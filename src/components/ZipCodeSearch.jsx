@@ -622,13 +622,6 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
 
   return (
     <div className={`rounded-xl p-4 border-2 ${colors} relative`}>
-      {/* Your Location badge */}
-      <div className="absolute -top-3 left-4">
-        <span className="bg-emerald-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full">
-          Your Location
-        </span>
-      </div>
-
       {/* Action buttons */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
         <button
