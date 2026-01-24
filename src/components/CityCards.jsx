@@ -28,8 +28,10 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function CityCard({ city, stormPhase }) {
-  const colors = hazardColors[city.hazardType] || hazardColors.none;
+function CityCard({ city, stormPhase, isUserLocation = false }) {
+  const colors = isUserLocation
+    ? 'border-emerald-500/50 bg-slate-800 ring-1 ring-emerald-500/30'
+    : (hazardColors[city.hazardType] || hazardColors.none);
   const hazard = hazardLabels[city.hazardType] || hazardLabels.none;
   const danger = dangerBadges[city.iceDanger];
   const obs = city.observation;
@@ -38,9 +40,17 @@ function CityCard({ city, stormPhase }) {
   const hasObserved = (city.observed?.snowfall > 0) || (city.observed?.ice > 0);
 
   return (
-    <div className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors`}>
+    <div className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors relative`}>
+      {/* User Location Badge */}
+      {isUserLocation && (
+        <div className="absolute -top-2 left-3">
+          <span className="bg-emerald-500 text-white text-[9px] font-semibold px-2 py-0.5 rounded-full">
+            Your Location
+          </span>
+        </div>
+      )}
       {/* Header */}
-      <div className="flex justify-between items-start mb-2 sm:mb-3">
+      <div className={`flex justify-between items-start mb-2 sm:mb-3 ${isUserLocation ? 'mt-1' : ''}`}>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm sm:text-base font-semibold text-white truncate">{city.name}</h3>
           <div className="flex items-center gap-2">
@@ -147,34 +157,44 @@ function CityCard({ city, stormPhase }) {
 
 function SortControls({ sortBy, onSortChange }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="text-slate-500">Sort:</span>
+    <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+      <span className="text-slate-500 hidden sm:inline">Sort:</span>
       <button
-        onClick={() => onSortChange('snow')}
-        className={`px-2 py-1 rounded transition-colors ${
-          sortBy === 'snow'
-            ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30'
-            : 'text-slate-400 hover:text-slate-300 border border-transparent'
+        onClick={() => onSortChange('forecast')}
+        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
+          sortBy === 'forecast'
+            ? 'bg-amber-500/20 text-amber-400'
+            : 'text-slate-400 hover:text-slate-300'
         }`}
       >
-        Snow
+        Forecast
+      </button>
+      <button
+        onClick={() => onSortChange('actual')}
+        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
+          sortBy === 'actual'
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'text-slate-400 hover:text-slate-300'
+        }`}
+      >
+        Actual
       </button>
       <button
         onClick={() => onSortChange('city')}
-        className={`px-2 py-1 rounded transition-colors ${
+        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
           sortBy === 'city'
-            ? 'bg-slate-600 text-white border border-slate-500/30'
-            : 'text-slate-400 hover:text-slate-300 border border-transparent'
+            ? 'bg-slate-600 text-white'
+            : 'text-slate-400 hover:text-slate-300'
         }`}
       >
-        A-Z
+        City
       </button>
     </div>
   );
 }
 
-export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
-  const [sortBy, setSortBy] = useState('snow');
+export default function CityCards({ cities, stormPhase = 'pre-storm', userLocation = null }) {
+  const [sortBy, setSortBy] = useState('forecast');
 
   if (!cities || cities.length === 0) {
     return (
@@ -184,10 +204,21 @@ export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
     );
   }
 
+  // Combine cities with user location if provided
+  let allCities = [...cities];
+  if (userLocation) {
+    const exists = allCities.some(c => c.id === userLocation.id);
+    if (!exists) {
+      allCities.push({ ...userLocation, isUserLocation: true });
+    }
+  }
+
   // Sort cities based on selection
-  const sortedCities = [...cities].sort((a, b) => {
-    if (sortBy === 'snow') {
+  const sortedCities = allCities.sort((a, b) => {
+    if (sortBy === 'forecast') {
       return (b.forecast?.snowfall || 0) - (a.forecast?.snowfall || 0);
+    } else if (sortBy === 'actual') {
+      return (b.observed?.snowfall || 0) - (a.observed?.snowfall || 0);
     }
     return a.name.localeCompare(b.name);
   });
@@ -200,7 +231,7 @@ export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
       </div>
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {sortedCities.map(city => (
-          <CityCard key={city.id} city={city} stormPhase={stormPhase} />
+          <CityCard key={city.id} city={city} stormPhase={stormPhase} isUserLocation={city.isUserLocation} />
         ))}
       </div>
     </div>

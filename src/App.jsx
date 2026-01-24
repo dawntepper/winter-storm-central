@@ -192,7 +192,7 @@ export default function App() {
 
         {/* City Cards */}
         <section>
-          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} />
+          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} userLocation={userLocation} />
         </section>
 
         {/* Footer */}
