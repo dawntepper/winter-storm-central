@@ -90,6 +90,38 @@ function StormAlert({ stormPhase }) {
   );
 }
 
+function StaleDataBanner({ isStale, lastSuccessfulUpdate, error }) {
+  if (!isStale && !error) return null;
+
+  const formatTime = (date) => {
+    if (!date) return 'Unknown';
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="bg-slate-700/50 border border-slate-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 text-sm">&#9888;</span>
+          <span className="text-slate-300 font-medium text-sm">
+            {error || 'Using cached data - NOAA API temporarily unavailable'}
+          </span>
+        </div>
+        {lastSuccessfulUpdate && (
+          <p className="text-slate-400 text-xs">
+            Last successful update: {formatTime(lastSuccessfulUpdate)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ForecastBanner({ stormPhase }) {
   if (stormPhase !== 'pre-storm') return null;
 
@@ -135,7 +167,9 @@ export default function App() {
     loading,
     error,
     lastRefresh,
+    lastSuccessfulUpdate,
     stormPhase,
+    isStale,
     refresh,
     getSnowLeaderboard,
     getIceLeaderboard,
@@ -144,7 +178,7 @@ export default function App() {
     getCitiesGeoOrdered
   } = useWeatherData();
 
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocations, setUserLocations] = useState([]);
 
   const hasData = Object.keys(weatherData).length > 0;
 
@@ -160,22 +194,27 @@ export default function App() {
     <div className="min-h-screen">
       <Header
         lastRefresh={lastRefresh}
+        lastSuccessfulUpdate={lastSuccessfulUpdate}
         onRefresh={refresh}
         loading={loading}
         stormPhase={stormPhase}
+        isStale={isStale}
       />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Stale Data Warning */}
+        <StaleDataBanner isStale={isStale} lastSuccessfulUpdate={lastSuccessfulUpdate} error={error && hasData ? error : null} />
+
         {/* Storm Alert */}
         <StormAlert stormPhase={stormPhase} />
 
         {/* Storm Map - Hero Section */}
         <section>
-          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocation={userLocation} isHero />
+          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocations={userLocations} isHero />
         </section>
 
         {/* Zip Code Search */}
-        <ZipCodeSearch stormPhase={stormPhase} onLocationChange={setUserLocation} />
+        <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setUserLocations} />
 
         {/* Prominent Forecast Banner */}
         <ForecastBanner stormPhase={stormPhase} />
@@ -191,13 +230,13 @@ export default function App() {
             observedSnowLeaderboard={getObservedSnowLeaderboard()}
             observedIceLeaderboard={getObservedIceLeaderboard()}
             stormPhase={stormPhase}
-            userLocation={userLocation}
+            userLocations={userLocations}
           />
         </section>
 
         {/* City Cards */}
         <section>
-          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} userLocation={userLocation} />
+          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} userLocations={userLocations} />
         </section>
 
         {/* Footer */}

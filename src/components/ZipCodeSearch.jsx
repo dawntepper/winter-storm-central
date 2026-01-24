@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const STORAGE_KEY = 'winterStorm_userZip';
-const SHOW_ON_MAP_KEY = 'winterStorm_showOnMap';
+const LOCATIONS_KEY = 'winterStorm_userLocations';
 
 // Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
 async function getCoordinatesFromZip(zip) {
@@ -25,12 +24,13 @@ async function getCoordinatesFromZip(zip) {
   return {
     lat: parseFloat(place.latitude),
     lon: parseFloat(place.longitude),
-    name: `${place['place name']}, ${place['state abbreviation']}`
+    name: `${place['place name']}, ${place['state abbreviation']}`,
+    zip
   };
 }
 
 // Fetch weather data for coordinates (same logic as useWeatherData)
-async function fetchWeatherForLocation(lat, lon, name) {
+async function fetchWeatherForLocation(lat, lon, name, zip) {
   const STORM_START = new Date('2026-01-24T00:00:00Z');
   const STORM_END = new Date('2026-01-27T00:00:00Z');
 
@@ -122,7 +122,8 @@ async function fetchWeatherForLocation(lat, lon, name) {
     else if (forecastIce > 0) iceDanger = 'caution';
 
     return {
-      id: 'user-location',
+      id: `user-${zip}`,
+      zip,
       name,
       lat,
       lon,
@@ -166,7 +167,7 @@ const dangerBadges = {
   safe: null
 };
 
-function UserLocationCard({ data, onRemove, stormPhase }) {
+function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, stormPhase }) {
   const colors = hazardColors[data.hazardType] || hazardColors.none;
   const hazard = hazardLabels[data.hazardType] || hazardLabels.none;
   const danger = dangerBadges[data.iceDanger];
@@ -205,6 +206,19 @@ function UserLocationCard({ data, onRemove, stormPhase }) {
                 </span>
               )}
             </div>
+            {/* Add to Map checkbox */}
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isOnMap}
+                onChange={(e) => onToggleMap(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+              />
+              <span className="text-xs text-slate-400">Add to Map</span>
+              {isOnMap && (
+                <span className="text-[10px] text-emerald-400">(on map)</span>
+              )}
+            </label>
           </div>
         </div>
 
@@ -269,37 +283,51 @@ function UserLocationCard({ data, onRemove, stormPhase }) {
   );
 }
 
-export default function ZipCodeSearch({ stormPhase, onLocationChange }) {
+export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   const [zip, setZip] = useState('');
-  const [savedZip, setSavedZip] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [locationData, setLocationData] = useState(null);
-  const [showOnMap, setShowOnMap] = useState(false);
+  const [currentLocationData, setCurrentLocationData] = useState(null);
 
-  // Load saved zip and showOnMap preference on mount
+  // Store all saved locations with their map visibility
+  const [savedLocations, setSavedLocations] = useState({}); // { zip: { data, onMap } }
+
+  // Load saved locations on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const storedShowOnMap = localStorage.getItem(SHOW_ON_MAP_KEY) === 'true';
-    setShowOnMap(storedShowOnMap);
-
+    const stored = localStorage.getItem(LOCATIONS_KEY);
     if (stored) {
-      setSavedZip(stored);
-      setZip(stored);
-      fetchLocationWeather(stored, storedShowOnMap);
+      try {
+        const parsed = JSON.parse(stored);
+        setSavedLocations(parsed);
+
+        // Notify parent of locations that are on the map
+        if (onLocationsChange) {
+          const onMapLocations = Object.values(parsed)
+            .filter(loc => loc.onMap)
+            .map(loc => loc.data);
+          onLocationsChange(onMapLocations);
+        }
+      } catch (e) {
+        console.error('Error loading saved locations:', e);
+      }
     }
   }, []);
 
-  // Notify parent when showOnMap changes
-  const handleShowOnMapChange = (checked) => {
-    setShowOnMap(checked);
-    localStorage.setItem(SHOW_ON_MAP_KEY, checked.toString());
-    if (onLocationChange) {
-      onLocationChange(checked ? locationData : null);
+  // Save to localStorage whenever savedLocations changes
+  const updateSavedLocations = (newLocations) => {
+    setSavedLocations(newLocations);
+    localStorage.setItem(LOCATIONS_KEY, JSON.stringify(newLocations));
+
+    // Notify parent of locations that are on the map
+    if (onLocationsChange) {
+      const onMapLocations = Object.values(newLocations)
+        .filter(loc => loc.onMap)
+        .map(loc => loc.data);
+      onLocationsChange(onMapLocations);
     }
   };
 
-  const fetchLocationWeather = async (zipCode, shouldShowOnMap = showOnMap) => {
+  const fetchLocationWeather = async (zipCode) => {
     setLoading(true);
     setError(null);
 
@@ -307,23 +335,25 @@ export default function ZipCodeSearch({ stormPhase, onLocationChange }) {
       console.log('Looking up zip code:', zipCode);
       const coords = await getCoordinatesFromZip(zipCode);
       console.log('Got coordinates:', coords);
-      const weather = await fetchWeatherForLocation(coords.lat, coords.lon, coords.name);
+      const weather = await fetchWeatherForLocation(coords.lat, coords.lon, coords.name, zipCode);
       console.log('Got weather data:', weather);
-      setLocationData(weather);
-      setSavedZip(zipCode);
-      localStorage.setItem(STORAGE_KEY, zipCode);
 
-      // Notify parent if showing on map
-      if (onLocationChange && shouldShowOnMap) {
-        onLocationChange(weather);
+      setCurrentLocationData(weather);
+
+      // Check if this zip already exists in saved locations
+      const existingLocation = savedLocations[zipCode];
+      if (existingLocation) {
+        // Update the data but keep the onMap setting
+        const newLocations = {
+          ...savedLocations,
+          [zipCode]: { ...existingLocation, data: weather }
+        };
+        updateSavedLocations(newLocations);
       }
     } catch (err) {
       console.error('Zip code search error:', err);
       setError(err.message || 'Failed to fetch weather data');
-      setLocationData(null);
-      if (onLocationChange) {
-        onLocationChange(null);
-      }
+      setCurrentLocationData(null);
     } finally {
       setLoading(false);
     }
@@ -341,18 +371,41 @@ export default function ZipCodeSearch({ stormPhase, onLocationChange }) {
     fetchLocationWeather(cleanZip);
   };
 
-  const handleRemove = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SHOW_ON_MAP_KEY);
-    setSavedZip(null);
-    setLocationData(null);
-    setZip('');
-    setError(null);
-    setShowOnMap(false);
-    if (onLocationChange) {
-      onLocationChange(null);
+  const handleToggleMap = (zipCode, checked) => {
+    const locationData = zipCode === currentLocationData?.zip
+      ? currentLocationData
+      : savedLocations[zipCode]?.data;
+
+    if (!locationData) return;
+
+    const newLocations = {
+      ...savedLocations,
+      [zipCode]: { data: locationData, onMap: checked }
+    };
+
+    // If unchecking and it's not the current search, remove it entirely
+    if (!checked && zipCode !== currentLocationData?.zip) {
+      delete newLocations[zipCode];
     }
+
+    updateSavedLocations(newLocations);
   };
+
+  const handleRemove = () => {
+    if (!currentLocationData) return;
+
+    const zipCode = currentLocationData.zip;
+    const newLocations = { ...savedLocations };
+    delete newLocations[zipCode];
+
+    updateSavedLocations(newLocations);
+    setCurrentLocationData(null);
+    setZip('');
+  };
+
+  const isCurrentOnMap = currentLocationData
+    ? savedLocations[currentLocationData.zip]?.onMap || false
+    : false;
 
   return (
     <div className="space-y-4">
@@ -388,27 +441,20 @@ export default function ZipCodeSearch({ stormPhase, onLocationChange }) {
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
 
-        {/* Add to Map checkbox - only show when we have location data */}
-        {locationData && (
-          <label className="flex items-center gap-2 mt-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showOnMap}
-              onChange={(e) => handleShowOnMapChange(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-            />
-            <span className="text-sm text-slate-300">Add to Map</span>
-            {showOnMap && (
-              <span className="text-xs text-emerald-400">(showing on map)</span>
-            )}
-          </label>
+        {/* Show count of locations on map */}
+        {Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
+          <p className="text-emerald-400 text-xs mt-2">
+            {Object.values(savedLocations).filter(l => l.onMap).length} location(s) added to map
+          </p>
         )}
       </div>
 
       {/* Result Card - Full Width */}
-      {locationData && (
+      {currentLocationData && (
         <UserLocationCard
-          data={locationData}
+          data={currentLocationData}
+          isOnMap={isCurrentOnMap}
+          onToggleMap={(checked) => handleToggleMap(currentLocationData.zip, checked)}
           onRemove={handleRemove}
           stormPhase={stormPhase}
         />

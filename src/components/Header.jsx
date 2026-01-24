@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) {
+export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
 
   const phaseLabels = {
@@ -53,11 +53,11 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
             <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 sm:gap-3 mt-0.5 sm:mt-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] sm:text-xs text-slate-500">Now Tracking:</span>
-                <span className="text-sky-300 text-xs sm:text-sm font-semibold">Winter Storm Fern</span>
+                <a href="https://x.com/search?q=WinterStormFern" target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:text-sky-200 text-xs sm:text-sm font-semibold transition-colors">Winter Storm Fern</a>
               </div>
               <span className="text-slate-700 hidden xs:inline">|</span>
               <div className="flex items-center gap-2">
-                <span className="text-sky-400 text-[10px] sm:text-xs font-medium">#WinterStormFern</span>
+                <a href="https://x.com/search?q=WinterStormFern" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 text-[10px] sm:text-xs font-medium transition-colors">#WinterStormFern</a>
                 <span className="text-slate-600 hidden sm:inline">|</span>
                 <span className="text-slate-400 text-[10px] sm:text-xs hidden sm:inline">Jan 24-26, 2026</span>
                 <span className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded ${phaseColors[stormPhase]} text-white flex-shrink-0`}>
@@ -73,7 +73,10 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
           {/* Last Updated - hidden on mobile */}
           <div className="text-right text-sm text-slate-400 hidden md:block">
             {lastRefresh && (
-              <p>Updated {lastRefresh.toLocaleTimeString()}</p>
+              <div className="flex items-center justify-end gap-2">
+                {isStale && <span className="text-amber-400 text-xs">(cached)</span>}
+                <p>Updated {lastRefresh.toLocaleTimeString()}</p>
+              </div>
             )}
             <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
           </div>

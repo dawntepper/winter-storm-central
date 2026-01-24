@@ -1,24 +1,112 @@
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from 'react-leaflet';
+import { useEffect, useState, useMemo } from 'react';
+import L from 'leaflet';
 
-// Center of the storm coverage area
-const CENTER = [37.5, -82];
-const ZOOM = 5;
+// Center of the storm coverage area - adjusted for better framing
+const CENTER = [37.0, -84];
+const ZOOM = 5.5;
 
-// Atmospheric color palette
+// Atmospheric color palette - more vibrant
 const hazardColors = {
-  snow: '#93C5FD',    // Softer winter sky blue
-  ice: '#E879F9',     // Ominous fuchsia/purple
-  mixed: '#94A3B8',   // Lighter slate
-  none: '#475569'     // Slate
+  snow: '#60A5FA',    // Brighter blue
+  ice: '#E879F9',     // Vibrant fuchsia
+  mixed: '#A78BFA',   // Purple blend
+  none: '#64748B'     // Slate
 };
 
-function MapController() {
+// Glow colors for the outer ring
+const glowColors = {
+  snow: 'rgba(96, 165, 250, 0.4)',
+  ice: 'rgba(232, 121, 249, 0.4)',
+  mixed: 'rgba(167, 139, 250, 0.4)',
+  none: 'rgba(100, 116, 139, 0.3)'
+};
+
+// Create custom label icon
+const createLabelIcon = (name, hazardType, isUser = false) => {
+  const bgColor = isUser ? 'rgba(16, 185, 129, 0.9)' : 'rgba(15, 23, 42, 0.85)';
+  const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
+
+  return L.divIcon({
+    className: 'city-label-icon',
+    html: `<div style="
+      background: ${bgColor};
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid ${borderColor};
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    ">${name}${isUser ? ' ★' : ''}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, -20]
+  });
+};
+
+function MapController({ showRadar }) {
   const map = useMap();
 
   useEffect(() => {
     map.scrollWheelZoom.disable();
+
+    // Smooth zoom
+    map.options.zoomAnimation = true;
+    map.options.fadeAnimation = true;
+    map.options.markerZoomAnimation = true;
   }, [map]);
+
+  return null;
+}
+
+// Radar layer component
+function RadarLayer({ show }) {
+  const map = useMap();
+  const [radarLayer, setRadarLayer] = useState(null);
+  const [radarTimestamp, setRadarTimestamp] = useState(null);
+
+  useEffect(() => {
+    if (!show) {
+      if (radarLayer) {
+        map.removeLayer(radarLayer);
+        setRadarLayer(null);
+      }
+      return;
+    }
+
+    // Fetch latest radar timestamp from RainViewer
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+      .then(res => res.json())
+      .then(data => {
+        const latest = data.radar?.past?.slice(-1)[0];
+        if (latest) {
+          setRadarTimestamp(latest.time);
+          const layer = L.tileLayer(
+            `https://tilecache.rainviewer.com/v2/radar/${latest.time}/256/{z}/{x}/{y}/2/1_1.png`,
+            {
+              opacity: 0.5,
+              zIndex: 100
+            }
+          );
+
+          if (radarLayer) {
+            map.removeLayer(radarLayer);
+          }
+
+          layer.addTo(map);
+          setRadarLayer(layer);
+        }
+      })
+      .catch(err => console.error('Radar fetch error:', err));
+
+    return () => {
+      if (radarLayer) {
+        map.removeLayer(radarLayer);
+      }
+    };
+  }, [show, map]);
 
   return null;
 }
@@ -29,223 +117,400 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+// Enhanced city marker with glow effect
 function CityMarker({ city, stormPhase }) {
+  const [isHovered, setIsHovered] = useState(false);
   const color = hazardColors[city.hazardType] || hazardColors.none;
+  const glowColor = glowColors[city.hazardType] || glowColors.none;
   const forecastSnow = city.forecast?.snowfall || 0;
   const forecastIce = city.forecast?.ice || 0;
   const observedSnow = city.observed?.snowfall || 0;
   const observedIce = city.observed?.ice || 0;
-  const radius = Math.max(8, Math.min(20, 8 + forecastSnow + (forecastIce * 10)));
+
+  // Increased base radius by 50%
+  const baseRadius = Math.max(12, Math.min(30, 12 + forecastSnow * 1.5 + (forecastIce * 15)));
+  const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
   const hasObserved = observedSnow > 0 || observedIce > 0;
 
+  const labelIcon = useMemo(() => createLabelIcon(city.name.split(',')[0], city.hazardType), [city.name, city.hazardType]);
+
   return (
-    <CircleMarker
-      center={[city.lat, city.lon]}
-      radius={radius}
-      pathOptions={{
-        fillColor: color,
-        fillOpacity: 0.7,
-        color: '#94a3b8',
-        weight: 1.5,
-        opacity: 0.8
-      }}
-    >
-      <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
-        <div className="min-w-[160px]">
-          {/* City name and last updated */}
-          <div className="flex items-center justify-between mb-1.5">
-            <h3 className="font-semibold text-sm">{city.name}</h3>
+    <>
+      {/* Outer glow ring */}
+      <CircleMarker
+        center={[city.lat, city.lon]}
+        radius={radius + 8}
+        pathOptions={{
+          fillColor: glowColor,
+          fillOpacity: 0.5,
+          color: 'transparent',
+          weight: 0
+        }}
+        className="pulse-marker"
+      />
+
+      {/* Main marker */}
+      <CircleMarker
+        center={[city.lat, city.lon]}
+        radius={radius}
+        pathOptions={{
+          fillColor: color,
+          fillOpacity: 0.85,
+          color: '#ffffff',
+          weight: 2.5,
+          opacity: 0.9
+        }}
+        eventHandlers={{
+          mouseover: () => setIsHovered(true),
+          mouseout: () => setIsHovered(false)
+        }}
+      >
+        <Tooltip
+          direction="top"
+          offset={[0, -15]}
+          opacity={0.98}
+          className="enhanced-tooltip"
+        >
+          <div className="min-w-[180px] p-1">
+            {/* City name header */}
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200">
+              <h3 className="font-bold text-sm text-gray-800">{city.name}</h3>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                city.hazardType === 'snow' ? 'bg-blue-100 text-blue-700' :
+                city.hazardType === 'ice' ? 'bg-purple-100 text-purple-700' :
+                city.hazardType === 'mixed' ? 'bg-violet-100 text-violet-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {city.hazardType.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Current conditions */}
+            {city.observation?.temperature && (
+              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
+                <span className="text-lg font-bold text-emerald-700">{city.observation.temperature}°F</span>
+                <span className="text-[10px] text-emerald-600">{city.observation.conditions}</span>
+              </div>
+            )}
+
+            {/* Forecast Data */}
+            <div className="mb-2">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Forecast</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-blue-50 rounded p-1.5 text-center">
+                  <div className="text-blue-700 font-bold text-sm">
+                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-blue-500">Snow</div>
+                </div>
+                <div className="bg-purple-50 rounded p-1.5 text-center">
+                  <div className="text-purple-700 font-bold text-sm">
+                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-purple-500">Ice</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Observed Data */}
+            {isActive && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
+                </div>
+                {hasObserved ? (
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-emerald-50 rounded p-1.5 text-center">
+                      <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
+                      <div className="text-[9px] text-emerald-500">Snow</div>
+                    </div>
+                    <div className="bg-emerald-50 rounded p-1.5 text-center">
+                      <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
+                      <div className="text-[9px] text-emerald-500">Ice</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-400 italic text-center py-1">Accumulating...</p>
+                )}
+              </div>
+            )}
+
             {city.lastUpdated && (
-              <span className="text-[9px] text-gray-400">{formatTime(city.lastUpdated)}</span>
+              <div className="text-[9px] text-gray-400 text-right mt-2 pt-1 border-t border-gray-100">
+                Updated {formatTime(city.lastUpdated)}
+              </div>
             )}
           </div>
+        </Tooltip>
+      </CircleMarker>
 
-          {/* Forecast Data */}
-          <div className="mb-1.5">
-            <div className="flex items-center gap-1 mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              <span className="text-[10px] text-gray-500 font-medium">FORECAST</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-blue-600">Snow:</span>{' '}
-                <strong>{forecastSnow > 0 ? `${forecastSnow.toFixed(2)}"` : '-'}</strong>
-              </div>
-              <div>
-                <span className="text-purple-600">Ice:</span>{' '}
-                <strong>{forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Observed Data (show during/after storm) */}
-          {isActive && (
-            <div className="border-t border-gray-200 pt-1.5">
-              <div className="flex items-center gap-1 mb-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] text-gray-500 font-medium">ACTUAL</span>
-              </div>
-              {hasObserved ? (
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-blue-600">Snow:</span>{' '}
-                    <strong className="text-emerald-600">{observedSnow.toFixed(2)}"</strong>
-                  </div>
-                  <div>
-                    <span className="text-purple-600">Ice:</span>{' '}
-                    <strong className="text-emerald-600">{observedIce.toFixed(2)}"</strong>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[10px] text-gray-400 italic">Accumulating...</p>
-              )}
-            </div>
-          )}
-
-          {/* Live conditions */}
-          {city.observation && (
-            <div className="border-t border-gray-200 pt-1.5 mt-1.5">
-              <p className="text-[10px] text-emerald-600 font-medium">
-                Live: {city.observation.temperature}°F, {city.observation.conditions}
-              </p>
-            </div>
-          )}
-        </div>
-      </Tooltip>
-    </CircleMarker>
+      {/* City label */}
+      <Marker
+        position={[city.lat, city.lon]}
+        icon={labelIcon}
+        interactive={false}
+      />
+    </>
   );
 }
 
+// Enhanced user location marker
 function UserLocationMarker({ location, stormPhase }) {
+  const [isHovered, setIsHovered] = useState(false);
   const color = hazardColors[location.hazardType] || hazardColors.none;
   const forecastSnow = location.forecast?.snowfall || 0;
   const forecastIce = location.forecast?.ice || 0;
   const observedSnow = location.observed?.snowfall || 0;
   const observedIce = location.observed?.ice || 0;
-  const radius = Math.max(10, Math.min(22, 10 + forecastSnow + (forecastIce * 10)));
+
+  const baseRadius = Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
+  const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
   const hasObserved = observedSnow > 0 || observedIce > 0;
 
+  const labelIcon = useMemo(() => createLabelIcon(location.name.split(',')[0], location.hazardType, true), [location.name, location.hazardType]);
+
   return (
-    <CircleMarker
-      center={[location.lat, location.lon]}
-      radius={radius}
-      pathOptions={{
-        fillColor: color,
-        fillOpacity: 0.8,
-        color: '#10b981', // Emerald green outline
-        weight: 3,
-        opacity: 1
-      }}
-    >
-      <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
-        <div className="min-w-[160px]">
-          {/* City name with Your Location badge */}
-          <div className="flex items-center justify-between mb-1.5">
-            <h3 className="font-semibold text-sm">{location.name}</h3>
-            <span className="text-[8px] bg-emerald-500 text-white px-1 py-0.5 rounded">You</span>
-          </div>
+    <>
+      {/* Outer glow - emerald for user */}
+      <CircleMarker
+        center={[location.lat, location.lon]}
+        radius={radius + 10}
+        pathOptions={{
+          fillColor: 'rgba(16, 185, 129, 0.3)',
+          fillOpacity: 0.6,
+          color: 'transparent',
+          weight: 0
+        }}
+        className="pulse-marker-user"
+      />
 
-          {/* Forecast Data */}
-          <div className="mb-1.5">
-            <div className="flex items-center gap-1 mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              <span className="text-[10px] text-gray-500 font-medium">EXPECTED</span>
+      {/* Main marker */}
+      <CircleMarker
+        center={[location.lat, location.lon]}
+        radius={radius}
+        pathOptions={{
+          fillColor: color,
+          fillOpacity: 0.9,
+          color: '#10b981',
+          weight: 3.5,
+          opacity: 1
+        }}
+        eventHandlers={{
+          mouseover: () => setIsHovered(true),
+          mouseout: () => setIsHovered(false)
+        }}
+      >
+        <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
+          <div className="min-w-[180px] p-1">
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
+              <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
+              <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-semibold">YOUR LOCATION</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-blue-600">Snow:</span>{' '}
-                <strong>{forecastSnow > 0 ? `${forecastSnow.toFixed(2)}"` : '-'}</strong>
-              </div>
-              <div>
-                <span className="text-purple-600">Ice:</span>{' '}
-                <strong>{forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}</strong>
-              </div>
-            </div>
-          </div>
 
-          {/* Observed Data */}
-          <div className="border-t border-gray-200 pt-1.5">
-            <div className="flex items-center gap-1 mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span className="text-[10px] text-gray-500 font-medium">ACCUMULATIONS</span>
-            </div>
-            {hasObserved ? (
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-blue-600">Snow:</span>{' '}
-                  <strong className="text-emerald-600">{observedSnow.toFixed(2)}"</strong>
-                </div>
-                <div>
-                  <span className="text-purple-600">Ice:</span>{' '}
-                  <strong className="text-emerald-600">{observedIce.toFixed(2)}"</strong>
-                </div>
+            {/* Current conditions */}
+            {location.conditions?.temperature && (
+              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
+                <span className="text-lg font-bold text-emerald-700">{location.conditions.temperature}°{location.conditions.temperatureUnit}</span>
+                <span className="text-[10px] text-emerald-600">{location.conditions.shortForecast}</span>
               </div>
-            ) : (
-              <p className="text-[10px] text-gray-400 italic">No accumulation yet</p>
             )}
+
+            {/* Forecast */}
+            <div className="mb-2">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Expected</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-blue-50 rounded p-1.5 text-center">
+                  <div className="text-blue-700 font-bold text-sm">
+                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-blue-500">Snow</div>
+                </div>
+                <div className="bg-purple-50 rounded p-1.5 text-center">
+                  <div className="text-purple-700 font-bold text-sm">
+                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-purple-500">Ice</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Accumulations */}
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
+              </div>
+              {hasObserved ? (
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-emerald-50 rounded p-1.5 text-center">
+                    <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
+                    <div className="text-[9px] text-emerald-500">Snow</div>
+                  </div>
+                  <div className="bg-emerald-50 rounded p-1.5 text-center">
+                    <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
+                    <div className="text-[9px] text-emerald-500">Ice</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-400 italic text-center py-1">No accumulation yet</p>
+              )}
+            </div>
           </div>
-        </div>
-      </Tooltip>
-    </CircleMarker>
+        </Tooltip>
+      </CircleMarker>
+
+      {/* City label */}
+      <Marker
+        position={[location.lat, location.lon]}
+        icon={labelIcon}
+        interactive={false}
+      />
+    </>
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocation = null, isHero = false }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false }) {
+  const [showRadar, setShowRadar] = useState(false);
   const cities = Object.values(weatherData);
 
   return (
-    <div className={`bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700 ${isHero ? 'ring-1 ring-slate-600' : ''}`}>
-      <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
+    <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''}`}>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
-          <h2 className={`font-semibold text-white ${isHero ? 'text-base sm:text-lg' : 'text-sm sm:text-base'}`}>Storm Coverage</h2>
-          <span className={`text-[10px] px-2 py-1 rounded border ${
-            stormPhase === 'pre-storm'
-              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-          }`}>
-            {stormPhase === 'pre-storm' ? 'Forecast' : 'Live Tracking'}
-          </span>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h2 className={`font-bold text-white ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`}>
+              Storm Coverage
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Radar toggle */}
+            <button
+              onClick={() => setShowRadar(!showRadar)}
+              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all ${
+                showRadar
+                  ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+              }`}
+            >
+              {showRadar ? '✓ Radar On' : 'Show Radar'}
+            </button>
+            <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-lg border font-medium ${
+              stormPhase === 'pre-storm'
+                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+            }`}>
+              {stormPhase === 'pre-storm' ? 'Forecast Mode' : 'Live Tracking'}
+            </span>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500 mt-2">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-300"></span> Snow
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5 text-[10px] sm:text-xs text-slate-400 mt-3">
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-blue-400 ring-2 ring-white/30"></span> Snow
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-fuchsia-400"></span> Ice
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-fuchsia-400 ring-2 ring-white/30"></span> Ice
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-slate-400"></span> Mixed
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-violet-400 ring-2 ring-white/30"></span> Mixed
           </span>
-          {userLocation && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full border-2 border-emerald-500 bg-transparent"></span> Your Location
+          {userLocations.length > 0 && (
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-emerald-500 bg-emerald-500/30"></span> Your Location{userLocations.length > 1 ? 's' : ''}
             </span>
           )}
-          <span className="ml-auto text-slate-600 hidden sm:inline">Hover for details</span>
+          {showRadar && (
+            <span className="flex items-center gap-2 text-cyan-400">
+              <span className="w-3 h-3 rounded bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"></span> Radar
+            </span>
+          )}
+          <span className="ml-auto text-slate-500 hidden sm:inline">Hover markers for details</span>
         </div>
       </div>
-      <MapContainer
-        center={CENTER}
-        zoom={ZOOM}
-        style={{ height: isHero ? '400px' : '300px', width: '100%' }}
-        className={`z-0 ${isHero ? 'sm:!h-[500px] lg:!h-[550px]' : 'sm:!h-[400px]'}`}
-      >
-        <MapController />
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        {cities.map(city => (
-          <CityMarker key={city.id} city={city} stormPhase={stormPhase} />
-        ))}
-        {userLocation && (
-          <UserLocationMarker location={userLocation} stormPhase={stormPhase} />
-        )}
-      </MapContainer>
+
+      {/* Map Container - increased height */}
+      <div className="relative">
+        <MapContainer
+          center={CENTER}
+          zoom={ZOOM}
+          style={{ height: isHero ? '500px' : '350px', width: '100%' }}
+          className={`z-0 ${isHero ? 'sm:!h-[600px] lg:!h-[700px]' : 'sm:!h-[450px]'}`}
+          zoomControl={false}
+        >
+          <MapController showRadar={showRadar} />
+
+          {/* Dark Matter basemap */}
+          <TileLayer
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          />
+
+          {/* Radar overlay */}
+          <RadarLayer show={showRadar} />
+
+          {/* City markers */}
+          {cities.map(city => (
+            <CityMarker key={city.id} city={city} stormPhase={stormPhase} />
+          ))}
+
+          {/* User location markers */}
+          {userLocations.map(location => (
+            <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} />
+          ))}
+        </MapContainer>
+
+        {/* Gradient overlay at edges for polish */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-900/30 to-transparent"></div>
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-900/30 to-transparent"></div>
+        </div>
+      </div>
+
+      {/* Custom styles for pulse animation */}
+      <style>{`
+        .pulse-marker {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        .pulse-marker-user {
+          animation: pulse-user 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.7; }
+        }
+        @keyframes pulse-user {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .leaflet-tooltip.enhanced-tooltip {
+          background: white;
+          border: none;
+          border-radius: 10px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05);
+          padding: 8px;
+        }
+        .leaflet-tooltip.enhanced-tooltip::before {
+          border-top-color: white;
+        }
+        .city-label-icon {
+          background: none !important;
+          border: none !important;
+        }
+      `}</style>
     </div>
   );
 }

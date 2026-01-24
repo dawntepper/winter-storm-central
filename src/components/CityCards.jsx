@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 // Atmospheric color palette
 const hazardColors = {
   snow: 'border-sky-300/30 bg-slate-800',      // Softer winter sky blue
@@ -17,8 +15,8 @@ const hazardLabels = {
 
 const dangerBadges = {
   catastrophic: { label: 'Catastrophic', class: 'bg-red-500/20 text-red-400 border border-red-500/30' },
-  dangerous: { label: 'Dangerous', class: 'bg-red-500/20 text-red-400 border border-red-500/30' },  // Changed to red
-  caution: { label: 'Caution', class: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' }, // Orange/amber
+  dangerous: { label: 'Dangerous', class: 'bg-red-500/20 text-red-400 border border-red-500/30' },
+  caution: { label: 'Caution', class: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' },
   safe: null
 };
 
@@ -155,47 +153,7 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
   );
 }
 
-function SortControls({ sortBy, onSortChange }) {
-  return (
-    <div className="flex items-center gap-1 text-[10px] sm:text-xs">
-      <span className="text-slate-500 hidden sm:inline">Sort:</span>
-      <button
-        onClick={() => onSortChange('forecast')}
-        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
-          sortBy === 'forecast'
-            ? 'bg-amber-500/20 text-amber-400'
-            : 'text-slate-400 hover:text-slate-300'
-        }`}
-      >
-        Forecast
-      </button>
-      <button
-        onClick={() => onSortChange('actual')}
-        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
-          sortBy === 'actual'
-            ? 'bg-emerald-500/20 text-emerald-400'
-            : 'text-slate-400 hover:text-slate-300'
-        }`}
-      >
-        Actual
-      </button>
-      <button
-        onClick={() => onSortChange('city')}
-        className={`px-1.5 sm:px-2 py-1 rounded transition-colors ${
-          sortBy === 'city'
-            ? 'bg-slate-600 text-white'
-            : 'text-slate-400 hover:text-slate-300'
-        }`}
-      >
-        City
-      </button>
-    </div>
-  );
-}
-
-export default function CityCards({ cities, stormPhase = 'pre-storm', userLocation = null }) {
-  const [sortBy, setSortBy] = useState('forecast');
-
+export default function CityCards({ cities, stormPhase = 'pre-storm', userLocations = [] }) {
   if (!cities || cities.length === 0) {
     return (
       <div className="text-center text-slate-500 py-12">
@@ -204,30 +162,23 @@ export default function CityCards({ cities, stormPhase = 'pre-storm', userLocati
     );
   }
 
-  // Combine cities with user location if provided
+  // Combine cities with user locations
   let allCities = [...cities];
-  if (userLocation) {
-    const exists = allCities.some(c => c.id === userLocation.id);
+  userLocations.forEach(userLoc => {
+    const exists = allCities.some(c => c.id === userLoc.id);
     if (!exists) {
-      allCities.push({ ...userLocation, isUserLocation: true });
+      allCities.push({ ...userLoc, isUserLocation: true });
     }
-  }
-
-  // Sort cities based on selection
-  const sortedCities = allCities.sort((a, b) => {
-    if (sortBy === 'forecast') {
-      return (b.forecast?.snowfall || 0) - (a.forecast?.snowfall || 0);
-    } else if (sortBy === 'actual') {
-      return (b.observed?.snowfall || 0) - (a.observed?.snowfall || 0);
-    }
-    return a.name.localeCompare(b.name);
   });
+
+  // Sort cities alphabetically by name
+  const sortedCities = allCities.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h2 className="text-base sm:text-lg font-semibold text-white">All Tracked Cities</h2>
-        <SortControls sortBy={sortBy} onSortChange={setSortBy} />
+        <span className="text-[10px] sm:text-xs text-slate-500">{sortedCities.length} locations</span>
       </div>
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {sortedCities.map(city => (
