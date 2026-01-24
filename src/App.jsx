@@ -46,7 +46,7 @@ function ErrorState({ error, onRetry }) {
 }
 
 function StormAlert({ stormPhase }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const alerts = {
     'pre-storm': {
@@ -78,7 +78,7 @@ function StormAlert({ stormPhase }) {
     <div className={`border rounded-xl ${alert.class} overflow-hidden`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors"
+        className="w-full px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <span className={`text-lg sm:text-xl ${alert.iconColor} flex-shrink-0`} dangerouslySetInnerHTML={{ __html: alert.icon }} />
