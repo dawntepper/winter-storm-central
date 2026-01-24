@@ -79,6 +79,11 @@ function StormAlert({ stormPhase }) {
         <div className="min-w-0">
           <h2 className="text-sm sm:text-base font-semibold text-white mb-1">{alert.title}</h2>
           <p className="text-xs sm:text-sm text-slate-200">{alert.message}</p>
+          <p className="text-[10px] sm:text-xs text-slate-400 mt-2">
+            Data updates every 30 minutes from NOAA. Always check{' '}
+            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+            {' '}and local emergency alerts for official guidance.
+          </p>
         </div>
       </div>
     </div>
@@ -196,8 +201,12 @@ export default function App() {
         </section>
 
         {/* Footer */}
-        <footer className="text-center text-slate-600 text-[10px] sm:text-xs py-4 border-t border-slate-800">
-          <p>Data provided by NOAA National Weather Service</p>
+        <footer className="text-center py-6 border-t border-slate-800">
+          <p className="text-slate-500 text-xs max-w-2xl mx-auto px-4">
+            <span className="font-medium text-slate-400">Disclaimer:</span> Storm Fern Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
+            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+            {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
+          </p>
         </footer>
       </main>
     </div>
