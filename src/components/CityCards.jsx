@@ -19,24 +19,40 @@ const dangerBadges = {
   safe: null
 };
 
-function CityCard({ city }) {
+function formatTime(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function CityCard({ city, stormPhase }) {
   const colors = hazardColors[city.hazardType] || hazardColors.none;
   const hazard = hazardLabels[city.hazardType] || hazardLabels.none;
   const danger = dangerBadges[city.iceDanger];
   const obs = city.observation;
 
+  const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
+  const hasObserved = (city.observed?.snowfall > 0) || (city.observed?.ice > 0);
+
   return (
-    <div className={`rounded-xl p-4 border ${colors} hover:border-slate-500 transition-colors`}>
+    <div className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors`}>
       {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="text-base font-semibold text-white">{city.name}</h3>
-          <span className={`text-xs font-medium ${hazard.class}`}>
-            {hazard.text}
-          </span>
+      <div className="flex justify-between items-start mb-2 sm:mb-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm sm:text-base font-semibold text-white truncate">{city.name}</h3>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] sm:text-xs font-medium ${hazard.class}`}>
+              {hazard.text}
+            </span>
+            {city.lastUpdated && (
+              <span className="text-[9px] sm:text-[10px] text-slate-600">
+                {formatTime(city.lastUpdated)}
+              </span>
+            )}
+          </div>
         </div>
         {danger && (
-          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${danger.class}`}>
+          <span className={`px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded flex-shrink-0 ${danger.class}`}>
             {danger.label}
           </span>
         )}
@@ -44,55 +60,75 @@ function CityCard({ city }) {
 
       {/* Current Observation */}
       {obs && (
-        <div className="bg-slate-900/50 rounded-lg p-2 mb-3 border border-slate-700/50">
+        <div className="bg-slate-900/50 rounded-lg p-2 mb-2 sm:mb-3 border border-slate-700/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">Live</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] text-slate-500">Live</span>
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             {obs.temperature !== null && (
-              <span className="text-2xl font-semibold text-white">{obs.temperature}°F</span>
+              <span className="text-xl sm:text-2xl font-semibold text-white">{obs.temperature}°F</span>
             )}
-            <span className="text-sm text-slate-400 truncate">{obs.conditions}</span>
+            <span className="text-xs sm:text-sm text-slate-400 truncate">{obs.conditions}</span>
           </div>
           {obs.windSpeed !== null && (
-            <p className="text-xs text-slate-500 mt-1">Wind: {obs.windSpeed} mph</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Wind: {obs.windSpeed} mph</p>
           )}
         </div>
       )}
 
       {/* Accumulation Data */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-xl font-semibold text-blue-400">
-            {city.forecast.snowfall > 0 ? `${city.forecast.snowfall.toFixed(2)}"` : '-'}
+          <p className="text-lg sm:text-xl font-semibold text-blue-400">
+            {city.forecast?.snowfall > 0 ? `${city.forecast.snowfall.toFixed(2)}"` : '-'}
           </p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow Fcst</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
+            Snow {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
+          </p>
         </div>
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-xl font-semibold text-purple-400">
-            {city.forecast.ice > 0 ? `${city.forecast.ice.toFixed(2)}"` : '-'}
+          <p className="text-lg sm:text-xl font-semibold text-purple-400">
+            {city.forecast?.ice > 0 ? `${city.forecast.ice.toFixed(2)}"` : '-'}
           </p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice Fcst</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
+            Ice {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
+          </p>
         </div>
       </div>
 
-      {/* Observed vs Forecast indicator */}
-      {(city.observed.snowfall > 0 || city.observed.ice > 0) && (
-        <div className="flex items-center gap-2 text-xs text-slate-500 border-t border-slate-700/50 pt-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>
-            Observed: {city.observed.snowfall.toFixed(2)}" snow, {city.observed.ice.toFixed(2)}" ice
-          </span>
+      {/* Observed totals (during/after storm) */}
+      {isActive && hasObserved && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 mb-2 sm:mb-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="text-[10px] text-emerald-400 font-medium uppercase">Actual Totals</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="text-slate-300">
+              Snow: <span className="text-emerald-400 font-semibold">{city.observed.snowfall.toFixed(2)}"</span>
+            </div>
+            <div className="text-slate-300">
+              Ice: <span className="text-emerald-400 font-semibold">{city.observed.ice.toFixed(2)}"</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Forecast conditions */}
+      {/* Forecast badge for pre-storm */}
+      {stormPhase === 'pre-storm' && (
+        <div className="flex items-center gap-1.5 text-[10px] text-amber-400/70 mb-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+          <span>Forecast data</span>
+        </div>
+      )}
+
+      {/* Forecast conditions (if no live obs) */}
       {!obs && city.conditions?.shortForecast && (
-        <div className="text-sm text-slate-400 border-t border-slate-700/50 pt-2">
+        <div className="text-xs sm:text-sm text-slate-400 border-t border-slate-700/50 pt-2">
           <p className="truncate">{city.conditions.shortForecast}</p>
           {city.conditions.temperature && (
-            <p className="text-slate-500 text-xs">
+            <p className="text-slate-500 text-[10px] sm:text-xs">
               {city.conditions.temperature}°{city.conditions.temperatureUnit}
             </p>
           )}
@@ -100,13 +136,13 @@ function CityCard({ city }) {
       )}
 
       {city.error && (
-        <p className="text-[10px] text-red-400/70 mt-2">Data may be incomplete</p>
+        <p className="text-[9px] sm:text-[10px] text-red-400/70 mt-2">Data may be incomplete</p>
       )}
     </div>
   );
 }
 
-export default function CityCards({ weatherData }) {
+export default function CityCards({ weatherData, stormPhase = 'pre-storm' }) {
   const cities = Object.values(weatherData);
 
   if (cities.length === 0) {
@@ -118,9 +154,9 @@ export default function CityCards({ weatherData }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
       {cities.map(city => (
-        <CityCard key={city.id} city={city} />
+        <CityCard key={city.id} city={city} stormPhase={stormPhase} />
       ))}
     </div>
   );
