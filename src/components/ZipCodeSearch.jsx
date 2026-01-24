@@ -332,7 +332,7 @@ export default function ZipCodeSearch({ stormPhase }) {
       {/* Input Section */}
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Check your location's forecast
+          Check Location
         </label>
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
           <input
