@@ -535,13 +535,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             >
               {showRadar ? '✓ Radar On' : 'Show Radar'}
             </button>
-            <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-lg border font-medium ${
-              stormPhase === 'pre-storm'
-                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-            }`}>
-              {stormPhase === 'pre-storm' ? 'Forecast Mode' : 'Live Tracking'}
-            </span>
           </div>
         </div>
 
@@ -566,7 +559,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <span className="w-3 h-3 rounded bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"></span> Radar
             </span>
           )}
-          <span className="ml-auto text-slate-500 hidden sm:inline">Hover markers for details</span>
+          <span className="ml-auto text-slate-500 hidden sm:inline">
+              Hover markers for details
+              {stormPhase !== 'pre-storm' && <span className="text-emerald-400 ml-2">• Live Tracking</span>}
+            </span>
         </div>
       </div>
 

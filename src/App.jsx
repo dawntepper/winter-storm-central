@@ -3,6 +3,7 @@ import { useWeatherData } from './hooks/useWeatherData';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import DualLeaderboard from './components/DualLeaderboard';
+import AccumulationsTable from './components/AccumulationsTable';
 import CityCards from './components/CityCards';
 import StormMap from './components/StormMap';
 
@@ -273,17 +274,37 @@ export default function App() {
             />
           </div>
 
-          {/* Right: Leaderboards stacked vertically */}
+          {/* Right: Leaderboards/Accumulations stacked vertically */}
           <div className="flex flex-col gap-4 lg:gap-5">
-            <DualLeaderboard
-              snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
-              iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-              observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
-              observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
-              stormPhase={stormPhase}
-              userLocations={userLocations}
-              stackedLayout
-            />
+            {/* Show Accumulations Table during active/post-storm, Leaderboards during pre-storm */}
+            {stormPhase === 'pre-storm' ? (
+              <DualLeaderboard
+                snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
+                iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
+                observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
+                observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
+                stormPhase={stormPhase}
+                userLocations={userLocations}
+                stackedLayout
+              />
+            ) : (
+              <>
+                <AccumulationsTable
+                  weatherData={showOnlyUserLocations ? {} : weatherData}
+                  userLocations={userLocations}
+                  stormPhase={stormPhase}
+                />
+                <DualLeaderboard
+                  snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
+                  iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
+                  observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
+                  observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
+                  stormPhase={stormPhase}
+                  userLocations={userLocations}
+                  stackedLayout
+                />
+              </>
+            )}
           </div>
         </section>
 
