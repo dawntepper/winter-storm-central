@@ -169,8 +169,6 @@ function UserLocationCard({ data, onRemove, stormPhase }) {
   const colors = hazardColors[data.hazardType] || hazardColors.none;
   const hazard = hazardLabels[data.hazardType] || hazardLabels.none;
   const danger = dangerBadges[data.iceDanger];
-  const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
-  const hasObserved = (data.observed?.snowfall > 0) || (data.observed?.ice > 0);
 
   return (
     <div className={`rounded-xl p-4 border-2 ${colors} relative`}>
@@ -192,76 +190,80 @@ function UserLocationCard({ data, onRemove, stormPhase }) {
         </svg>
       </button>
 
-      {/* Header */}
-      <div className="flex justify-between items-start mb-3 mt-2">
-        <div className="min-w-0 flex-1 pr-6">
-          <h3 className="text-base font-semibold text-white truncate">{data.name}</h3>
-          <span className={`text-xs font-medium ${hazard.class}`}>{hazard.text}</span>
+      {/* Main content - horizontal layout on larger screens */}
+      <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:gap-6">
+        {/* Left: City info */}
+        <div className="flex items-center gap-3 mb-3 lg:mb-0 lg:min-w-[200px]">
+          <div>
+            <h3 className="text-lg font-semibold text-white">{data.name}</h3>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-medium ${hazard.class}`}>{hazard.text}</span>
+              {danger && (
+                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${danger.class}`}>
+                  {danger.label}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        {danger && (
-          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded flex-shrink-0 ${danger.class}`}>
-            {danger.label}
-          </span>
+
+        {/* Center: Expected totals */}
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span className="text-[10px] text-slate-500 font-medium uppercase">Expected</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-900/30 rounded-lg p-3 text-center">
+              <p className="text-2xl font-semibold text-sky-300">
+                {data.forecast?.snowfall > 0 ? `${data.forecast.snowfall.toFixed(2)}"` : '-'}
+              </p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow</p>
+            </div>
+            <div className="bg-slate-900/30 rounded-lg p-3 text-center">
+              <p className="text-2xl font-semibold text-fuchsia-400">
+                {data.forecast?.ice > 0 ? `${data.forecast.ice.toFixed(2)}"` : '-'}
+              </p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Accumulations */}
+        <div className="flex-1 mt-3 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-700/50 lg:pl-6">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="text-[10px] text-slate-500 font-medium uppercase">Accumulations</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-semibold text-emerald-400">
+                {data.observed?.snowfall > 0 ? `${data.observed.snowfall.toFixed(2)}"` : '-'}
+              </p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow</p>
+            </div>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-semibold text-emerald-400">
+                {data.observed?.ice > 0 ? `${data.observed.ice.toFixed(2)}"` : '-'}
+              </p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Far right: Current conditions */}
+        {data.conditions?.shortForecast && (
+          <div className="mt-3 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-700/50 lg:pl-6 lg:min-w-[150px]">
+            <p className="text-[10px] text-slate-500 font-medium uppercase mb-1">Conditions</p>
+            <p className="text-sm text-slate-300">{data.conditions.shortForecast}</p>
+            {data.conditions.temperature && (
+              <p className="text-lg font-semibold text-white mt-1">
+                {data.conditions.temperature}°{data.conditions.temperatureUnit}
+              </p>
+            )}
+          </div>
         )}
       </div>
-
-      {/* Accumulation Data */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-xl font-semibold text-sky-300">
-            {data.forecast?.snowfall > 0 ? `${data.forecast.snowfall.toFixed(2)}"` : '-'}
-          </p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">
-            Snow {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
-          </p>
-        </div>
-        <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-xl font-semibold text-fuchsia-400">
-            {data.forecast?.ice > 0 ? `${data.forecast.ice.toFixed(2)}"` : '-'}
-          </p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">
-            Ice {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
-          </p>
-        </div>
-      </div>
-
-      {/* Observed totals */}
-      {isActive && hasObserved && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 mb-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-[10px] text-emerald-400 font-medium uppercase">Actual Totals</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="text-slate-300">
-              Snow: <span className="text-emerald-400 font-semibold">{data.observed.snowfall.toFixed(2)}"</span>
-            </div>
-            <div className="text-slate-300">
-              Ice: <span className="text-emerald-400 font-semibold">{data.observed.ice.toFixed(2)}"</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Forecast badge */}
-      {stormPhase === 'pre-storm' && (
-        <div className="flex items-center gap-1.5 text-[10px] text-amber-400/70 mb-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span>Forecast data</span>
-        </div>
-      )}
-
-      {/* Conditions */}
-      {data.conditions?.shortForecast && (
-        <div className="text-sm text-slate-400 border-t border-slate-700/50 pt-2">
-          <p className="truncate">{data.conditions.shortForecast}</p>
-          {data.conditions.temperature && (
-            <p className="text-slate-500 text-xs">
-              {data.conditions.temperature}°{data.conditions.temperatureUnit}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -326,52 +328,48 @@ export default function ZipCodeSearch({ stormPhase }) {
   };
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        {/* Input Section */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Check your location's forecast
-          </label>
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-              type="text"
-              value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              placeholder="Enter zip code"
-              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors"
-              maxLength={5}
-            />
-            <button
-              type="submit"
-              disabled={loading || zip.length !== 5}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                </span>
-              ) : (
-                'Search'
-              )}
-            </button>
-          </form>
-          {error && (
-            <p className="text-red-400 text-xs mt-2">{error}</p>
-          )}
-        </div>
-
-        {/* Result Card */}
-        {locationData && (
-          <div className="sm:w-80">
-            <UserLocationCard
-              data={locationData}
-              onRemove={handleRemove}
-              stormPhase={stormPhase}
-            />
-          </div>
+    <div className="space-y-4">
+      {/* Input Section */}
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Check your location's forecast
+        </label>
+        <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
+          <input
+            type="text"
+            value={zip}
+            onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+            placeholder="Enter zip code"
+            className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors"
+            maxLength={5}
+          />
+          <button
+            type="submit"
+            disabled={loading || zip.length !== 5}
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              </span>
+            ) : (
+              'Search'
+            )}
+          </button>
+        </form>
+        {error && (
+          <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
       </div>
+
+      {/* Result Card - Full Width */}
+      {locationData && (
+        <UserLocationCard
+          data={locationData}
+          onRemove={handleRemove}
+          stormPhase={stormPhase}
+        />
+      )}
     </div>
   );
 }
