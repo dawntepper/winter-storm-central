@@ -485,7 +485,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   };
 
   return (
-    <div className={`bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`} style={{ overflow: 'visible' }}>
+    <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
@@ -561,7 +561,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
-      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`} style={{ overflow: 'visible' }}>
+      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         <MapContainer
           center={CENTER}
           zoom={ZOOM}
@@ -625,24 +625,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           border-radius: 10px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05);
           padding: 8px;
-          z-index: 9999 !important;
         }
         .leaflet-tooltip.enhanced-tooltip::before {
           border-top-color: white;
-        }
-        /* Allow tooltips to overflow map container */
-        .leaflet-container {
-          overflow: visible !important;
-        }
-        .leaflet-pane {
-          overflow: visible !important;
-        }
-        .leaflet-map-pane {
-          overflow: visible !important;
-        }
-        .leaflet-tooltip-pane {
-          overflow: visible !important;
-          z-index: 9999 !important;
         }
         .city-label-wrapper {
           background: transparent !important;
