@@ -197,66 +197,6 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-// Smart tooltip component that repositions based on map edges
-function SmartTooltip({ children, position }) {
-  const map = useMap();
-  const [tooltipDirection, setTooltipDirection] = useState('top');
-  const [tooltipOffset, setTooltipOffset] = useState([0, -15]);
-
-  useEffect(() => {
-    const updatePosition = () => {
-      if (!map || !position) return;
-
-      const containerPoint = map.latLngToContainerPoint(position);
-      const containerSize = map.getSize();
-
-      const marginTop = 120; // Space needed for tooltip above
-      const marginBottom = 120;
-      const marginSide = 100;
-
-      let direction = 'top';
-      let offset = [0, -15];
-
-      // Check if too close to top
-      if (containerPoint.y < marginTop) {
-        direction = 'bottom';
-        offset = [0, 15];
-      }
-      // Check if too close to bottom
-      else if (containerPoint.y > containerSize.y - marginBottom) {
-        direction = 'top';
-        offset = [0, -15];
-      }
-
-      // Check horizontal edges
-      if (containerPoint.x < marginSide) {
-        direction = 'right';
-        offset = [15, 0];
-      } else if (containerPoint.x > containerSize.x - marginSide) {
-        direction = 'left';
-        offset = [-15, 0];
-      }
-
-      setTooltipDirection(direction);
-      setTooltipOffset(offset);
-    };
-
-    updatePosition();
-    map.on('move zoom', updatePosition);
-    return () => map.off('move zoom', updatePosition);
-  }, [map, position]);
-
-  return (
-    <Tooltip
-      direction={tooltipDirection}
-      offset={tooltipOffset}
-      opacity={0.98}
-      className="enhanced-tooltip"
-    >
-      {children}
-    </Tooltip>
-  );
-}
 
 // Enhanced city marker with glow effect
 function CityMarker({ city, stormPhase }) {
@@ -312,7 +252,12 @@ function CityMarker({ city, stormPhase }) {
           mouseout: () => setIsHovered(false)
         }}
       >
-        <SmartTooltip position={position}>
+        <Tooltip
+          direction="top"
+          offset={[0, -15]}
+          opacity={0.98}
+          className="enhanced-tooltip"
+        >
           <div className="min-w-[180px] p-1">
             {/* City name header */}
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200">
@@ -387,7 +332,7 @@ function CityMarker({ city, stormPhase }) {
               </div>
             )}
           </div>
-        </SmartTooltip>
+        </Tooltip>
       </CircleMarker>
 
       {/* City label */}
@@ -452,7 +397,7 @@ function UserLocationMarker({ location, stormPhase }) {
           mouseout: () => setIsHovered(false)
         }}
       >
-        <SmartTooltip position={position}>
+        <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
           <div className="min-w-[180px] p-1">
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
               <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
@@ -511,7 +456,7 @@ function UserLocationMarker({ location, stormPhase }) {
               )}
             </div>
           </div>
-        </SmartTooltip>
+        </Tooltip>
       </CircleMarker>
 
       {/* City label */}
@@ -540,7 +485,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   };
 
   return (
-    <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
+    <div className={`bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`} style={{ overflow: 'visible' }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
@@ -616,7 +561,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
-      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`} style={{ overflow: 'visible' }}>
         <MapContainer
           center={CENTER}
           zoom={ZOOM}
@@ -680,9 +625,24 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           border-radius: 10px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05);
           padding: 8px;
+          z-index: 9999 !important;
         }
         .leaflet-tooltip.enhanced-tooltip::before {
           border-top-color: white;
+        }
+        /* Allow tooltips to overflow map container */
+        .leaflet-container {
+          overflow: visible !important;
+        }
+        .leaflet-pane {
+          overflow: visible !important;
+        }
+        .leaflet-map-pane {
+          overflow: visible !important;
+        }
+        .leaflet-tooltip-pane {
+          overflow: visible !important;
+          z-index: 9999 !important;
         }
         .city-label-wrapper {
           background: transparent !important;
