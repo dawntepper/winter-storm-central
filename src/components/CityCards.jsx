@@ -117,17 +117,9 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
       {/* Accumulation Data - Actual */}
       <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
         <div className={`rounded-lg p-2 text-center ${hasObserved ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
-          {actualSnow > 0 ? (
-            <p className="text-lg sm:text-xl font-semibold text-emerald-400">
-              {actualSnow.toFixed(1)}"
-            </p>
-          ) : isActive && city.forecast?.snowfall > 0 ? (
-            <p className="text-sm sm:text-base font-medium text-amber-400/70 italic">
-              Accum...
-            </p>
-          ) : (
-            <p className="text-lg sm:text-xl font-semibold text-slate-600">-</p>
-          )}
+          <p className={`text-lg sm:text-xl font-semibold ${actualSnow > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+            {actualSnow > 0 ? `${actualSnow.toFixed(1)}"` : '-'}
+          </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
             Snow Actual
             {hasStationData && obs?.isRecent && actualSnow > 0 && (
@@ -136,17 +128,9 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
           </p>
         </div>
         <div className={`rounded-lg p-2 text-center ${actualIce > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
-          {actualIce > 0 ? (
-            <p className="text-lg sm:text-xl font-semibold text-emerald-400">
-              {actualIce.toFixed(2)}"
-            </p>
-          ) : isActive && city.forecast?.ice > 0 ? (
-            <p className="text-sm sm:text-base font-medium text-amber-400/70 italic">
-              Accum...
-            </p>
-          ) : (
-            <p className="text-lg sm:text-xl font-semibold text-slate-600">-</p>
-          )}
+          <p className={`text-lg sm:text-xl font-semibold ${actualIce > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+            {actualIce > 0 ? `${actualIce.toFixed(2)}"` : '-'}
+          </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
             Ice Actual
           </p>

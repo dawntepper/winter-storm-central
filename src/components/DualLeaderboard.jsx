@@ -1,5 +1,4 @@
 function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, compact = false }) {
-  const isStormActive = stormPhase === 'active';
   // Combine forecast cities with user locations (always include if added to map)
   let displayCities = [...cities];
 
@@ -76,19 +75,13 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                     {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
                   </span>
                   <div className="w-16 text-right">
-                    {actual > 0 ? (
-                      <>
-                        <span className="text-sm sm:text-base font-semibold text-emerald-400">
-                          {actual.toFixed(1)}"
-                        </span>
-                        {hasStationData && isRecent && (
-                          <span className="block text-[8px] text-emerald-500">Live</span>
-                        )}
-                      </>
-                    ) : isStormActive && forecast > 0 ? (
-                      <span className="text-[10px] sm:text-xs text-amber-400/70 italic">Accum...</span>
-                    ) : (
-                      <span className="text-sm sm:text-base font-semibold text-slate-600">-</span>
+                    <span className={`text-sm sm:text-base font-semibold ${
+                      actual > 0 ? 'text-emerald-400' : 'text-slate-600'
+                    }`}>
+                      {actual > 0 ? `${actual.toFixed(1)}"` : '-'}
+                    </span>
+                    {hasStationData && isRecent && actual > 0 && (
+                      <span className="block text-[8px] text-emerald-500">Live</span>
                     )}
                   </div>
                 </div>
@@ -102,7 +95,6 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
 }
 
 function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = false }) {
-  const isStormActive = stormPhase === 'active';
   let displayCities = [...cities];
 
   // Add all user locations that aren't already in the list
@@ -184,17 +176,11 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
                   <span className="w-16 text-right text-sm sm:text-base font-semibold text-fuchsia-400">
                     {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
                   </span>
-                  <div className="w-16 text-right">
-                    {actual > 0 ? (
-                      <span className="text-sm sm:text-base font-semibold text-emerald-400">
-                        {actual.toFixed(2)}"
-                      </span>
-                    ) : isStormActive && forecast > 0 ? (
-                      <span className="text-[10px] sm:text-xs text-amber-400/70 italic">Accum...</span>
-                    ) : (
-                      <span className="text-sm sm:text-base font-semibold text-slate-600">-</span>
-                    )}
-                  </div>
+                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
+                    actual > 0 ? 'text-emerald-400' : 'text-slate-600'
+                  }`}>
+                    {actual > 0 ? `${actual.toFixed(2)}"` : '-'}
+                  </span>
                 </div>
               </div>
             );
