@@ -223,6 +223,18 @@ export default function App() {
       />
 
       <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* SEO Header Section */}
+        <header className="text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
+            Winter Storm Fern Tracker - Live Updates
+          </h1>
+          <p className="text-sm sm:text-base text-slate-400 max-w-3xl">
+            Track Winter Storm Fern affecting 180M+ Americans across the Eastern US (Jan 24-26, 2026).
+            Real-time NOAA data showing snow accumulation, ice danger, and live radar.
+            Monitor your family's locations with custom tracking.
+          </p>
+        </header>
+
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={isStale} lastSuccessfulUpdate={lastSuccessfulUpdate} error={error && hasData ? error : null} />
 
