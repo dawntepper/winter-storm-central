@@ -46,6 +46,8 @@ function ErrorState({ error, onRetry }) {
 }
 
 function StormAlert({ stormPhase }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   const alerts = {
     'pre-storm': {
       title: 'Winter Storm Fern Alert',
@@ -73,19 +75,36 @@ function StormAlert({ stormPhase }) {
   const alert = alerts[stormPhase] || alerts['pre-storm'];
 
   return (
-    <div className={`border rounded-xl p-3 sm:p-4 ${alert.class}`}>
-      <div className="flex items-start gap-3">
-        <span className={`text-lg sm:text-xl ${alert.iconColor} flex-shrink-0`} dangerouslySetInnerHTML={{ __html: alert.icon }} />
-        <div className="min-w-0">
-          <h2 className="text-sm sm:text-base font-semibold text-white mb-1">{alert.title}</h2>
-          <p className="text-xs sm:text-sm text-slate-200">{alert.message}</p>
-          <p className="text-[10px] sm:text-xs text-slate-400 mt-2">
-            Data updates every 30 minutes from NOAA. Always check{' '}
-            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-            {' '}and local emergency alerts for official guidance.
-          </p>
+    <div className={`border rounded-xl ${alert.class} overflow-hidden`}>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className={`text-lg sm:text-xl ${alert.iconColor} flex-shrink-0`} dangerouslySetInnerHTML={{ __html: alert.icon }} />
+          <h2 className="text-sm sm:text-base font-semibold text-white">{alert.title}</h2>
         </div>
-      </div>
+        <svg
+          className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isExpanded && (
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
+          <div className="pl-8 sm:pl-10">
+            <p className="text-xs sm:text-sm text-slate-200">{alert.message}</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-2">
+              Data updates every 30 minutes from NOAA. Always check{' '}
+              <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+              {' '}and local emergency alerts for official guidance.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -179,6 +198,7 @@ export default function App() {
   } = useWeatherData();
 
   const [userLocations, setUserLocations] = useState([]);
+  const [showOnlyUserLocations, setShowOnlyUserLocations] = useState(false);
 
   const hasData = Object.keys(weatherData).length > 0;
 
@@ -208,12 +228,44 @@ export default function App() {
         {/* Storm Alert */}
         <StormAlert stormPhase={stormPhase} />
 
+        {/* Location Search - moved to top */}
+        <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setUserLocations} />
+
+        {/* View Toggle */}
+        {userLocations.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400">View:</span>
+            <div className="flex rounded-lg overflow-hidden border border-slate-700">
+              <button
+                onClick={() => setShowOnlyUserLocations(false)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  !showOnlyUserLocations
+                    ? 'bg-sky-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                All Locations
+              </button>
+              <button
+                onClick={() => setShowOnlyUserLocations(true)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  showOnlyUserLocations
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                My Locations ({userLocations.length})
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Main Grid: Map + Leaderboards side-by-side on desktop */}
         <section className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
           {/* Left: Storm Map */}
           <div className="lg:min-h-[600px]">
             <StormMap
-              weatherData={weatherData}
+              weatherData={showOnlyUserLocations ? {} : weatherData}
               stormPhase={stormPhase}
               userLocations={userLocations}
               isHero
@@ -224,19 +276,16 @@ export default function App() {
           {/* Right: Leaderboards stacked vertically */}
           <div className="flex flex-col gap-4 lg:gap-5">
             <DualLeaderboard
-              snowLeaderboard={getSnowLeaderboard()}
-              iceLeaderboard={getIceLeaderboard()}
-              observedSnowLeaderboard={getObservedSnowLeaderboard()}
-              observedIceLeaderboard={getObservedIceLeaderboard()}
+              snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
+              iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
+              observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
+              observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
               stormPhase={stormPhase}
               userLocations={userLocations}
               stackedLayout
             />
           </div>
         </section>
-
-        {/* Zip Code Search */}
-        <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setUserLocations} />
 
         {/* Prominent Forecast Banner */}
         <ForecastBanner stormPhase={stormPhase} />
@@ -246,7 +295,12 @@ export default function App() {
 
         {/* City Cards - Full Width */}
         <section>
-          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} userLocations={userLocations} />
+          <CityCards
+            cities={showOnlyUserLocations ? [] : getCitiesGeoOrdered()}
+            stormPhase={stormPhase}
+            userLocations={userLocations}
+            showOnlyUserLocations={showOnlyUserLocations}
+          />
         </section>
 
         {/* Footer */}

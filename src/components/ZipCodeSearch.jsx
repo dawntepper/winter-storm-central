@@ -2,6 +2,166 @@ import { useState, useEffect } from 'react';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
+// States and cities in the storm-affected region
+const STATES_AND_CITIES = {
+  'TX': {
+    name: 'Texas',
+    cities: [
+      { name: 'Dallas', lat: 32.7767, lon: -96.7970 },
+      { name: 'Fort Worth', lat: 32.7555, lon: -97.3308 },
+      { name: 'Austin', lat: 30.2672, lon: -97.7431 },
+      { name: 'Houston', lat: 29.7604, lon: -95.3698 },
+      { name: 'San Antonio', lat: 29.4241, lon: -98.4936 },
+    ]
+  },
+  'TN': {
+    name: 'Tennessee',
+    cities: [
+      { name: 'Memphis', lat: 35.1495, lon: -90.0490 },
+      { name: 'Nashville', lat: 36.1627, lon: -86.7816 },
+      { name: 'Knoxville', lat: 35.9606, lon: -83.9207 },
+      { name: 'Chattanooga', lat: 35.0456, lon: -85.3097 },
+    ]
+  },
+  'GA': {
+    name: 'Georgia',
+    cities: [
+      { name: 'Atlanta', lat: 33.7490, lon: -84.3880 },
+      { name: 'Savannah', lat: 32.0809, lon: -81.0912 },
+      { name: 'Augusta', lat: 33.4735, lon: -82.0105 },
+      { name: 'Macon', lat: 32.8407, lon: -83.6324 },
+    ]
+  },
+  'NC': {
+    name: 'North Carolina',
+    cities: [
+      { name: 'Raleigh', lat: 35.7796, lon: -78.6382 },
+      { name: 'Charlotte', lat: 35.2271, lon: -80.8431 },
+      { name: 'Greensboro', lat: 36.0726, lon: -79.7920 },
+      { name: 'Durham', lat: 35.9940, lon: -78.8986 },
+      { name: 'Wilmington', lat: 34.2257, lon: -77.9447 },
+    ]
+  },
+  'SC': {
+    name: 'South Carolina',
+    cities: [
+      { name: 'Columbia', lat: 34.0007, lon: -81.0348 },
+      { name: 'Charleston', lat: 32.7765, lon: -79.9311 },
+      { name: 'Greenville', lat: 34.8526, lon: -82.3940 },
+    ]
+  },
+  'VA': {
+    name: 'Virginia',
+    cities: [
+      { name: 'Richmond', lat: 37.5407, lon: -77.4360 },
+      { name: 'Virginia Beach', lat: 36.8529, lon: -75.9780 },
+      { name: 'Norfolk', lat: 36.8508, lon: -76.2859 },
+      { name: 'Arlington', lat: 38.8816, lon: -77.0910 },
+    ]
+  },
+  'DC': {
+    name: 'Washington DC',
+    cities: [
+      { name: 'Washington', lat: 38.9072, lon: -77.0369 },
+    ]
+  },
+  'MD': {
+    name: 'Maryland',
+    cities: [
+      { name: 'Baltimore', lat: 39.2904, lon: -76.6122 },
+      { name: 'Bethesda', lat: 38.9847, lon: -77.0947 },
+      { name: 'Rockville', lat: 39.0840, lon: -77.1528 },
+      { name: 'Annapolis', lat: 38.9784, lon: -76.4922 },
+    ]
+  },
+  'PA': {
+    name: 'Pennsylvania',
+    cities: [
+      { name: 'Philadelphia', lat: 39.9526, lon: -75.1652 },
+      { name: 'Pittsburgh', lat: 40.4406, lon: -79.9959 },
+      { name: 'Harrisburg', lat: 40.2732, lon: -76.8867 },
+      { name: 'Allentown', lat: 40.6084, lon: -75.4902 },
+    ]
+  },
+  'NJ': {
+    name: 'New Jersey',
+    cities: [
+      { name: 'Newark', lat: 40.7357, lon: -74.1724 },
+      { name: 'Jersey City', lat: 40.7178, lon: -74.0431 },
+      { name: 'Trenton', lat: 40.2206, lon: -74.7597 },
+      { name: 'Atlantic City', lat: 39.3643, lon: -74.4229 },
+    ]
+  },
+  'NY': {
+    name: 'New York',
+    cities: [
+      { name: 'New York City', lat: 40.7128, lon: -74.0060 },
+      { name: 'Buffalo', lat: 42.8864, lon: -78.8784 },
+      { name: 'Albany', lat: 42.6526, lon: -73.7562 },
+      { name: 'Syracuse', lat: 43.0481, lon: -76.1474 },
+      { name: 'Rochester', lat: 43.1566, lon: -77.6088 },
+    ]
+  },
+  'CT': {
+    name: 'Connecticut',
+    cities: [
+      { name: 'Hartford', lat: 41.7658, lon: -72.6734 },
+      { name: 'New Haven', lat: 41.3083, lon: -72.9279 },
+      { name: 'Stamford', lat: 41.0534, lon: -73.5387 },
+    ]
+  },
+  'MA': {
+    name: 'Massachusetts',
+    cities: [
+      { name: 'Boston', lat: 42.3601, lon: -71.0589 },
+      { name: 'Worcester', lat: 42.2626, lon: -71.8023 },
+      { name: 'Springfield', lat: 42.1015, lon: -72.5898 },
+      { name: 'Cambridge', lat: 42.3736, lon: -71.1097 },
+    ]
+  },
+  'OH': {
+    name: 'Ohio',
+    cities: [
+      { name: 'Columbus', lat: 39.9612, lon: -82.9988 },
+      { name: 'Cleveland', lat: 41.4993, lon: -81.6944 },
+      { name: 'Cincinnati', lat: 39.1031, lon: -84.5120 },
+      { name: 'Toledo', lat: 41.6528, lon: -83.5379 },
+    ]
+  },
+  'IN': {
+    name: 'Indiana',
+    cities: [
+      { name: 'Indianapolis', lat: 39.7684, lon: -86.1581 },
+      { name: 'Fort Wayne', lat: 41.0793, lon: -85.1394 },
+      { name: 'Evansville', lat: 37.9716, lon: -87.5711 },
+    ]
+  },
+  'MO': {
+    name: 'Missouri',
+    cities: [
+      { name: 'St. Louis', lat: 38.6270, lon: -90.1994 },
+      { name: 'Kansas City', lat: 39.0997, lon: -94.5786 },
+      { name: 'Springfield', lat: 37.2090, lon: -93.2923 },
+    ]
+  },
+  'KY': {
+    name: 'Kentucky',
+    cities: [
+      { name: 'Louisville', lat: 38.2527, lon: -85.7585 },
+      { name: 'Lexington', lat: 38.0406, lon: -84.5037 },
+      { name: 'Bowling Green', lat: 36.9685, lon: -86.4808 },
+    ]
+  },
+  'WV': {
+    name: 'West Virginia',
+    cities: [
+      { name: 'Charleston', lat: 38.3498, lon: -81.6326 },
+      { name: 'Huntington', lat: 38.4192, lon: -82.4452 },
+      { name: 'Morgantown', lat: 39.6295, lon: -79.9559 },
+    ]
+  },
+};
+
 // Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
 async function getCoordinatesFromZip(zip) {
   const url = `https://api.zippopotam.us/us/${zip}`;
@@ -167,7 +327,7 @@ const dangerBadges = {
   safe: null
 };
 
-function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, stormPhase }) {
+function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
   const colors = hazardColors[data.hazardType] || hazardColors.none;
   const hazard = hazardLabels[data.hazardType] || hazardLabels.none;
   const danger = dangerBadges[data.iceDanger];
@@ -181,16 +341,27 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, stormPhase }) 
         </span>
       </div>
 
-      {/* Remove button */}
-      <button
-        onClick={onRemove}
-        className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition-colors"
-        title="Remove location"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {/* Action buttons */}
+      <div className="absolute top-3 right-3 flex items-center gap-2">
+        {isOnMap && onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="text-slate-500 hover:text-slate-300 transition-colors text-xs"
+            title="Close card (stays on map)"
+          >
+            Close
+          </button>
+        )}
+        <button
+          onClick={onRemove}
+          className="text-slate-500 hover:text-red-400 transition-colors"
+          title="Remove location"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       {/* Main content - horizontal layout on larger screens */}
       <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:gap-6">
@@ -285,12 +456,16 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, stormPhase }) 
 
 export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   const [zip, setZip] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [searchMode, setSearchMode] = useState('city'); // 'city' or 'zip'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentLocationData, setCurrentLocationData] = useState(null);
+  const [isCardDismissed, setIsCardDismissed] = useState(false);
 
   // Store all saved locations with their map visibility
-  const [savedLocations, setSavedLocations] = useState({}); // { zip: { data, onMap } }
+  const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
 
   // Load saved locations on mount
   useEffect(() => {
@@ -330,6 +505,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   const fetchLocationWeather = async (zipCode) => {
     setLoading(true);
     setError(null);
+    setIsCardDismissed(false);
 
     try {
       console.log('Looking up zip code:', zipCode);
@@ -359,6 +535,40 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
     }
   };
 
+  const fetchCityWeather = async (stateCode, cityData) => {
+    setLoading(true);
+    setError(null);
+    setIsCardDismissed(false);
+
+    const cityId = `${cityData.name}-${stateCode}`.toLowerCase().replace(/\s+/g, '-');
+    const cityName = `${cityData.name}, ${stateCode}`;
+
+    try {
+      console.log('Looking up city:', cityName);
+      const weather = await fetchWeatherForLocation(cityData.lat, cityData.lon, cityName, cityId);
+      weather.id = `user-${cityId}`;
+      console.log('Got weather data:', weather);
+
+      setCurrentLocationData(weather);
+
+      // Check if this city already exists in saved locations
+      const existingLocation = savedLocations[cityId];
+      if (existingLocation) {
+        const newLocations = {
+          ...savedLocations,
+          [cityId]: { ...existingLocation, data: weather }
+        };
+        updateSavedLocations(newLocations);
+      }
+    } catch (err) {
+      console.error('City search error:', err);
+      setError(err.message || 'Failed to fetch weather data');
+      setCurrentLocationData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleanZip = zip.trim();
@@ -371,21 +581,22 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
     fetchLocationWeather(cleanZip);
   };
 
-  const handleToggleMap = (zipCode, checked) => {
-    const locationData = zipCode === currentLocationData?.zip
+  const handleToggleMap = (locationId, checked) => {
+    const locationData = (currentLocationData?.zip === locationId || currentLocationData?.id === `user-${locationId}`)
       ? currentLocationData
-      : savedLocations[zipCode]?.data;
+      : savedLocations[locationId]?.data;
 
     if (!locationData) return;
 
     const newLocations = {
       ...savedLocations,
-      [zipCode]: { data: locationData, onMap: checked }
+      [locationId]: { data: locationData, onMap: checked }
     };
 
     // If unchecking and it's not the current search, remove it entirely
-    if (!checked && zipCode !== currentLocationData?.zip) {
-      delete newLocations[zipCode];
+    const currentId = currentLocationData?.zip || currentLocationData?.id?.replace('user-', '');
+    if (!checked && locationId !== currentId) {
+      delete newLocations[locationId];
     }
 
     updateSavedLocations(newLocations);
@@ -394,49 +605,136 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   const handleRemove = () => {
     if (!currentLocationData) return;
 
-    const zipCode = currentLocationData.zip;
+    const locationId = currentLocationData.zip || currentLocationData.id?.replace('user-', '');
     const newLocations = { ...savedLocations };
-    delete newLocations[zipCode];
+    delete newLocations[locationId];
 
     updateSavedLocations(newLocations);
     setCurrentLocationData(null);
     setZip('');
+    setSelectedCity('');
   };
 
+  const handleDismissCard = () => {
+    setIsCardDismissed(true);
+  };
+
+  const handleCitySelect = () => {
+    if (!selectedState || !selectedCity) return;
+    const stateData = STATES_AND_CITIES[selectedState];
+    const cityData = stateData?.cities.find(c => c.name === selectedCity);
+    if (cityData) {
+      fetchCityWeather(selectedState, cityData);
+    }
+  };
+
+  const currentLocationId = currentLocationData?.zip || currentLocationData?.id?.replace('user-', '');
   const isCurrentOnMap = currentLocationData
-    ? savedLocations[currentLocationData.zip]?.onMap || false
+    ? savedLocations[currentLocationId]?.onMap || false
     : false;
+
+  const availableCities = selectedState ? STATES_AND_CITIES[selectedState]?.cities || [] : [];
 
   return (
     <div className="space-y-4">
       {/* Input Section */}
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Check Location
-        </label>
-        <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
-          <input
-            type="text"
-            value={zip}
-            onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-            placeholder="Enter zip code"
-            className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors"
-            maxLength={5}
-          />
-          <button
-            type="submit"
-            disabled={loading || zip.length !== 5}
-            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-              </span>
-            ) : (
-              'Search'
-            )}
-          </button>
-        </form>
+        <div className="flex items-center justify-between mb-3">
+          <label className="block text-sm font-medium text-slate-300">
+            Check Your Location
+          </label>
+          {/* Search mode toggle */}
+          <div className="flex rounded-lg overflow-hidden border border-slate-600 text-xs">
+            <button
+              type="button"
+              onClick={() => setSearchMode('city')}
+              className={`px-2.5 py-1 transition-colors ${
+                searchMode === 'city'
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              By City
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode('zip')}
+              className={`px-2.5 py-1 transition-colors ${
+                searchMode === 'zip'
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              By Zip
+            </button>
+          </div>
+        </div>
+
+        {searchMode === 'city' ? (
+          /* City/State dropdowns */
+          <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
+            <select
+              value={selectedState}
+              onChange={(e) => {
+                setSelectedState(e.target.value);
+                setSelectedCity('');
+              }}
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors"
+            >
+              <option value="">Select State</option>
+              {Object.entries(STATES_AND_CITIES).map(([code, state]) => (
+                <option key={code} value={code}>{state.name}</option>
+              ))}
+            </select>
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              disabled={!selectedState}
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors disabled:opacity-50"
+            >
+              <option value="">Select City</option>
+              {availableCities.map((city) => (
+                <option key={city.name} value={city.name}>{city.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleCitySelect}
+              disabled={loading || !selectedState || !selectedCity}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
+              ) : (
+                'Check'
+              )}
+            </button>
+          </div>
+        ) : (
+          /* Zip code input */
+          <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
+            <input
+              type="text"
+              value={zip}
+              onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="Enter zip code"
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors"
+              maxLength={5}
+            />
+            <button
+              type="submit"
+              disabled={loading || zip.length !== 5}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
+              ) : (
+                'Search'
+              )}
+            </button>
+          </form>
+        )}
+
         {error && (
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
@@ -449,13 +747,14 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
         )}
       </div>
 
-      {/* Result Card - Full Width */}
-      {currentLocationData && (
+      {/* Result Card - Full Width, can be dismissed */}
+      {currentLocationData && !isCardDismissed && (
         <UserLocationCard
           data={currentLocationData}
           isOnMap={isCurrentOnMap}
-          onToggleMap={(checked) => handleToggleMap(currentLocationData.zip, checked)}
+          onToggleMap={(checked) => handleToggleMap(currentLocationId, checked)}
           onRemove={handleRemove}
+          onDismiss={handleDismissCard}
           stormPhase={stormPhase}
         />
       )}
