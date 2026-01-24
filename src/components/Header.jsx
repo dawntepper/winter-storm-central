@@ -17,8 +17,8 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
 
   const handleShare = async () => {
     const shareData = {
-      title: 'Winter Storm Central',
-      text: 'Track the major winter storm hitting the Eastern US Jan 24-26, 2026',
+      title: 'Storm Fern Tracker',
+      text: 'Track Winter Storm Fern hitting the Eastern US Jan 24-26, 2026 #WinterStormFern',
       url: window.location.href
     };
 
@@ -48,9 +48,11 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
           <div className="text-2xl sm:text-3xl text-slate-300 flex-shrink-0">&#10052;</div>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-semibold text-white tracking-tight truncate">
-              Winter Storm Central
+              Storm Fern Tracker
             </h1>
             <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1">
+              <span className="text-sky-400 text-xs sm:text-sm font-medium">#WinterStormFern</span>
+              <span className="text-slate-600 hidden xs:inline">|</span>
               <p className="text-slate-400 text-xs sm:text-sm hidden xs:block">
                 Jan 24-26, 2026
               </p>

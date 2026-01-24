@@ -83,7 +83,7 @@ function SnowLeaderboard({ cities, observed, stormPhase, userLocation, maxHeight
           <SortToggle sortBy={sortBy} onSortChange={setSortBy} />
         </div>
         <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
-          Expected for Jan 24-26
+          Storm Fern | Jan 24-26
         </p>
       </div>
 

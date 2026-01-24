@@ -48,22 +48,22 @@ function ErrorState({ error, onRetry }) {
 function StormAlert({ stormPhase }) {
   const alerts = {
     'pre-storm': {
-      title: 'Winter Storm Watch',
-      message: 'A major winter storm is forecast for the Eastern US from January 24-26, 2026. Prepare now for hazardous travel conditions.',
+      title: 'Winter Storm Fern Alert',
+      message: 'Winter Storm Fern is forecast for the Eastern US from January 24-26, 2026. Prepare now for hazardous travel conditions.',
       icon: '&#9888;',
       iconColor: 'text-amber-400',
       class: 'border-amber-500/30 bg-amber-500/5'
     },
     'active': {
-      title: 'Winter Storm Warning',
-      message: 'Winter storm is currently impacting the Eastern US. Avoid travel if possible. Monitor local conditions for updates.',
+      title: 'Winter Storm Fern Warning',
+      message: 'Winter Storm Fern is currently impacting the Eastern US. Avoid travel if possible. Monitor local conditions for updates.',
       icon: '&#9888;',
       iconColor: 'text-red-400',
       class: 'border-red-500/30 bg-red-500/5'
     },
     'post-storm': {
-      title: 'Storm Recovery',
-      message: 'The winter storm has passed. Use caution on roads as crews continue cleanup operations.',
+      title: 'Storm Fern Recovery',
+      message: 'Winter Storm Fern has passed. Use caution on roads as crews continue cleanup operations.',
       icon: '&#10003;',
       iconColor: 'text-slate-400',
       class: 'border-slate-500/30 bg-slate-500/5'
@@ -96,7 +96,7 @@ function ForecastBanner({ stormPhase }) {
           <span className="text-amber-300 font-semibold text-sm sm:text-base">Currently Showing Forecast Data</span>
         </div>
         <p className="text-amber-200/70 text-xs sm:text-sm">
-          Actual accumulation totals will appear once the storm begins on Jan 24
+          Actual accumulation totals will appear once Storm Fern begins on Jan 24
         </p>
       </div>
     </div>
@@ -116,9 +116,9 @@ function DataSourceLegend({ stormPhase }) {
       </div>
       <span className="text-slate-700 hidden sm:inline">|</span>
       <span className="w-full sm:w-auto">
-        {stormPhase === 'pre-storm' && 'Storm begins Jan 24 - showing forecasts'}
-        {stormPhase === 'active' && 'Storm active - tracking actual accumulations'}
-        {stormPhase === 'post-storm' && 'Storm complete - showing final totals'}
+        {stormPhase === 'pre-storm' && 'Storm Fern begins Jan 24 - showing forecasts'}
+        {stormPhase === 'active' && 'Storm Fern active - tracking actual accumulations'}
+        {stormPhase === 'post-storm' && 'Storm Fern complete - showing final totals'}
       </span>
     </div>
   );
