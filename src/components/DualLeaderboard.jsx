@@ -1,4 +1,4 @@
-function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight }) {
+function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, compact = false }) {
   // Combine forecast cities with user locations (always include if added to map)
   let displayCities = [...cities];
 
@@ -14,7 +14,7 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight }) 
   displayCities.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
+    <div className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col ${compact ? 'flex-1' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-sky-300">&#10052;</span> Snow Totals
@@ -34,8 +34,8 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight }) 
       </div>
 
       <div
-        className="divide-y divide-slate-700/50 overflow-y-auto"
-        style={{ maxHeight: maxHeight ? `${maxHeight}px` : 'none' }}
+        className={`divide-y divide-slate-700/50 overflow-y-auto ${compact ? 'flex-1' : ''}`}
+        style={{ maxHeight: !compact && maxHeight ? `${maxHeight}px` : 'none' }}
       >
         {displayCities.length === 0 ? (
           <div className="p-4 text-center text-slate-500 text-sm">
@@ -85,7 +85,7 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight }) 
   );
 }
 
-function IceLeaderboard({ cities, stormPhase, userLocations = [] }) {
+function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = false }) {
   let displayCities = [...cities];
 
   // Add all user locations that aren't already in the list
@@ -106,7 +106,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [] }) {
   };
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+    <div className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden ${compact ? 'flex-1 flex flex-col' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-fuchsia-400">&#9888;</span> Ice Danger Zone
@@ -125,7 +125,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [] }) {
         </div>
       </div>
 
-      <div className="divide-y divide-slate-700/50">
+      <div className={`divide-y divide-slate-700/50 ${compact ? 'flex-1 overflow-y-auto' : ''}`}>
         {displayCities.length === 0 ? (
           <div className="p-4 text-center text-slate-500 text-sm">
             No significant ice forecast
@@ -188,14 +188,36 @@ export default function DualLeaderboard({
   observedSnowLeaderboard = [],
   observedIceLeaderboard = [],
   stormPhase = 'pre-storm',
-  userLocations = []
+  userLocations = [],
+  stackedLayout = false
 }) {
   // Calculate max height for snow leaderboard based on ice leaderboard
   // Each row is roughly 40-48px
   const iceRowHeight = 44;
   const iceMaxItems = Math.min(10, (iceLeaderboard.length || 1) + userLocations.length);
-  const maxHeight = iceMaxItems * iceRowHeight;
+  const maxHeight = stackedLayout ? undefined : iceMaxItems * iceRowHeight;
 
+  // Stacked layout: vertical column for sidebar view
+  if (stackedLayout) {
+    return (
+      <>
+        <SnowLeaderboard
+          cities={snowLeaderboard}
+          stormPhase={stormPhase}
+          userLocations={userLocations}
+          compact
+        />
+        <IceLeaderboard
+          cities={iceLeaderboard}
+          stormPhase={stormPhase}
+          userLocations={userLocations}
+          compact
+        />
+      </>
+    );
+  }
+
+  // Default: side-by-side grid layout
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
       <SnowLeaderboard

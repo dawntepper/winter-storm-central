@@ -201,16 +201,38 @@ export default function App() {
         isStale={isStale}
       />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={isStale} lastSuccessfulUpdate={lastSuccessfulUpdate} error={error && hasData ? error : null} />
 
         {/* Storm Alert */}
         <StormAlert stormPhase={stormPhase} />
 
-        {/* Storm Map - Hero Section */}
-        <section>
-          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocations={userLocations} isHero />
+        {/* Main Grid: Map + Leaderboards side-by-side on desktop */}
+        <section className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
+          {/* Left: Storm Map */}
+          <div className="lg:min-h-[600px]">
+            <StormMap
+              weatherData={weatherData}
+              stormPhase={stormPhase}
+              userLocations={userLocations}
+              isHero
+              isSidebar
+            />
+          </div>
+
+          {/* Right: Leaderboards stacked vertically */}
+          <div className="flex flex-col gap-4 lg:gap-5">
+            <DualLeaderboard
+              snowLeaderboard={getSnowLeaderboard()}
+              iceLeaderboard={getIceLeaderboard()}
+              observedSnowLeaderboard={getObservedSnowLeaderboard()}
+              observedIceLeaderboard={getObservedIceLeaderboard()}
+              stormPhase={stormPhase}
+              userLocations={userLocations}
+              stackedLayout
+            />
+          </div>
         </section>
 
         {/* Zip Code Search */}
@@ -222,19 +244,7 @@ export default function App() {
         {/* Data Source Legend */}
         <DataSourceLegend stormPhase={stormPhase} />
 
-        {/* Leaderboards */}
-        <section>
-          <DualLeaderboard
-            snowLeaderboard={getSnowLeaderboard()}
-            iceLeaderboard={getIceLeaderboard()}
-            observedSnowLeaderboard={getObservedSnowLeaderboard()}
-            observedIceLeaderboard={getObservedIceLeaderboard()}
-            stormPhase={stormPhase}
-            userLocations={userLocations}
-          />
-        </section>
-
-        {/* City Cards */}
+        {/* City Cards - Full Width */}
         <section>
           <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} userLocations={userLocations} />
         </section>

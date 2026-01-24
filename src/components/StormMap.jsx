@@ -388,12 +388,12 @@ function UserLocationMarker({ location, stormPhase }) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false }) {
   const [showRadar, setShowRadar] = useState(false);
   const cities = Object.values(weatherData);
 
   return (
-    <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''}`}>
+    <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
@@ -450,13 +450,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         </div>
       </div>
 
-      {/* Map Container - increased height */}
-      <div className="relative">
+      {/* Map Container - fills available height in sidebar mode */}
+      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         <MapContainer
           center={CENTER}
           zoom={ZOOM}
-          style={{ height: isHero ? '500px' : '350px', width: '100%' }}
-          className={`z-0 ${isHero ? 'sm:!h-[600px] lg:!h-[700px]' : 'sm:!h-[450px]'}`}
+          style={{ height: isSidebar ? '100%' : (isHero ? '500px' : '350px'), width: '100%' }}
+          className={`z-0 ${!isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]' : ''} ${!isSidebar && !isHero ? 'sm:!h-[450px]' : ''}`}
           zoomControl={false}
         >
           <MapController showRadar={showRadar} />
