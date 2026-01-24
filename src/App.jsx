@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useWeatherData } from './hooks/useWeatherData';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
@@ -138,6 +139,8 @@ export default function App() {
     getCitiesGeoOrdered
   } = useWeatherData();
 
+  const [userLocation, setUserLocation] = useState(null);
+
   const hasData = Object.keys(weatherData).length > 0;
 
   if (loading && !hasData) {
@@ -162,7 +165,7 @@ export default function App() {
         <StormAlert stormPhase={stormPhase} />
 
         {/* Zip Code Search */}
-        <ZipCodeSearch stormPhase={stormPhase} />
+        <ZipCodeSearch stormPhase={stormPhase} onLocationChange={setUserLocation} />
 
         {/* Prominent Forecast Banner */}
         <ForecastBanner stormPhase={stormPhase} />
@@ -183,7 +186,7 @@ export default function App() {
 
         {/* Storm Map */}
         <section>
-          <StormMap weatherData={weatherData} stormPhase={stormPhase} />
+          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocation={userLocation} />
         </section>
 
         {/* City Cards */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'winterStorm_userZip';
+const SHOW_ON_MAP_KEY = 'winterStorm_showOnMap';
 
 // Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
 async function getCoordinatesFromZip(zip) {
@@ -268,24 +269,37 @@ function UserLocationCard({ data, onRemove, stormPhase }) {
   );
 }
 
-export default function ZipCodeSearch({ stormPhase }) {
+export default function ZipCodeSearch({ stormPhase, onLocationChange }) {
   const [zip, setZip] = useState('');
   const [savedZip, setSavedZip] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [locationData, setLocationData] = useState(null);
+  const [showOnMap, setShowOnMap] = useState(false);
 
-  // Load saved zip on mount
+  // Load saved zip and showOnMap preference on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
+    const storedShowOnMap = localStorage.getItem(SHOW_ON_MAP_KEY) === 'true';
+    setShowOnMap(storedShowOnMap);
+
     if (stored) {
       setSavedZip(stored);
       setZip(stored);
-      fetchLocationWeather(stored);
+      fetchLocationWeather(stored, storedShowOnMap);
     }
   }, []);
 
-  const fetchLocationWeather = async (zipCode) => {
+  // Notify parent when showOnMap changes
+  const handleShowOnMapChange = (checked) => {
+    setShowOnMap(checked);
+    localStorage.setItem(SHOW_ON_MAP_KEY, checked.toString());
+    if (onLocationChange) {
+      onLocationChange(checked ? locationData : null);
+    }
+  };
+
+  const fetchLocationWeather = async (zipCode, shouldShowOnMap = showOnMap) => {
     setLoading(true);
     setError(null);
 
@@ -298,10 +312,18 @@ export default function ZipCodeSearch({ stormPhase }) {
       setLocationData(weather);
       setSavedZip(zipCode);
       localStorage.setItem(STORAGE_KEY, zipCode);
+
+      // Notify parent if showing on map
+      if (onLocationChange && shouldShowOnMap) {
+        onLocationChange(weather);
+      }
     } catch (err) {
       console.error('Zip code search error:', err);
       setError(err.message || 'Failed to fetch weather data');
       setLocationData(null);
+      if (onLocationChange) {
+        onLocationChange(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -321,10 +343,15 @@ export default function ZipCodeSearch({ stormPhase }) {
 
   const handleRemove = () => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SHOW_ON_MAP_KEY);
     setSavedZip(null);
     setLocationData(null);
     setZip('');
     setError(null);
+    setShowOnMap(false);
+    if (onLocationChange) {
+      onLocationChange(null);
+    }
   };
 
   return (
@@ -359,6 +386,22 @@ export default function ZipCodeSearch({ stormPhase }) {
         </form>
         {error && (
           <p className="text-red-400 text-xs mt-2">{error}</p>
+        )}
+
+        {/* Add to Map checkbox - only show when we have location data */}
+        {locationData && (
+          <label className="flex items-center gap-2 mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showOnMap}
+              onChange={(e) => handleShowOnMapChange(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+            />
+            <span className="text-sm text-slate-300">Add to Map</span>
+            {showOnMap && (
+              <span className="text-xs text-emerald-400">(showing on map)</span>
+            )}
+          </label>
         )}
       </div>
 
