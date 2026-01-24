@@ -73,6 +73,18 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          {/* Ko-fi Support Button */}
+          <a
+            href="https://ko-fi.com/dawntepper"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 hover:border-amber-500/30"
+            title="Support stormtracking.io"
+          >
+            <span className="text-base">☕</span>
+            <span className="hidden lg:inline text-xs">Support</span>
+          </a>
+
           {/* Last Updated - hidden on mobile */}
           <div className="text-right text-sm text-slate-400 hidden md:block">
             {lastRefresh && (

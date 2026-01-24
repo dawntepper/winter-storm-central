@@ -304,7 +304,18 @@ export default function App() {
         </section>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-slate-800">
+        <footer className="text-center py-6 border-t border-slate-800 space-y-4">
+          {/* Ko-fi Support */}
+          <a
+            href="https://ko-fi.com/dawntepper"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm transition-colors border border-slate-700 hover:border-amber-500/30"
+          >
+            <span className="text-lg">☕</span>
+            <span>Thank you for supporting stormtracking.io</span>
+          </a>
+
           <p className="text-slate-500 text-xs max-w-2xl mx-auto px-4">
             <span className="font-medium text-slate-400">Disclaimer:</span> Winter Storm Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
             <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
