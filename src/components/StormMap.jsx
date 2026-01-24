@@ -428,7 +428,7 @@ function UserLocationMarker({ location, stormPhase }) {
 }
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false }) {
-  const [showRadar, setShowRadar] = useState(false);
+  const [showRadar, setShowRadar] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(ZOOM);
   const cities = Object.values(weatherData);
 
