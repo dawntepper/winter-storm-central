@@ -876,6 +876,14 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
 
     if (!locationData) return;
 
+    // Track location added to map
+    if (checked && window.plausible) {
+      // Extract state from location name (e.g., "City, ST" -> "ST")
+      const state = locationData.name?.split(',').pop()?.trim() || 'Unknown';
+      const totalLocations = Object.values(savedLocations).filter(l => l.onMap).length + 1;
+      window.plausible('Location Added', { props: { state, count: totalLocations } });
+    }
+
     const newLocations = {
       ...savedLocations,
       [locationId]: { data: locationData, onMap: checked }

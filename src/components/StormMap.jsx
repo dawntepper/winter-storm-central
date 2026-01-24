@@ -478,6 +478,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   const handleZoomToLocations = () => {
     setFitTrigger(prev => prev + 1);
+    // Track My Locations viewed
+    if (window.plausible) {
+      window.plausible('My Locations Viewed');
+    }
   };
 
   const handleResetView = () => {
@@ -516,7 +520,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             </button>
             {/* Radar toggle */}
             <button
-              onClick={() => setShowRadar(!showRadar)}
+              onClick={() => {
+                setShowRadar(!showRadar);
+                // Track radar toggle
+                if (window.plausible) {
+                  window.plausible('Radar Toggled');
+                }
+              }}
               className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                 showRadar
                   ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
