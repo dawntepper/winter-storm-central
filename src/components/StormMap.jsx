@@ -1,6 +1,9 @@
-import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from 'react-leaflet';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
+
+// Context to share zoom level with marker components
+const ZoomContext = createContext(5.5);
 
 // Center of the storm coverage area - adjusted for better framing
 const CENTER = [37.0, -84];
@@ -22,10 +25,17 @@ const glowColors = {
   none: 'rgba(100, 116, 139, 0.3)'
 };
 
-// Create custom label icon
-const createLabelIcon = (name, hazardType, isUser = false) => {
+// Create custom label icon with zoom-aware offset
+const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
   const bgColor = isUser ? 'rgba(16, 185, 129, 0.95)' : 'rgba(15, 23, 42, 0.9)';
   const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
+
+  // Calculate offset based on zoom level
+  // At zoom 5.5 (default), offset is -15
+  // At higher zoom, offset increases to spread labels apart
+  const baseOffset = -15;
+  const zoomFactor = Math.max(0, zoomLevel - 5.5);
+  const offset = baseOffset - (zoomFactor * 8); // Labels move up 8px per zoom level
 
   return L.divIcon({
     className: 'city-label-wrapper',
@@ -44,7 +54,7 @@ const createLabelIcon = (name, hazardType, isUser = false) => {
       transform: translateX(-50%);
     ">${name}${isUser ? ' ★' : ''}</div>`,
     iconSize: null,
-    iconAnchor: [0, -15]
+    iconAnchor: [0, offset]
   });
 };
 
@@ -59,6 +69,22 @@ function MapController({ showRadar }) {
     map.options.fadeAnimation = true;
     map.options.markerZoomAnimation = true;
   }, [map]);
+
+  return null;
+}
+
+// Component to track zoom level and update context
+function ZoomTracker({ onZoomChange }) {
+  const map = useMapEvents({
+    zoomend: () => {
+      onZoomChange(map.getZoom());
+    }
+  });
+
+  // Set initial zoom
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
 
   return null;
 }
@@ -128,6 +154,7 @@ function formatTime(isoString) {
 // Enhanced city marker with glow effect
 function CityMarker({ city, stormPhase }) {
   const [isHovered, setIsHovered] = useState(false);
+  const zoomLevel = useContext(ZoomContext);
   const color = hazardColors[city.hazardType] || hazardColors.none;
   const glowColor = glowColors[city.hazardType] || glowColors.none;
   const forecastSnow = city.forecast?.snowfall || 0;
@@ -142,7 +169,8 @@ function CityMarker({ city, stormPhase }) {
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
   const hasObserved = observedSnow > 0 || observedIce > 0;
 
-  const labelIcon = useMemo(() => createLabelIcon(city.name.split(',')[0], city.hazardType), [city.name, city.hazardType]);
+  // Recreate label icon when zoom changes
+  const labelIcon = useMemo(() => createLabelIcon(city.name.split(',')[0], city.hazardType, false, zoomLevel), [city.name, city.hazardType, zoomLevel]);
 
   return (
     <>
@@ -271,6 +299,7 @@ function CityMarker({ city, stormPhase }) {
 // Enhanced user location marker
 function UserLocationMarker({ location, stormPhase }) {
   const [isHovered, setIsHovered] = useState(false);
+  const zoomLevel = useContext(ZoomContext);
   const color = hazardColors[location.hazardType] || hazardColors.none;
   const forecastSnow = location.forecast?.snowfall || 0;
   const forecastIce = location.forecast?.ice || 0;
@@ -283,7 +312,8 @@ function UserLocationMarker({ location, stormPhase }) {
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
   const hasObserved = observedSnow > 0 || observedIce > 0;
 
-  const labelIcon = useMemo(() => createLabelIcon(location.name.split(',')[0], location.hazardType, true), [location.name, location.hazardType]);
+  // Recreate label icon when zoom changes
+  const labelIcon = useMemo(() => createLabelIcon(location.name.split(',')[0], location.hazardType, true, zoomLevel), [location.name, location.hazardType, zoomLevel]);
 
   return (
     <>
@@ -390,6 +420,7 @@ function UserLocationMarker({ location, stormPhase }) {
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false }) {
   const [showRadar, setShowRadar] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(ZOOM);
   const cities = Object.values(weatherData);
 
   return (
@@ -460,6 +491,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           zoomControl={false}
         >
           <MapController showRadar={showRadar} />
+          <ZoomTracker onZoomChange={setZoomLevel} />
 
           {/* Dark Matter basemap */}
           <TileLayer
@@ -470,15 +502,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           {/* Radar overlay */}
           <RadarLayer show={showRadar} />
 
-          {/* City markers */}
-          {cities.map(city => (
-            <CityMarker key={city.id} city={city} stormPhase={stormPhase} />
-          ))}
+          {/* City markers with zoom context */}
+          <ZoomContext.Provider value={zoomLevel}>
+            {cities.map(city => (
+              <CityMarker key={city.id} city={city} stormPhase={stormPhase} />
+            ))}
 
-          {/* User location markers */}
-          {userLocations.map(location => (
-            <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} />
-          ))}
+            {/* User location markers */}
+            {userLocations.map(location => (
+              <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} />
+            ))}
+          </ZoomContext.Provider>
         </MapContainer>
 
         {/* Gradient overlay at edges for polish */}
