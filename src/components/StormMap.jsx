@@ -194,14 +194,14 @@ function UserLocationMarker({ location, stormPhase }) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocation = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocation = null, isHero = false }) {
   const cities = Object.values(weatherData);
 
   return (
-    <div className="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700">
+    <div className={`bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700 ${isHero ? 'ring-1 ring-slate-600' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm sm:text-base font-semibold text-white">Storm Coverage</h2>
+          <h2 className={`font-semibold text-white ${isHero ? 'text-base sm:text-lg' : 'text-sm sm:text-base'}`}>Storm Coverage</h2>
           <span className={`text-[10px] px-2 py-1 rounded border ${
             stormPhase === 'pre-storm'
               ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
@@ -231,8 +231,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       <MapContainer
         center={CENTER}
         zoom={ZOOM}
-        style={{ height: '300px', width: '100%' }}
-        className="z-0 sm:!h-[400px]"
+        style={{ height: isHero ? '400px' : '300px', width: '100%' }}
+        className={`z-0 ${isHero ? 'sm:!h-[500px] lg:!h-[550px]' : 'sm:!h-[400px]'}`}
       >
         <MapController />
         <TileLayer

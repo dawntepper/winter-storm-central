@@ -164,6 +164,11 @@ export default function App() {
         {/* Storm Alert */}
         <StormAlert stormPhase={stormPhase} />
 
+        {/* Storm Map - Hero Section */}
+        <section>
+          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocation={userLocation} isHero />
+        </section>
+
         {/* Zip Code Search */}
         <ZipCodeSearch stormPhase={stormPhase} onLocationChange={setUserLocation} />
 
@@ -181,12 +186,8 @@ export default function App() {
             observedSnowLeaderboard={getObservedSnowLeaderboard()}
             observedIceLeaderboard={getObservedIceLeaderboard()}
             stormPhase={stormPhase}
+            userLocation={userLocation}
           />
-        </section>
-
-        {/* Storm Map */}
-        <section>
-          <StormMap weatherData={weatherData} stormPhase={stormPhase} userLocation={userLocation} />
         </section>
 
         {/* City Cards */}
