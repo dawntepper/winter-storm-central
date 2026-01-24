@@ -5,11 +5,12 @@ import { useEffect } from 'react';
 const CENTER = [37.5, -82];
 const ZOOM = 5;
 
+// Atmospheric color palette
 const hazardColors = {
-  snow: '#3b82f6',    // blue
-  ice: '#a855f7',     // purple
-  mixed: '#6b7280',   // gray
-  none: '#475569'     // slate
+  snow: '#93C5FD',    // Softer winter sky blue
+  ice: '#E879F9',     // Ominous fuchsia/purple
+  mixed: '#94A3B8',   // Lighter slate
+  none: '#475569'     // Slate
 };
 
 function MapController() {
@@ -135,13 +136,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm' }) {
         </div>
         <div className="flex flex-wrap gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500 mt-2">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-500"></span> Snow
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-300"></span> Snow
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-purple-500"></span> Ice
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-fuchsia-400"></span> Ice
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-slate-500"></span> Mixed
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-slate-400"></span> Mixed
           </span>
           <span className="ml-auto text-slate-600 hidden sm:inline">Hover for details</span>
         </div>

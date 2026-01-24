@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { cities } from '../config/cities';
+import { cities, geoOrder } from '../config/cities';
 
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const OBSERVATION_REFRESH = 5 * 60 * 1000; // 5 minutes for observations
@@ -193,6 +193,8 @@ const fetchCityWeather = async (cityId, cityData) => {
       name: cityData.name,
       lat: cityData.lat,
       lon: cityData.lon,
+      snowOrder: cityData.snowOrder,
+      iceOrder: cityData.iceOrder,
       // Forecast totals for full storm
       forecast: {
         snowfall: forecastSnow,
@@ -221,6 +223,8 @@ const fetchCityWeather = async (cityId, cityData) => {
       name: cityData.name,
       lat: cityData.lat,
       lon: cityData.lon,
+      snowOrder: cityData.snowOrder,
+      iceOrder: cityData.iceOrder,
       forecast: { snowfall: 0, ice: 0 },
       observed: { snowfall: 0, ice: 0 },
       snowfall: 0,
@@ -291,30 +295,37 @@ export const useWeatherData = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Get sorted arrays for leaderboards
+  // Get sorted arrays for leaderboards (geographic west-to-east ordering)
   const getSnowLeaderboard = () => {
     return Object.values(weatherData)
-      .filter(city => city.forecast.snowfall > 0)
-      .sort((a, b) => b.forecast.snowfall - a.forecast.snowfall);
+      .filter(city => city.forecast.snowfall > 0 && city.snowOrder != null)
+      .sort((a, b) => a.snowOrder - b.snowOrder);
   };
 
   const getIceLeaderboard = () => {
     return Object.values(weatherData)
-      .filter(city => city.forecast.ice > 0)
-      .sort((a, b) => b.forecast.ice - a.forecast.ice);
+      .filter(city => city.forecast.ice > 0 && city.iceOrder != null)
+      .sort((a, b) => a.iceOrder - b.iceOrder);
   };
 
-  // Get observed leaderboards (for during/after storm)
+  // Get observed leaderboards (for during/after storm) - also geographic order
   const getObservedSnowLeaderboard = () => {
     return Object.values(weatherData)
-      .filter(city => city.observed.snowfall > 0)
-      .sort((a, b) => b.observed.snowfall - a.observed.snowfall);
+      .filter(city => city.observed.snowfall > 0 && city.snowOrder != null)
+      .sort((a, b) => a.snowOrder - b.snowOrder);
   };
 
   const getObservedIceLeaderboard = () => {
     return Object.values(weatherData)
-      .filter(city => city.observed.ice > 0)
-      .sort((a, b) => b.observed.ice - a.observed.ice);
+      .filter(city => city.observed.ice > 0 && city.iceOrder != null)
+      .sort((a, b) => a.iceOrder - b.iceOrder);
+  };
+
+  // Get cities in geographic order for cards
+  const getCitiesGeoOrdered = () => {
+    return geoOrder
+      .map(id => weatherData[id])
+      .filter(Boolean);
   };
 
   return {
@@ -327,6 +338,7 @@ export const useWeatherData = () => {
     getSnowLeaderboard,
     getIceLeaderboard,
     getObservedSnowLeaderboard,
-    getObservedIceLeaderboard
+    getObservedIceLeaderboard,
+    getCitiesGeoOrdered
   };
 };

@@ -1,5 +1,6 @@
 import { useWeatherData } from './hooks/useWeatherData';
 import Header from './components/Header';
+import ZipCodeSearch from './components/ZipCodeSearch';
 import DualLeaderboard from './components/DualLeaderboard';
 import CityCards from './components/CityCards';
 import StormMap from './components/StormMap';
@@ -133,7 +134,8 @@ export default function App() {
     getSnowLeaderboard,
     getIceLeaderboard,
     getObservedSnowLeaderboard,
-    getObservedIceLeaderboard
+    getObservedIceLeaderboard,
+    getCitiesGeoOrdered
   } = useWeatherData();
 
   const hasData = Object.keys(weatherData).length > 0;
@@ -158,6 +160,9 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Storm Alert */}
         <StormAlert stormPhase={stormPhase} />
+
+        {/* Zip Code Search */}
+        <ZipCodeSearch stormPhase={stormPhase} />
 
         {/* Prominent Forecast Banner */}
         <ForecastBanner stormPhase={stormPhase} />
@@ -184,7 +189,7 @@ export default function App() {
         {/* City Cards */}
         <section>
           <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">All Tracked Cities</h2>
-          <CityCards weatherData={weatherData} stormPhase={stormPhase} />
+          <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} />
         </section>
 
         {/* Footer */}

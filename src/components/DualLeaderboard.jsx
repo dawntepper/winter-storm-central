@@ -8,7 +8,7 @@ function SnowLeaderboard({ cities, observed, stormPhase }) {
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <div className="flex items-center justify-between">
           <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
-            <span className="text-blue-400">&#10052;</span> Snow Totals
+            <span className="text-sky-300">&#10052;</span> Snow Totals
           </h2>
           <span className={`px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded border ${
             dataType === 'observed'
@@ -19,7 +19,7 @@ function SnowLeaderboard({ cities, observed, stormPhase }) {
           </span>
         </div>
         <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
-          {dataType === 'observed' ? 'Observed accumulation' : 'Expected for Jan 24-26'}
+          {dataType === 'observed' ? 'Observed accumulation (west to east)' : 'Expected for Jan 24-26 (west to east)'}
         </p>
       </div>
 
@@ -29,7 +29,7 @@ function SnowLeaderboard({ cities, observed, stormPhase }) {
             {dataType === 'observed' ? 'No snowfall recorded yet' : 'No significant snowfall forecast'}
           </div>
         ) : (
-          displayCities.slice(0, 6).map((city, index) => {
+          displayCities.slice(0, 10).map((city, index) => {
             const amount = dataType === 'observed' ? city.observed.snowfall : city.forecast.snowfall;
             return (
               <div
@@ -47,7 +47,7 @@ function SnowLeaderboard({ cities, observed, stormPhase }) {
                   <span className="text-slate-200 font-medium text-sm sm:text-base truncate">{city.name}</span>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className="text-lg sm:text-xl font-semibold text-blue-400">
+                  <span className="text-lg sm:text-xl font-semibold text-sky-300">
                     {amount.toFixed(2)}"
                   </span>
                 </div>
@@ -67,7 +67,7 @@ function IceLeaderboard({ cities, observed, stormPhase }) {
 
   const getDangerLevel = (ice) => {
     if (ice >= 0.5) return { label: 'Catastrophic', class: 'bg-red-500/20 text-red-400 border-red-500/30' };
-    if (ice >= 0.25) return { label: 'Dangerous', class: 'bg-orange-500/20 text-orange-400 border-orange-500/30' };
+    if (ice >= 0.25) return { label: 'Dangerous', class: 'bg-red-500/20 text-red-400 border-red-500/30' };  // Red for urgency
     return null;
   };
 
@@ -76,7 +76,7 @@ function IceLeaderboard({ cities, observed, stormPhase }) {
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <div className="flex items-center justify-between">
           <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
-            <span className="text-purple-400">&#9888;</span> Ice Accumulation
+            <span className="text-fuchsia-400">&#9888;</span> Ice Danger Zone
           </h2>
           <span className={`px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded border ${
             dataType === 'observed'
@@ -108,8 +108,8 @@ function IceLeaderboard({ cities, observed, stormPhase }) {
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold flex-shrink-0
                                 ${index === 0 ? 'bg-red-500/20 text-red-400' :
-                                  index === 1 ? 'bg-orange-500/20 text-orange-400' :
-                                  index === 2 ? 'bg-yellow-500/20 text-yellow-500' :
+                                  index === 1 ? 'bg-red-500/15 text-red-400' :
+                                  index === 2 ? 'bg-amber-500/20 text-amber-400' :
                                   'bg-slate-700 text-slate-400'}`}>
                     {index + 1}
                   </span>
@@ -123,7 +123,7 @@ function IceLeaderboard({ cities, observed, stormPhase }) {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-2">
-                  <span className="text-lg sm:text-xl font-semibold text-purple-400">
+                  <span className="text-lg sm:text-xl font-semibold text-fuchsia-400">
                     {amount.toFixed(2)}"
                   </span>
                 </div>

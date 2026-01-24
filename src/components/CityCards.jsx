@@ -1,21 +1,22 @@
+// Atmospheric color palette
 const hazardColors = {
-  snow: 'border-blue-500/30 bg-slate-800',
-  ice: 'border-purple-500/30 bg-slate-800',
-  mixed: 'border-slate-500/30 bg-slate-800',
+  snow: 'border-sky-300/30 bg-slate-800',      // Softer winter sky blue
+  ice: 'border-fuchsia-400/30 bg-slate-800',   // Ominous purple
+  mixed: 'border-slate-400/30 bg-slate-800',   // Lighter slate
   none: 'border-slate-700 bg-slate-800/50'
 };
 
 const hazardLabels = {
-  snow: { text: 'Snow', class: 'text-blue-400' },
-  ice: { text: 'Ice', class: 'text-purple-400' },
-  mixed: { text: 'Mixed', class: 'text-slate-400' },
+  snow: { text: 'Snow', class: 'text-sky-300' },        // #93C5FD equivalent
+  ice: { text: 'Ice', class: 'text-fuchsia-400' },      // #E879F9 equivalent
+  mixed: { text: 'Mixed', class: 'text-slate-400' },    // #94A3B8
   none: { text: 'Clear', class: 'text-slate-500' }
 };
 
 const dangerBadges = {
   catastrophic: { label: 'Catastrophic', class: 'bg-red-500/20 text-red-400 border border-red-500/30' },
-  dangerous: { label: 'Dangerous', class: 'bg-orange-500/20 text-orange-400 border border-orange-500/30' },
-  caution: { label: 'Caution', class: 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' },
+  dangerous: { label: 'Dangerous', class: 'bg-red-500/20 text-red-400 border border-red-500/30' },  // Changed to red
+  caution: { label: 'Caution', class: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' }, // Orange/amber
   safe: null
 };
 
@@ -80,7 +81,7 @@ function CityCard({ city, stormPhase }) {
       {/* Accumulation Data */}
       <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-lg sm:text-xl font-semibold text-blue-400">
+          <p className="text-lg sm:text-xl font-semibold text-sky-300">
             {city.forecast?.snowfall > 0 ? `${city.forecast.snowfall.toFixed(2)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
@@ -88,7 +89,7 @@ function CityCard({ city, stormPhase }) {
           </p>
         </div>
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
-          <p className="text-lg sm:text-xl font-semibold text-purple-400">
+          <p className="text-lg sm:text-xl font-semibold text-fuchsia-400">
             {city.forecast?.ice > 0 ? `${city.forecast.ice.toFixed(2)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
@@ -142,10 +143,8 @@ function CityCard({ city, stormPhase }) {
   );
 }
 
-export default function CityCards({ weatherData, stormPhase = 'pre-storm' }) {
-  const cities = Object.values(weatherData);
-
-  if (cities.length === 0) {
+export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
+  if (!cities || cities.length === 0) {
     return (
       <div className="text-center text-slate-500 py-12">
         <p>No weather data available</p>
