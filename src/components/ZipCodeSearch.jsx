@@ -631,19 +631,10 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
 
       {/* Action buttons */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
-        {isOnMap && onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="text-slate-500 hover:text-slate-300 transition-colors text-xs"
-            title="Close card (stays on map)"
-          >
-            Close
-          </button>
-        )}
         <button
-          onClick={onRemove}
-          className="text-slate-500 hover:text-red-400 transition-colors"
-          title="Remove location"
+          onClick={isOnMap ? onDismiss : onRemove}
+          className="text-slate-500 hover:text-slate-300 transition-colors"
+          title={isOnMap ? "Close card (stays on map)" : "Remove location"}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
