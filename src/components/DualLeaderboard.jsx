@@ -44,7 +44,11 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.snowfall || 0;
-            const actual = city.observed?.snowfall || 0;
+            // Use station observation snowDepth for actual, fallback to forecast-based observed
+            const stationSnow = city.observation?.snowDepth;
+            const actual = stationSnow !== null && stationSnow !== undefined ? stationSnow : (city.observed?.snowfall || 0);
+            const hasStationData = stationSnow !== null && stationSnow !== undefined;
+            const isRecent = city.observation?.isRecent;
             const isUser = city.isUserLocation;
             return (
               <div
@@ -70,11 +74,16 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                   <span className="w-16 text-right text-sm sm:text-base font-semibold text-sky-300">
                     {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
                   </span>
-                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    actual > 0 ? 'text-emerald-400' : 'text-slate-600'
-                  }`}>
-                    {actual > 0 ? `${actual.toFixed(1)}"` : '-'}
-                  </span>
+                  <div className="w-16 text-right">
+                    <span className={`text-sm sm:text-base font-semibold ${
+                      actual > 0 ? 'text-emerald-400' : 'text-slate-600'
+                    }`}>
+                      {actual > 0 ? `${actual.toFixed(1)}"` : '-'}
+                    </span>
+                    {hasStationData && isRecent && (
+                      <span className="block text-[8px] text-emerald-500">Live</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
