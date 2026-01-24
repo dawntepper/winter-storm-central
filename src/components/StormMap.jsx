@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from 'react-leaflet';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import L from 'leaflet';
 
 // Center of the storm coverage area - adjusted for better framing
@@ -24,25 +24,27 @@ const glowColors = {
 
 // Create custom label icon
 const createLabelIcon = (name, hazardType, isUser = false) => {
-  const bgColor = isUser ? 'rgba(16, 185, 129, 0.9)' : 'rgba(15, 23, 42, 0.85)';
+  const bgColor = isUser ? 'rgba(16, 185, 129, 0.95)' : 'rgba(15, 23, 42, 0.9)';
   const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
 
   return L.divIcon({
-    className: 'city-label-icon',
-    html: `<div style="
+    className: 'city-label-wrapper',
+    html: `<div class="city-label" style="
+      display: inline-block;
       background: ${bgColor};
       color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
-      border: 1px solid ${borderColor};
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      border: 2px solid ${borderColor};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      transform: translateX(-50%);
     ">${name}${isUser ? ' ★' : ''}</div>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, -20]
+    iconSize: null,
+    iconAnchor: [0, -15]
   });
 };
 
@@ -61,49 +63,55 @@ function MapController({ showRadar }) {
   return null;
 }
 
-// Radar layer component
+// Radar layer component using RainViewer API
 function RadarLayer({ show }) {
   const map = useMap();
-  const [radarLayer, setRadarLayer] = useState(null);
-  const [radarTimestamp, setRadarTimestamp] = useState(null);
+  const layerRef = useRef(null);
 
   useEffect(() => {
-    if (!show) {
-      if (radarLayer) {
-        map.removeLayer(radarLayer);
-        setRadarLayer(null);
-      }
-      return;
+    // Clean up existing layer
+    if (layerRef.current) {
+      map.removeLayer(layerRef.current);
+      layerRef.current = null;
     }
 
+    if (!show) return;
+
     // Fetch latest radar timestamp from RainViewer
-    fetch('https://api.rainviewer.com/public/weather-maps.json')
-      .then(res => res.json())
-      .then(data => {
+    const fetchRadar = async () => {
+      try {
+        const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const data = await response.json();
         const latest = data.radar?.past?.slice(-1)[0];
-        if (latest) {
-          setRadarTimestamp(latest.time);
+
+        if (latest && show) {
           const layer = L.tileLayer(
-            `https://tilecache.rainviewer.com/v2/radar/${latest.time}/256/{z}/{x}/{y}/2/1_1.png`,
+            `https://tilecache.rainviewer.com/v2/radar/${latest.time}/256/{z}/{x}/{y}/6/1_1.png`,
             {
-              opacity: 0.5,
-              zIndex: 100
+              opacity: 0.6,
+              zIndex: 200,
+              tileSize: 256
             }
           );
 
-          if (radarLayer) {
-            map.removeLayer(radarLayer);
-          }
-
           layer.addTo(map);
-          setRadarLayer(layer);
+          layerRef.current = layer;
         }
-      })
-      .catch(err => console.error('Radar fetch error:', err));
+      } catch (err) {
+        console.error('Radar fetch error:', err);
+      }
+    };
+
+    fetchRadar();
+
+    // Refresh radar every 5 minutes
+    const interval = setInterval(fetchRadar, 5 * 60 * 1000);
 
     return () => {
-      if (radarLayer) {
-        map.removeLayer(radarLayer);
+      clearInterval(interval);
+      if (layerRef.current) {
+        map.removeLayer(layerRef.current);
+        layerRef.current = null;
       }
     };
   }, [show, map]);
@@ -480,7 +488,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         </div>
       </div>
 
-      {/* Custom styles for pulse animation */}
+      {/* Custom styles for pulse animation and labels */}
       <style>{`
         .pulse-marker {
           animation: pulse 2s ease-in-out infinite;
@@ -506,8 +514,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         .leaflet-tooltip.enhanced-tooltip::before {
           border-top-color: white;
         }
-        .city-label-icon {
-          background: none !important;
+        .city-label-wrapper {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .city-label-wrapper .city-label {
+          box-sizing: border-box;
+        }
+        .leaflet-div-icon {
+          background: transparent !important;
           border: none !important;
         }
       `}</style>
