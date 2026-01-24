@@ -47,7 +47,10 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div className="text-2xl sm:text-3xl text-slate-300 flex-shrink-0">&#10052;</div>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-2xl font-semibold text-white tracking-tight truncate">
+            <h1
+              className="text-lg sm:text-2xl font-semibold text-white tracking-tight truncate cursor-help"
+              title="Disclaimer: Winter Storm Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at weather.gov and follow local emergency management guidance. Not affiliated with NOAA or NWS."
+            >
               Winter Storm Tracker
             </h1>
             <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 sm:gap-3 mt-0.5 sm:mt-1">

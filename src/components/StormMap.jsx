@@ -488,7 +488,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           zoom={ZOOM}
           style={{ height: isSidebar ? '100%' : (isHero ? '500px' : '350px'), width: '100%' }}
           className={`z-0 ${!isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]' : ''} ${!isSidebar && !isHero ? 'sm:!h-[450px]' : ''}`}
-          zoomControl={false}
+          zoomControl={true}
         >
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />

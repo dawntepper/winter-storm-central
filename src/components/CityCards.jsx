@@ -88,8 +88,8 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
         </div>
       )}
 
-      {/* Accumulation Data */}
-      <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
+      {/* Accumulation Data - Expected */}
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
           <p className="text-lg sm:text-xl font-semibold text-sky-300">
             {city.forecast?.snowfall > 0 ? `${city.forecast.snowfall.toFixed(2)}"` : '-'}
@@ -108,23 +108,25 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
         </div>
       </div>
 
-      {/* Observed totals (during/after storm) */}
-      {isActive && hasObserved && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 mb-2 sm:mb-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-[10px] text-emerald-400 font-medium uppercase">Actual Totals</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="text-slate-300">
-              Snow: <span className="text-emerald-400 font-semibold">{city.observed.snowfall.toFixed(2)}"</span>
-            </div>
-            <div className="text-slate-300">
-              Ice: <span className="text-emerald-400 font-semibold">{city.observed.ice.toFixed(2)}"</span>
-            </div>
-          </div>
+      {/* Accumulation Data - Actual */}
+      <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
+        <div className={`rounded-lg p-2 text-center ${hasObserved ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
+          <p className={`text-lg sm:text-xl font-semibold ${city.observed?.snowfall > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+            {city.observed?.snowfall > 0 ? `${city.observed.snowfall.toFixed(2)}"` : '-'}
+          </p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
+            Snow Actual
+          </p>
         </div>
-      )}
+        <div className={`rounded-lg p-2 text-center ${hasObserved ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
+          <p className={`text-lg sm:text-xl font-semibold ${city.observed?.ice > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+            {city.observed?.ice > 0 ? `${city.observed.ice.toFixed(2)}"` : '-'}
+          </p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
+            Ice Actual
+          </p>
+        </div>
+      </div>
 
       {/* Forecast badge for pre-storm */}
       {stormPhase === 'pre-storm' && (
