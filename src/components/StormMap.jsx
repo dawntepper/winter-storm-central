@@ -108,15 +108,24 @@ function RadarLayer({ show }) {
       try {
         const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
         const data = await response.json();
+        const host = data.host || 'https://tilecache.rainviewer.com';
         const latest = data.radar?.past?.slice(-1)[0];
 
         if (latest && show) {
+          // Remove existing layer before adding new one
+          if (layerRef.current) {
+            map.removeLayer(layerRef.current);
+          }
+
+          // Color scheme 4 = "The Weather Channel" style (more vibrant)
+          // Options: 1_1 = smooth radar with snow detection
           const layer = L.tileLayer(
-            `https://tilecache.rainviewer.com/v2/radar/${latest.time}/256/{z}/{x}/{y}/6/1_1.png`,
+            `${host}${latest.path}/256/{z}/{x}/{y}/4/1_1.png`,
             {
-              opacity: 0.6,
-              zIndex: 200,
-              tileSize: 256
+              opacity: 0.7,
+              zIndex: 400,
+              tileSize: 256,
+              attribution: '<a href="https://rainviewer.com">RainViewer</a>'
             }
           );
 
