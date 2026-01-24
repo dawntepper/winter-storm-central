@@ -192,7 +192,6 @@ export default function App() {
 
         {/* City Cards */}
         <section>
-          <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">All Tracked Cities</h2>
           <CityCards cities={getCitiesGeoOrdered()} stormPhase={stormPhase} />
         </section>
 

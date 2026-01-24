@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 // Atmospheric color palette
 const hazardColors = {
   snow: 'border-sky-300/30 bg-slate-800',      // Softer winter sky blue
@@ -143,7 +145,37 @@ function CityCard({ city, stormPhase }) {
   );
 }
 
+function SortControls({ sortBy, onSortChange }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-slate-500">Sort:</span>
+      <button
+        onClick={() => onSortChange('snow')}
+        className={`px-2 py-1 rounded transition-colors ${
+          sortBy === 'snow'
+            ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30'
+            : 'text-slate-400 hover:text-slate-300 border border-transparent'
+        }`}
+      >
+        Snow
+      </button>
+      <button
+        onClick={() => onSortChange('city')}
+        className={`px-2 py-1 rounded transition-colors ${
+          sortBy === 'city'
+            ? 'bg-slate-600 text-white border border-slate-500/30'
+            : 'text-slate-400 hover:text-slate-300 border border-transparent'
+        }`}
+      >
+        A-Z
+      </button>
+    </div>
+  );
+}
+
 export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
+  const [sortBy, setSortBy] = useState('snow');
+
   if (!cities || cities.length === 0) {
     return (
       <div className="text-center text-slate-500 py-12">
@@ -152,11 +184,25 @@ export default function CityCards({ cities, stormPhase = 'pre-storm' }) {
     );
   }
 
+  // Sort cities based on selection
+  const sortedCities = [...cities].sort((a, b) => {
+    if (sortBy === 'snow') {
+      return (b.forecast?.snowfall || 0) - (a.forecast?.snowfall || 0);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
   return (
-    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-      {cities.map(city => (
-        <CityCard key={city.id} city={city} stormPhase={stormPhase} />
-      ))}
+    <div>
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg font-semibold text-white">All Tracked Cities</h2>
+        <SortControls sortBy={sortBy} onSortChange={setSortBy} />
+      </div>
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        {sortedCities.map(city => (
+          <CityCard key={city.id} city={city} stormPhase={stormPhase} />
+        ))}
+      </div>
     </div>
   );
 }
