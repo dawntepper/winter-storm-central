@@ -203,7 +203,7 @@ export default function App() {
         {/* Footer */}
         <footer className="text-center py-6 border-t border-slate-800">
           <p className="text-slate-500 text-xs max-w-2xl mx-auto px-4">
-            <span className="font-medium text-slate-400">Disclaimer:</span> Storm Fern Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
+            <span className="font-medium text-slate-400">Disclaimer:</span> Winter Storm Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
             <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
             {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
           </p>

@@ -17,7 +17,7 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
 
   const handleShare = async () => {
     const shareData = {
-      title: 'Storm Fern Tracker',
+      title: 'Winter Storm Tracker - Storm Fern',
       text: 'Track Winter Storm Fern hitting the Eastern US Jan 24-26, 2026 #WinterStormFern',
       url: window.location.href
     };
@@ -48,17 +48,22 @@ export default function Header({ lastRefresh, onRefresh, loading, stormPhase }) 
           <div className="text-2xl sm:text-3xl text-slate-300 flex-shrink-0">&#10052;</div>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-semibold text-white tracking-tight truncate">
-              Storm Fern Tracker
+              Winter Storm Tracker
             </h1>
-            <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1">
-              <span className="text-sky-400 text-xs sm:text-sm font-medium">#WinterStormFern</span>
-              <span className="text-slate-600 hidden xs:inline">|</span>
-              <p className="text-slate-400 text-xs sm:text-sm hidden xs:block">
-                Jan 24-26, 2026
-              </p>
-              <span className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded ${phaseColors[stormPhase]} text-white flex-shrink-0`}>
-                {phaseLabels[stormPhase]}
-              </span>
+            <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 sm:gap-3 mt-0.5 sm:mt-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs text-slate-500">Now Tracking:</span>
+                <span className="text-sky-300 text-xs sm:text-sm font-semibold">Winter Storm Fern</span>
+              </div>
+              <span className="text-slate-700 hidden xs:inline">|</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sky-400 text-[10px] sm:text-xs font-medium">#WinterStormFern</span>
+                <span className="text-slate-600 hidden sm:inline">|</span>
+                <span className="text-slate-400 text-[10px] sm:text-xs hidden sm:inline">Jan 24-26, 2026</span>
+                <span className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded ${phaseColors[stormPhase]} text-white flex-shrink-0`}>
+                  {phaseLabels[stormPhase]}
+                </span>
+              </div>
             </div>
           </div>
         </div>
