@@ -197,6 +197,67 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+// Smart tooltip component that repositions based on map edges
+function SmartTooltip({ children, position }) {
+  const map = useMap();
+  const [tooltipDirection, setTooltipDirection] = useState('top');
+  const [tooltipOffset, setTooltipOffset] = useState([0, -15]);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (!map || !position) return;
+
+      const containerPoint = map.latLngToContainerPoint(position);
+      const containerSize = map.getSize();
+
+      const marginTop = 120; // Space needed for tooltip above
+      const marginBottom = 120;
+      const marginSide = 100;
+
+      let direction = 'top';
+      let offset = [0, -15];
+
+      // Check if too close to top
+      if (containerPoint.y < marginTop) {
+        direction = 'bottom';
+        offset = [0, 15];
+      }
+      // Check if too close to bottom
+      else if (containerPoint.y > containerSize.y - marginBottom) {
+        direction = 'top';
+        offset = [0, -15];
+      }
+
+      // Check horizontal edges
+      if (containerPoint.x < marginSide) {
+        direction = 'right';
+        offset = [15, 0];
+      } else if (containerPoint.x > containerSize.x - marginSide) {
+        direction = 'left';
+        offset = [-15, 0];
+      }
+
+      setTooltipDirection(direction);
+      setTooltipOffset(offset);
+    };
+
+    updatePosition();
+    map.on('move zoom', updatePosition);
+    return () => map.off('move zoom', updatePosition);
+  }, [map, position]);
+
+  return (
+    <Tooltip
+      direction={tooltipDirection}
+      offset={tooltipOffset}
+      opacity={0.98}
+      className="enhanced-tooltip"
+    >
+      {children}
+    </Tooltip>
+  );
+}
+
 // Enhanced city marker with glow effect
 function CityMarker({ city, stormPhase }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -207,6 +268,8 @@ function CityMarker({ city, stormPhase }) {
   const forecastIce = city.forecast?.ice || 0;
   const observedSnow = city.observed?.snowfall || 0;
   const observedIce = city.observed?.ice || 0;
+
+  const position = [city.lat, city.lon];
 
   // Increased base radius by 50%
   const baseRadius = Math.max(12, Math.min(30, 12 + forecastSnow * 1.5 + (forecastIce * 15)));
@@ -235,7 +298,7 @@ function CityMarker({ city, stormPhase }) {
 
       {/* Main marker */}
       <CircleMarker
-        center={[city.lat, city.lon]}
+        center={position}
         radius={radius}
         pathOptions={{
           fillColor: color,
@@ -249,12 +312,7 @@ function CityMarker({ city, stormPhase }) {
           mouseout: () => setIsHovered(false)
         }}
       >
-        <Tooltip
-          direction="top"
-          offset={[0, -15]}
-          opacity={0.98}
-          className="enhanced-tooltip"
-        >
+        <SmartTooltip position={position}>
           <div className="min-w-[180px] p-1">
             {/* City name header */}
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200">
@@ -329,7 +387,7 @@ function CityMarker({ city, stormPhase }) {
               </div>
             )}
           </div>
-        </Tooltip>
+        </SmartTooltip>
       </CircleMarker>
 
       {/* City label */}
@@ -352,6 +410,8 @@ function UserLocationMarker({ location, stormPhase }) {
   const observedSnow = location.observed?.snowfall || 0;
   const observedIce = location.observed?.ice || 0;
 
+  const position = [location.lat, location.lon];
+
   const baseRadius = Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
@@ -365,7 +425,7 @@ function UserLocationMarker({ location, stormPhase }) {
     <>
       {/* Outer glow - emerald for user */}
       <CircleMarker
-        center={[location.lat, location.lon]}
+        center={position}
         radius={radius + 10}
         pathOptions={{
           fillColor: 'rgba(16, 185, 129, 0.3)',
@@ -378,7 +438,7 @@ function UserLocationMarker({ location, stormPhase }) {
 
       {/* Main marker */}
       <CircleMarker
-        center={[location.lat, location.lon]}
+        center={position}
         radius={radius}
         pathOptions={{
           fillColor: color,
@@ -392,7 +452,7 @@ function UserLocationMarker({ location, stormPhase }) {
           mouseout: () => setIsHovered(false)
         }}
       >
-        <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
+        <SmartTooltip position={position}>
           <div className="min-w-[180px] p-1">
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
               <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
@@ -451,7 +511,7 @@ function UserLocationMarker({ location, stormPhase }) {
               )}
             </div>
           </div>
-        </Tooltip>
+        </SmartTooltip>
       </CircleMarker>
 
       {/* City label */}
