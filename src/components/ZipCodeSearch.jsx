@@ -682,9 +682,11 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
               className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors"
             >
               <option value="">Select State</option>
-              {Object.entries(STATES_AND_CITIES).map(([code, state]) => (
-                <option key={code} value={code}>{state.name}</option>
-              ))}
+              {Object.entries(STATES_AND_CITIES)
+                .sort((a, b) => a[1].name.localeCompare(b[1].name))
+                .map(([code, state]) => (
+                  <option key={code} value={code}>{state.name}</option>
+                ))}
             </select>
             <select
               value={selectedCity}
