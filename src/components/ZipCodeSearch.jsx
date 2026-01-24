@@ -927,30 +927,32 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
     <div className="space-y-4">
       {/* Input Section */}
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <label className="block text-sm font-medium text-slate-300">
+        <div className="flex items-center gap-3 mb-3">
+          <label className="text-sm font-medium text-slate-300">
             Check Your Location
           </label>
+          <span className="text-slate-600">|</span>
           {/* Search mode toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-slate-600 text-xs">
+          <div className="flex items-center gap-1 text-xs">
             <button
               type="button"
               onClick={() => setSearchMode('city')}
-              className={`px-2.5 py-1 transition-colors ${
+              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                 searchMode === 'city'
                   ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  : 'text-slate-400 hover:text-slate-300'
               }`}
             >
               By City
             </button>
+            <span className="text-slate-600">/</span>
             <button
               type="button"
               onClick={() => setSearchMode('zip')}
-              className={`px-2.5 py-1 transition-colors ${
+              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                 searchMode === 'zip'
                   ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  : 'text-slate-400 hover:text-slate-300'
               }`}
             >
               By Zip

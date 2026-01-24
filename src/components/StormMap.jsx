@@ -73,6 +73,43 @@ function MapController({ showRadar }) {
   return null;
 }
 
+// Component to fit map bounds to user locations
+function FitBoundsToLocations({ userLocations, triggerFit }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (triggerFit && userLocations.length > 0) {
+      // Create bounds from user locations
+      const bounds = L.latLngBounds(
+        userLocations.map(loc => [loc.lat, loc.lon])
+      );
+
+      // Add padding to the bounds so markers aren't at the edge
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 10, // Don't zoom in too far
+        animate: true,
+        duration: 0.5
+      });
+    }
+  }, [triggerFit, userLocations, map]);
+
+  return null;
+}
+
+// Reset map to default view
+function ResetMapView({ trigger }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (trigger) {
+      map.setView(CENTER, ZOOM, { animate: true, duration: 0.5 });
+    }
+  }, [trigger, map]);
+
+  return null;
+}
+
 // Component to track zoom level and update context
 function ZoomTracker({ onZoomChange }) {
   const map = useMapEvents({
@@ -430,7 +467,17 @@ function UserLocationMarker({ location, stormPhase }) {
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false }) {
   const [showRadar, setShowRadar] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(ZOOM);
+  const [fitTrigger, setFitTrigger] = useState(0);
+  const [resetTrigger, setResetTrigger] = useState(0);
   const cities = Object.values(weatherData);
+
+  const handleZoomToLocations = () => {
+    setFitTrigger(prev => prev + 1);
+  };
+
+  const handleResetView = () => {
+    setResetTrigger(prev => prev + 1);
+  };
 
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
@@ -444,10 +491,28 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {/* Zoom to user locations button */}
+            {userLocations.length > 0 && (
+              <button
+                onClick={handleZoomToLocations}
+                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 cursor-pointer"
+                title="Zoom to your locations"
+              >
+                Zoom to My Locations
+              </button>
+            )}
+            {/* Reset view button */}
+            <button
+              onClick={handleResetView}
+              className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
+              title="Reset to full view"
+            >
+              Reset View
+            </button>
             {/* Radar toggle */}
             <button
               onClick={() => setShowRadar(!showRadar)}
-              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all ${
+              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                 showRadar
                   ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
                   : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
@@ -501,6 +566,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         >
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />
+          <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
+          <ResetMapView trigger={resetTrigger} />
 
           {/* Dark Matter basemap */}
           <TileLayer
