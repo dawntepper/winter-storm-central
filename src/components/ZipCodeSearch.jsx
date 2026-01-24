@@ -4,6 +4,24 @@ const LOCATIONS_KEY = 'winterStorm_userLocations';
 
 // States and cities in the storm-affected region
 const STATES_AND_CITIES = {
+  'AL': {
+    name: 'Alabama',
+    cities: [
+      { name: 'Birmingham', lat: 33.5186, lon: -86.8104 },
+      { name: 'Montgomery', lat: 32.3792, lon: -86.3077 },
+      { name: 'Huntsville', lat: 34.7304, lon: -86.5861 },
+      { name: 'Mobile', lat: 30.6954, lon: -88.0399 },
+    ]
+  },
+  'AR': {
+    name: 'Arkansas',
+    cities: [
+      { name: 'Little Rock', lat: 34.7465, lon: -92.2896 },
+      { name: 'Fort Smith', lat: 35.3859, lon: -94.3985 },
+      { name: 'Fayetteville', lat: 36.0822, lon: -94.1719 },
+      { name: 'Jonesboro', lat: 35.8423, lon: -90.7043 },
+    ]
+  },
   'TX': {
     name: 'Texas',
     cities: [
