@@ -82,6 +82,9 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
               </div>
             )}
             <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
+            <p className="text-xs text-slate-500">
+              Contact: <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">@dawntepper_</a>
+            </p>
           </div>
 
           {/* Share Button */}
