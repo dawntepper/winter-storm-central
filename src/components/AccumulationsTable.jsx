@@ -75,8 +75,13 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-amber-400">&#9888;</span> Storm Fern Tracking
         </h2>
-        <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
-          Cities with recorded snow or ice • Click headers to sort
+        {lastRefresh && (
+          <p className="text-slate-400 text-[10px] sm:text-xs mt-1">
+            Last updated: {formatTimestamp(lastRefresh)}
+          </p>
+        )}
+        <p className="text-slate-500 text-[10px] sm:text-xs mt-0.5">
+          Values show current conditions and may change as the storm progresses
         </p>
       </div>
 
@@ -180,12 +185,8 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
         })}
       </div>
 
-      <div className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-900/30 border-t border-slate-700/50 text-[10px] sm:text-xs text-slate-500 space-y-1">
-        <p>Forecast predictions and station measurements update hourly from NOAA</p>
-        {lastRefresh && (
-          <p>Last updated: {formatTimestamp(lastRefresh)}</p>
-        )}
-        <p className="text-slate-600">Values show current conditions and may change as the storm progresses</p>
+      <div className="px-3 sm:px-4 py-2 bg-slate-900/30 border-t border-slate-700/50 text-[10px] sm:text-xs text-slate-500">
+        F = Forecast • A = Actual • Click headers to sort • {sortedCities.length} cities
       </div>
     </div>
   );
