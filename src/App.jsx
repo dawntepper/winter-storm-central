@@ -305,6 +305,7 @@ export default function App() {
                   weatherData={showOnlyUserLocations ? {} : weatherData}
                   userLocations={userLocations}
                   stormPhase={stormPhase}
+                  lastRefresh={lastRefresh}
                 />
                 <DualLeaderboard
                   snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}

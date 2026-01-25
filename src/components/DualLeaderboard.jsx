@@ -44,7 +44,7 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.snowfall || 0;
-            const maxSnow = city.maxAccumulation?.snow || 0;
+            const observedSnow = city.observed?.snowfall || 0;
             const isUser = city.isUserLocation;
             return (
               <div
@@ -71,9 +71,9 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                     {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
                   </span>
                   <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    maxSnow > 0 ? 'text-emerald-400' : 'text-slate-600'
+                    observedSnow > 0 ? 'text-emerald-400' : 'text-slate-600'
                   }`}>
-                    {maxSnow > 0 ? `${maxSnow.toFixed(1)}"` : '-'}
+                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
                   </span>
                 </div>
               </div>
@@ -133,7 +133,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.ice || 0;
-            const maxIce = city.maxAccumulation?.ice || 0;
+            const observedIce = city.observed?.ice || 0;
             const danger = getDangerLevel(forecast);
             const isUser = city.isUserLocation;
             return (
@@ -168,9 +168,9 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
                     {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
                   </span>
                   <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    maxIce > 0 ? 'text-emerald-400' : 'text-slate-600'
+                    observedIce > 0 ? 'text-emerald-400' : 'text-slate-600'
                   }`}>
-                    {maxIce > 0 ? `${maxIce.toFixed(2)}"` : '-'}
+                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
                   </span>
                 </div>
               </div>
