@@ -88,8 +88,8 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
               sortBy === 'max' && sortType === 'snow' ? 'text-emerald-400 font-bold' : 'text-emerald-400/70'
             }`}
           >
-            <span className="hidden sm:inline">Snow Max</span>
-            <span className="sm:hidden">Sn M</span>
+            <span className="hidden sm:inline">Snow Actual</span>
+            <span className="sm:hidden">Sn A</span>
             {sortBy === 'max' && sortType === 'snow' && ' ▼'}
           </button>
           <button
@@ -108,8 +108,8 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
               sortBy === 'max' && sortType === 'ice' ? 'text-emerald-400 font-bold' : 'text-emerald-400/70'
             }`}
           >
-            <span className="hidden sm:inline">Ice Max</span>
-            <span className="sm:hidden">Ic M</span>
+            <span className="hidden sm:inline">Ice Actual</span>
+            <span className="sm:hidden">Ic A</span>
             {sortBy === 'max' && sortType === 'ice' && ' ▼'}
           </button>
         </div>
@@ -169,7 +169,7 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
       </div>
 
       <div className="px-3 sm:px-4 py-2 bg-slate-900/30 border-t border-slate-700/50 text-[10px] text-slate-500">
-        F = Forecast • Max = Peak reported (never decreases) • {sortedCities.length} cities
+        F = Forecast • Actual = Peak reported (never decreases) • {sortedCities.length} cities
       </div>
     </div>
   );

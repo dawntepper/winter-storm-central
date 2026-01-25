@@ -29,7 +29,7 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         <span>City</span>
         <div className="flex gap-4 sm:gap-6">
           <span className="w-16 text-right text-sky-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Max</span>
+          <span className="w-16 text-right text-emerald-400">Actual</span>
         </div>
       </div>
 
@@ -121,7 +121,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         <span>City</span>
         <div className="flex gap-4 sm:gap-6">
           <span className="w-16 text-right text-fuchsia-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Max</span>
+          <span className="w-16 text-right text-emerald-400">Actual</span>
         </div>
       </div>
 

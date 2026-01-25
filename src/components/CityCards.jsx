@@ -112,7 +112,7 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
             {city.maxAccumulation?.snow > 0 ? `${city.maxAccumulation.snow.toFixed(1)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Snow Max
+            Snow Actual
           </p>
         </div>
         <div className={`rounded-lg p-2 text-center ${city.maxAccumulation?.ice > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
@@ -120,7 +120,7 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
             {city.maxAccumulation?.ice > 0 ? `${city.maxAccumulation.ice.toFixed(2)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Ice Max
+            Ice Actual
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
       {/* Data note */}
       <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-2">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-        <span>Max = Peak reported (never decreases)</span>
+        <span>Actual = Peak reported (never decreases)</span>
       </div>
 
       {/* Forecast conditions (if no live obs) */}
