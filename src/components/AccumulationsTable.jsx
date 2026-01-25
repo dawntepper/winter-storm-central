@@ -12,7 +12,7 @@ function formatTimestamp(date) {
   }).replace(',', '') + ' EST';
 }
 
-export default function AccumulationsTable({ weatherData, userLocations = [], stormPhase, lastRefresh }) {
+export default function AccumulationsTable({ weatherData, userLocations = [], stormPhase, lastRefresh, onCityClick }) {
   const [sortType, setSortType] = useState('snow'); // 'snow' or 'ice'
   const [sortBy, setSortBy] = useState('actual'); // 'forecast' or 'actual'
 
@@ -143,7 +143,8 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
           return (
             <div
               key={city.id || city.name}
-              className={`grid grid-cols-[1fr_auto] px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-slate-700/30 transition-colors ${
+              onClick={() => onCityClick && onCityClick(city)}
+              className={`grid grid-cols-[1fr_auto] px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-slate-700/30 transition-colors cursor-pointer ${
                 isUser ? 'bg-emerald-500/5 border-l-2 border-emerald-500' : ''
               }`}
             >

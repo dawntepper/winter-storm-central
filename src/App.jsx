@@ -200,6 +200,14 @@ export default function App() {
 
   const [userLocations, setUserLocations] = useState([]);
   const [showOnlyUserLocations, setShowOnlyUserLocations] = useState(false);
+  const [mapCenterOn, setMapCenterOn] = useState(null);
+
+  // Handle city click from table - center map on that city
+  const handleCityClick = (city) => {
+    if (city.lat && city.lon) {
+      setMapCenterOn({ lat: city.lat, lon: city.lon, id: Date.now() });
+    }
+  };
 
   const hasData = Object.keys(weatherData).length > 0;
 
@@ -283,6 +291,7 @@ export default function App() {
               userLocations={userLocations}
               isHero
               isSidebar
+              centerOn={mapCenterOn}
             />
           </div>
 
@@ -306,6 +315,7 @@ export default function App() {
                   userLocations={userLocations}
                   stormPhase={stormPhase}
                   lastRefresh={lastRefresh}
+                  onCityClick={handleCityClick}
                 />
                 <DualLeaderboard
                   snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}

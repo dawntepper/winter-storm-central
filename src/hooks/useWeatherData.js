@@ -84,11 +84,28 @@ export const useWeatherData = () => {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  // Auto-refresh
+  // Auto-refresh every 30 minutes
   useEffect(() => {
     const interval = setInterval(() => fetchWeatherData(), REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchWeatherData]);
+
+  // Refresh when tab becomes visible again (browsers throttle inactive tabs)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Check if it's been more than 5 minutes since last refresh
+        const fiveMinutes = 5 * 60 * 1000;
+        if (!lastRefresh || (Date.now() - lastRefresh.getTime()) > fiveMinutes) {
+          console.log('Tab became visible, refreshing data...');
+          fetchWeatherData();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchWeatherData, lastRefresh]);
 
   // Update storm phase periodically
   useEffect(() => {

@@ -110,6 +110,19 @@ function ResetMapView({ trigger }) {
   return null;
 }
 
+// Center map on a specific location
+function CenterOnLocation({ location }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (location && location.lat && location.lon) {
+      map.setView([location.lat, location.lon], 8, { animate: true, duration: 0.5 });
+    }
+  }, [location?.id, location?.lat, location?.lon, map]);
+
+  return null;
+}
+
 // Component to track zoom level and update context
 function ZoomTracker({ onZoomChange }) {
   const map = useMapEvents({
@@ -469,7 +482,7 @@ function UserLocationMarker({ location, stormPhase }) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false, centerOn = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(ZOOM);
   const [fitTrigger, setFitTrigger] = useState(0);
@@ -579,6 +592,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <ZoomTracker onZoomChange={setZoomLevel} />
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
           <ResetMapView trigger={resetTrigger} />
+          <CenterOnLocation location={centerOn} />
 
           {/* Dark Matter basemap */}
           <TileLayer
