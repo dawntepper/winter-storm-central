@@ -74,6 +74,7 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-amber-400">&#9888;</span> Storm Fern Tracking
+          <span className="text-[10px] sm:text-xs text-slate-500 font-normal ml-1">(click to view on map)</span>
         </h2>
         {lastRefresh && (
           <p className="text-slate-400 text-[10px] sm:text-xs mt-1">

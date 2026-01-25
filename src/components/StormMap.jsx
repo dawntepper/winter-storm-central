@@ -355,12 +355,84 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
         </Tooltip>
       </CircleMarker>
 
-      {/* City label */}
+      {/* City label - also interactive for easier hovering */}
       <Marker
         position={[city.lat, city.lon]}
         icon={labelIcon}
-        interactive={false}
-      />
+        eventHandlers={{
+          mouseover: () => setIsHovered(true),
+          mouseout: () => setIsHovered(false)
+        }}
+      >
+        <Tooltip
+          direction="top"
+          offset={[0, -30]}
+          opacity={0.98}
+          className="enhanced-tooltip"
+        >
+          <div className="min-w-[180px] p-1">
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200">
+              <h3 className="font-bold text-sm text-gray-800">{city.name}</h3>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                city.hazardType === 'snow' ? 'bg-blue-100 text-blue-700' :
+                city.hazardType === 'ice' ? 'bg-purple-100 text-purple-700' :
+                city.hazardType === 'mixed' ? 'bg-violet-100 text-violet-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {city.hazardType.toUpperCase()}
+              </span>
+            </div>
+            {city.observation?.temperature && (
+              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
+                <span className="text-lg font-bold text-emerald-700">{city.observation.temperature}°F</span>
+                <span className="text-[10px] text-emerald-600">{city.observation.conditions}</span>
+              </div>
+            )}
+            <div className="mb-2">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Forecast</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-blue-50 rounded p-1.5 text-center">
+                  <div className="text-blue-700 font-bold text-sm">
+                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-blue-500">Snow</div>
+                </div>
+                <div className="bg-purple-50 rounded p-1.5 text-center">
+                  <div className="text-purple-700 font-bold text-sm">
+                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-purple-500">Ice</div>
+                </div>
+              </div>
+            </div>
+            {isActive && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
+                </div>
+                {hasObserved ? (
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-emerald-50 rounded p-1.5 text-center">
+                      <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
+                      <div className="text-[9px] text-emerald-500">Snow</div>
+                    </div>
+                    <div className="bg-emerald-50 rounded p-1.5 text-center">
+                      <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
+                      <div className="text-[9px] text-emerald-500">Ice</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-400 italic text-center py-1">Accumulating...</p>
+                )}
+              </div>
+            )}
+          </div>
+        </Tooltip>
+      </Marker>
     </>
   );
 }
@@ -479,12 +551,70 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         </Tooltip>
       </CircleMarker>
 
-      {/* City label */}
+      {/* City label - also interactive for easier hovering */}
       <Marker
         position={[location.lat, location.lon]}
         icon={labelIcon}
-        interactive={false}
-      />
+        eventHandlers={{
+          mouseover: () => setIsHovered(true),
+          mouseout: () => setIsHovered(false)
+        }}
+      >
+        <Tooltip direction="top" offset={[0, -30]} opacity={0.98} className="enhanced-tooltip">
+          <div className="min-w-[180px] p-1">
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
+              <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
+              <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-semibold">YOUR LOCATION</span>
+            </div>
+            {location.conditions?.temperature && (
+              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
+                <span className="text-lg font-bold text-emerald-700">{location.conditions.temperature}°{location.conditions.temperatureUnit}</span>
+                <span className="text-[10px] text-emerald-600">{location.conditions.shortForecast}</span>
+              </div>
+            )}
+            <div className="mb-2">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Expected</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-blue-50 rounded p-1.5 text-center">
+                  <div className="text-blue-700 font-bold text-sm">
+                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-blue-500">Snow</div>
+                </div>
+                <div className="bg-purple-50 rounded p-1.5 text-center">
+                  <div className="text-purple-700 font-bold text-sm">
+                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-purple-500">Ice</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
+              </div>
+              {hasObserved ? (
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-emerald-50 rounded p-1.5 text-center">
+                    <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
+                    <div className="text-[9px] text-emerald-500">Snow</div>
+                  </div>
+                  <div className="bg-emerald-50 rounded p-1.5 text-center">
+                    <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
+                    <div className="text-[9px] text-emerald-500">Ice</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-400 italic text-center py-1">No accumulation yet</p>
+              )}
+            </div>
+          </div>
+        </Tooltip>
+      </Marker>
     </>
   );
 }
