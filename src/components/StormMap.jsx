@@ -110,16 +110,19 @@ function ResetMapView({ trigger }) {
   return null;
 }
 
-// Center map on a specific location (offset so city appears in lower portion for tooltip room)
+// Center map on a specific location with responsive offset
 function CenterOnLocation({ location }) {
   const map = useMap();
 
   useEffect(() => {
     if (location && location.lat && location.lon) {
-      // Offset the center northward so the city appears in the lower third of the map
-      // This gives room for the tooltip to appear above the marker without being cut off
-      const latOffset = 1.2; // Degrees north - adjust based on zoom level 8
+      const isMobile = window.innerWidth < 768;
+
+      // Desktop: city appears in upper portion (small offset down for tooltip room above)
+      // Mobile: city appears slightly below center
+      const latOffset = isMobile ? 0.4 : -0.5;
       const adjustedLat = location.lat + latOffset;
+
       map.setView([adjustedLat, location.lon], 8, { animate: true, duration: 0.5 });
     }
   }, [location?.id, location?.lat, location?.lon, map]);
@@ -216,7 +219,7 @@ function formatTime(isoString) {
 
 
 // Enhanced city marker with glow effect
-function CityMarker({ city, stormPhase }) {
+function CityMarker({ city, stormPhase, isMobile = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const zoomLevel = useContext(ZoomContext);
   const color = hazardColors[city.hazardType] || hazardColors.none;
@@ -228,8 +231,8 @@ function CityMarker({ city, stormPhase }) {
 
   const position = [city.lat, city.lon];
 
-  // Increased base radius by 50%
-  const baseRadius = Math.max(12, Math.min(30, 12 + forecastSnow * 1.5 + (forecastIce * 15)));
+  // Mobile: uniform size for readability. Desktop: scale by forecast
+  const baseRadius = isMobile ? 10 : Math.max(12, Math.min(30, 12 + forecastSnow * 1.5 + (forecastIce * 15)));
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
@@ -243,7 +246,7 @@ function CityMarker({ city, stormPhase }) {
       {/* Outer glow ring */}
       <CircleMarker
         center={[city.lat, city.lon]}
-        radius={radius + 8}
+        radius={radius + (isMobile ? 4 : 8)}
         pathOptions={{
           fillColor: glowColor,
           fillOpacity: 0.5,
@@ -363,7 +366,7 @@ function CityMarker({ city, stormPhase }) {
 }
 
 // Enhanced user location marker
-function UserLocationMarker({ location, stormPhase }) {
+function UserLocationMarker({ location, stormPhase, isMobile = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const zoomLevel = useContext(ZoomContext);
   const color = hazardColors[location.hazardType] || hazardColors.none;
@@ -374,7 +377,8 @@ function UserLocationMarker({ location, stormPhase }) {
 
   const position = [location.lat, location.lon];
 
-  const baseRadius = Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
+  // Mobile: uniform size for readability. Desktop: scale by forecast
+  const baseRadius = isMobile ? 12 : Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
@@ -388,7 +392,7 @@ function UserLocationMarker({ location, stormPhase }) {
       {/* Outer glow - emerald for user */}
       <CircleMarker
         center={position}
-        radius={radius + 10}
+        radius={radius + (isMobile ? 5 : 10)}
         pathOptions={{
           fillColor: 'rgba(16, 185, 129, 0.3)',
           fillOpacity: 0.6,
@@ -491,7 +495,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [zoomLevel, setZoomLevel] = useState(ZOOM);
   const [fitTrigger, setFitTrigger] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const cities = Object.values(weatherData);
+
+  // Track window resize for responsive marker sizing
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleZoomToLocations = () => {
     setFitTrigger(prev => prev + 1);
@@ -610,12 +622,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           {/* City markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
             {cities.map(city => (
-              <CityMarker key={city.id} city={city} stormPhase={stormPhase} />
+              <CityMarker key={city.id} city={city} stormPhase={stormPhase} isMobile={isMobile} />
             ))}
 
             {/* User location markers */}
             {userLocations.map(location => (
-              <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} />
+              <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} isMobile={isMobile} />
             ))}
           </ZoomContext.Provider>
         </MapContainer>
