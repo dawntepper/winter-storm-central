@@ -13,8 +13,8 @@ function formatTimestamp(date) {
 }
 
 export default function AccumulationsTable({ weatherData, userLocations = [], stormPhase, lastRefresh, onCityClick }) {
-  const [sortType, setSortType] = useState('snow'); // 'snow' or 'ice'
-  const [sortBy, setSortBy] = useState('actual'); // 'forecast' or 'actual'
+  const [sortType, setSortType] = useState('snow'); // 'snow', 'ice', or 'name'
+  const [sortBy, setSortBy] = useState('actual'); // 'forecast', 'actual', or 'name'
 
   // Combine all cities and user locations
   const allCities = [
@@ -42,8 +42,17 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
     return acc;
   }, []);
 
-  // Sort cities
+  // Sort cities - user locations always first, then by selected column
   const sortedCities = [...uniqueCities].sort((a, b) => {
+    // User locations always come first
+    if (a.isUserLocation && !b.isUserLocation) return -1;
+    if (!a.isUserLocation && b.isUserLocation) return 1;
+
+    // Then sort by selected column
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name); // Alphabetical A-Z
+    }
+
     let aVal, bVal;
     if (sortBy === 'forecast') {
       aVal = sortType === 'snow' ? (a.forecast?.snowfall || 0) : (a.forecast?.ice || 0);
@@ -58,6 +67,11 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
   const handleSort = (type, column) => {
     setSortType(type);
     setSortBy(column);
+  };
+
+  const handleNameSort = () => {
+    setSortBy('name');
+    setSortType('name');
   };
 
   if (sortedCities.length === 0) {
@@ -88,7 +102,14 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
 
       {/* Column Headers */}
       <div className="grid grid-cols-[1fr_auto] px-3 sm:px-4 py-2 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
-        <span>City</span>
+        <button
+          onClick={handleNameSort}
+          className={`text-left cursor-pointer hover:text-slate-300 transition-colors ${
+            sortBy === 'name' ? 'text-slate-300 font-bold' : ''
+          }`}
+        >
+          City{sortBy === 'name' && ' ▼'}
+        </button>
         <div className="grid grid-cols-4 gap-1 sm:gap-4">
           <button
             onClick={() => handleSort('snow', 'forecast')}
