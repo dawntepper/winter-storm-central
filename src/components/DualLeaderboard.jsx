@@ -17,17 +17,20 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
     <div className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col ${compact ? 'flex-1' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
-          <span className="text-sky-300">&#10052;</span> Snow Forecast
+          <span className="text-sky-300">&#10052;</span> Snow Totals
         </h2>
         <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
           Storm Fern | Jan 24-26
         </p>
       </div>
 
-      {/* Column Headers - Forecast only */}
+      {/* Column Headers */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <span className="w-20 text-right text-sky-400">Forecast</span>
+        <div className="flex gap-4 sm:gap-6">
+          <span className="w-16 text-right text-sky-400">Forecast</span>
+          <span className="w-16 text-right text-emerald-400">Max</span>
+        </div>
       </div>
 
       <div
@@ -41,6 +44,7 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.snowfall || 0;
+            const maxSnow = city.maxAccumulation?.snow || 0;
             const isUser = city.isUserLocation;
             return (
               <div
@@ -62,9 +66,16 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                     )}
                   </div>
                 </div>
-                <span className="w-20 text-right text-sm sm:text-base font-semibold text-sky-300 flex-shrink-0">
-                  {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
-                </span>
+                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
+                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-sky-300">
+                    {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
+                  </span>
+                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
+                    maxSnow > 0 ? 'text-emerald-400' : 'text-slate-600'
+                  }`}>
+                    {maxSnow > 0 ? `${maxSnow.toFixed(1)}"` : '-'}
+                  </span>
+                </div>
               </div>
             );
           })
@@ -105,10 +116,13 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         </p>
       </div>
 
-      {/* Column Headers - Forecast only */}
+      {/* Column Headers */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <span className="w-20 text-right text-fuchsia-400">Forecast</span>
+        <div className="flex gap-4 sm:gap-6">
+          <span className="w-16 text-right text-fuchsia-400">Forecast</span>
+          <span className="w-16 text-right text-emerald-400">Max</span>
+        </div>
       </div>
 
       <div className={`divide-y divide-slate-700/50 ${compact ? 'flex-1 overflow-y-auto' : ''}`}>
@@ -119,6 +133,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.ice || 0;
+            const maxIce = city.maxAccumulation?.ice || 0;
             const danger = getDangerLevel(forecast);
             const isUser = city.isUserLocation;
             return (
@@ -148,9 +163,16 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
                     )}
                   </div>
                 </div>
-                <span className="w-20 text-right text-sm sm:text-base font-semibold text-fuchsia-400 flex-shrink-0">
-                  {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
-                </span>
+                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
+                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-fuchsia-400">
+                    {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
+                  </span>
+                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
+                    maxIce > 0 ? 'text-emerald-400' : 'text-slate-600'
+                  }`}>
+                    {maxIce > 0 ? `${maxIce.toFixed(2)}"` : '-'}
+                  </span>
+                </div>
               </div>
             );
           })
