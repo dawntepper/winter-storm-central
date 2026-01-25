@@ -110,13 +110,17 @@ function ResetMapView({ trigger }) {
   return null;
 }
 
-// Center map on a specific location
+// Center map on a specific location (offset so city appears in lower portion for tooltip room)
 function CenterOnLocation({ location }) {
   const map = useMap();
 
   useEffect(() => {
     if (location && location.lat && location.lon) {
-      map.setView([location.lat, location.lon], 8, { animate: true, duration: 0.5 });
+      // Offset the center northward so the city appears in the lower third of the map
+      // This gives room for the tooltip to appear above the marker without being cut off
+      const latOffset = 1.2; // Degrees north - adjust based on zoom level 8
+      const adjustedLat = location.lat + latOffset;
+      map.setView([adjustedLat, location.lon], 8, { animate: true, duration: 0.5 });
     }
   }, [location?.id, location?.lat, location?.lon, map]);
 
