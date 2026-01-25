@@ -399,7 +399,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
           color: 'transparent',
           weight: 0
         }}
-        className="pulse-marker-user"
       />
 
       {/* Main marker */}
