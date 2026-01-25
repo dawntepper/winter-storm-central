@@ -6,7 +6,7 @@ import L from 'leaflet';
 const ZoomContext = createContext(5.5);
 
 // Center of the storm coverage area - responsive defaults
-const CENTER_DESKTOP = [35.0, -85]; // Center on Tennessee, US fills viewport
+const CENTER_DESKTOP = [28.0, -85]; // Center on Gulf, US appears at top of viewport
 const CENTER_MOBILE = [37.0, -82];  // Centered for mobile
 const ZOOM_DESKTOP = 4.5;  // Zoomed out to see full US
 const ZOOM_MOBILE = 3;     // Zoomed out to see full storm on mobile
