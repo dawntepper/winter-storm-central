@@ -5,9 +5,9 @@ import L from 'leaflet';
 // Context to share zoom level with marker components
 const ZoomContext = createContext(5.5);
 
-// Center of the storm coverage area - adjusted for better framing
-const CENTER = [37.0, -84];
-const ZOOM = 5.5;
+// Center of the storm coverage area - focused on active storm region
+const CENTER = [37.5, -80];
+const ZOOM = 6;
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
