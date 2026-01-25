@@ -31,11 +31,19 @@ export const useWeatherData = () => {
     console.log('Fetching weather data from Netlify function...');
 
     try {
+      // Add timestamp to bust cache on mobile browsers
+      const timestamp = Date.now();
       const url = forceRefresh
-        ? '/api/weather-data?refresh=true'
-        : '/api/weather-data';
+        ? `/api/weather-data?refresh=true&t=${timestamp}`
+        : `/api/weather-data?t=${timestamp}`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

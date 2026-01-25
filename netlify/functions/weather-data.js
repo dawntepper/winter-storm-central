@@ -88,11 +88,14 @@ const getHazardType = (snow, ice) => {
 // Fetch latest observation from NOAA weather station
 const fetchStationObservation = async (stationId) => {
   try {
-    const url = `https://api.weather.gov/stations/${stationId}/observations/latest`;
+    // Add timestamp to bust any intermediate caches
+    const timestamp = Date.now();
+    const url = `https://api.weather.gov/stations/${stationId}/observations/latest?t=${timestamp}`;
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'WinterStormTracker/1.0 (contact@winterstormtracker.com)',
-        'Accept': 'application/geo+json'
+        'Accept': 'application/geo+json',
+        'Cache-Control': 'no-cache'
       }
     });
 
@@ -143,11 +146,14 @@ const fetchStationObservation = async (stationId) => {
 // Fetch weather data for a single city
 const fetchCityWeather = async (cityId, cityData) => {
   try {
-    const pointsUrl = `https://api.weather.gov/points/${cityData.lat},${cityData.lon}`;
+    // Add timestamp to bust any intermediate caches
+    const timestamp = Date.now();
+    const pointsUrl = `https://api.weather.gov/points/${cityData.lat},${cityData.lon}?t=${timestamp}`;
     const pointsResponse = await fetch(pointsUrl, {
       headers: {
         'User-Agent': 'WinterStormTracker/1.0 (contact@winterstormtracker.com)',
-        'Accept': 'application/geo+json'
+        'Accept': 'application/geo+json',
+        'Cache-Control': 'no-cache'
       }
     });
 
@@ -160,17 +166,20 @@ const fetchCityWeather = async (cityId, cityData) => {
     const forecastUrl = pointsData.properties.forecast;
 
     // Fetch grid data, forecast, and station observation in parallel
+    // Add timestamp to bust any intermediate caches
     const [gridResponse, forecastResponse, observation] = await Promise.all([
-      fetch(forecastGridDataUrl, {
+      fetch(`${forecastGridDataUrl}?t=${timestamp}`, {
         headers: {
           'User-Agent': 'WinterStormTracker/1.0 (contact@winterstormtracker.com)',
-          'Accept': 'application/geo+json'
+          'Accept': 'application/geo+json',
+          'Cache-Control': 'no-cache'
         }
       }),
-      fetch(forecastUrl, {
+      fetch(`${forecastUrl}?t=${timestamp}`, {
         headers: {
           'User-Agent': 'WinterStormTracker/1.0 (contact@winterstormtracker.com)',
-          'Accept': 'application/geo+json'
+          'Accept': 'application/geo+json',
+          'Cache-Control': 'no-cache'
         }
       }),
       cityData.stationId ? fetchStationObservation(cityData.stationId) : Promise.resolve(null)
@@ -270,12 +279,15 @@ const fetchAllCities = async () => {
 
 // Main handler
 exports.handler = async (event, context) => {
-  // CORS headers
+  // CORS and cache control headers - prevent mobile browser caching
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   };
 
   // Handle preflight
