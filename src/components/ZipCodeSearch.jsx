@@ -507,18 +507,14 @@ async function fetchWeatherForLocation(lat, lon, name, zip) {
   };
 
   try {
-    // Get NOAA grid point - add timestamp to bust cache
-    const timestamp = Date.now();
-    const pointsUrl = `https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}?t=${timestamp}`;
+    // Get NOAA grid point
+    const pointsUrl = `https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`;
     console.log('Fetching NOAA data for:', pointsUrl);
 
     const pointsResponse = await fetch(pointsUrl, {
-      cache: 'no-store',
       headers: {
         'User-Agent': 'WinterStormCentral/1.0 (contact@example.com)',
-        'Accept': 'application/geo+json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Accept': 'application/geo+json'
       }
     });
 
@@ -535,15 +531,13 @@ async function fetchWeatherForLocation(lat, lon, name, zip) {
     const forecastGridDataUrl = pointsData.properties.forecastGridData;
     const forecastUrl = pointsData.properties.forecast;
 
-    // Fetch grid data and forecast - add timestamp to bust cache
+    // Fetch grid data and forecast
     const [gridResponse, forecastResponse] = await Promise.all([
-      fetch(`${forecastGridDataUrl}?t=${timestamp}`, {
-        cache: 'no-store',
-        headers: { 'User-Agent': 'WinterStormCentral/1.0', 'Accept': 'application/geo+json', 'Cache-Control': 'no-cache' }
+      fetch(forecastGridDataUrl, {
+        headers: { 'User-Agent': 'WinterStormCentral/1.0', 'Accept': 'application/geo+json' }
       }),
-      fetch(`${forecastUrl}?t=${timestamp}`, {
-        cache: 'no-store',
-        headers: { 'User-Agent': 'WinterStormCentral/1.0', 'Accept': 'application/geo+json', 'Cache-Control': 'no-cache' }
+      fetch(forecastUrl, {
+        headers: { 'User-Agent': 'WinterStormCentral/1.0', 'Accept': 'application/geo+json' }
       })
     ]);
 
