@@ -758,14 +758,25 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <RadarLayer show={showRadar} />
 
           {/* City markers with zoom context */}
+          {/* Key includes lastUpdated to force re-render when data changes */}
           <ZoomContext.Provider value={zoomLevel}>
             {cities.map(city => (
-              <CityMarker key={city.id} city={city} stormPhase={stormPhase} isMobile={isMobile} />
+              <CityMarker
+                key={`${city.id}-${city.lastUpdated || ''}`}
+                city={city}
+                stormPhase={stormPhase}
+                isMobile={isMobile}
+              />
             ))}
 
             {/* User location markers */}
             {userLocations.map(location => (
-              <UserLocationMarker key={location.id} location={location} stormPhase={stormPhase} isMobile={isMobile} />
+              <UserLocationMarker
+                key={`${location.id}-${location.lastUpdated || ''}`}
+                location={location}
+                stormPhase={stormPhase}
+                isMobile={isMobile}
+              />
             ))}
           </ZoomContext.Provider>
         </MapContainer>
