@@ -118,9 +118,9 @@ function CenterOnLocation({ location }) {
     if (location && location.lat && location.lon) {
       const isMobile = window.innerWidth < 768;
 
-      // Desktop: city appears in upper portion (small offset down for tooltip room above)
+      // Desktop: city appears near top of map (large negative offset) with room for tooltip above
       // Mobile: city appears slightly below center
-      const latOffset = isMobile ? 0.4 : -0.5;
+      const latOffset = isMobile ? 0.4 : -1.8;
       const adjustedLat = location.lat + latOffset;
 
       map.setView([adjustedLat, location.lon], 8, { animate: true, duration: 0.5 });
