@@ -736,8 +736,24 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   const [currentLocationData, setCurrentLocationData] = useState(null);
   const [isCardDismissed, setIsCardDismissed] = useState(false);
 
+  // Mobile collapse state - collapsed by default on mobile
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Store all saved locations with their map visibility
   const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
+
+  // Track window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Auto-expand on desktop
+      if (!mobile) setIsExpanded(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load saved locations on mount
   useEffect(() => {
@@ -918,39 +934,68 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   return (
     <div className="space-y-4">
       {/* Input Section */}
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <label className="text-sm font-medium text-slate-300">
-            Check Your Location
-          </label>
-          <span className="text-slate-600">|</span>
-          {/* Search mode toggle */}
-          <div className="flex items-center gap-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setSearchMode('city')}
-              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                searchMode === 'city'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              By City
-            </button>
-            <span className="text-slate-600">/</span>
-            <button
-              type="button"
-              onClick={() => setSearchMode('zip')}
-              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                searchMode === 'zip'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              By Zip
-            </button>
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+        {/* Collapsible Header - clickable on mobile */}
+        <button
+          type="button"
+          onClick={() => isMobile && setIsExpanded(!isExpanded)}
+          className={`w-full px-4 py-3 flex items-center justify-between ${isMobile ? 'cursor-pointer hover:bg-slate-700/30' : 'cursor-default'}`}
+        >
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-300">
+              Check Your Location
+            </label>
+            {/* Show count badge on collapsed mobile */}
+            {isMobile && !isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
+                {Object.values(savedLocations).filter(l => l.onMap).length} on map
+              </span>
+            )}
           </div>
-        </div>
+          {/* Chevron - only show on mobile */}
+          {isMobile && (
+            <svg
+              className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </button>
+
+        {/* Collapsible Content */}
+        {(!isMobile || isExpanded) && (
+          <div className="px-4 pb-4 border-t border-slate-700/50">
+            <div className="flex items-center gap-3 pt-3 mb-3">
+              {/* Search mode toggle */}
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSearchMode('city')}
+                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                    searchMode === 'city'
+                      ? 'bg-sky-600 text-white'
+                      : 'text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  By City
+                </button>
+                <span className="text-slate-600">/</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode('zip')}
+                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                    searchMode === 'zip'
+                      ? 'bg-sky-600 text-white'
+                      : 'text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  By Zip
+                </button>
+              </div>
+            </div>
 
         {searchMode === 'city' ? (
           /* City/State dropdowns */
@@ -1028,6 +1073,8 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
           <p className="text-emerald-400 text-xs mt-2">
             {Object.values(savedLocations).filter(l => l.onMap).length} location(s) added to map
           </p>
+        )}
+          </div>
         )}
       </div>
 
