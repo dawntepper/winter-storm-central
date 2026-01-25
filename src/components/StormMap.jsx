@@ -327,27 +327,27 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
               </div>
             </div>
 
-            {/* Observed Data */}
+            {/* Observed Data - Always show during active storm */}
             {isActive && (
               <div>
                 <div className="flex items-center gap-1 mb-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
                 </div>
-                {hasObserved ? (
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-emerald-50 rounded p-1.5 text-center">
-                      <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
-                      <div className="text-[9px] text-emerald-500">Snow</div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                    <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
                     </div>
-                    <div className="bg-emerald-50 rounded p-1.5 text-center">
-                      <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
-                      <div className="text-[9px] text-emerald-500">Ice</div>
-                    </div>
+                    <div className="text-[9px] text-gray-500">Snow</div>
                   </div>
-                ) : (
-                  <p className="text-[10px] text-gray-400 italic text-center py-1">Accumulating...</p>
-                )}
+                  <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                    <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
+                    </div>
+                    <div className="text-[9px] text-gray-500">Ice</div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -419,20 +419,20 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
                 </div>
-                {hasObserved ? (
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-emerald-50 rounded p-1.5 text-center">
-                      <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
-                      <div className="text-[9px] text-emerald-500">Snow</div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                    <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
                     </div>
-                    <div className="bg-emerald-50 rounded p-1.5 text-center">
-                      <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
-                      <div className="text-[9px] text-emerald-500">Ice</div>
-                    </div>
+                    <div className="text-[9px] text-gray-500">Snow</div>
                   </div>
-                ) : (
-                  <p className="text-[10px] text-gray-400 italic text-center py-1">Accumulating...</p>
-                )}
+                  <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                    <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
+                    </div>
+                    <div className="text-[9px] text-gray-500">Ice</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -537,20 +537,20 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
               </div>
-              {hasObserved ? (
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-emerald-50 rounded p-1.5 text-center">
-                    <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
-                    <div className="text-[9px] text-emerald-500">Snow</div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
                   </div>
-                  <div className="bg-emerald-50 rounded p-1.5 text-center">
-                    <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
-                    <div className="text-[9px] text-emerald-500">Ice</div>
-                  </div>
+                  <div className="text-[9px] text-gray-500">Snow</div>
                 </div>
-              ) : (
-                <p className="text-[10px] text-gray-400 italic text-center py-1">No accumulation yet</p>
-              )}
+                <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-gray-500">Ice</div>
+                </div>
+              </div>
             </div>
           </div>
         </Tooltip>
@@ -602,20 +602,20 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
               </div>
-              {hasObserved ? (
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-emerald-50 rounded p-1.5 text-center">
-                    <div className="text-emerald-700 font-bold text-sm">{observedSnow.toFixed(1)}"</div>
-                    <div className="text-[9px] text-emerald-500">Snow</div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
                   </div>
-                  <div className="bg-emerald-50 rounded p-1.5 text-center">
-                    <div className="text-emerald-700 font-bold text-sm">{observedIce.toFixed(2)}"</div>
-                    <div className="text-[9px] text-emerald-500">Ice</div>
-                  </div>
+                  <div className="text-[9px] text-gray-500">Snow</div>
                 </div>
-              ) : (
-                <p className="text-[10px] text-gray-400 italic text-center py-1">No accumulation yet</p>
-              )}
+                <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
+                  </div>
+                  <div className="text-[9px] text-gray-500">Ice</div>
+                </div>
+              </div>
             </div>
           </div>
         </Tooltip>
