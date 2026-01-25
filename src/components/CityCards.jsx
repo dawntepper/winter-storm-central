@@ -165,22 +165,23 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
 }
 
 export default function CityCards({ cities, stormPhase = 'pre-storm', userLocations = [] }) {
-  if (!cities || cities.length === 0) {
-    return (
-      <div className="text-center text-slate-500 py-12">
-        <p>No weather data available</p>
-      </div>
-    );
-  }
-
-  // Combine cities with user locations
-  let allCities = [...cities];
+  // Combine cities with user locations first
+  let allCities = [...(cities || [])];
   userLocations.forEach(userLoc => {
     const exists = allCities.some(c => c.id === userLoc.id);
     if (!exists) {
       allCities.push({ ...userLoc, isUserLocation: true });
     }
   });
+
+  // Check for empty after combining
+  if (allCities.length === 0) {
+    return (
+      <div className="text-center text-slate-500 py-12">
+        <p>No weather data available</p>
+      </div>
+    );
+  }
 
   // Sort cities alphabetically by name
   const sortedCities = allCities.sort((a, b) => a.name.localeCompare(b.name));
