@@ -17,20 +17,17 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
     <div className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col ${compact ? 'flex-1' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
-          <span className="text-sky-300">&#10052;</span> Snow Totals
+          <span className="text-sky-300">&#10052;</span> Snow Forecast
         </h2>
         <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
           Storm Fern | Jan 24-26
         </p>
       </div>
 
-      {/* Column Headers */}
+      {/* Column Headers - Forecast only */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <div className="flex gap-4 sm:gap-6">
-          <span className="w-16 text-right text-amber-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Actual</span>
-        </div>
+        <span className="w-20 text-right text-sky-400">Forecast</span>
       </div>
 
       <div
@@ -44,11 +41,6 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.snowfall || 0;
-            // Use station observation snowDepth for actual, fallback to forecast-based observed
-            const stationSnow = city.observation?.snowDepth;
-            const actual = stationSnow !== null && stationSnow !== undefined ? stationSnow : (city.observed?.snowfall || 0);
-            const hasStationData = stationSnow !== null && stationSnow !== undefined;
-            const isRecent = city.observation?.isRecent;
             const isUser = city.isUserLocation;
             return (
               <div
@@ -70,21 +62,9 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                     )}
                   </div>
                 </div>
-                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
-                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-sky-300">
-                    {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
-                  </span>
-                  <div className="w-16 text-right">
-                    <span className={`text-sm sm:text-base font-semibold ${
-                      actual > 0 ? 'text-emerald-400' : 'text-slate-600'
-                    }`}>
-                      {actual > 0 ? `${actual.toFixed(1)}"` : '-'}
-                    </span>
-                    {hasStationData && isRecent && actual > 0 && (
-                      <span className="block text-[8px] text-emerald-500">Live</span>
-                    )}
-                  </div>
-                </div>
+                <span className="w-20 text-right text-sm sm:text-base font-semibold text-sky-300 flex-shrink-0">
+                  {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
+                </span>
               </div>
             );
           })
@@ -125,13 +105,10 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         </p>
       </div>
 
-      {/* Column Headers */}
+      {/* Column Headers - Forecast only */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <div className="flex gap-4 sm:gap-6">
-          <span className="w-16 text-right text-amber-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Actual</span>
-        </div>
+        <span className="w-20 text-right text-fuchsia-400">Forecast</span>
       </div>
 
       <div className={`divide-y divide-slate-700/50 ${compact ? 'flex-1 overflow-y-auto' : ''}`}>
@@ -142,7 +119,6 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.ice || 0;
-            const actual = city.observed?.ice || 0;
             const danger = getDangerLevel(forecast);
             const isUser = city.isUserLocation;
             return (
@@ -172,16 +148,9 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
                     )}
                   </div>
                 </div>
-                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
-                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-fuchsia-400">
-                    {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
-                  </span>
-                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    actual > 0 ? 'text-emerald-400' : 'text-slate-600'
-                  }`}>
-                    {actual > 0 ? `${actual.toFixed(2)}"` : '-'}
-                  </span>
-                </div>
+                <span className="w-20 text-right text-sm sm:text-base font-semibold text-fuchsia-400 flex-shrink-0">
+                  {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
+                </span>
               </div>
             );
           })

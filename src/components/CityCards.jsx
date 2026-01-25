@@ -34,15 +34,6 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
   const danger = dangerBadges[city.iceDanger];
   const obs = city.observation;
 
-  const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
-
-  // Use station observation for actual snow if available
-  const stationSnow = obs?.snowDepth;
-  const actualSnow = stationSnow !== null && stationSnow !== undefined ? stationSnow : (city.observed?.snowfall || 0);
-  const actualIce = city.observed?.ice || 0;
-  const hasStationData = stationSnow !== null && stationSnow !== undefined;
-  const hasObserved = actualSnow > 0 || actualIce > 0;
-
   return (
     <div className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors relative`}>
       {/* User Location Badge */}
@@ -94,14 +85,14 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
         </div>
       )}
 
-      {/* Accumulation Data - Expected */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
+      {/* Accumulation Data - Forecast Only */}
+      <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
           <p className="text-lg sm:text-xl font-semibold text-sky-300">
             {city.forecast?.snowfall > 0 ? `${city.forecast.snowfall.toFixed(2)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Snow {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
+            Snow Forecast
           </p>
         </div>
         <div className="bg-slate-900/30 rounded-lg p-2 text-center">
@@ -109,41 +100,16 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
             {city.forecast?.ice > 0 ? `${city.forecast.ice.toFixed(2)}"` : '-'}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Ice {stormPhase === 'pre-storm' ? 'Fcst' : 'Exp'}
+            Ice Forecast
           </p>
         </div>
       </div>
 
-      {/* Accumulation Data - Actual */}
-      <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-3">
-        <div className={`rounded-lg p-2 text-center ${hasObserved ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
-          <p className={`text-lg sm:text-xl font-semibold ${actualSnow > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
-            {actualSnow > 0 ? `${actualSnow.toFixed(1)}"` : '-'}
-          </p>
-          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Snow Actual
-            {hasStationData && obs?.isRecent && actualSnow > 0 && (
-              <span className="ml-1 text-emerald-500">Live</span>
-            )}
-          </p>
-        </div>
-        <div className={`rounded-lg p-2 text-center ${actualIce > 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/20 border border-slate-700/30'}`}>
-          <p className={`text-lg sm:text-xl font-semibold ${actualIce > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
-            {actualIce > 0 ? `${actualIce.toFixed(2)}"` : '-'}
-          </p>
-          <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wide">
-            Ice Actual
-          </p>
-        </div>
+      {/* NOAA data note */}
+      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+        <span>NOAA forecast data</span>
       </div>
-
-      {/* Forecast badge for pre-storm */}
-      {stormPhase === 'pre-storm' && (
-        <div className="flex items-center gap-1.5 text-[10px] text-amber-400/70 mb-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span>Forecast data</span>
-        </div>
-      )}
 
       {/* Forecast conditions (if no live obs) */}
       {!obs && city.conditions?.shortForecast && (
