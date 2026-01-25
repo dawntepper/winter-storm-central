@@ -5,9 +5,11 @@ import L from 'leaflet';
 // Context to share zoom level with marker components
 const ZoomContext = createContext(5.5);
 
-// Center of the storm coverage area - focused on active storm region
-const CENTER = [37.5, -80];
-const ZOOM = 6;
+// Center of the storm coverage area - responsive defaults
+const CENTER_DESKTOP = [38.5, -80]; // Shifted north for desktop
+const CENTER_MOBILE = [37.0, -82];  // Centered for mobile
+const ZOOM_DESKTOP = 6;
+const ZOOM_MOBILE = 3;  // Zoomed out to see full storm on mobile
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
@@ -97,13 +99,16 @@ function FitBoundsToLocations({ userLocations, triggerFit }) {
   return null;
 }
 
-// Reset map to default view
+// Reset map to default view (responsive)
 function ResetMapView({ trigger }) {
   const map = useMap();
 
   useEffect(() => {
     if (trigger) {
-      map.setView(CENTER, ZOOM, { animate: true, duration: 0.5 });
+      const isMobile = window.innerWidth < 768;
+      const center = isMobile ? CENTER_MOBILE : CENTER_DESKTOP;
+      const zoom = isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP;
+      map.setView(center, zoom, { animate: true, duration: 0.5 });
     }
   }, [trigger, map]);
 
@@ -621,11 +626,15 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false, centerOn = null }) {
   const [showRadar, setShowRadar] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState(ZOOM);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [zoomLevel, setZoomLevel] = useState(isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP);
   const [fitTrigger, setFitTrigger] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const cities = Object.values(weatherData);
+
+  // Initial center/zoom based on screen size
+  const initialCenter = isMobile ? CENTER_MOBILE : CENTER_DESKTOP;
+  const initialZoom = isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP;
 
   // Track window resize for responsive marker sizing
   useEffect(() => {
@@ -727,8 +736,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       {/* Map Container - fills available height in sidebar mode */}
       <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         <MapContainer
-          center={CENTER}
-          zoom={ZOOM}
+          center={initialCenter}
+          zoom={initialZoom}
           style={{ height: isSidebar ? '100%' : (isHero ? '500px' : '350px'), width: '100%' }}
           className={`z-0 ${!isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]' : ''} ${!isSidebar && !isHero ? 'sm:!h-[450px]' : ''}`}
           zoomControl={true}
