@@ -30,12 +30,12 @@ const glowColors = {
 
 // Create custom label icon with zoom-aware offset
 const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
-  // User locations get white labels for high visibility
-  const bgColor = isUser ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.9)';
-  const textColor = isUser ? '#1e293b' : 'white';
-  const borderColor = isUser ? '#ffffff' : hazardColors[hazardType] || hazardColors.none;
+  // User locations get green labels for high visibility
+  const bgColor = isUser ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.9)';
+  const textColor = isUser ? '#10b981' : 'white';
+  const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
   const shadow = isUser
-    ? '0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3)'
+    ? '0 2px 12px rgba(0,0,0,0.4), 0 0 15px rgba(16, 185, 129, 0.3)'
     : '0 2px 8px rgba(0,0,0,0.6)';
   const textShadow = isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.8)';
 
@@ -473,12 +473,12 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
 
   return (
     <>
-      {/* Outer glow - white for user (non-interactive to allow map dragging) */}
+      {/* Outer glow - light green for user locations (non-interactive to allow map dragging) */}
       <CircleMarker
         center={position}
         radius={radius + (isMobile ? 5 : 10)}
         pathOptions={{
-          fillColor: 'rgba(255, 255, 255, 0.25)',
+          fillColor: 'rgba(16, 185, 129, 0.25)',
           fillOpacity: 0.6,
           color: 'transparent',
           weight: 0,
@@ -486,15 +486,15 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         }}
       />
 
-      {/* Main marker - white border for visibility */}
+      {/* Main marker - green border, light green fill */}
       <CircleMarker
         center={position}
         radius={radius}
         pathOptions={{
-          fillColor: color,
+          fillColor: 'rgba(16, 185, 129, 0.3)',
           fillOpacity: 0.9,
-          color: '#ffffff',
-          weight: 3.5,
+          color: '#10b981',
+          weight: 3,
           opacity: 1,
           bubblingMouseEvents: true
         }}
