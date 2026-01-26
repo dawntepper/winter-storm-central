@@ -26,16 +26,21 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function CityCard({ city, stormPhase, isUserLocation = false }) {
+function CityCard({ city, stormPhase, isUserLocation = false, onClick, isSelected = false, showAddPrompt = false, onAdd, onDismiss }) {
   const colors = isUserLocation
     ? 'border-emerald-500/50 bg-slate-800 ring-1 ring-emerald-500/30'
+    : isSelected
+    ? 'border-sky-400/50 bg-slate-800 ring-1 ring-sky-400/30'
     : (hazardColors[city.hazardType] || hazardColors.none);
   const hazard = hazardLabels[city.hazardType] || hazardLabels.none;
   const danger = dangerBadges[city.iceDanger];
   const obs = city.observation;
 
   return (
-    <div className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors relative`}>
+    <div
+      onClick={() => !isUserLocation && onClick && onClick(city)}
+      className={`rounded-xl p-3 sm:p-4 border ${colors} hover:border-slate-500 transition-colors relative ${!isUserLocation ? 'cursor-pointer' : ''}`}
+    >
       {/* User Location Badge */}
       {isUserLocation && (
         <div className="absolute -top-2 left-3">
@@ -120,11 +125,32 @@ function CityCard({ city, stormPhase, isUserLocation = false }) {
       {city.error && (
         <p className="text-[9px] sm:text-[10px] text-red-400/70 mt-2">Data may be incomplete</p>
       )}
+
+      {/* Add to Map prompt */}
+      {showAddPrompt && !isUserLocation && (
+        <div className="mt-3 pt-3 border-t border-slate-600/50 flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-300">Add to your map?</span>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onAdd && onAdd(city); }}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              Add
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDismiss && onDismiss(); }}
+              className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function CityCards({ cities, stormPhase = 'pre-storm', userLocations = [] }) {
+export default function CityCards({ cities, stormPhase = 'pre-storm', userLocations = [], onCityClick, selectedCityId, onAddCity, onDismissCity }) {
   // Combine cities with user locations first
   let allCities = [...(cities || [])];
   userLocations.forEach(userLoc => {
@@ -150,11 +176,21 @@ export default function CityCards({ cities, stormPhase = 'pre-storm', userLocati
     <div>
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h2 className="text-base sm:text-lg font-semibold text-white">All Tracked Cities</h2>
-        <span className="text-[10px] sm:text-xs text-slate-500">{sortedCities.length} locations</span>
+        <span className="text-[10px] sm:text-xs text-slate-500">{sortedCities.length} locations • Click to preview on map</span>
       </div>
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {sortedCities.map(city => (
-          <CityCard key={city.id} city={city} stormPhase={stormPhase} isUserLocation={city.isUserLocation} />
+          <CityCard
+            key={city.id}
+            city={city}
+            stormPhase={stormPhase}
+            isUserLocation={city.isUserLocation}
+            onClick={onCityClick}
+            isSelected={selectedCityId === city.id}
+            showAddPrompt={selectedCityId === city.id}
+            onAdd={onAddCity}
+            onDismiss={onDismissCity}
+          />
         ))}
       </div>
     </div>

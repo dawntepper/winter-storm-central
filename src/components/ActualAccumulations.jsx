@@ -13,6 +13,23 @@
 
 import { useState } from 'react';
 
+function InfoTooltip({ text, position = 'top' }) {
+  const positionClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-1',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-1',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-1'
+  };
+
+  return (
+    <span className="relative group cursor-help ml-1">
+      <span className="text-slate-500 hover:text-slate-400 text-[10px]">ⓘ</span>
+      <span className={`absolute ${positionClasses[position]} px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 max-w-[200px] text-wrap`}>
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function formatDate(dateStr) {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -55,6 +72,7 @@ export function AccumulationBadge({ stormTotal, snowDepth, stationName }) {
       <div className="flex items-center gap-1.5 mb-1">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
         <span className="text-[9px] text-emerald-400 font-medium uppercase">Actual</span>
+        <InfoTooltip text="Through yesterday, updates ~7-9 AM" />
       </div>
       <div className="grid grid-cols-2 gap-2 text-center">
         <div>
@@ -107,8 +125,9 @@ export function AccumulationCard({ data, cityName }) {
               <span className="text-emerald-400">&#10003;</span>
               Actual Accumulations
             </h3>
-            <p className="text-[10px] text-emerald-400/70 mt-0.5">
-              Measured snowfall from weather stations
+            <p className="text-[10px] text-emerald-400/70 mt-0.5 flex items-center">
+              Measured snowfall through yesterday
+              <InfoTooltip text="Updates each morning ~7-9 AM with previous day's totals" />
             </p>
           </div>
           <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-medium px-2 py-1 rounded">
@@ -231,10 +250,16 @@ export function AccumulationLeaderboard({ data, title = "Actual Storm Totals" })
     <div className="bg-slate-800/50 rounded-xl border border-emerald-500/30 overflow-hidden">
       <div className="bg-emerald-500/10 px-4 py-3 border-b border-emerald-500/20">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <span className="text-emerald-400">&#10003;</span>
-            {title}
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <span className="text-emerald-400">&#10003;</span>
+              {title}
+            </h3>
+            <p className="text-[10px] text-emerald-400/70 mt-0.5 flex items-center">
+              Through yesterday
+              <InfoTooltip text="Updates each morning ~7-9 AM with previous day's totals" />
+            </p>
+          </div>
           <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-medium px-2 py-1 rounded">
             MEASURED
           </span>

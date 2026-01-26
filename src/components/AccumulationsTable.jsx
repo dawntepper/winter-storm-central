@@ -78,8 +78,8 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
           <span className="text-slate-500 text-sm cursor-help" title="Click city to view on map">ⓘ</span>
         </h2>
         <p className="text-slate-400 text-[10px] sm:text-xs mt-1">
-          Forecast data from NOAA • Updates hourly
-          {lastRefresh && ` • Last updated: ${formatTimestamp(lastRefresh)}`}
+          Forecast data from NOAA • Storm precipitation ended Jan 26 • Tracking ongoing impact
+          {lastRefresh && ` • ${formatTimestamp(lastRefresh)}`}
         </p>
       </div>
 
@@ -138,9 +138,6 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
                   </span>
                 )}
                 <span className="text-slate-200 font-medium text-xs sm:text-sm truncate">{city.name}</span>
-                {isUser && (
-                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded flex-shrink-0">You</span>
-                )}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:gap-6">
                 <span className={`w-16 sm:w-24 text-right text-xs sm:text-sm font-semibold ${

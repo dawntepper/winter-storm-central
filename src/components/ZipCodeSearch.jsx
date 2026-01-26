@@ -919,16 +919,19 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
           onClick={() => isMobile && setIsExpanded(!isExpanded)}
           className={`w-full px-4 py-3 flex items-center justify-between ${isMobile ? 'cursor-pointer hover:bg-slate-700/30' : 'cursor-default'}`}
         >
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-slate-300">
-              Check Your Location
-            </label>
-            {/* Show count badge on collapsed mobile */}
-            {isMobile && !isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
-                {Object.values(savedLocations).filter(l => l.onMap).length} on map
-              </span>
-            )}
+          <div className="flex flex-col items-start gap-0.5">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-slate-300">
+                Check Your Location
+              </label>
+              {/* Show count badge on collapsed mobile */}
+              {isMobile && !isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
+                  {Object.values(savedLocations).filter(l => l.onMap).length} on map
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] sm:text-xs text-slate-500">Get extreme weather alerts and daily forecasts</span>
           </div>
           {/* Chevron - only show on mobile */}
           {isMobile && (
@@ -1046,11 +1049,35 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
 
-        {/* Show count of locations on map */}
+        {/* Saved Locations List with Remove Buttons */}
         {Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
-          <p className="text-emerald-400 text-xs mt-2">
-            {Object.values(savedLocations).filter(l => l.onMap).length} location(s) added to map
-          </p>
+          <div className="mt-3 pt-3 border-t border-slate-700/50">
+            <p className="text-emerald-400 text-xs mb-2">
+              {Object.values(savedLocations).filter(l => l.onMap).length} location(s) on map:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(savedLocations)
+                .filter(([_, loc]) => loc.onMap)
+                .map(([id, loc]) => (
+                  <div
+                    key={id}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+                  >
+                    <span className="text-xs text-emerald-400">{loc.data.name}</span>
+                    <button
+                      onClick={() => handleToggleMap(id, false)}
+                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                      title="Remove from map"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
         )}
 
         {/* Device storage note */}

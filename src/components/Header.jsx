@@ -6,19 +6,19 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
   const phaseLabels = {
     'pre-storm': 'Forecast Mode',
     'active': 'Storm Active',
-    'post-storm': 'Storm Complete'
+    'post-storm': 'Impact Ongoing'
   };
 
   const phaseColors = {
-    'pre-storm': 'bg-amber-600',
+    'pre-storm': 'bg-amber-500',
     'active': 'bg-emerald-600',
-    'post-storm': 'bg-slate-500'
+    'post-storm': 'bg-amber-500'
   };
 
   const handleShare = async () => {
     const shareData = {
-      title: 'Winter Storm Tracker - Storm Fern',
-      text: 'Track Winter Storm Fern hitting the Eastern US Jan 24-26, 2026 #WinterStormFern',
+      title: 'StormTracking - Extreme Weather Information',
+      text: 'Get extreme weather information for your locations in real-time with live NOAA data',
       url: window.location.href
     };
 
@@ -45,29 +45,15 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Logo & Title */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <div className="text-2xl sm:text-3xl text-slate-300 flex-shrink-0">&#10052;</div>
           <div className="min-w-0">
             <h1
-              className="text-lg sm:text-2xl font-semibold text-white tracking-tight truncate cursor-help"
-              title="Disclaimer: Winter Storm Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at weather.gov and follow local emergency management guidance. Not affiliated with NOAA or NWS."
+              className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate cursor-help flex items-center gap-2"
+              title="Disclaimer: StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at weather.gov and follow local emergency management guidance. Not affiliated with NOAA or NWS."
             >
-              Winter Storm Tracker
+              <span className="text-xl sm:text-2xl">&#9888;&#65039;</span>
+              StormTracking
             </h1>
-            <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 sm:gap-3 mt-0.5 sm:mt-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs text-slate-500">Now Tracking:</span>
-                <a href="https://x.com/search?q=WinterStormFern" target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:text-sky-200 text-xs sm:text-sm font-semibold transition-colors">Winter Storm Fern</a>
-              </div>
-              <span className="text-slate-700 hidden xs:inline">|</span>
-              <div className="flex items-center gap-2">
-                <a href="https://x.com/search?q=WinterStormFern" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 text-[10px] sm:text-xs font-medium transition-colors">#WinterStormFern</a>
-                <span className="text-slate-600 hidden sm:inline">|</span>
-                <span className="text-slate-400 text-[10px] sm:text-xs hidden sm:inline">Jan 24-26, 2026</span>
-                <span className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded ${phaseColors[stormPhase]} text-white flex-shrink-0`}>
-                  {phaseLabels[stormPhase]}
-                </span>
-              </div>
-            </div>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Get extreme weather information for your locations</p>
           </div>
         </div>
 

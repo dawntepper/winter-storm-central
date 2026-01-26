@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { geoOrder } from '../config/cities';
+import { mockWeatherData } from '../config/mockWeatherData';
 
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+const isDev = import.meta.env.DEV;
 
 // Determine if we're in the storm period
 const getStormPhase = () => {
@@ -76,11 +78,21 @@ export const useWeatherData = () => {
       });
     } catch (err) {
       console.error('Failed to fetch weather data:', err);
-      setError(err.message || 'Failed to load weather data. Please try again.');
 
-      // If we have existing data, keep it
-      if (Object.keys(weatherData).length === 0) {
-        setError('Weather data temporarily unavailable. Please try again in a few minutes.');
+      // In development, fall back to mock data if API isn't available
+      if (isDev && Object.keys(weatherData).length === 0) {
+        console.log('Using mock weather data for local development');
+        setWeatherData(mockWeatherData);
+        setStormPhase('active'); // Show active storm UI for testing
+        setLastRefresh(new Date());
+        setError(null); // Clear error since we have mock data
+      } else {
+        setError(err.message || 'Failed to load weather data. Please try again.');
+
+        // If we have existing data, keep it
+        if (Object.keys(weatherData).length === 0) {
+          setError('Weather data temporarily unavailable. Please try again in a few minutes.');
+        }
       }
     } finally {
       setLoading(false);

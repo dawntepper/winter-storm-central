@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { useWeatherData } from './hooks/useWeatherData';
-import { useActualAccumulations } from './hooks/useActualAccumulations';
+import { useExtremeWeather } from './hooks/useExtremeWeather';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
-import DualLeaderboard from './components/DualLeaderboard';
-import AccumulationsTable from './components/AccumulationsTable';
-import CityCards from './components/CityCards';
 import StormMap from './components/StormMap';
-import { AccumulationLeaderboard, AccumulationCard } from './components/ActualAccumulations';
+import ExtremeWeatherSection from './components/ExtremeWeatherSection';
 
 function LoadingState() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center">
-        <div className="text-5xl mb-4 text-slate-400">&#10052;</div>
-        <h2 className="text-xl font-semibold text-white mb-2">Loading Storm Data</h2>
+        <div className="text-5xl mb-4 text-slate-400">&#9888;&#65039;</div>
+        <h2 className="text-xl font-semibold text-white mb-2">Loading Weather Information</h2>
         <p className="text-slate-500 text-sm">Fetching from NOAA Weather Service</p>
         <div className="mt-4 flex justify-center gap-1">
           {[0, 1, 2].map(i => (
@@ -48,47 +45,21 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-function StormAlert({ stormPhase }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const alerts = {
-    'pre-storm': {
-      title: 'Winter Storm Fern Alert',
-      message: 'Winter Storm Fern is forecast for the Eastern US from January 24-26, 2026. Prepare now for hazardous travel conditions.',
-      icon: '&#9888;',
-      iconColor: 'text-amber-400',
-      class: 'border-amber-500/30 bg-amber-500/5'
-    },
-    'active': {
-      title: 'Winter Storm Fern Warning',
-      message: 'Winter Storm Fern is currently impacting the Eastern US. Avoid travel if possible. Monitor local conditions for updates.',
-      icon: '&#9888;',
-      iconColor: 'text-red-400',
-      class: 'border-red-500/30 bg-red-500/5'
-    },
-    'post-storm': {
-      title: 'Storm Fern Recovery',
-      message: 'Winter Storm Fern has passed. Use caution on roads as crews continue cleanup operations.',
-      icon: '&#10003;',
-      iconColor: 'text-slate-400',
-      class: 'border-slate-500/30 bg-slate-500/5'
-    }
-  };
-
-  const alert = alerts[stormPhase] || alerts['pre-storm'];
+function CollapsibleSection({ title, subtitle, defaultExpanded = false, children }) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className={`border rounded-xl ${alert.class} overflow-hidden`}>
+    <div className="bg-slate-800/30 rounded-xl border border-slate-700 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors cursor-pointer"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <span className={`text-lg sm:text-xl ${alert.iconColor} flex-shrink-0`} dangerouslySetInnerHTML={{ __html: alert.icon }} />
-          <h2 className="text-sm sm:text-base font-semibold text-white">{alert.title}</h2>
+        <div>
+          <h3 className="text-base font-semibold text-white text-left">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 text-left">{subtitle}</p>}
         </div>
         <svg
-          className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -97,15 +68,8 @@ function StormAlert({ stormPhase }) {
         </svg>
       </button>
       {isExpanded && (
-        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
-          <div className="pl-8 sm:pl-10">
-            <p className="text-xs sm:text-sm text-slate-200">{alert.message}</p>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-2">
-              Data updates every 30 minutes from NOAA. Always check{' '}
-              <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-              {' '}and local emergency alerts for official guidance.
-            </p>
-          </div>
+        <div className="p-4 pt-0">
+          {children}
         </div>
       )}
     </div>
@@ -144,45 +108,6 @@ function StaleDataBanner({ isStale, lastSuccessfulUpdate, error }) {
   );
 }
 
-function ForecastBanner({ stormPhase }) {
-  if (stormPhase !== 'pre-storm') return null;
-
-  return (
-    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 sm:px-4 py-2 sm:py-3">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></div>
-          <span className="text-amber-300 font-semibold text-sm sm:text-base">NOAA Forecast Data</span>
-        </div>
-        <p className="text-amber-200/70 text-xs sm:text-sm">
-          Forecasts update hourly from NOAA Weather Service
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function DataSourceLegend({ stormPhase }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500">
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span>Live conditions</span>
-      </div>
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span>NOAA Forecast</span>
-      </div>
-      <span className="text-slate-700 hidden sm:inline">|</span>
-      <span className="w-full sm:w-auto">
-        {stormPhase === 'pre-storm' && 'Storm Fern begins Jan 24 - showing NOAA forecasts'}
-        {stormPhase === 'active' && 'Storm Fern active - showing NOAA forecasts'}
-        {stormPhase === 'post-storm' && 'Storm Fern complete - showing NOAA forecasts'}
-      </span>
-    </div>
-  );
-}
-
 export default function App() {
   const {
     weatherData,
@@ -198,28 +123,120 @@ export default function App() {
     getCitiesGeoOrdered
   } = useWeatherData();
 
-  const [userLocations, setUserLocations] = useState([]);
-  const [showOnlyUserLocations, setShowOnlyUserLocations] = useState(false);
+  const [searchLocations, setSearchLocations] = useState([]); // From ZipCodeSearch
+  const [alertLocations, setAlertLocations] = useState([]); // From alert "Add to Map"
   const [mapCenterOn, setMapCenterOn] = useState(null);
+  const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
+  const [previewCity, setPreviewCity] = useState(null); // City being previewed
 
-  // Premium feature: Actual accumulations from weather stations
-  // Toggle this to test the premium feature locally
-  const [showPremiumFeatures, setShowPremiumFeatures] = useState(true);
+  // Combine search and alert locations for the map
+  const userLocations = [...searchLocations, ...alertLocations];
 
+  // Extreme weather alerts (for when no active storm event)
   const {
-    accumulations,
-    loading: accumulationsLoading,
-    error: accumulationsError,
-    lastUpdate: accumulationsLastUpdate,
-    getAccumulationLeaderboard,
-    getDisplayData
-  } = useActualAccumulations(weatherData, userLocations, showPremiumFeatures);
+    loading: alertsLoading,
+    error: alertsError,
+    lastUpdated: alertsLastUpdated,
+    isStale: alertsIsStale,
+    refresh: refreshAlerts,
+    getAlertsByCategory,
+    hasActiveAlerts
+  } = useExtremeWeather(true);
 
-  // Handle city click from table - center map on that city
-  const handleCityClick = (city) => {
-    if (city.lat && city.lon) {
-      setMapCenterOn({ lat: city.lat, lon: city.lon, id: Date.now() });
+  // Handle alert tap - center map on that location and track for re-clicking
+  const handleAlertTap = (alert) => {
+    if (alert.lat && alert.lon) {
+      setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+
+      // Add to viewed locations if not already there
+      setViewedLocations(prev => {
+        const exists = prev.some(loc => loc.id === alert.id);
+        if (!exists) {
+          return [...prev, { ...alert, viewedAt: Date.now() }].slice(-10); // Keep last 10
+        }
+        return prev;
+      });
+
+      // Track alert interaction
+      if (window.plausible) {
+        window.plausible('Alert Tapped', { props: { category: alert.category, event: alert.event } });
+      }
     }
+  };
+
+  // Handle adding alert location to map (separate from search locations)
+  const handleAddAlertToMap = (alert) => {
+    if (!alert.lat || !alert.lon) return;
+
+    // Create a user location object from the alert
+    const newLocation = {
+      id: `alert-${alert.id}`,
+      name: alert.location,
+      lat: alert.lat,
+      lon: alert.lon,
+      forecast: { snowfall: 0, ice: 0 },
+      hazardType: alert.category === 'winter' ? 'snow' :
+                  alert.category === 'heat' ? 'none' :
+                  alert.category === 'flood' ? 'none' : 'none',
+      conditions: {
+        shortForecast: alert.event,
+        temperature: null
+      },
+      alertInfo: {
+        event: alert.event,
+        headline: alert.headline,
+        category: alert.category
+      }
+    };
+
+    // Add to alert locations (separate state)
+    setAlertLocations(prev => {
+      const exists = prev.some(loc => loc.name === alert.location);
+      if (!exists) {
+        return [...prev, newLocation];
+      }
+      return prev;
+    });
+
+    // Center map on the added location
+    setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+
+    // On mobile, scroll to the map so user can see the added location
+    const isMobile = window.innerWidth < 1024; // lg breakpoint
+    if (isMobile) {
+      setTimeout(() => {
+        document.querySelector('#storm-map-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+
+    // Track
+    if (window.plausible) {
+      window.plausible('Alert Added to Map', { props: { category: alert.category } });
+    }
+  };
+
+  // Handle removing an alert location from map
+  const handleRemoveAlertLocation = (locationId) => {
+    setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
+  };
+
+  // Handle clicking a viewed location to re-center map and show marker
+  const handleViewedLocationClick = (location) => {
+    if (location.lat && location.lon) {
+      setMapCenterOn({ lat: location.lat, lon: location.lon, id: Date.now() });
+      // Show preview marker with the location name
+      setPreviewCity({
+        id: location.id,
+        name: location.name || location.location, // alerts use 'location', cities use 'name'
+        lat: location.lat,
+        lon: location.lon
+      });
+    }
+  };
+
+  // Scroll to location search
+  const handleAddLocation = () => {
+    document.querySelector('#location-search')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const hasData = Object.keys(weatherData).length > 0;
@@ -244,150 +261,196 @@ export default function App() {
       />
 
       <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* SEO Header Section */}
-        <header className="text-center sm:text-left">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
-            Winter Storm Fern Tracker - Live Updates
-          </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-3xl">
-            Track Winter Storm Fern affecting 180M+ Americans across the Eastern US (Jan 24-26, 2026).
-            Real-time NOAA data showing snow accumulation, ice danger, and live radar.
-            Monitor your family's locations with custom tracking.
-          </p>
-        </header>
-
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={isStale} lastSuccessfulUpdate={lastSuccessfulUpdate} error={error && hasData ? error : null} />
 
-        {/* Storm Alert */}
-        <StormAlert stormPhase={stormPhase} />
-
-        {/* Location Search - moved to top */}
-        <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setUserLocations} />
-
-        {/* View Toggle + Premium Toggle */}
-        <div className="flex flex-wrap items-center gap-4">
+        {/* ========== MOBILE LAYOUT ========== */}
+        <div className="lg:hidden space-y-4">
+          {/* 1. Your Locations (if any) - TOP on mobile */}
           {userLocations.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400">View:</span>
-              <div className="flex rounded-lg overflow-hidden border border-slate-700">
-                <button
-                  onClick={() => setShowOnlyUserLocations(false)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    !showOnlyUserLocations
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  All Locations
-                </button>
-                <button
-                  onClick={() => setShowOnlyUserLocations(true)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    showOnlyUserLocations
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  My Locations ({userLocations.length})
-                </button>
+            <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 p-4">
+              <h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
+                <span>&#9733;</span> Your Locations ({userLocations.length})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {searchLocations.map((loc) => (
+                  <div
+                    key={loc.id}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+                  >
+                    <button
+                      onClick={() => handleViewedLocationClick(loc)}
+                      className="text-xs text-emerald-400 hover:text-emerald-300"
+                    >
+                      {loc.name}
+                    </button>
+                  </div>
+                ))}
+                {alertLocations.map((loc) => (
+                  <div
+                    key={loc.id}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg"
+                  >
+                    <button
+                      onClick={() => handleViewedLocationClick(loc)}
+                      className="text-xs text-amber-400 hover:text-amber-300"
+                    >
+                      {loc.name}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveAlertLocation(loc.id)}
+                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                      title="Remove from map"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Premium Feature Toggle (for testing) */}
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showPremiumFeatures}
-                onChange={(e) => setShowPremiumFeatures(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-              />
-              <span className="text-xs text-slate-400">
-                Show Actual Accumulations
-                <span className="ml-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">PREMIUM</span>
-              </span>
-            </label>
-          </div>
-        </div>
+          {/* 2. EXTREME WEATHER - KEY FEATURE on mobile */}
+          <ExtremeWeatherSection
+            categories={getAlertsByCategory()}
+            loading={alertsLoading}
+            error={alertsError}
+            lastUpdated={alertsLastUpdated}
+            isStale={alertsIsStale}
+            onRefresh={refreshAlerts}
+            onAlertTap={handleAlertTap}
+            onAddToMap={handleAddAlertToMap}
+            onAddLocation={handleAddLocation}
+          />
 
-        {/* Main Grid: Map + Leaderboards side-by-side on desktop */}
-        <section className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
-          {/* Left: Storm Map */}
-          <div className="lg:min-h-[600px]">
+          {/* 3. Check Your Location - Above map on mobile */}
+          <CollapsibleSection
+            title="Check Your Location"
+            subtitle="Track weather for your area"
+            defaultExpanded={true}
+          >
+            <div id="location-search-mobile">
+              <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
+            </div>
+          </CollapsibleSection>
+
+          {/* 4. Storm Coverage Map on mobile */}
+          <div id="storm-map-mobile">
             <StormMap
-              weatherData={showOnlyUserLocations ? {} : weatherData}
+              weatherData={weatherData}
               stormPhase={stormPhase}
               userLocations={userLocations}
               isHero
-              isSidebar
               centerOn={mapCenterOn}
+              previewLocation={previewCity}
             />
           </div>
+        </div>
 
-          {/* Right: Leaderboards/Accumulations stacked vertically */}
+        {/* ========== DESKTOP LAYOUT ========== */}
+        <section className="hidden lg:grid lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
+          {/* Left Column: Search + Map */}
           <div className="flex flex-col gap-4 lg:gap-5">
-            {/* Show Accumulations Table during active/post-storm, Leaderboards during pre-storm */}
-            {stormPhase === 'pre-storm' ? (
-              <>
-                <DualLeaderboard
-                  snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
-                  iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-                  stormPhase={stormPhase}
-                  userLocations={userLocations}
-                  stackedLayout
-                />
-                {/* Premium: Actual Accumulations Leaderboard */}
-                {showPremiumFeatures && (
-                  <AccumulationLeaderboard
-                    data={getAccumulationLeaderboard(10)}
-                    title="Actual Storm Totals"
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                <AccumulationsTable
-                  weatherData={showOnlyUserLocations ? {} : weatherData}
-                  userLocations={userLocations}
-                  stormPhase={stormPhase}
-                  lastRefresh={lastRefresh}
-                  onCityClick={handleCityClick}
-                />
-                {/* Premium: Actual Accumulations Leaderboard */}
-                {showPremiumFeatures && (
-                  <AccumulationLeaderboard
-                    data={getAccumulationLeaderboard(10)}
-                    title="Actual Storm Totals"
-                  />
-                )}
-                <DualLeaderboard
-                  snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
-                  iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-                  stormPhase={stormPhase}
-                  userLocations={userLocations}
-                  stackedLayout
-                />
-              </>
-            )}
+            {/* Check Your Location - Above map on desktop */}
+            <div id="location-search">
+              <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
+            </div>
+
+            {/* Storm Map - Below search on desktop */}
+            <div className="lg:min-h-[500px]">
+              <StormMap
+                weatherData={weatherData}
+                stormPhase={stormPhase}
+                userLocations={userLocations}
+                isHero
+                isSidebar
+                centerOn={mapCenterOn}
+                previewLocation={previewCity}
+              />
+            </div>
           </div>
-        </section>
 
-        {/* Prominent Forecast Banner */}
-        <ForecastBanner stormPhase={stormPhase} />
+          {/* Right Column: Your Locations + Extreme Weather */}
+          <div className="flex flex-col gap-4 lg:gap-5">
+            {/* Your Locations (if any) */}
+            {userLocations.length > 0 && (
+              <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 p-4">
+                <h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
+                  <span>&#9733;</span> Your Locations ({userLocations.length})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {searchLocations.map((loc) => (
+                    <div
+                      key={loc.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+                    >
+                      <button
+                        onClick={() => handleViewedLocationClick(loc)}
+                        className="text-xs text-emerald-400 hover:text-emerald-300"
+                      >
+                        {loc.name}
+                      </button>
+                    </div>
+                  ))}
+                  {alertLocations.map((loc) => (
+                    <div
+                      key={loc.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg"
+                    >
+                      <button
+                        onClick={() => handleViewedLocationClick(loc)}
+                        className="text-xs text-amber-400 hover:text-amber-300"
+                      >
+                        {loc.name}
+                      </button>
+                      <button
+                        onClick={() => handleRemoveAlertLocation(loc.id)}
+                        className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                        title="Remove from map"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Data Source Legend */}
-        <DataSourceLegend stormPhase={stormPhase} />
+            {/* Recently Viewed Locations */}
+            {viewedLocations.length > 0 && (
+              <div className="bg-slate-800/30 rounded-xl border border-slate-700 p-4">
+                <h3 className="text-sm font-medium text-slate-400 mb-3">Recently Viewed</h3>
+                <div className="flex flex-wrap gap-2">
+                  {viewedLocations.slice().reverse().map((loc) => (
+                    <button
+                      key={loc.id}
+                      onClick={() => handleViewedLocationClick(loc)}
+                      className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 text-xs rounded-lg transition-colors"
+                    >
+                      {loc.location}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* City Cards - Full Width */}
-        <section>
-          <CityCards
-            cities={showOnlyUserLocations ? [] : getCitiesGeoOrdered()}
-            stormPhase={stormPhase}
-            userLocations={userLocations}
-            showOnlyUserLocations={showOnlyUserLocations}
-          />
+            {/* EXTREME WEATHER - KEY FEATURE */}
+            <ExtremeWeatherSection
+              categories={getAlertsByCategory()}
+              loading={alertsLoading}
+              error={alertsError}
+              lastUpdated={alertsLastUpdated}
+              isStale={alertsIsStale}
+              onRefresh={refreshAlerts}
+              onAlertTap={handleAlertTap}
+              onAddToMap={handleAddAlertToMap}
+              onAddLocation={handleAddLocation}
+            />
+          </div>
         </section>
 
         {/* Footer */}
@@ -399,12 +462,12 @@ export default function App() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm transition-colors border border-slate-700 hover:border-amber-500/30"
           >
-            <span className="text-lg">☕</span>
-            <span>Thank you for supporting stormtracking.io</span>
+            <span className="text-lg">&#9749;</span>
+            <span>Support StormTracking</span>
           </a>
 
           <p className="text-slate-500 text-xs max-w-2xl mx-auto px-4">
-            <span className="font-medium text-slate-400">Disclaimer:</span> Winter Storm Tracker uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
+            <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
             <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
             {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
           </p>

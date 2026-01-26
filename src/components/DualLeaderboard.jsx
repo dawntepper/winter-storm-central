@@ -1,3 +1,14 @@
+function InfoTooltip({ text }) {
+  return (
+    <span className="relative group cursor-help ml-1">
+      <span className="text-slate-500 hover:text-slate-400 text-[10px]">ⓘ</span>
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, compact = false }) {
   // Combine forecast cities with user locations (always include if added to map)
   let displayCities = [...cities];
@@ -23,8 +34,9 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-sky-300">&#10052;</span> Snow Forecast
         </h2>
-        <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
+        <p className="text-slate-500 text-[10px] sm:text-xs mt-1 flex items-center">
           NOAA forecast for Storm Fern | Jan 24-26
+          <InfoTooltip text="Forecasts update every 6 hours from NOAA" />
         </p>
       </div>
 
@@ -108,8 +120,9 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
           <span className="text-fuchsia-400">&#9888;</span> Ice Danger Zone
         </h2>
-        <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
+        <p className="text-slate-500 text-[10px] sm:text-xs mt-1 flex items-center">
           &gt;0.25" dangerous | &gt;0.5" catastrophic
+          <InfoTooltip text="Forecasts update every 6 hours from NOAA" />
         </p>
       </div>
 

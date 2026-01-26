@@ -6,10 +6,11 @@ import L from 'leaflet';
 const ZoomContext = createContext(5.5);
 
 // Center of the storm coverage area - responsive defaults
-const CENTER_DESKTOP = [24.0, -85]; // Center on Caribbean, US appears in top third with tooltip room
-const CENTER_MOBILE = [37.0, -82];  // Centered for mobile
-const ZOOM_DESKTOP = 4.8;  // Slightly tighter to show US larger
-const ZOOM_MOBILE = 3;     // Zoomed out to see full storm on mobile
+// Continental US centered near top of viewport, leaving room for cards below
+const CENTER_DESKTOP = [32.0, -96]; // US appears in upper portion of map
+const CENTER_MOBILE = [37.0, -95];  // Centered for mobile
+const ZOOM_DESKTOP = 4.2;  // Show full continental US
+const ZOOM_MOBILE = 3.5;   // Zoomed out to see full storm on mobile
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
@@ -29,8 +30,14 @@ const glowColors = {
 
 // Create custom label icon with zoom-aware offset
 const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
-  const bgColor = isUser ? 'rgba(16, 185, 129, 0.95)' : 'rgba(15, 23, 42, 0.9)';
-  const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
+  // User locations get white labels for high visibility
+  const bgColor = isUser ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.9)';
+  const textColor = isUser ? '#1e293b' : 'white';
+  const borderColor = isUser ? '#ffffff' : hazardColors[hazardType] || hazardColors.none;
+  const shadow = isUser
+    ? '0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.6)';
+  const textShadow = isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.8)';
 
   // Calculate offset based on zoom level
   // At zoom 5.5 (default), offset is -15
@@ -44,15 +51,15 @@ const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
     html: `<div class="city-label" style="
       display: inline-block;
       background: ${bgColor};
-      color: white;
+      color: ${textColor};
       padding: 3px 8px;
       border-radius: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: ${isUser ? '700' : '600'};
       white-space: nowrap;
       border: 2px solid ${borderColor};
-      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      box-shadow: ${shadow};
+      text-shadow: ${textShadow};
       transform: translateX(-50%);
     ">${name}${isUser ? ' ★' : ''}</div>`,
     iconSize: null,
@@ -64,12 +71,36 @@ function MapController({ showRadar }) {
   const map = useMap();
 
   useEffect(() => {
+    // Disable scroll wheel zoom to prevent accidental zoom when scrolling page
     map.scrollWheelZoom.disable();
+
+    // Ensure dragging is enabled
+    map.dragging.enable();
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
 
     // Smooth zoom
     map.options.zoomAnimation = true;
     map.options.fadeAnimation = true;
     map.options.markerZoomAnimation = true;
+
+    // Re-enable map interactions after any click (fixes stuck state after marker click)
+    const handleClick = () => {
+      setTimeout(() => {
+        map.dragging.enable();
+        map.touchZoom.enable();
+      }, 100);
+    };
+
+    map.on('click', handleClick);
+    map.on('popupclose', handleClick);
+    map.on('tooltipclose', handleClick);
+
+    return () => {
+      map.off('click', handleClick);
+      map.off('popupclose', handleClick);
+      map.off('tooltipclose', handleClick);
+    };
   }, [map]);
 
   return null;
@@ -115,6 +146,38 @@ function ResetMapView({ trigger }) {
   return null;
 }
 
+// Center map on user's geolocation
+function CenterOnGeolocation({ trigger, onLocated, onError }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (trigger) {
+      if (!navigator.geolocation) {
+        onError('Geolocation not supported by your browser');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          map.setView([latitude, longitude], 8, { animate: true, duration: 0.5 });
+          onLocated({ lat: latitude, lon: longitude });
+        },
+        (error) => {
+          let message = 'Unable to get your location';
+          if (error.code === 1) message = 'Location access denied';
+          if (error.code === 2) message = 'Location unavailable';
+          if (error.code === 3) message = 'Location request timed out';
+          onError(message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      );
+    }
+  }, [trigger, map, onLocated, onError]);
+
+  return null;
+}
+
 // Center map on a specific location with responsive offset
 function CenterOnLocation({ location }) {
   const map = useMap();
@@ -123,12 +186,12 @@ function CenterOnLocation({ location }) {
     if (location && location.lat && location.lon) {
       const isMobile = window.innerWidth < 768;
 
-      // Desktop: city appears near top of map (large negative offset) with room for tooltip above
-      // Mobile: city appears slightly below center
-      const latOffset = isMobile ? 0.4 : -1.8;
+      // Small offset to place city slightly above center (negative = city appears higher)
+      // Keep it minimal so city stays well within view
+      const latOffset = isMobile ? 0.1 : -0.2;
       const adjustedLat = location.lat + latOffset;
 
-      map.setView([adjustedLat, location.lon], 8, { animate: true, duration: 0.5 });
+      map.setView([adjustedLat, location.lon], 7, { animate: true, duration: 0.5 });
     }
   }, [location?.id, location?.lat, location?.lon, map]);
 
@@ -410,28 +473,30 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
 
   return (
     <>
-      {/* Outer glow - emerald for user */}
+      {/* Outer glow - white for user (non-interactive to allow map dragging) */}
       <CircleMarker
         center={position}
         radius={radius + (isMobile ? 5 : 10)}
         pathOptions={{
-          fillColor: 'rgba(16, 185, 129, 0.3)',
+          fillColor: 'rgba(255, 255, 255, 0.25)',
           fillOpacity: 0.6,
           color: 'transparent',
-          weight: 0
+          weight: 0,
+          interactive: false
         }}
       />
 
-      {/* Main marker */}
+      {/* Main marker - white border for visibility */}
       <CircleMarker
         center={position}
         radius={radius}
         pathOptions={{
           fillColor: color,
           fillOpacity: 0.9,
-          color: '#10b981',
+          color: '#ffffff',
           weight: 3.5,
-          opacity: 1
+          opacity: 1,
+          bubblingMouseEvents: true
         }}
         eventHandlers={{
           mouseover: () => setIsHovered(true),
@@ -443,7 +508,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
             <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
               <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
-              <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded font-medium">You</span>
             </div>
 
             {/* Current conditions */}
@@ -493,7 +557,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
             <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
               <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
-              <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded font-medium">You</span>
             </div>
             {location.conditions?.temperature && (
               <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
@@ -528,12 +591,46 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false, centerOn = null }) {
+// Preview marker - just a green label, no circle (shown before user clicks Add)
+function PreviewMarker({ location }) {
+  if (!location) return null;
+
+  const position = [location.lat, location.lon];
+  const cityName = location.name?.split(',')[0] || location.name;
+
+  // Create white label icon for high visibility on dark map
+  const labelIcon = L.divIcon({
+    className: 'city-label-wrapper',
+    html: `<div class="city-label" style="
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.95);
+      color: #1e293b;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3);
+      transform: translateX(-50%);
+    ">${cityName}</div>`,
+    iconSize: null,
+    iconAnchor: [0, 0]
+  });
+
+  return <Marker position={position} icon={labelIcon} />;
+}
+
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [zoomLevel, setZoomLevel] = useState(isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP);
   const [fitTrigger, setFitTrigger] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [geoTrigger, setGeoTrigger] = useState(0);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+  const [userGeoLocation, setUserGeoLocation] = useState(null);
   const cities = Object.values(weatherData);
 
   // Initial center/zoom based on screen size
@@ -559,6 +656,28 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setResetTrigger(prev => prev + 1);
   };
 
+  const handleMyLocation = () => {
+    setGeoLoading(true);
+    setGeoError(null);
+    setGeoTrigger(prev => prev + 1);
+  };
+
+  const handleGeoLocated = (coords) => {
+    setGeoLoading(false);
+    setUserGeoLocation(coords);
+    // Track geolocation use
+    if (window.plausible) {
+      window.plausible('My Location Used');
+    }
+  };
+
+  const handleGeoError = (message) => {
+    setGeoLoading(false);
+    setGeoError(message);
+    // Clear error after 3 seconds
+    setTimeout(() => setGeoError(null), 3000);
+  };
+
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
@@ -571,21 +690,45 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {/* Zoom to user locations button */}
+            {/* My Location button - uses browser geolocation */}
+            <button
+              onClick={handleMyLocation}
+              disabled={geoLoading}
+              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                userGeoLocation
+                  ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+              } ${geoLoading ? 'opacity-50 cursor-wait' : ''}`}
+              title="Center map on your location"
+            >
+              {geoLoading ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></span>
+                  <span className="hidden sm:inline">Locating...</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <span>&#128205;</span>
+                  <span className="hidden sm:inline">My Location</span>
+                </span>
+              )}
+            </button>
+            {/* Zoom to saved locations button */}
             {userLocations.length > 0 && (
               <button
                 onClick={handleZoomToLocations}
                 className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 cursor-pointer"
-                title="Zoom to your locations"
+                title="Zoom to your saved locations"
               >
-                Zoom to My Locations
+                <span className="hidden sm:inline">Saved Locations</span>
+                <span className="sm:hidden">Saved</span>
               </button>
             )}
             {/* Reset view button */}
             <button
               onClick={handleResetView}
               className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
-              title="Reset to full view"
+              title="Reset to default US view"
             >
               Reset View
             </button>
@@ -611,15 +754,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-4 sm:gap-5 text-[10px] sm:text-xs text-slate-400 mt-3">
-          <span className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-blue-400 ring-2 ring-white/30"></span> Snow
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-fuchsia-400 ring-2 ring-white/30"></span> Ice
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-violet-400 ring-2 ring-white/30"></span> Mixed
-          </span>
           {userLocations.length > 0 && (
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full border-2 border-emerald-500 bg-emerald-500/30"></span> Your Location{userLocations.length > 1 ? 's' : ''}
@@ -630,10 +764,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <span className="w-3 h-3 rounded bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"></span> Radar
             </span>
           )}
+          {geoError && (
+            <span className="text-red-400 text-[10px]">{geoError}</span>
+          )}
           <span className="ml-auto text-slate-500 hidden sm:inline">
-              Hover markers for details
-              {stormPhase !== 'pre-storm' && <span className="text-emerald-400 ml-2">• Live Tracking</span>}
-            </span>
+            Click a city below to preview on map
+          </span>
         </div>
       </div>
 
@@ -651,6 +787,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
           <ResetMapView trigger={resetTrigger} />
           <CenterOnLocation location={centerOn} />
+          <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
           {/* Dark Matter basemap */}
           <TileLayer
@@ -661,19 +798,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           {/* Radar overlay */}
           <RadarLayer show={showRadar} />
 
-          {/* City markers with zoom context */}
-          {/* Key includes lastUpdated to force re-render when data changes */}
+          {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {cities.map(city => (
-              <CityMarker
-                key={`${city.id}-${city.lastUpdated || ''}`}
-                city={city}
-                stormPhase={stormPhase}
-                isMobile={isMobile}
-              />
-            ))}
-
-            {/* User location markers */}
+            {/* Only show user-added location markers (no pre-loaded Storm Fern cities) */}
             {userLocations.map(location => (
               <UserLocationMarker
                 key={`${location.id}-${location.lastUpdated || ''}`}
@@ -682,6 +809,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 isMobile={isMobile}
               />
             ))}
+
+            {/* Preview marker - only show if not already a user location */}
+            {previewLocation && !userLocations.some(loc => loc.name === previewLocation.name) && (
+              <PreviewMarker location={previewLocation} />
+            )}
           </ZoomContext.Provider>
         </MapContainer>
 
