@@ -126,6 +126,7 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
 
   const handleAddToMap = (e) => {
     e.stopPropagation();
+    console.log('AlertCard handleAddToMap - calling onAddToMap with alert:', alert);
     onAddToMap(alert);
     setShowAddPrompt(false);
   };

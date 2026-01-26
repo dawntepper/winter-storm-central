@@ -166,7 +166,11 @@ export default function App() {
 
   // Handle adding alert location to map (separate from search locations)
   const handleAddAlertToMap = (alert) => {
-    if (!alert.lat || !alert.lon) return;
+    console.log('handleAddAlertToMap called with:', alert);
+    if (!alert.lat || !alert.lon) {
+      console.warn('Alert missing coordinates:', alert);
+      return;
+    }
 
     // Create a user location object from the alert
     const newLocation = {
