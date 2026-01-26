@@ -220,6 +220,29 @@ export default function App() {
     setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
   };
 
+  // Handle removing a search location from map (and localStorage)
+  const handleRemoveSearchLocation = (locationId) => {
+    // Remove from state
+    setSearchLocations(prev => prev.filter(loc => loc.id !== locationId));
+
+    // Also update localStorage to keep ZipCodeSearch in sync
+    const LOCATIONS_KEY = 'winterStorm_userLocations';
+    try {
+      const stored = localStorage.getItem(LOCATIONS_KEY);
+      if (stored) {
+        const savedLocations = JSON.parse(stored);
+        // Find and remove the location by matching the id
+        const locationKey = locationId.replace('user-', '');
+        if (savedLocations[locationKey]) {
+          delete savedLocations[locationKey];
+          localStorage.setItem(LOCATIONS_KEY, JSON.stringify(savedLocations));
+        }
+      }
+    } catch (e) {
+      console.error('Error updating localStorage:', e);
+    }
+  };
+
   // Handle clicking a viewed location to re-center map and show marker
   const handleViewedLocationClick = (location) => {
     if (location.lat && location.lon) {
@@ -295,6 +318,15 @@ export default function App() {
                     >
                       <span>📍</span>
                       <span>{loc.name}</span>
+                    </button>
+                    <button
+                      onClick={() => handleRemoveSearchLocation(loc.id)}
+                      className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                      title="Remove from map"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 ))}
@@ -405,6 +437,15 @@ export default function App() {
                       >
                         <span>📍</span>
                         <span>{loc.name}</span>
+                      </button>
+                      <button
+                        onClick={() => handleRemoveSearchLocation(loc.id)}
+                        className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                        title="Remove from map"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
                   ))}

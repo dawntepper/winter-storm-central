@@ -761,8 +761,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {/* User location markers temporarily disabled - causing map interaction issues */}
-            {/* TODO: Fix and re-enable UserLocationMarker */}
+            {/* User location markers - green circles with labels */}
+            {userLocations.map((location) => (
+              <UserLocationMarker
+                key={location.id}
+                location={location}
+                stormPhase={stormPhase}
+                isMobile={isMobile}
+              />
+            ))}
 
             {/* Preview marker for extreme weather alerts */}
             {previewLocation && (
