@@ -665,44 +665,22 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
           </div>
         </div>
 
-        {/* Center: Expected totals */}
+        {/* Center: NOAA Forecast */}
         <div className="flex-1">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Expected</span>
+            <span className="text-[10px] text-slate-500 font-medium uppercase">NOAA Forecast</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-slate-900/30 rounded-lg p-3 text-center">
               <p className="text-2xl font-semibold text-sky-300">
-                {data.forecast?.snowfall > 0 ? `${data.forecast.snowfall.toFixed(2)}"` : '-'}
+                {data.forecast?.snowfall > 0 ? `${data.forecast.snowfall.toFixed(1)}"` : '-'}
               </p>
               <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow</p>
             </div>
             <div className="bg-slate-900/30 rounded-lg p-3 text-center">
               <p className="text-2xl font-semibold text-fuchsia-400">
                 {data.forecast?.ice > 0 ? `${data.forecast.ice.toFixed(2)}"` : '-'}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Accumulations */}
-        <div className="flex-1 mt-3 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-700/50 lg:pl-6">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Accumulations</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
-              <p className="text-2xl font-semibold text-emerald-400">
-                {data.observed?.snowfall > 0 ? `${data.observed.snowfall.toFixed(2)}"` : '-'}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow</p>
-            </div>
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
-              <p className="text-2xl font-semibold text-emerald-400">
-                {data.observed?.ice > 0 ? `${data.observed.ice.toFixed(2)}"` : '-'}
               </p>
               <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice</p>
             </div>
