@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   const phaseLabels = {
     'pre-storm': 'Forecast Mode',
@@ -45,15 +46,46 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Logo & Title */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <div className="min-w-0">
-            <h1
-              className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate cursor-help flex items-center gap-2"
-              title="Disclaimer: StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at weather.gov and follow local emergency management guidance. Not affiliated with NOAA or NWS."
-            >
-              <span className="text-xl sm:text-2xl">&#9888;&#65039;</span>
-              StormTracking
-            </h1>
+          <div className="min-w-0 relative">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate flex items-center gap-2">
+                <span className="text-xl sm:text-2xl">&#9888;&#65039;</span>
+                StormTracking
+              </h1>
+              {/* Info icon with disclaimer tooltip */}
+              <button
+                onClick={() => setShowDisclaimer(!showDisclaimer)}
+                className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
+                title="View disclaimer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            </div>
             <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Get extreme weather information for your locations</p>
+
+            {/* Disclaimer popup */}
+            {showDisclaimer && (
+              <div className="absolute top-full left-0 mt-2 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-w-xs sm:max-w-sm">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <span className="text-xs font-semibold text-slate-300">Disclaimer</span>
+                  <button
+                    onClick={() => setShowDisclaimer(false)}
+                    className="text-slate-500 hover:text-slate-300"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
+                  <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+                  {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

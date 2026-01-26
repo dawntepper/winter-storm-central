@@ -326,15 +326,9 @@ export default function App() {
           />
 
           {/* 3. Check Your Location - Above map on mobile */}
-          <CollapsibleSection
-            title="Check Your Location"
-            subtitle="Track weather for your area"
-            defaultExpanded={true}
-          >
-            <div id="location-search-mobile">
-              <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
-            </div>
-          </CollapsibleSection>
+          <div id="location-search-mobile">
+            <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
+          </div>
 
           {/* 4. Storm Coverage Map on mobile */}
           <div id="storm-map-mobile">

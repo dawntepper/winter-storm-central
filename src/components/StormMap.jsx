@@ -713,17 +713,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 </span>
               )}
             </button>
-            {/* Zoom to saved locations button */}
-            {userLocations.length > 0 && (
-              <button
-                onClick={handleZoomToLocations}
-                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 cursor-pointer"
-                title="Zoom to your saved locations"
-              >
-                <span className="hidden sm:inline">Saved Locations</span>
-                <span className="sm:hidden">Saved</span>
-              </button>
-            )}
+            {/* Saved locations button - temporarily disabled */}
             {/* Reset view button */}
             <button
               onClick={handleResetView}
@@ -754,11 +744,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-4 sm:gap-5 text-[10px] sm:text-xs text-slate-400 mt-3">
-          {userLocations.length > 0 && (
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full border-2 border-emerald-500 bg-emerald-500/30"></span> Your Location{userLocations.length > 1 ? 's' : ''}
-            </span>
-          )}
           {showRadar && (
             <span className="flex items-center gap-2 text-cyan-400">
               <span className="w-3 h-3 rounded bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"></span> Radar
@@ -768,7 +753,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             <span className="text-red-400 text-[10px]">{geoError}</span>
           )}
           <span className="ml-auto text-slate-500 hidden sm:inline">
-            Click a city below to preview on map
+            Click an alert to preview on map
           </span>
         </div>
       </div>
@@ -800,18 +785,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {/* Only show user-added location markers (no pre-loaded Storm Fern cities) */}
-            {userLocations.map(location => (
-              <UserLocationMarker
-                key={`${location.id}-${location.lastUpdated || ''}`}
-                location={location}
-                stormPhase={stormPhase}
-                isMobile={isMobile}
-              />
-            ))}
+            {/* User location markers temporarily disabled - causing map interaction issues */}
+            {/* TODO: Fix and re-enable UserLocationMarker */}
 
-            {/* Preview marker - only show if not already a user location */}
-            {previewLocation && !userLocations.some(loc => loc.name === previewLocation.name) && (
+            {/* Preview marker for extreme weather alerts */}
+            {previewLocation && (
               <PreviewMarker location={previewLocation} />
             )}
           </ZoomContext.Provider>
