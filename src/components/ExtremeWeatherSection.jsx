@@ -369,8 +369,8 @@ export default function ExtremeWeatherSection({
         <AlertModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
       )}
 
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
+      {/* Header - dark gray background */}
+      <div className="px-4 py-3 bg-slate-800 border-b border-slate-700/50 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-white">
             Extreme Weather Conditions
