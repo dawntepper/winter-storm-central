@@ -231,6 +231,14 @@ export default function App() {
         lat: location.lat,
         lon: location.lon
       });
+
+      // On mobile, scroll to the map so user can see the location
+      const isMobile = window.innerWidth < 1024; // lg breakpoint
+      if (isMobile) {
+        setTimeout(() => {
+          document.querySelector('#storm-map-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
     }
   };
 
@@ -268,46 +276,55 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Your Locations (if any) - TOP on mobile */}
           {userLocations.length > 0 && (
-            <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 p-4">
-              <h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
-                <span>&#9733;</span> Your Locations ({userLocations.length})
-              </h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
+              <div className="px-4 py-3 border-b border-emerald-500/20">
+                <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
+                  <span>&#9733;</span> Your Locations ({userLocations.length})
+                </h3>
+              </div>
+              <div className="divide-y divide-slate-700/50">
                 {searchLocations.map((loc) => (
                   <div
                     key={loc.id}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+                    className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
+                    style={{ minHeight: '48px' }}
                   >
                     <button
                       onClick={() => handleViewedLocationClick(loc)}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                      className="flex-1 flex items-center gap-2 py-3 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
                     >
-                      {loc.name}
+                      <span>📍</span>
+                      <span>{loc.name}</span>
                     </button>
                   </div>
                 ))}
                 {alertLocations.map((loc) => (
                   <div
                     key={loc.id}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg"
+                    className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
+                    style={{ minHeight: '48px' }}
                   >
                     <button
                       onClick={() => handleViewedLocationClick(loc)}
-                      className="text-xs text-amber-400 hover:text-amber-300 cursor-pointer"
+                      className="flex-1 flex items-center gap-2 py-3 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
                     >
-                      {loc.name}
+                      <span>📍</span>
+                      <span>{loc.name}</span>
                     </button>
                     <button
                       onClick={() => handleRemoveAlertLocation(loc.id)}
-                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
+                      className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
                       title="Remove from map"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
                 ))}
+              </div>
+              <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                <p className="text-xs text-slate-500 text-center">Tap location to view on map</p>
               </div>
             </div>
           )}
@@ -370,46 +387,53 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Your Locations (if any) */}
             {userLocations.length > 0 && (
-              <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 p-4">
-                <h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
-                  <span>&#9733;</span> Your Locations ({userLocations.length})
-                </h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
+                <div className="px-4 py-3 border-b border-emerald-500/20">
+                  <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
+                    <span>&#9733;</span> Your Locations ({userLocations.length})
+                  </h3>
+                </div>
+                <div className="divide-y divide-slate-700/50">
                   {searchLocations.map((loc) => (
                     <div
                       key={loc.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"
+                      className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
                     >
                       <button
                         onClick={() => handleViewedLocationClick(loc)}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                        className="flex-1 flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
                       >
-                        {loc.name}
+                        <span>📍</span>
+                        <span>{loc.name}</span>
                       </button>
                     </div>
                   ))}
                   {alertLocations.map((loc) => (
                     <div
                       key={loc.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg"
+                      className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
                     >
                       <button
                         onClick={() => handleViewedLocationClick(loc)}
-                        className="text-xs text-amber-400 hover:text-amber-300 cursor-pointer"
+                        className="flex-1 flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
                       >
-                        {loc.name}
+                        <span>📍</span>
+                        <span>{loc.name}</span>
                       </button>
                       <button
                         onClick={() => handleRemoveAlertLocation(loc.id)}
-                        className="text-slate-400 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
+                        className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
                         title="Remove from map"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
                   ))}
+                </div>
+                <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                  <p className="text-xs text-slate-500 text-center">Tap location to view on map</p>
                 </div>
               </div>
             )}
