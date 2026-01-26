@@ -1074,6 +1074,11 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
             {Object.values(savedLocations).filter(l => l.onMap).length} location(s) added to map
           </p>
         )}
+
+        {/* Device storage note */}
+        <p className="text-slate-500 text-[10px] mt-2">
+          Locations saved on this device only
+        </p>
           </div>
         )}
       </div>
