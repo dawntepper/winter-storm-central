@@ -66,9 +66,9 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
                 {/* Disclaimer popup */}
                 {showDisclaimer && (
-                  <div className="absolute top-full left-0 mt-1 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-w-xs sm:max-w-sm">
-                    <span className="text-xs font-semibold text-slate-300 block mb-2">Disclaimer</span>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <div className="absolute top-full left-0 mt-1 p-4 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 w-72 sm:w-96">
+                    <span className="text-sm font-semibold text-slate-200 block mb-2">Disclaimer</span>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                       StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
                       <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline cursor-pointer">weather.gov</a>
                       {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
