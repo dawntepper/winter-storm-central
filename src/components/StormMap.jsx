@@ -37,7 +37,8 @@ const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
   const shadow = isUser
     ? '0 2px 12px rgba(0,0,0,0.4), 0 0 15px rgba(16, 185, 129, 0.4)'
     : '0 2px 8px rgba(0,0,0,0.6)';
-  const textShadow = isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.8)';
+  // Add text shadow for all labels (including user locations for better readability)
+  const textShadow = '0 1px 3px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3)';
 
   // Calculate offset based on zoom level
   // At zoom 5.5 (default), offset is -15
@@ -486,13 +487,13 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         }}
       />
 
-      {/* Main marker - solid green fill with green border */}
+      {/* Main marker - gray fill with green border */}
       <CircleMarker
         center={position}
         radius={radius}
         pathOptions={{
-          fillColor: '#10b981',
-          fillOpacity: 0.85,
+          fillColor: '#475569',
+          fillOpacity: 0.9,
           color: '#10b981',
           weight: 3,
           opacity: 1,
