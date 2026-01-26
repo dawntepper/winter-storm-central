@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useWeatherData } from './hooks/useWeatherData';
+import { useActualAccumulations } from './hooks/useActualAccumulations';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import DualLeaderboard from './components/DualLeaderboard';
 import AccumulationsTable from './components/AccumulationsTable';
 import CityCards from './components/CityCards';
 import StormMap from './components/StormMap';
+import { AccumulationLeaderboard, AccumulationCard } from './components/ActualAccumulations';
 
 function LoadingState() {
   return (
@@ -200,6 +202,19 @@ export default function App() {
   const [showOnlyUserLocations, setShowOnlyUserLocations] = useState(false);
   const [mapCenterOn, setMapCenterOn] = useState(null);
 
+  // Premium feature: Actual accumulations from weather stations
+  // Toggle this to test the premium feature locally
+  const [showPremiumFeatures, setShowPremiumFeatures] = useState(true);
+
+  const {
+    accumulations,
+    loading: accumulationsLoading,
+    error: accumulationsError,
+    lastUpdate: accumulationsLastUpdate,
+    getAccumulationLeaderboard,
+    getDisplayData
+  } = useActualAccumulations(weatherData, userLocations, showPremiumFeatures);
+
   // Handle city click from table - center map on that city
   const handleCityClick = (city) => {
     if (city.lat && city.lon) {
@@ -250,34 +265,52 @@ export default function App() {
         {/* Location Search - moved to top */}
         <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setUserLocations} />
 
-        {/* View Toggle */}
-        {userLocations.length > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">View:</span>
-            <div className="flex rounded-lg overflow-hidden border border-slate-700">
-              <button
-                onClick={() => setShowOnlyUserLocations(false)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  !showOnlyUserLocations
-                    ? 'bg-sky-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
-              >
-                All Locations
-              </button>
-              <button
-                onClick={() => setShowOnlyUserLocations(true)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  showOnlyUserLocations
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
-              >
-                My Locations ({userLocations.length})
-              </button>
+        {/* View Toggle + Premium Toggle */}
+        <div className="flex flex-wrap items-center gap-4">
+          {userLocations.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-400">View:</span>
+              <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                <button
+                  onClick={() => setShowOnlyUserLocations(false)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    !showOnlyUserLocations
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  All Locations
+                </button>
+                <button
+                  onClick={() => setShowOnlyUserLocations(true)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    showOnlyUserLocations
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  My Locations ({userLocations.length})
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* Premium Feature Toggle (for testing) */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPremiumFeatures}
+                onChange={(e) => setShowPremiumFeatures(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+              />
+              <span className="text-xs text-slate-400">
+                Show Actual Accumulations
+                <span className="ml-1 text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">PREMIUM</span>
+              </span>
+            </label>
           </div>
-        )}
+        </div>
 
         {/* Main Grid: Map + Leaderboards side-by-side on desktop */}
         <section className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
@@ -297,13 +330,22 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Show Accumulations Table during active/post-storm, Leaderboards during pre-storm */}
             {stormPhase === 'pre-storm' ? (
-              <DualLeaderboard
-                snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
-                iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-                stormPhase={stormPhase}
-                userLocations={userLocations}
-                stackedLayout
-              />
+              <>
+                <DualLeaderboard
+                  snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
+                  iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
+                  stormPhase={stormPhase}
+                  userLocations={userLocations}
+                  stackedLayout
+                />
+                {/* Premium: Actual Accumulations Leaderboard */}
+                {showPremiumFeatures && (
+                  <AccumulationLeaderboard
+                    data={getAccumulationLeaderboard(10)}
+                    title="Actual Storm Totals"
+                  />
+                )}
+              </>
             ) : (
               <>
                 <AccumulationsTable
@@ -313,6 +355,13 @@ export default function App() {
                   lastRefresh={lastRefresh}
                   onCityClick={handleCityClick}
                 />
+                {/* Premium: Actual Accumulations Leaderboard */}
+                {showPremiumFeatures && (
+                  <AccumulationLeaderboard
+                    data={getAccumulationLeaderboard(10)}
+                    title="Actual Storm Totals"
+                  />
+                )}
                 <DualLeaderboard
                   snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
                   iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
