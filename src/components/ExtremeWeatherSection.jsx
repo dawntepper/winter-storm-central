@@ -29,7 +29,7 @@ function AlertModal({ alert, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white transition-colors"
+            className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -94,13 +94,13 @@ function AlertModal({ alert, onClose }) {
             href="https://www.weather.gov/alerts"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-sky-400 hover:text-sky-300"
+            className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer"
           >
             View all alerts on Weather.gov →
           </a>
           <button
             onClick={onClose}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors"
+            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
           >
             Close
           </button>
@@ -139,7 +139,7 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
     <div className="bg-slate-800/50 rounded-lg overflow-hidden">
       <button
         onClick={handleCardClick}
-        className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors active:scale-[0.98] touch-manipulation"
+        className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -165,7 +165,7 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
           {alert.headline && (
             <div className="px-4 py-3 bg-amber-900/20 border-b border-amber-500/20">
               <div className="flex items-start gap-2">
-                <span className="text-amber-400 mt-0.5">&#9888;</span>
+                <span className="text-amber-400 mt-0.5">📡</span>
                 <div className="flex-1">
                   <p className="text-sm text-amber-200 font-medium mb-1">
                     {alert.headline}
@@ -181,7 +181,7 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
                               e.stopPropagation();
                               onShowDetail(alert);
                             }}
-                            className="text-sky-400 hover:text-sky-300 font-medium"
+                            className="text-sky-400 hover:text-sky-300 font-medium cursor-pointer"
                           >
                             Full Alert
                           </button>
@@ -205,13 +205,13 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
             <div className="flex gap-2">
               <button
                 onClick={handleAddToMap}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation"
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
               >
                 Add
               </button>
               <button
                 onClick={handleDismissPrompt}
-                className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-slate-300 text-xs font-medium rounded-lg transition-colors touch-manipulation"
+                className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-slate-300 text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
               >
                 Close
               </button>
@@ -237,7 +237,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
       {/* Category Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2 py-2 mb-2 touch-manipulation"
+        className="w-full flex items-center justify-between px-2 py-2 mb-2 touch-manipulation cursor-pointer hover:bg-slate-700/30 rounded-lg transition-colors"
         style={{ minHeight: '48px' }}
       >
         <div className="flex items-center gap-2">
@@ -293,7 +293,7 @@ function EmptyState({ onAddLocation }) {
       </p>
       <button
         onClick={onAddLocation}
-        className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors touch-manipulation"
+        className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
         + Add Location
@@ -320,11 +320,11 @@ function LoadingState() {
 function ErrorState({ error, onRetry }) {
   return (
     <div className="py-6 px-4 text-center">
-      <div className="text-2xl mb-2">&#9888;</div>
+      <div className="text-2xl mb-2">📡</div>
       <p className="text-sm text-slate-400 mb-3">{error}</p>
       <button
         onClick={onRetry}
-        className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors"
+        className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors cursor-pointer"
       >
         Try Again
       </button>
@@ -387,7 +387,7 @@ export default function ExtremeWeatherSection({
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="p-2 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 touch-manipulation"
+          className="p-2 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 touch-manipulation cursor-pointer"
           title="Refresh"
           style={{ minWidth: '44px', minHeight: '44px' }}
         >

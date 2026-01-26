@@ -626,7 +626,7 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
       <div className="absolute top-3 right-3 flex items-center gap-2">
         <button
           onClick={isOnMap ? onDismiss : onRemove}
-          className="text-slate-500 hover:text-slate-300 transition-colors"
+          className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
           title={isOnMap ? "Close card (stays on map)" : "Remove location"}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1009,7 +1009,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
               type="button"
               onClick={handleCitySelect}
               disabled={loading || !selectedState || !selectedCity}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
@@ -1032,7 +1032,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
             <button
               type="submit"
               disabled={loading || zip.length !== 5}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
@@ -1064,7 +1064,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
                     <span className="text-xs text-emerald-400">{loc.data.name}</span>
                     <button
                       onClick={() => handleToggleMap(id, false)}
-                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
                       title="Remove from map"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -10,7 +10,7 @@ function LoadingState() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center">
-        <div className="text-5xl mb-4 text-slate-400">&#9888;&#65039;</div>
+        <div className="text-5xl mb-4 text-slate-400">📡</div>
         <h2 className="text-xl font-semibold text-white mb-2">Loading Weather Information</h2>
         <p className="text-slate-500 text-sm">Fetching from NOAA Weather Service</p>
         <div className="mt-4 flex justify-center gap-1">
@@ -31,12 +31,12 @@ function ErrorState({ error, onRetry }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center bg-slate-800 border border-slate-700 rounded-xl p-6 sm:p-8 max-w-md w-full">
-        <div className="text-3xl mb-4 text-slate-400">&#9888;</div>
+        <div className="text-3xl mb-4 text-slate-400">📡</div>
         <h2 className="text-lg font-semibold text-white mb-2">Error Loading Data</h2>
         <p className="text-slate-500 text-sm mb-4">{error}</p>
         <button
           onClick={onRetry}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-white text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer"
         >
           Try Again
         </button>
@@ -52,7 +52,7 @@ function CollapsibleSection({ title, subtitle, defaultExpanded = false, children
     <div className="bg-slate-800/30 rounded-xl border border-slate-700 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
       >
         <div>
           <h3 className="text-base font-semibold text-white text-left">{title}</h3>
@@ -280,7 +280,7 @@ export default function App() {
                   >
                     <button
                       onClick={() => handleViewedLocationClick(loc)}
-                      className="text-xs text-emerald-400 hover:text-emerald-300"
+                      className="text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
                     >
                       {loc.name}
                     </button>
@@ -293,13 +293,13 @@ export default function App() {
                   >
                     <button
                       onClick={() => handleViewedLocationClick(loc)}
-                      className="text-xs text-amber-400 hover:text-amber-300"
+                      className="text-xs text-amber-400 hover:text-amber-300 cursor-pointer"
                     >
                       {loc.name}
                     </button>
                     <button
                       onClick={() => handleRemoveAlertLocation(loc.id)}
-                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                      className="text-slate-400 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
                       title="Remove from map"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,7 +382,7 @@ export default function App() {
                     >
                       <button
                         onClick={() => handleViewedLocationClick(loc)}
-                        className="text-xs text-emerald-400 hover:text-emerald-300"
+                        className="text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
                       >
                         {loc.name}
                       </button>
@@ -395,13 +395,13 @@ export default function App() {
                     >
                       <button
                         onClick={() => handleViewedLocationClick(loc)}
-                        className="text-xs text-amber-400 hover:text-amber-300"
+                        className="text-xs text-amber-400 hover:text-amber-300 cursor-pointer"
                       >
                         {loc.name}
                       </button>
                       <button
                         onClick={() => handleRemoveAlertLocation(loc.id)}
-                        className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+                        className="text-slate-400 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
                         title="Remove from map"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,7 +423,7 @@ export default function App() {
                     <button
                       key={loc.id}
                       onClick={() => handleViewedLocationClick(loc)}
-                      className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 text-xs rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
                     >
                       {loc.location}
                     </button>
@@ -454,7 +454,7 @@ export default function App() {
             href="https://ko-fi.com/dawntepper"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm transition-colors border border-slate-700 hover:border-amber-500/30"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm transition-colors border border-slate-700 hover:border-amber-500/30 cursor-pointer"
           >
             <span className="text-lg">&#9749;</span>
             <span>Support StormTracking</span>
@@ -462,7 +462,7 @@ export default function App() {
 
           <p className="text-slate-500 text-xs max-w-2xl mx-auto px-4">
             <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
-            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline cursor-pointer">weather.gov</a>
             {' '}and follow local emergency management guidance. Not affiliated with NOAA or NWS.
           </p>
         </footer>

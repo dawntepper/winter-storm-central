@@ -49,7 +49,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
           <div className="min-w-0 relative">
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate flex items-center gap-2">
-                <span className="text-xl sm:text-2xl">&#9888;&#65039;</span>
+                <span className="text-xl sm:text-2xl">📡</span>
                 StormTracking
               </h1>
               {/* Info icon with disclaimer tooltip on hover */}
@@ -93,7 +93,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             )}
             <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
             <p className="text-xs text-slate-500">
-              Contact: <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">@dawntepper_</a>
+              Contact: <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 cursor-pointer">@dawntepper_</a>
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             <button
               onClick={handleShare}
               className="p-2 sm:px-3 sm:py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium
-                         transition-colors flex items-center gap-2 border border-slate-600"
+                         transition-colors flex items-center gap-2 border border-slate-600 cursor-pointer"
               title="Share this tracker"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +122,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             href="https://ko-fi.com/dawntepper"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 hover:border-amber-500/30"
+            className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 hover:border-amber-500/30 cursor-pointer"
             title="Support stormtracking.io"
           >
             <span className="text-base">☕</span>
@@ -135,7 +135,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             disabled={loading}
             className="p-2 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800
                        disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium
-                       transition-colors flex items-center gap-2 border border-slate-600"
+                       transition-colors flex items-center gap-2 border border-slate-600 cursor-pointer"
           >
             <span className={loading ? 'animate-spin' : ''}>&#8635;</span>
             <span className="hidden sm:inline">{loading ? 'Loading...' : 'Refresh'}</span>
