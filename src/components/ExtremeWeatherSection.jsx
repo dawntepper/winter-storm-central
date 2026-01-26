@@ -250,7 +250,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
           </span>
         </div>
         <svg
-          className={`w-5 h-5 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

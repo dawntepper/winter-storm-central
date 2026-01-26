@@ -6,11 +6,11 @@ import L from 'leaflet';
 const ZoomContext = createContext(5.5);
 
 // Center of the storm coverage area - responsive defaults
-// Continental US centered near top of viewport, leaving room for cards below
-const CENTER_DESKTOP = [32.0, -96]; // US appears in upper portion of map
-const CENTER_MOBILE = [37.0, -95];  // Centered for mobile
-const ZOOM_DESKTOP = 4.2;  // Show full continental US
-const ZOOM_MOBILE = 3.5;   // Zoomed out to see full storm on mobile
+// Adjusted to include Alaska in default view
+const CENTER_DESKTOP = [45.0, -115]; // Shifted north and west to show Alaska
+const CENTER_MOBILE = [42.0, -100];  // Centered for mobile
+const ZOOM_DESKTOP = 3.2;  // Zoomed out to show Alaska + continental US
+const ZOOM_MOBILE = 2.8;   // Zoomed out more on mobile to see full coverage
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
@@ -26,6 +26,25 @@ const glowColors = {
   ice: 'rgba(232, 121, 249, 0.4)',
   mixed: 'rgba(167, 139, 250, 0.4)',
   none: 'rgba(100, 116, 139, 0.3)'
+};
+
+// Weather condition to icon mapping
+const getWeatherIcon = (condition) => {
+  if (!condition) return '⛅';
+  const c = condition.toLowerCase();
+  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
+  if (c.includes('cold') || c.includes('freez')) return '🥶';
+  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
+  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
+  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
+  if (c.includes('wind') || c.includes('breez')) return '💨';
+  if (c.includes('cloudy') || c.includes('overcast')) {
+    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
+    return '☁️';
+  }
+  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
+  if (c.includes('partly')) return '⛅';
+  return '⛅';
 };
 
 // Create custom label icon with zoom-aware offset
@@ -505,40 +524,28 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         }}
       >
         <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
-          <div className="min-w-[180px] p-1">
-            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
-              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
-              <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
+          <div className="min-w-[200px] p-3">
+            {/* Line 1: Weather icon + City name */}
+            <h3 className="font-bold text-lg text-gray-800 mb-2">
+              {getWeatherIcon(location.conditions?.shortForecast)} {location.name}
+            </h3>
+
+            {/* Line 2: Alert status */}
+            <div className="mb-1">
+              {location.alertInfo ? (
+                <span className="text-sm text-orange-500">⚠️ {location.alertInfo.event}</span>
+              ) : (
+                <span className="text-sm text-cyan-600">✓ No active alerts</span>
+              )}
             </div>
 
-            {/* Current conditions */}
-            {location.conditions?.temperature && (
-              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
-                <span className="text-lg font-bold text-emerald-700">{location.conditions.temperature}°{location.conditions.temperatureUnit}</span>
-                <span className="text-[10px] text-emerald-600">{location.conditions.shortForecast}</span>
-              </div>
-            )}
-
-            {/* Forecast */}
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-blue-50 rounded p-1.5 text-center">
-                  <div className="text-blue-700 font-bold text-sm">
-                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-blue-500">Snow</div>
-                </div>
-                <div className="bg-purple-50 rounded p-1.5 text-center">
-                  <div className="text-purple-700 font-bold text-sm">
-                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-purple-500">Ice</div>
-                </div>
-              </div>
+            {/* Line 3: Temperature · Condition */}
+            <div className="text-sm text-gray-500">
+              {location.conditions?.temperature ? (
+                <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
+              ) : (
+                <span>Loading weather data...</span>
+              )}
             </div>
           </div>
         </Tooltip>
@@ -554,36 +561,28 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         }}
       >
         <Tooltip direction="top" offset={[0, -30]} opacity={0.98} className="enhanced-tooltip">
-          <div className="min-w-[180px] p-1">
-            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
-              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
-              <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
+          <div className="min-w-[200px] p-3">
+            {/* Line 1: Weather icon + City name */}
+            <h3 className="font-bold text-lg text-gray-800 mb-2">
+              {getWeatherIcon(location.conditions?.shortForecast)} {location.name}
+            </h3>
+
+            {/* Line 2: Alert status */}
+            <div className="mb-1">
+              {location.alertInfo ? (
+                <span className="text-sm text-orange-500">⚠️ {location.alertInfo.event}</span>
+              ) : (
+                <span className="text-sm text-cyan-600">✓ No active alerts</span>
+              )}
             </div>
-            {location.conditions?.temperature && (
-              <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
-                <span className="text-lg font-bold text-emerald-700">{location.conditions.temperature}°{location.conditions.temperatureUnit}</span>
-                <span className="text-[10px] text-emerald-600">{location.conditions.shortForecast}</span>
-              </div>
-            )}
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-blue-50 rounded p-1.5 text-center">
-                  <div className="text-blue-700 font-bold text-sm">
-                    {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-blue-500">Snow</div>
-                </div>
-                <div className="bg-purple-50 rounded p-1.5 text-center">
-                  <div className="text-purple-700 font-bold text-sm">
-                    {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-purple-500">Ice</div>
-                </div>
-              </div>
+
+            {/* Line 3: Temperature · Condition */}
+            <div className="text-sm text-gray-500">
+              {location.conditions?.temperature ? (
+                <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
+              ) : (
+                <span>Loading weather data...</span>
+              )}
             </div>
           </div>
         </Tooltip>

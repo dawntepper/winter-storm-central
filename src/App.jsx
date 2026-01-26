@@ -339,7 +339,7 @@ export default function App() {
                   <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                 </h3>
                 <svg
-                  className={`w-5 h-5 text-slate-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-white transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -513,7 +513,7 @@ export default function App() {
                     <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                   </h3>
                   <svg
-                    className={`w-5 h-5 text-slate-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-white transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
