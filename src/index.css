@@ -2,7 +2,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background: #0f172a;
   min-height: 100vh;
 }
 
