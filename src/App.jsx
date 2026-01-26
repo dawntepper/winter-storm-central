@@ -327,49 +327,79 @@ export default function App() {
                     {searchLocations.map((loc) => (
                       <div
                         key={loc.id}
-                        className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
-                        style={{ minHeight: '48px' }}
+                        className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                       >
-                        <button
-                          onClick={() => handleViewedLocationClick(loc)}
-                          className="flex-1 flex items-center gap-3 py-3 text-sm text-white hover:text-emerald-300 hover:underline cursor-pointer text-left font-medium"
-                        >
-                          <span className="text-emerald-400">📍</span>
-                          <span>{loc.name}</span>
-                        </button>
-                        <button
-                          onClick={() => handleRemoveSearchLocation(loc.id)}
-                          className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                          title="Remove from map"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                        {/* Line 1: City name + × button */}
+                        <div className="flex items-start justify-between gap-4">
+                          <button
+                            onClick={() => handleViewedLocationClick(loc)}
+                            className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold"
+                          >
+                            {loc.name}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveSearchLocation(loc.id)}
+                            className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
+                            title="Remove from map"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        {/* Line 2: Alert status */}
+                        <div className="mt-1">
+                          {loc.alertInfo ? (
+                            <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
+                          ) : (
+                            <span className="text-xs text-emerald-400">✅ No active alerts</span>
+                          )}
+                        </div>
+                        {/* Line 3: Current weather */}
+                        <div className="mt-1 text-xs text-slate-400">
+                          {loc.conditions?.temperature ? (
+                            <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                          ) : (
+                            <span>Loading weather data...</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                     {alertLocations.map((loc) => (
                       <div
                         key={loc.id}
-                        className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
-                        style={{ minHeight: '48px' }}
+                        className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                       >
-                        <button
-                          onClick={() => handleViewedLocationClick(loc)}
-                          className="flex-1 flex items-center gap-3 py-3 text-sm text-white hover:text-amber-300 hover:underline cursor-pointer text-left font-medium"
-                        >
-                          <span className="text-amber-400">📍</span>
-                          <span>{loc.name}</span>
-                        </button>
-                        <button
-                          onClick={() => handleRemoveAlertLocation(loc.id)}
-                          className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                          title="Remove from map"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                        {/* Line 1: City name + × button */}
+                        <div className="flex items-start justify-between gap-4">
+                          <button
+                            onClick={() => handleViewedLocationClick(loc)}
+                            className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold"
+                          >
+                            {loc.name}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveAlertLocation(loc.id)}
+                            className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
+                            title="Remove from map"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        {/* Line 2: Alert status - always has alert since it came from alerts */}
+                        <div className="mt-1">
+                          <span className="text-xs text-orange-400">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
+                        </div>
+                        {/* Line 3: Current weather */}
+                        <div className="mt-1 text-xs text-slate-400">
+                          {loc.conditions?.temperature ? (
+                            <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                          ) : (
+                            <span>Loading weather data...</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -465,47 +495,79 @@ export default function App() {
                       {searchLocations.map((loc) => (
                         <div
                           key={loc.id}
-                          className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
+                          className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                         >
-                          <button
-                            onClick={() => handleViewedLocationClick(loc)}
-                            className="flex-1 flex items-center gap-3 text-sm text-white hover:text-emerald-300 hover:underline cursor-pointer text-left font-medium"
-                          >
-                            <span className="text-emerald-400">📍</span>
-                            <span>{loc.name}</span>
-                          </button>
-                          <button
-                            onClick={() => handleRemoveSearchLocation(loc.id)}
-                            className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                            title="Remove from map"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          {/* Line 1: City name + × button */}
+                          <div className="flex items-start justify-between gap-4">
+                            <button
+                              onClick={() => handleViewedLocationClick(loc)}
+                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold"
+                            >
+                              {loc.name}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveSearchLocation(loc.id)}
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
+                              title="Remove from map"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          {/* Line 2: Alert status */}
+                          <div className="mt-1">
+                            {loc.alertInfo ? (
+                              <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
+                            ) : (
+                              <span className="text-xs text-emerald-400">✅ No active alerts</span>
+                            )}
+                          </div>
+                          {/* Line 3: Current weather */}
+                          <div className="mt-1 text-xs text-slate-400">
+                            {loc.conditions?.temperature ? (
+                              <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                            ) : (
+                              <span>Loading weather data...</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {alertLocations.map((loc) => (
                         <div
                           key={loc.id}
-                          className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
+                          className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                         >
-                          <button
-                            onClick={() => handleViewedLocationClick(loc)}
-                            className="flex-1 flex items-center gap-3 text-sm text-white hover:text-amber-300 hover:underline cursor-pointer text-left font-medium"
-                          >
-                            <span className="text-amber-400">📍</span>
-                            <span>{loc.name}</span>
-                          </button>
-                          <button
-                            onClick={() => handleRemoveAlertLocation(loc.id)}
-                            className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                            title="Remove from map"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          {/* Line 1: City name + × button */}
+                          <div className="flex items-start justify-between gap-4">
+                            <button
+                              onClick={() => handleViewedLocationClick(loc)}
+                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold"
+                            >
+                              {loc.name}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveAlertLocation(loc.id)}
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
+                              title="Remove from map"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          {/* Line 2: Alert status - always has alert since it came from alerts */}
+                          <div className="mt-1">
+                            <span className="text-xs text-orange-400">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
+                          </div>
+                          {/* Line 3: Current weather */}
+                          <div className="mt-1 text-xs text-slate-400">
+                            {loc.conditions?.temperature ? (
+                              <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                            ) : (
+                              <span>Loading weather data...</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
