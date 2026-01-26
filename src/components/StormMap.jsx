@@ -440,9 +440,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
       >
         <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
           <div className="min-w-[180px] p-1">
-            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
-              <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
-              <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-semibold">YOUR LOCATION</span>
+            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
+              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
+              <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
+              <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded font-medium">You</span>
             </div>
 
             {/* Current conditions */}
@@ -489,9 +490,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
       >
         <Tooltip direction="top" offset={[0, -30]} opacity={0.98} className="enhanced-tooltip">
           <div className="min-w-[180px] p-1">
-            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-emerald-200">
-              <h3 className="font-bold text-sm text-gray-800">{location.name}</h3>
-              <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-semibold">YOUR LOCATION</span>
+            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-emerald-200">
+              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500">★</span>
+              <h3 className="font-bold text-sm text-gray-800 flex-1">{location.name}</h3>
+              <span className="text-[8px] bg-emerald-500/20 text-emerald-600 px-1.5 py-0.5 rounded font-medium">You</span>
             </div>
             {location.conditions?.temperature && (
               <div className="flex items-center gap-2 mb-2 p-1.5 bg-emerald-50 rounded">
