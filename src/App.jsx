@@ -328,7 +328,7 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Your Locations (if any) - TOP on mobile - COLLAPSIBLE */}
           {userLocations.length > 0 && (
-            <div className="rounded-xl border border-emerald-500/30 overflow-hidden">
+            <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
               {/* Collapsible Header - dark gray background */}
               <button
                 onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
@@ -503,7 +503,7 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Your Locations (if any) - COLLAPSIBLE */}
             {userLocations.length > 0 && (
-              <div className="rounded-xl border border-emerald-500/30 overflow-hidden">
+              <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
                 {/* Collapsible Header - dark gray background */}
                 <button
                   onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
