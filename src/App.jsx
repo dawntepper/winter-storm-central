@@ -352,7 +352,7 @@ export default function App() {
                           {loc.alertInfo ? (
                             <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
                           ) : (
-                            <span className="text-xs text-emerald-400">✅ No active alerts</span>
+                            <span className="text-xs text-cyan-500">✅ No active alerts</span>
                           )}
                         </div>
                         {/* Line 3: Current weather */}
@@ -520,7 +520,7 @@ export default function App() {
                             {loc.alertInfo ? (
                               <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
                             ) : (
-                              <span className="text-xs text-emerald-400">✅ No active alerts</span>
+                              <span className="text-xs text-cyan-500">✅ No active alerts</span>
                             )}
                           </div>
                           {/* Line 3: Current weather */}
