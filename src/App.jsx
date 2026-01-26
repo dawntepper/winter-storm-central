@@ -328,11 +328,11 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Your Locations (if any) - TOP on mobile - COLLAPSIBLE */}
           {userLocations.length > 0 && (
-            <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
-              {/* Collapsible Header */}
+            <div className="rounded-xl border border-emerald-500/30 overflow-hidden">
+              {/* Collapsible Header - dark gray background */}
               <button
                 onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
+                className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 style={{ minHeight: '48px' }}
               >
                 <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -351,11 +351,13 @@ export default function App() {
               {/* Expandable Content */}
               {yourLocationsExpanded && (
                 <>
-                  <div className="divide-y divide-slate-700/50 border-t border-slate-700/50">
-                    {searchLocations.map((loc) => (
+                  <div>
+                    {searchLocations.map((loc, index) => (
                       <div
                         key={loc.id}
-                        className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
+                        className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                          index % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
+                        }`}
                       >
                         {/* Line 1: Weather icon + City name + × button */}
                         <div className="flex items-start justify-between gap-4">
@@ -394,10 +396,12 @@ export default function App() {
                         </div>
                       </div>
                     ))}
-                    {alertLocations.map((loc) => (
+                    {alertLocations.map((loc, index) => (
                       <div
                         key={loc.id}
-                        className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
+                        className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                          (searchLocations.length + index) % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
+                        }`}
                       >
                         {/* Line 1: Weather icon + City name + × button */}
                         <div className="flex items-start justify-between gap-4">
@@ -433,7 +437,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                  <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                     <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                   </div>
                 </>
@@ -499,11 +503,11 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Your Locations (if any) - COLLAPSIBLE */}
             {userLocations.length > 0 && (
-              <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
-                {/* Collapsible Header */}
+              <div className="rounded-xl border border-emerald-500/30 overflow-hidden">
+                {/* Collapsible Header - dark gray background */}
                 <button
                   onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
+                  className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   <h3 className="text-base font-semibold text-white flex items-center gap-2">
                     <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
@@ -521,11 +525,13 @@ export default function App() {
                 {/* Expandable Content */}
                 {yourLocationsExpanded && (
                   <>
-                    <div className="divide-y divide-slate-700/50 border-t border-slate-700/50">
-                      {searchLocations.map((loc) => (
+                    <div>
+                      {searchLocations.map((loc, index) => (
                         <div
                           key={loc.id}
-                          className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
+                          className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                            index % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
+                          }`}
                         >
                           {/* Line 1: Weather icon + City name + × button */}
                           <div className="flex items-start justify-between gap-4">
@@ -564,10 +570,12 @@ export default function App() {
                           </div>
                         </div>
                       ))}
-                      {alertLocations.map((loc) => (
+                      {alertLocations.map((loc, index) => (
                         <div
                           key={loc.id}
-                          className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
+                          className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                            (searchLocations.length + index) % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
+                          }`}
                         >
                           {/* Line 1: Weather icon + City name + × button */}
                           <div className="flex items-start justify-between gap-4">
@@ -603,7 +611,7 @@ export default function App() {
                         </div>
                       ))}
                     </div>
-                    <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                    <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                       <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                     </div>
                   </>

@@ -113,7 +113,7 @@ function AlertModal({ alert, onClose }) {
 /**
  * Individual city/alert card with expandable warning details
  */
-function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
+function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor, isEven = false }) {
   const [showAddPrompt, setShowAddPrompt] = useState(false);
 
   const handleCardClick = () => {
@@ -136,10 +136,10 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
   };
 
   return (
-    <div className="bg-slate-800/50 rounded-lg overflow-hidden">
+    <div className={`border-t border-white/5 ${isEven ? 'bg-slate-700/40' : 'bg-slate-800/30'}`}>
       <button
         onClick={handleCardClick}
-        className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
+        className="w-full text-left px-4 py-3 hover:bg-slate-600/50 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -233,11 +233,11 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
   if (!alerts || alerts.length === 0) return null;
 
   return (
-    <div className="mb-6">
-      {/* Category Header */}
+    <div className="mb-4 rounded-lg overflow-hidden border border-slate-700/50">
+      {/* Category Header - dark gray background */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2 py-2 mb-2 touch-manipulation cursor-pointer hover:bg-slate-700/30 rounded-lg transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
         <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
           <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
             {category.name}
           </h3>
-          <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
             {alerts.length}
           </span>
         </div>
@@ -259,10 +259,10 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
         </svg>
       </button>
 
-      {/* Alerts List */}
+      {/* Alerts List with zebra striping */}
       {isExpanded && (
-        <div className="space-y-2 pl-2">
-          {alerts.map((alert) => (
+        <div>
+          {alerts.map((alert, index) => (
             <AlertCard
               key={alert.id}
               alert={alert}
@@ -270,6 +270,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
               onAddToMap={onAddToMap}
               onShowDetail={onShowDetail}
               categoryColor={category.color}
+              isEven={index % 2 === 1}
             />
           ))}
         </div>
