@@ -114,7 +114,6 @@ function AlertModal({ alert, onClose }) {
  * Individual city/alert card with expandable warning details
  */
 function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
-  console.log('AlertCard onAddToMap prop:', typeof onAddToMap);
   const [showAddPrompt, setShowAddPrompt] = useState(false);
 
   const handleCardClick = () => {
@@ -127,7 +126,6 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
 
   const handleAddToMap = (e) => {
     e.stopPropagation();
-    console.log('AlertCard handleAddToMap - calling onAddToMap with alert:', alert);
     onAddToMap(alert);
     setShowAddPrompt(false);
   };
@@ -230,7 +228,6 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
  * Category group with collapsible alerts
  */
 function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail, defaultExpanded = true }) {
-  console.log('CategoryGroup onAddToMap prop:', typeof onAddToMap, onAddToMap);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   if (!alerts || alerts.length === 0) return null;
