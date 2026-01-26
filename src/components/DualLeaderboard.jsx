@@ -10,27 +10,28 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
     }
   });
 
-  // Sort alphabetically by city name
-  displayCities.sort((a, b) => a.name.localeCompare(b.name));
+  // Sort by forecast amount descending, user locations first
+  displayCities.sort((a, b) => {
+    if (a.isUserLocation && !b.isUserLocation) return -1;
+    if (!a.isUserLocation && b.isUserLocation) return 1;
+    return (b.forecast?.snowfall || 0) - (a.forecast?.snowfall || 0);
+  });
 
   return (
     <div className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden flex flex-col ${compact ? 'flex-1' : ''}`}>
       <div className="bg-slate-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-700">
         <h2 className="text-sm sm:text-lg font-semibold text-white flex items-center gap-2">
-          <span className="text-sky-300">&#10052;</span> Snow Totals
+          <span className="text-sky-300">&#10052;</span> Snow Forecast
         </h2>
         <p className="text-slate-500 text-[10px] sm:text-xs mt-1">
-          Storm Fern | Jan 24-26
+          NOAA forecast for Storm Fern | Jan 24-26
         </p>
       </div>
 
       {/* Column Headers */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <div className="flex gap-4 sm:gap-6">
-          <span className="w-16 text-right text-sky-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Actual</span>
-        </div>
+        <span className="w-16 text-right text-sky-400">Forecast</span>
       </div>
 
       <div
@@ -44,7 +45,6 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.snowfall || 0;
-            const observedSnow = city.observed?.snowfall || 0;
             const isUser = city.isUserLocation;
             return (
               <div
@@ -66,16 +66,9 @@ function SnowLeaderboard({ cities, stormPhase, userLocations = [], maxHeight, co
                     )}
                   </div>
                 </div>
-                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
-                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-sky-300">
-                    {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
-                  </span>
-                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    observedSnow > 0 ? 'text-emerald-400' : 'text-slate-600'
-                  }`}>
-                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                  </span>
-                </div>
+                <span className="w-16 text-right text-sm sm:text-base font-semibold text-sky-300 flex-shrink-0">
+                  {forecast > 0 ? `${forecast.toFixed(1)}"` : '-'}
+                </span>
               </div>
             );
           })
@@ -96,8 +89,12 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
     }
   });
 
-  // Sort alphabetically by city name
-  displayCities.sort((a, b) => a.name.localeCompare(b.name));
+  // Sort by forecast amount descending, user locations first
+  displayCities.sort((a, b) => {
+    if (a.isUserLocation && !b.isUserLocation) return -1;
+    if (!a.isUserLocation && b.isUserLocation) return 1;
+    return (b.forecast?.ice || 0) - (a.forecast?.ice || 0);
+  });
 
   const getDangerLevel = (ice) => {
     if (ice >= 0.5) return { label: 'Catastrophic', class: 'bg-red-500/20 text-red-400 border-red-500/30' };
@@ -119,10 +116,7 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
       {/* Column Headers */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <span>City</span>
-        <div className="flex gap-4 sm:gap-6">
-          <span className="w-16 text-right text-fuchsia-400">Forecast</span>
-          <span className="w-16 text-right text-emerald-400">Actual</span>
-        </div>
+        <span className="w-16 text-right text-fuchsia-400">Forecast</span>
       </div>
 
       <div className={`divide-y divide-slate-700/50 ${compact ? 'flex-1 overflow-y-auto' : ''}`}>
@@ -133,7 +127,6 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
         ) : (
           displayCities.map((city) => {
             const forecast = city.forecast?.ice || 0;
-            const observedIce = city.observed?.ice || 0;
             const danger = getDangerLevel(forecast);
             const isUser = city.isUserLocation;
             return (
@@ -163,16 +156,9 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
                     )}
                   </div>
                 </div>
-                <div className="flex gap-4 sm:gap-6 flex-shrink-0">
-                  <span className="w-16 text-right text-sm sm:text-base font-semibold text-fuchsia-400">
-                    {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
-                  </span>
-                  <span className={`w-16 text-right text-sm sm:text-base font-semibold ${
-                    observedIce > 0 ? 'text-emerald-400' : 'text-slate-600'
-                  }`}>
-                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
-                  </span>
-                </div>
+                <span className="w-16 text-right text-sm sm:text-base font-semibold text-fuchsia-400 flex-shrink-0">
+                  {forecast > 0 ? `${forecast.toFixed(2)}"` : '-'}
+                </span>
               </div>
             );
           })
@@ -185,14 +171,11 @@ function IceLeaderboard({ cities, stormPhase, userLocations = [], compact = fals
 export default function DualLeaderboard({
   snowLeaderboard,
   iceLeaderboard,
-  observedSnowLeaderboard = [],
-  observedIceLeaderboard = [],
   stormPhase = 'pre-storm',
   userLocations = [],
   stackedLayout = false
 }) {
   // Calculate max height for snow leaderboard based on ice leaderboard
-  // Each row is roughly 40-48px
   const iceRowHeight = 44;
   const iceMaxItems = Math.min(10, (iceLeaderboard.length || 1) + userLocations.length);
   const maxHeight = stackedLayout ? undefined : iceMaxItems * iceRowHeight;

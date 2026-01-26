@@ -13,8 +13,7 @@ function formatTimestamp(date) {
 }
 
 export default function AccumulationsTable({ weatherData, userLocations = [], stormPhase, lastRefresh, onCityClick }) {
-  const [sortType, setSortType] = useState('snow'); // 'snow', 'ice', or 'name'
-  const [sortBy, setSortBy] = useState('actual'); // 'forecast', 'actual', or 'name'
+  const [sortBy, setSortBy] = useState('snow'); // 'snow', 'ice', or 'name'
 
   // Combine all cities and user locations
   const allCities = [
@@ -22,13 +21,11 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
     ...userLocations.map(loc => ({ ...loc, isUserLocation: true }))
   ];
 
-  // Filter to cities with forecast OR observed data
+  // Filter to cities with forecast data
   const citiesWithData = allCities.filter(city => {
     const forecastSnow = city.forecast?.snowfall || 0;
     const forecastIce = city.forecast?.ice || 0;
-    const observedSnow = city.observed?.snowfall || 0;
-    const observedIce = city.observed?.ice || 0;
-    return forecastSnow > 0 || forecastIce > 0 || observedSnow > 0 || observedIce > 0;
+    return forecastSnow > 0 || forecastIce > 0;
   });
 
   // Remove duplicates (prefer weatherData version over userLocation)
@@ -53,26 +50,16 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
       return a.name.localeCompare(b.name); // Alphabetical A-Z
     }
 
-    let aVal, bVal;
-    if (sortBy === 'forecast') {
-      aVal = sortType === 'snow' ? (a.forecast?.snowfall || 0) : (a.forecast?.ice || 0);
-      bVal = sortType === 'snow' ? (b.forecast?.snowfall || 0) : (b.forecast?.ice || 0);
-    } else {
-      aVal = sortType === 'snow' ? (a.observed?.snowfall || 0) : (a.observed?.ice || 0);
-      bVal = sortType === 'snow' ? (b.observed?.snowfall || 0) : (b.observed?.ice || 0);
+    if (sortBy === 'snow') {
+      return (b.forecast?.snowfall || 0) - (a.forecast?.snowfall || 0);
     }
-    return bVal - aVal; // Descending
+
+    if (sortBy === 'ice') {
+      return (b.forecast?.ice || 0) - (a.forecast?.ice || 0);
+    }
+
+    return 0;
   });
-
-  const handleSort = (type, column) => {
-    setSortType(type);
-    setSortBy(column);
-  };
-
-  const handleNameSort = () => {
-    setSortBy('name');
-    setSortType('name');
-  };
 
   if (sortedCities.length === 0) {
     return (
@@ -90,66 +77,42 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
           <span className="text-amber-400">&#9888;</span> Storm Fern Tracking
           <span className="text-slate-500 text-sm cursor-help" title="Click city to view on map">ⓘ</span>
         </h2>
-        {lastRefresh && (
-          <p className="text-slate-400 text-[10px] sm:text-xs mt-1">
-            Last updated: {formatTimestamp(lastRefresh)}
-          </p>
-        )}
-        <p className="text-slate-500 text-[10px] sm:text-xs mt-0.5">
-          Values show current conditions and may change as the storm progresses
+        <p className="text-slate-400 text-[10px] sm:text-xs mt-1">
+          Forecast data from NOAA • Updates hourly
+          {lastRefresh && ` • Last updated: ${formatTimestamp(lastRefresh)}`}
         </p>
       </div>
 
       {/* Column Headers */}
       <div className="grid grid-cols-[1fr_auto] px-3 sm:px-4 py-2 bg-slate-900/50 border-b border-slate-700/50 text-[10px] text-slate-500 uppercase tracking-wide">
         <button
-          onClick={handleNameSort}
+          onClick={() => setSortBy('name')}
           className={`text-left cursor-pointer hover:text-slate-300 transition-colors ${
             sortBy === 'name' ? 'text-slate-300 font-bold' : ''
           }`}
         >
           City{sortBy === 'name' && ' ▼'}
         </button>
-        <div className="grid grid-cols-4 gap-1 sm:gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-6">
           <button
-            onClick={() => handleSort('snow', 'forecast')}
-            className={`w-10 sm:w-16 text-right cursor-pointer hover:text-sky-300 transition-colors ${
-              sortBy === 'forecast' && sortType === 'snow' ? 'text-sky-400 font-bold' : 'text-sky-400/70'
+            onClick={() => setSortBy('snow')}
+            className={`w-16 sm:w-24 text-right cursor-pointer hover:text-sky-300 transition-colors ${
+              sortBy === 'snow' ? 'text-sky-400 font-bold' : 'text-sky-400/70'
             }`}
           >
-            <span className="hidden sm:inline">Snow F</span>
-            <span className="sm:hidden">Sn F</span>
-            {sortBy === 'forecast' && sortType === 'snow' && ' ▼'}
+            <span className="hidden sm:inline">Snow</span>
+            <span className="sm:hidden">Snow</span>
+            {sortBy === 'snow' && ' ▼'}
           </button>
           <button
-            onClick={() => handleSort('snow', 'actual')}
-            className={`w-10 sm:w-16 text-right cursor-pointer hover:text-emerald-300 transition-colors ${
-              sortBy === 'actual' && sortType === 'snow' ? 'text-emerald-400 font-bold' : 'text-emerald-400/70'
+            onClick={() => setSortBy('ice')}
+            className={`w-16 sm:w-24 text-right cursor-pointer hover:text-fuchsia-300 transition-colors ${
+              sortBy === 'ice' ? 'text-fuchsia-400 font-bold' : 'text-fuchsia-400/70'
             }`}
           >
-            <span className="hidden sm:inline">Snow A</span>
-            <span className="sm:hidden">Sn A</span>
-            {sortBy === 'actual' && sortType === 'snow' && ' ▼'}
-          </button>
-          <button
-            onClick={() => handleSort('ice', 'forecast')}
-            className={`w-10 sm:w-16 text-right cursor-pointer hover:text-fuchsia-300 transition-colors ${
-              sortBy === 'forecast' && sortType === 'ice' ? 'text-fuchsia-400 font-bold' : 'text-fuchsia-400/70'
-            }`}
-          >
-            <span className="hidden sm:inline">Ice F</span>
-            <span className="sm:hidden">Ic F</span>
-            {sortBy === 'forecast' && sortType === 'ice' && ' ▼'}
-          </button>
-          <button
-            onClick={() => handleSort('ice', 'actual')}
-            className={`w-10 sm:w-16 text-right cursor-pointer hover:text-emerald-300 transition-colors ${
-              sortBy === 'actual' && sortType === 'ice' ? 'text-emerald-400 font-bold' : 'text-emerald-400/70'
-            }`}
-          >
-            <span className="hidden sm:inline">Ice A</span>
-            <span className="sm:hidden">Ic A</span>
-            {sortBy === 'actual' && sortType === 'ice' && ' ▼'}
+            <span className="hidden sm:inline">Ice</span>
+            <span className="sm:hidden">Ice</span>
+            {sortBy === 'ice' && ' ▼'}
           </button>
         </div>
       </div>
@@ -158,8 +121,6 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
         {sortedCities.map((city) => {
           const forecastSnow = city.forecast?.snowfall || 0;
           const forecastIce = city.forecast?.ice || 0;
-          const observedSnow = city.observed?.snowfall || 0;
-          const observedIce = city.observed?.ice || 0;
           const isUser = city.isUserLocation;
 
           return (
@@ -181,26 +142,16 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
                   <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded flex-shrink-0">You</span>
                 )}
               </div>
-              <div className="grid grid-cols-4 gap-1 sm:gap-4">
-                <span className={`w-10 sm:w-16 text-right text-xs sm:text-sm font-semibold ${
-                  sortBy === 'forecast' && sortType === 'snow' ? 'text-sky-300' : 'text-sky-300/70'
+              <div className="grid grid-cols-2 gap-2 sm:gap-6">
+                <span className={`w-16 sm:w-24 text-right text-xs sm:text-sm font-semibold ${
+                  sortBy === 'snow' ? 'text-sky-300' : 'text-sky-300/70'
                 }`}>
                   {forecastSnow > 0 ? `${forecastSnow.toFixed(1)}"` : '-'}
                 </span>
-                <span className={`w-10 sm:w-16 text-right text-xs sm:text-sm font-semibold ${
-                  observedSnow > 0 ? (sortBy === 'actual' && sortType === 'snow' ? 'text-emerald-400' : 'text-emerald-400/80') : 'text-slate-600'
-                }`}>
-                  {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                </span>
-                <span className={`w-10 sm:w-16 text-right text-xs sm:text-sm font-semibold ${
-                  sortBy === 'forecast' && sortType === 'ice' ? 'text-fuchsia-400' : 'text-fuchsia-400/70'
+                <span className={`w-16 sm:w-24 text-right text-xs sm:text-sm font-semibold ${
+                  sortBy === 'ice' ? 'text-fuchsia-400' : 'text-fuchsia-400/70'
                 }`}>
                   {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
-                </span>
-                <span className={`w-10 sm:w-16 text-right text-xs sm:text-sm font-semibold ${
-                  observedIce > 0 ? (sortBy === 'actual' && sortType === 'ice' ? 'text-emerald-400' : 'text-emerald-400/80') : 'text-slate-600'
-                }`}>
-                  {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
                 </span>
               </div>
             </div>
@@ -209,7 +160,7 @@ export default function AccumulationsTable({ weatherData, userLocations = [], st
       </div>
 
       <div className="px-3 sm:px-4 py-2 bg-slate-900/30 border-t border-slate-700/50 text-[10px] sm:text-xs text-slate-500">
-        F = Forecast • A = Actual • Click headers to sort • {sortedCities.length} cities
+        Click headers to sort • {sortedCities.length} cities • Forecast data from NOAA
       </div>
     </div>
   );

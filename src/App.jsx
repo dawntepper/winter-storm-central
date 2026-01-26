@@ -150,10 +150,10 @@ function ForecastBanner({ stormPhase }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></div>
-          <span className="text-amber-300 font-semibold text-sm sm:text-base">Currently Showing Forecast Data</span>
+          <span className="text-amber-300 font-semibold text-sm sm:text-base">NOAA Forecast Data</span>
         </div>
         <p className="text-amber-200/70 text-xs sm:text-sm">
-          Actual accumulation totals will appear once Storm Fern begins on Jan 24
+          Forecasts update hourly from NOAA Weather Service
         </p>
       </div>
     </div>
@@ -165,17 +165,17 @@ function DataSourceLegend({ stormPhase }) {
     <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span>Live data</span>
+        <span>Live conditions</span>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2">
         <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span>Forecast</span>
+        <span>NOAA Forecast</span>
       </div>
       <span className="text-slate-700 hidden sm:inline">|</span>
       <span className="w-full sm:w-auto">
-        {stormPhase === 'pre-storm' && 'Storm Fern begins Jan 24 - showing forecasts'}
-        {stormPhase === 'active' && 'Storm Fern active - tracking actual accumulations'}
-        {stormPhase === 'post-storm' && 'Storm Fern complete - showing final totals'}
+        {stormPhase === 'pre-storm' && 'Storm Fern begins Jan 24 - showing NOAA forecasts'}
+        {stormPhase === 'active' && 'Storm Fern active - showing NOAA forecasts'}
+        {stormPhase === 'post-storm' && 'Storm Fern complete - showing NOAA forecasts'}
       </span>
     </div>
   );
@@ -193,8 +193,6 @@ export default function App() {
     refresh,
     getSnowLeaderboard,
     getIceLeaderboard,
-    getObservedSnowLeaderboard,
-    getObservedIceLeaderboard,
     getCitiesGeoOrdered
   } = useWeatherData();
 
@@ -302,8 +300,6 @@ export default function App() {
               <DualLeaderboard
                 snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
                 iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-                observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
-                observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
                 stormPhase={stormPhase}
                 userLocations={userLocations}
                 stackedLayout
@@ -320,8 +316,6 @@ export default function App() {
                 <DualLeaderboard
                   snowLeaderboard={showOnlyUserLocations ? [] : getSnowLeaderboard()}
                   iceLeaderboard={showOnlyUserLocations ? [] : getIceLeaderboard()}
-                  observedSnowLeaderboard={showOnlyUserLocations ? [] : getObservedSnowLeaderboard()}
-                  observedIceLeaderboard={showOnlyUserLocations ? [] : getObservedIceLeaderboard()}
                   stormPhase={stormPhase}
                   userLocations={userLocations}
                   stackedLayout

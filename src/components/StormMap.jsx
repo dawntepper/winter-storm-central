@@ -306,10 +306,10 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
             )}
 
             {/* Forecast Data */}
-            <div className="mb-2">
+            <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Forecast</span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-blue-50 rounded p-1.5 text-center">
@@ -326,30 +326,6 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
                 </div>
               </div>
             </div>
-
-            {/* Observed Data - Always show during active storm */}
-            {isActive && (
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                    <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                    </div>
-                    <div className="text-[9px] text-gray-500">Snow</div>
-                  </div>
-                  <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                    <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
-                    </div>
-                    <div className="text-[9px] text-gray-500">Ice</div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {city.lastUpdated && (
               <div className="text-[9px] text-gray-400 text-right mt-2 pt-1 border-t border-gray-100">
@@ -393,10 +369,10 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
                 <span className="text-[10px] text-emerald-600">{city.observation.conditions}</span>
               </div>
             )}
-            <div className="mb-2">
+            <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Forecast</span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-blue-50 rounded p-1.5 text-center">
@@ -413,28 +389,6 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
                 </div>
               </div>
             </div>
-            {isActive && (
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Actual</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                    <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                    </div>
-                    <div className="text-[9px] text-gray-500">Snow</div>
-                  </div>
-                  <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                    <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
-                    </div>
-                    <div className="text-[9px] text-gray-500">Ice</div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </Tooltip>
       </Marker>
@@ -449,8 +403,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
   const color = hazardColors[location.hazardType] || hazardColors.none;
   const forecastSnow = location.forecast?.snowfall || 0;
   const forecastIce = location.forecast?.ice || 0;
-  const observedSnow = location.observed?.snowfall || 0;
-  const observedIce = location.observed?.ice || 0;
 
   const position = [location.lat, location.lon];
 
@@ -510,10 +462,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
             )}
 
             {/* Forecast */}
-            <div className="mb-2">
+            <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Expected</span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-blue-50 rounded p-1.5 text-center">
@@ -527,28 +479,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
                     {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
                   </div>
                   <div className="text-[9px] text-purple-500">Ice</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Accumulations */}
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-gray-500">Snow</div>
-                </div>
-                <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-gray-500">Ice</div>
                 </div>
               </div>
             </div>
@@ -577,10 +507,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
                 <span className="text-[10px] text-emerald-600">{location.conditions.shortForecast}</span>
               </div>
             )}
-            <div className="mb-2">
+            <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Expected</span>
+                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">NOAA Forecast</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-blue-50 rounded p-1.5 text-center">
@@ -594,26 +524,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
                     {forecastIce > 0 ? `${forecastIce.toFixed(2)}"` : '-'}
                   </div>
                   <div className="text-[9px] text-purple-500">Ice</div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Accumulations</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className={`rounded p-1.5 text-center ${observedSnow > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`font-bold text-sm ${observedSnow > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {observedSnow > 0 ? `${observedSnow.toFixed(1)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-gray-500">Snow</div>
-                </div>
-                <div className={`rounded p-1.5 text-center ${observedIce > 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`font-bold text-sm ${observedIce > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {observedIce > 0 ? `${observedIce.toFixed(2)}"` : '-'}
-                  </div>
-                  <div className="text-[9px] text-gray-500">Ice</div>
                 </div>
               </div>
             </div>
