@@ -307,11 +307,11 @@ export default function App() {
                 className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
                 style={{ minHeight: '48px' }}
               >
-                <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
-                  <span>&#9733;</span> Your Locations ({userLocations.length})
+                <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                 </h3>
                 <svg
-                  className={`w-5 h-5 text-emerald-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-slate-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -323,7 +323,7 @@ export default function App() {
               {/* Expandable Content */}
               {yourLocationsExpanded && (
                 <>
-                  <div className="divide-y divide-slate-700/50 border-t border-emerald-500/20">
+                  <div className="divide-y divide-slate-700/50 border-t border-slate-700/50">
                     {searchLocations.map((loc) => (
                       <div
                         key={loc.id}
@@ -332,9 +332,9 @@ export default function App() {
                       >
                         <button
                           onClick={() => handleViewedLocationClick(loc)}
-                          className="flex-1 flex items-center gap-2 py-3 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
+                          className="flex-1 flex items-center gap-3 py-3 text-sm text-white hover:text-emerald-300 hover:underline cursor-pointer text-left font-medium"
                         >
-                          <span>📍</span>
+                          <span className="text-emerald-400">📍</span>
                           <span>{loc.name}</span>
                         </button>
                         <button
@@ -356,9 +356,9 @@ export default function App() {
                       >
                         <button
                           onClick={() => handleViewedLocationClick(loc)}
-                          className="flex-1 flex items-center gap-2 py-3 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
+                          className="flex-1 flex items-center gap-3 py-3 text-sm text-white hover:text-amber-300 hover:underline cursor-pointer text-left font-medium"
                         >
-                          <span>📍</span>
+                          <span className="text-amber-400">📍</span>
                           <span>{loc.name}</span>
                         </button>
                         <button
@@ -445,11 +445,11 @@ export default function App() {
                   onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
                   className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
                 >
-                  <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
-                    <span>&#9733;</span> Your Locations ({userLocations.length})
+                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                    <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                   </h3>
                   <svg
-                    className={`w-5 h-5 text-emerald-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-slate-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -461,7 +461,7 @@ export default function App() {
                 {/* Expandable Content */}
                 {yourLocationsExpanded && (
                   <>
-                    <div className="divide-y divide-slate-700/50 border-t border-emerald-500/20">
+                    <div className="divide-y divide-slate-700/50 border-t border-slate-700/50">
                       {searchLocations.map((loc) => (
                         <div
                           key={loc.id}
@@ -469,9 +469,9 @@ export default function App() {
                         >
                           <button
                             onClick={() => handleViewedLocationClick(loc)}
-                            className="flex-1 flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
+                            className="flex-1 flex items-center gap-3 text-sm text-white hover:text-emerald-300 hover:underline cursor-pointer text-left font-medium"
                           >
-                            <span>📍</span>
+                            <span className="text-emerald-400">📍</span>
                             <span>{loc.name}</span>
                           </button>
                           <button
@@ -492,9 +492,9 @@ export default function App() {
                         >
                           <button
                             onClick={() => handleViewedLocationClick(loc)}
-                            className="flex-1 flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
+                            className="flex-1 flex items-center gap-3 text-sm text-white hover:text-amber-300 hover:underline cursor-pointer text-left font-medium"
                           >
-                            <span>📍</span>
+                            <span className="text-amber-400">📍</span>
                             <span>{loc.name}</span>
                           </button>
                           <button
