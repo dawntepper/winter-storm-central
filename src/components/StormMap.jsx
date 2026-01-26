@@ -30,12 +30,12 @@ const glowColors = {
 
 // Create custom label icon with zoom-aware offset
 const createLabelIcon = (name, hazardType, isUser = false, zoomLevel = 5.5) => {
-  // User locations get green labels for high visibility
-  const bgColor = isUser ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.9)';
-  const textColor = isUser ? '#10b981' : 'white';
+  // User locations get solid green labels with white text
+  const bgColor = isUser ? '#10b981' : 'rgba(15, 23, 42, 0.9)';
+  const textColor = isUser ? 'white' : 'white';
   const borderColor = isUser ? '#10b981' : hazardColors[hazardType] || hazardColors.none;
   const shadow = isUser
-    ? '0 2px 12px rgba(0,0,0,0.4), 0 0 15px rgba(16, 185, 129, 0.3)'
+    ? '0 2px 12px rgba(0,0,0,0.4), 0 0 15px rgba(16, 185, 129, 0.4)'
     : '0 2px 8px rgba(0,0,0,0.6)';
   const textShadow = isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.8)';
 
@@ -473,28 +473,28 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
 
   return (
     <>
-      {/* Outer glow - light green for user locations (non-interactive to allow map dragging) */}
+      {/* Outer glow - green for user locations (non-interactive to allow map dragging) */}
       <CircleMarker
         center={position}
         radius={radius + (isMobile ? 5 : 10)}
         pathOptions={{
-          fillColor: 'rgba(16, 185, 129, 0.3)',
-          fillOpacity: 0.6,
+          fillColor: '#10b981',
+          fillOpacity: 0.35,
           color: 'transparent',
           weight: 0,
           interactive: false
         }}
       />
 
-      {/* Main marker - hazard color fill with green border */}
+      {/* Main marker - solid green fill with green border */}
       <CircleMarker
         center={position}
         radius={radius}
         pathOptions={{
-          fillColor: color,
-          fillOpacity: 0.9,
+          fillColor: '#10b981',
+          fillOpacity: 0.85,
           color: '#10b981',
-          weight: 3.5,
+          weight: 3,
           opacity: 1,
           bubblingMouseEvents: true
         }}
