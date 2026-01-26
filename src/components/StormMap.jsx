@@ -478,7 +478,7 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         center={position}
         radius={radius + (isMobile ? 5 : 10)}
         pathOptions={{
-          fillColor: 'rgba(16, 185, 129, 0.25)',
+          fillColor: 'rgba(16, 185, 129, 0.3)',
           fillOpacity: 0.6,
           color: 'transparent',
           weight: 0,
@@ -486,15 +486,15 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
         }}
       />
 
-      {/* Main marker - green border, light green fill */}
+      {/* Main marker - hazard color fill with green border */}
       <CircleMarker
         center={position}
         radius={radius}
         pathOptions={{
-          fillColor: 'rgba(16, 185, 129, 0.3)',
+          fillColor: color,
           fillOpacity: 0.9,
           color: '#10b981',
-          weight: 3,
+          weight: 3.5,
           opacity: 1,
           bubblingMouseEvents: true
         }}
