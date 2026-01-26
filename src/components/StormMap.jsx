@@ -465,8 +465,8 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
 
   const position = [location.lat, location.lon];
 
-  // Mobile: uniform size for readability. Desktop: scale by forecast
-  const baseRadius = isMobile ? 12 : Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
+  // Fixed small size for clean, consistent appearance
+  const baseRadius = 8;
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   // Recreate label icon when zoom changes
@@ -477,7 +477,7 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
       {/* Outer glow - green for user locations (non-interactive to allow map dragging) */}
       <CircleMarker
         center={position}
-        radius={radius + (isMobile ? 5 : 10)}
+        radius={radius + 4}
         pathOptions={{
           fillColor: '#10b981',
           fillOpacity: 0.35,
