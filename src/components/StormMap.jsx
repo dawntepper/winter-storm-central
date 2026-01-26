@@ -803,14 +803,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           50% { opacity: 0.8; transform: scale(1.05); }
         }
         .leaflet-tooltip.enhanced-tooltip {
-          background: white;
-          border: none;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
           border-radius: 10px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
           padding: 8px;
         }
         .leaflet-tooltip.enhanced-tooltip::before {
-          border-top-color: white;
+          border-top-color: #f8fafc;
         }
         .city-label-wrapper {
           background: transparent !important;
