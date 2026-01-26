@@ -231,17 +231,12 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
   const glowColor = glowColors[city.hazardType] || glowColors.none;
   const forecastSnow = city.forecast?.snowfall || 0;
   const forecastIce = city.forecast?.ice || 0;
-  const observedSnow = city.observed?.snowfall || 0;
-  const observedIce = city.observed?.ice || 0;
 
   const position = [city.lat, city.lon];
 
   // Mobile: uniform size for readability. Desktop: scale by forecast
   const baseRadius = isMobile ? 10 : Math.max(12, Math.min(30, 12 + forecastSnow * 1.5 + (forecastIce * 15)));
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
-
-  const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
-  const hasObserved = observedSnow > 0 || observedIce > 0;
 
   // Recreate label icon when zoom changes
   const labelIcon = useMemo(() => createLabelIcon(city.name.split(',')[0], city.hazardType, false, zoomLevel), [city.name, city.hazardType, zoomLevel]);
@@ -409,9 +404,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
   // Mobile: uniform size for readability. Desktop: scale by forecast
   const baseRadius = isMobile ? 12 : Math.max(14, Math.min(32, 14 + forecastSnow * 1.5 + (forecastIce * 15)));
   const radius = isHovered ? baseRadius * 1.2 : baseRadius;
-
-  const isActive = stormPhase === 'active' || stormPhase === 'post-storm';
-  const hasObserved = observedSnow > 0 || observedIce > 0;
 
   // Recreate label icon when zoom changes
   const labelIcon = useMemo(() => createLabelIcon(location.name.split(',')[0], location.hazardType, true, zoomLevel), [location.name, location.hazardType, zoomLevel]);
