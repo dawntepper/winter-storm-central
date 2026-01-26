@@ -144,10 +144,10 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor, isEv
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h4 className="text-base font-medium text-slate-200 truncate">
+            <h4 className={`text-base font-medium truncate ${isEven ? 'text-slate-300' : 'text-gray-200'}`}>
               {alert.location}
             </h4>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <p className={`text-sm mt-0.5 ${isEven ? 'text-slate-400' : 'text-slate-300'}`}>
               {alert.event}
             </p>
           </div>
