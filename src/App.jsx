@@ -128,6 +128,7 @@ export default function App() {
   const [mapCenterOn, setMapCenterOn] = useState(null);
   const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
+  const [yourLocationsExpanded, setYourLocationsExpanded] = useState(true); // Your Locations section collapsed state
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
@@ -297,67 +298,86 @@ export default function App() {
 
         {/* ========== MOBILE LAYOUT ========== */}
         <div className="lg:hidden space-y-4">
-          {/* 1. Your Locations (if any) - TOP on mobile */}
+          {/* 1. Your Locations (if any) - TOP on mobile - COLLAPSIBLE */}
           {userLocations.length > 0 && (
             <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
-              <div className="px-4 py-3 border-b border-emerald-500/20">
+              {/* Collapsible Header */}
+              <button
+                onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
+                style={{ minHeight: '48px' }}
+              >
                 <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
                   <span>&#9733;</span> Your Locations ({userLocations.length})
                 </h3>
-              </div>
-              <div className="divide-y divide-slate-700/50">
-                {searchLocations.map((loc) => (
-                  <div
-                    key={loc.id}
-                    className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
-                    style={{ minHeight: '48px' }}
-                  >
-                    <button
-                      onClick={() => handleViewedLocationClick(loc)}
-                      className="flex-1 flex items-center gap-2 py-3 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
-                    >
-                      <span>📍</span>
-                      <span>{loc.name}</span>
-                    </button>
-                    <button
-                      onClick={() => handleRemoveSearchLocation(loc.id)}
-                      className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                      title="Remove from map"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                <svg
+                  className={`w-5 h-5 text-emerald-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Expandable Content */}
+              {yourLocationsExpanded && (
+                <>
+                  <div className="divide-y divide-slate-700/50 border-t border-emerald-500/20">
+                    {searchLocations.map((loc) => (
+                      <div
+                        key={loc.id}
+                        className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
+                        style={{ minHeight: '48px' }}
+                      >
+                        <button
+                          onClick={() => handleViewedLocationClick(loc)}
+                          className="flex-1 flex items-center gap-2 py-3 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
+                        >
+                          <span>📍</span>
+                          <span>{loc.name}</span>
+                        </button>
+                        <button
+                          onClick={() => handleRemoveSearchLocation(loc.id)}
+                          className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                          title="Remove from map"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    {alertLocations.map((loc) => (
+                      <div
+                        key={loc.id}
+                        className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
+                        style={{ minHeight: '48px' }}
+                      >
+                        <button
+                          onClick={() => handleViewedLocationClick(loc)}
+                          className="flex-1 flex items-center gap-2 py-3 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
+                        >
+                          <span>📍</span>
+                          <span>{loc.name}</span>
+                        </button>
+                        <button
+                          onClick={() => handleRemoveAlertLocation(loc.id)}
+                          className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                          title="Remove from map"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {alertLocations.map((loc) => (
-                  <div
-                    key={loc.id}
-                    className="flex items-center justify-between px-4 hover:bg-slate-700/30 transition-colors"
-                    style={{ minHeight: '48px' }}
-                  >
-                    <button
-                      onClick={() => handleViewedLocationClick(loc)}
-                      className="flex-1 flex items-center gap-2 py-3 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
-                    >
-                      <span>📍</span>
-                      <span>{loc.name}</span>
-                    </button>
-                    <button
-                      onClick={() => handleRemoveAlertLocation(loc.id)}
-                      className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                      title="Remove from map"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                  <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                   </div>
-                ))}
-              </div>
-              <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
-                <p className="text-xs text-slate-500 text-center">Tap location to view on map</p>
-              </div>
+                </>
+              )}
             </div>
           )}
 
@@ -417,65 +437,83 @@ export default function App() {
 
           {/* Right Column: Your Locations + Extreme Weather */}
           <div className="flex flex-col gap-4 lg:gap-5">
-            {/* Your Locations (if any) */}
+            {/* Your Locations (if any) - COLLAPSIBLE */}
             {userLocations.length > 0 && (
               <div className="bg-slate-800/30 rounded-xl border border-emerald-500/30 overflow-hidden">
-                <div className="px-4 py-3 border-b border-emerald-500/20">
+                {/* Collapsible Header */}
+                <button
+                  onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700/30 transition-colors cursor-pointer"
+                >
                   <h3 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
                     <span>&#9733;</span> Your Locations ({userLocations.length})
                   </h3>
-                </div>
-                <div className="divide-y divide-slate-700/50">
-                  {searchLocations.map((loc) => (
-                    <div
-                      key={loc.id}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleViewedLocationClick(loc)}
-                        className="flex-1 flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
-                      >
-                        <span>📍</span>
-                        <span>{loc.name}</span>
-                      </button>
-                      <button
-                        onClick={() => handleRemoveSearchLocation(loc.id)}
-                        className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                        title="Remove from map"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                  <svg
+                    className={`w-5 h-5 text-emerald-400 transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Expandable Content */}
+                {yourLocationsExpanded && (
+                  <>
+                    <div className="divide-y divide-slate-700/50 border-t border-emerald-500/20">
+                      {searchLocations.map((loc) => (
+                        <div
+                          key={loc.id}
+                          className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
+                        >
+                          <button
+                            onClick={() => handleViewedLocationClick(loc)}
+                            className="flex-1 flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer text-left"
+                          >
+                            <span>📍</span>
+                            <span>{loc.name}</span>
+                          </button>
+                          <button
+                            onClick={() => handleRemoveSearchLocation(loc.id)}
+                            className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Remove from map"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                      {alertLocations.map((loc) => (
+                        <div
+                          key={loc.id}
+                          className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
+                        >
+                          <button
+                            onClick={() => handleViewedLocationClick(loc)}
+                            className="flex-1 flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
+                          >
+                            <span>📍</span>
+                            <span>{loc.name}</span>
+                          </button>
+                          <button
+                            onClick={() => handleRemoveAlertLocation(loc.id)}
+                            className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Remove from map"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {alertLocations.map((loc) => (
-                    <div
-                      key={loc.id}
-                      className="flex items-center justify-between px-4 py-2 hover:bg-slate-700/30 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleViewedLocationClick(loc)}
-                        className="flex-1 flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 hover:underline cursor-pointer text-left"
-                      >
-                        <span>📍</span>
-                        <span>{loc.name}</span>
-                      </button>
-                      <button
-                        onClick={() => handleRemoveAlertLocation(loc.id)}
-                        className="ml-6 p-2 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
-                        title="Remove from map"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                    <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
+                      <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                     </div>
-                  ))}
-                </div>
-                <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
-                  <p className="text-xs text-slate-500 text-center">Tap location to view on map</p>
-                </div>
+                  </>
+                )}
               </div>
             )}
 
