@@ -355,19 +355,27 @@ export default function App() {
                     {searchLocations.map((loc, index) => (
                       <div
                         key={loc.id}
-                        className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                        className={`px-4 py-2.5 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
                           index % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
                         }`}
                       >
-                        {/* Line 1: Weather icon + City name + × button */}
-                        <div className="flex items-start justify-between gap-4">
-                          <button
-                            onClick={() => handleViewedLocationClick(loc)}
-                            className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
-                          >
-                            <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
-                            {loc.name}
-                          </button>
+                        {/* Line 1: Icon + City • Alert Status + × */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <button
+                              onClick={() => handleViewedLocationClick(loc)}
+                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                            >
+                              <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                              <span className="truncate">{loc.name}</span>
+                            </button>
+                            <span className="text-slate-500 flex-shrink-0">•</span>
+                            {loc.alertInfo ? (
+                              <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo.event}</span>
+                            ) : (
+                              <span className="text-xs text-cyan-500 flex-shrink-0">✅ No alerts</span>
+                            )}
+                          </div>
                           <button
                             onClick={() => handleRemoveSearchLocation(loc.id)}
                             className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
@@ -378,16 +386,8 @@ export default function App() {
                             </svg>
                           </button>
                         </div>
-                        {/* Line 2: Alert status */}
-                        <div className="mt-1">
-                          {loc.alertInfo ? (
-                            <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
-                          ) : (
-                            <span className="text-xs text-cyan-500">✅ No active alerts</span>
-                          )}
-                        </div>
-                        {/* Line 3: Current weather */}
-                        <div className="mt-1 text-xs text-slate-400">
+                        {/* Line 2: Temperature · Condition (indented) */}
+                        <div className="mt-1 text-xs text-slate-400 pl-6">
                           {loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                           ) : (
@@ -399,19 +399,23 @@ export default function App() {
                     {alertLocations.map((loc, index) => (
                       <div
                         key={loc.id}
-                        className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                        className={`px-4 py-2.5 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
                           (searchLocations.length + index) % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
                         }`}
                       >
-                        {/* Line 1: Weather icon + City name + × button */}
-                        <div className="flex items-start justify-between gap-4">
-                          <button
-                            onClick={() => handleViewedLocationClick(loc)}
-                            className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
-                          >
-                            <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
-                            {loc.name}
-                          </button>
+                        {/* Line 1: Icon + City • Alert Status + × */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <button
+                              onClick={() => handleViewedLocationClick(loc)}
+                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                            >
+                              <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                              <span className="truncate">{loc.name}</span>
+                            </button>
+                            <span className="text-slate-500 flex-shrink-0">•</span>
+                            <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
+                          </div>
                           <button
                             onClick={() => handleRemoveAlertLocation(loc.id)}
                             className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
@@ -422,12 +426,8 @@ export default function App() {
                             </svg>
                           </button>
                         </div>
-                        {/* Line 2: Alert status - always has alert since it came from alerts */}
-                        <div className="mt-1">
-                          <span className="text-xs text-orange-400">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
-                        </div>
-                        {/* Line 3: Current weather */}
-                        <div className="mt-1 text-xs text-slate-400">
+                        {/* Line 2: Temperature · Condition (indented) */}
+                        <div className="mt-1 text-xs text-slate-400 pl-6">
                           {loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                           ) : (
@@ -529,19 +529,27 @@ export default function App() {
                       {searchLocations.map((loc, index) => (
                         <div
                           key={loc.id}
-                          className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                          className={`px-4 py-2.5 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
                             index % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
                           }`}
                         >
-                          {/* Line 1: Weather icon + City name + × button */}
-                          <div className="flex items-start justify-between gap-4">
-                            <button
-                              onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
-                            >
-                              <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
-                              {loc.name}
-                            </button>
+                          {/* Line 1: Icon + City • Alert Status + × */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <button
+                                onClick={() => handleViewedLocationClick(loc)}
+                                className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                              >
+                                <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                                <span className="truncate">{loc.name}</span>
+                              </button>
+                              <span className="text-slate-500 flex-shrink-0">•</span>
+                              {loc.alertInfo ? (
+                                <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo.event}</span>
+                              ) : (
+                                <span className="text-xs text-cyan-500 flex-shrink-0">✅ No alerts</span>
+                              )}
+                            </div>
                             <button
                               onClick={() => handleRemoveSearchLocation(loc.id)}
                               className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
@@ -552,16 +560,8 @@ export default function App() {
                               </svg>
                             </button>
                           </div>
-                          {/* Line 2: Alert status */}
-                          <div className="mt-1">
-                            {loc.alertInfo ? (
-                              <span className="text-xs text-orange-400">⚠️ {loc.alertInfo.event}</span>
-                            ) : (
-                              <span className="text-xs text-cyan-500">✅ No active alerts</span>
-                            )}
-                          </div>
-                          {/* Line 3: Current weather */}
-                          <div className="mt-1 text-xs text-slate-400">
+                          {/* Line 2: Temperature · Condition (indented) */}
+                          <div className="mt-1 text-xs text-slate-400 pl-6">
                             {loc.conditions?.temperature ? (
                               <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                             ) : (
@@ -573,19 +573,23 @@ export default function App() {
                       {alertLocations.map((loc, index) => (
                         <div
                           key={loc.id}
-                          className={`px-4 py-3 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+                          className={`px-4 py-2.5 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
                             (searchLocations.length + index) % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
                           }`}
                         >
-                          {/* Line 1: Weather icon + City name + × button */}
-                          <div className="flex items-start justify-between gap-4">
-                            <button
-                              onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
-                            >
-                              <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
-                              {loc.name}
-                            </button>
+                          {/* Line 1: Icon + City • Alert Status + × */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <button
+                                onClick={() => handleViewedLocationClick(loc)}
+                                className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                              >
+                                <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                                <span className="truncate">{loc.name}</span>
+                              </button>
+                              <span className="text-slate-500 flex-shrink-0">•</span>
+                              <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
+                            </div>
                             <button
                               onClick={() => handleRemoveAlertLocation(loc.id)}
                               className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
@@ -596,12 +600,8 @@ export default function App() {
                               </svg>
                             </button>
                           </div>
-                          {/* Line 2: Alert status - always has alert since it came from alerts */}
-                          <div className="mt-1">
-                            <span className="text-xs text-orange-400">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
-                          </div>
-                          {/* Line 3: Current weather */}
-                          <div className="mt-1 text-xs text-slate-400">
+                          {/* Line 2: Temperature · Condition (indented) */}
+                          <div className="mt-1 text-xs text-slate-400 pl-6">
                             {loc.conditions?.temperature ? (
                               <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                             ) : (
