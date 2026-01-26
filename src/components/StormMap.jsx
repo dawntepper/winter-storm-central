@@ -690,30 +690,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {/* My Location button - uses browser geolocation */}
-            <button
-              onClick={handleMyLocation}
-              disabled={geoLoading}
-              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                userGeoLocation
-                  ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
-                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-              } ${geoLoading ? 'opacity-50 cursor-wait' : ''}`}
-              title="Center map on your location"
-            >
-              {geoLoading ? (
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></span>
-                  <span className="hidden sm:inline">Locating...</span>
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <span>&#128205;</span>
-                  <span className="hidden sm:inline">My Location</span>
-                </span>
-              )}
-            </button>
-            {/* Saved locations button - temporarily disabled */}
             {/* Reset view button */}
             <button
               onClick={handleResetView}
