@@ -161,9 +161,28 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
       {/* Add to Map prompt with alert details */}
       {showAddPrompt && (
         <div className="border-t border-slate-600/50">
+          {/* Action buttons - upper right */}
+          <div className="px-4 py-2 bg-slate-700/50 flex items-center justify-end gap-2">
+            <button
+              onClick={handleAddToMap}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
+            >
+              + Add to Map
+            </button>
+            <button
+              onClick={handleDismissPrompt}
+              className="p-1.5 text-slate-400 hover:text-white bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors touch-manipulation cursor-pointer"
+              title="Close"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
           {/* Alert details - shown automatically when card expands */}
           {alert.headline && (
-            <div className="px-4 py-3 bg-amber-900/20 border-b border-amber-500/20">
+            <div className="px-4 py-3 bg-amber-900/20 border-t border-amber-500/20">
               <div className="flex items-start gap-2">
                 <span className="text-amber-400 mt-0.5">📡</span>
                 <div className="flex-1">
@@ -198,25 +217,6 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor }) {
               </div>
             </div>
           )}
-
-          {/* Add to map buttons */}
-          <div className="px-4 py-3 bg-slate-700/50 flex items-center justify-between gap-3">
-            <span className="text-sm text-slate-300">Add to your map?</span>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddToMap}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
-              >
-                Add
-              </button>
-              <button
-                onClick={handleDismissPrompt}
-                className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-slate-300 text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

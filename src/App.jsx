@@ -6,6 +6,34 @@ import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
 import ExtremeWeatherSection from './components/ExtremeWeatherSection';
 
+// Weather condition to icon mapping
+const getWeatherIcon = (condition) => {
+  if (!condition) return '⛅';
+  const c = condition.toLowerCase();
+
+  // Snow
+  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
+  // Thunderstorms
+  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
+  // Rain
+  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
+  // Fog/Mist
+  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
+  // Windy
+  if (c.includes('wind') || c.includes('breez')) return '💨';
+  // Cloudy
+  if (c.includes('cloudy') || c.includes('overcast')) {
+    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
+    return '☁️';
+  }
+  // Clear/Sunny
+  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
+  // Partly conditions
+  if (c.includes('partly')) return '⛅';
+
+  return '⛅'; // Default
+};
+
 function LoadingState() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -329,12 +357,13 @@ export default function App() {
                         key={loc.id}
                         className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                       >
-                        {/* Line 1: City name + × button */}
+                        {/* Line 1: Weather icon + City name + × button */}
                         <div className="flex items-start justify-between gap-4">
                           <button
                             onClick={() => handleViewedLocationClick(loc)}
-                            className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold"
+                            className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
                           >
+                            <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                             {loc.name}
                           </button>
                           <button
@@ -370,12 +399,13 @@ export default function App() {
                         key={loc.id}
                         className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                       >
-                        {/* Line 1: City name + × button */}
+                        {/* Line 1: Weather icon + City name + × button */}
                         <div className="flex items-start justify-between gap-4">
                           <button
                             onClick={() => handleViewedLocationClick(loc)}
-                            className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold"
+                            className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
                           >
+                            <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                             {loc.name}
                           </button>
                           <button
@@ -497,12 +527,13 @@ export default function App() {
                           key={loc.id}
                           className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                         >
-                          {/* Line 1: City name + × button */}
+                          {/* Line 1: Weather icon + City name + × button */}
                           <div className="flex items-start justify-between gap-4">
                             <button
                               onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold"
+                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
                             >
+                              <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                               {loc.name}
                             </button>
                             <button
@@ -538,12 +569,13 @@ export default function App() {
                           key={loc.id}
                           className="px-4 py-3 hover:bg-slate-700/30 transition-colors"
                         >
-                          {/* Line 1: City name + × button */}
+                          {/* Line 1: Weather icon + City name + × button */}
                           <div className="flex items-start justify-between gap-4">
                             <button
                               onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold"
+                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5"
                             >
+                              <span>{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                               {loc.name}
                             </button>
                             <button
