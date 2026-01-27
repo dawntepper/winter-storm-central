@@ -615,13 +615,28 @@ const dangerBadges = {
   safe: null
 };
 
-function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
-  const colors = hazardColors[data.hazardType] || hazardColors.none;
-  const hazard = hazardLabels[data.hazardType] || hazardLabels.none;
-  const danger = dangerBadges[data.iceDanger];
+// Weather icon helper
+const getWeatherIcon = (condition) => {
+  if (!condition) return '⛅';
+  const c = condition.toLowerCase();
+  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
+  if (c.includes('cold') || c.includes('freez')) return '🥶';
+  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
+  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
+  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
+  if (c.includes('wind') || c.includes('breez')) return '💨';
+  if (c.includes('cloudy') || c.includes('overcast')) {
+    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
+    return '☁️';
+  }
+  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
+  if (c.includes('partly')) return '⛅';
+  return '⛅';
+};
 
+function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
   return (
-    <div className={`rounded-xl p-4 border-2 ${colors} relative`}>
+    <div className="rounded-xl p-4 border border-slate-700 bg-slate-800 relative">
       {/* Action buttons */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
         <button
@@ -635,71 +650,42 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
         </button>
       </div>
 
-      {/* Main content - horizontal layout on larger screens */}
-      <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:gap-6">
-        {/* Left: City info */}
-        <div className="flex items-center gap-3 mb-3 lg:mb-0 lg:min-w-[200px]">
-          <div>
-            <h3 className="text-lg font-semibold text-white">{data.name}</h3>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs font-medium ${hazard.class}`}>{hazard.text}</span>
-              {danger && (
-                <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded ${danger.class}`}>
-                  {danger.label}
-                </span>
-              )}
-            </div>
-            {/* Add to Map checkbox */}
-            <label className="flex items-center gap-2 mt-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isOnMap}
-                onChange={(e) => onToggleMap(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-              />
-              <span className="text-xs text-slate-400">Add to Map</span>
-              {isOnMap && (
-                <span className="text-[10px] text-emerald-400">(on map)</span>
-              )}
-            </label>
-          </div>
-        </div>
+      {/* City name with weather icon */}
+      <h3 className="text-lg font-semibold text-white mb-3 pr-8">
+        {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
+      </h3>
 
-        {/* Center: NOAA Forecast */}
-        <div className="flex-1">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">NOAA Forecast</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-900/30 rounded-lg p-3 text-center">
-              <p className="text-2xl font-semibold text-sky-300">
-                {data.forecast?.snowfall > 0 ? `${data.forecast.snowfall.toFixed(1)}"` : '-'}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Snow</p>
-            </div>
-            <div className="bg-slate-900/30 rounded-lg p-3 text-center">
-              <p className="text-2xl font-semibold text-fuchsia-400">
-                {data.forecast?.ice > 0 ? `${data.forecast.ice.toFixed(2)}"` : '-'}
-              </p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ice</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Far right: Current conditions */}
-        {data.conditions?.shortForecast && (
-          <div className="mt-3 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-t-0 lg:border-l border-slate-700/50 lg:pl-6 lg:min-w-[150px]">
-            <p className="text-[10px] text-slate-500 font-medium uppercase mb-1">Conditions</p>
-            <p className="text-sm text-slate-300">{data.conditions.shortForecast}</p>
-            {data.conditions.temperature && (
-              <p className="text-lg font-semibold text-white mt-1">
-                {data.conditions.temperature}°{data.conditions.temperatureUnit}
-              </p>
-            )}
-          </div>
+      {/* Alert status */}
+      <div className="mb-2">
+        {data.alertInfo ? (
+          <span className="text-sm text-orange-400">⚠️ {data.alertInfo.event}</span>
+        ) : (
+          <span className="text-sm text-cyan-500">✓ No active alerts</span>
         )}
       </div>
+
+      {/* Current conditions */}
+      <div className="text-sm text-slate-400 mb-4">
+        {data.conditions?.temperature ? (
+          <span>{data.conditions.temperature}°{data.conditions.temperatureUnit || 'F'} · {data.conditions.shortForecast || 'No data'}</span>
+        ) : (
+          <span>Loading weather data...</span>
+        )}
+      </div>
+
+      {/* Add to Map checkbox */}
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isOnMap}
+          onChange={(e) => onToggleMap(e.target.checked)}
+          className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+        />
+        <span className="text-sm text-slate-300">Add to Map</span>
+        {isOnMap && (
+          <span className="text-xs text-emerald-400">(on map)</span>
+        )}
+      </label>
     </div>
   );
 }
