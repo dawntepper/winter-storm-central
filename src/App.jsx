@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
+import { getActiveStormEvents } from './services/stormEventsService';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
@@ -145,25 +146,82 @@ function StaleDataBanner({ isStale, lastSuccessfulUpdate, error }) {
   );
 }
 
-// Active Storm Event Banner
+// Event type icons
+const stormTypeIcons = {
+  winter_storm: '❄️',
+  hurricane: '🌀',
+  severe_weather: '⛈️',
+  flooding: '🌊',
+  heat_wave: '🌡️',
+  wildfire: '🔥',
+  default: '⚠️'
+};
+
+// Status badge colors
+const statusBadgeColors = {
+  active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  forecasted: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+};
+
+// Active Storm Event Banner - fetches from Supabase
 function StormEventBanner() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data } = await getActiveStormEvents();
+      setEvents(data || []);
+      setLoading(false);
+    }
+    fetchEvents();
+  }, []);
+
+  // Don't show anything while loading or if no active events
+  if (loading || events.length === 0) return null;
+
+  // Show the most important event (active first, then forecasted by date)
+  const sortedEvents = [...events].sort((a, b) => {
+    if (a.status === 'active' && b.status !== 'active') return -1;
+    if (b.status === 'active' && a.status !== 'active') return 1;
+    return new Date(a.startDate) - new Date(b.startDate);
+  });
+
+  const primaryEvent = sortedEvents[0];
+  const icon = stormTypeIcons[primaryEvent.type] || stormTypeIcons.default;
+  const statusColor = statusBadgeColors[primaryEvent.status] || statusBadgeColors.forecasted;
+  const statusLabel = primaryEvent.status === 'active' ? 'Active Now' : 'Forecasted';
+
+  // Format date range
+  const startDate = new Date(primaryEvent.startDate + 'T12:00:00');
+  const endDate = new Date(primaryEvent.endDate + 'T12:00:00');
+  const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
   return (
     <Link
-      to="/storm/noreaster-january-2026"
-      className="block bg-gradient-to-r from-sky-900/80 to-indigo-900/80 border border-sky-500/30 hover:border-sky-400/50 transition-all"
+      to={`/storm/${primaryEvent.slug}`}
+      className={`block border transition-all ${
+        primaryEvent.status === 'active'
+          ? 'bg-gradient-to-r from-emerald-900/80 to-teal-900/80 border-emerald-500/30 hover:border-emerald-400/50'
+          : 'bg-gradient-to-r from-sky-900/80 to-indigo-900/80 border-sky-500/30 hover:border-sky-400/50'
+      }`}
     >
       <div className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">❄️</span>
+            <span className="text-2xl">{icon}</span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-white font-semibold text-sm sm:text-base">Tracking: Nor'easter - January 2026</span>
-                <span className="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">
-                  Forecasted
+                <span className="text-white font-semibold text-sm sm:text-base">
+                  {primaryEvent.status === 'active' ? 'Live: ' : 'Tracking: '}{primaryEvent.title}
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColor}`}>
+                  {statusLabel}
                 </span>
               </div>
-              <p className="text-sky-200/70 text-xs sm:text-sm">Major winter storm expected Jan 28-30 for Northeast US</p>
+              <p className="text-sky-200/70 text-xs sm:text-sm">
+                {dateRange} • {primaryEvent.affectedStates?.slice(0, 5).join(', ')}{primaryEvent.affectedStates?.length > 5 ? '...' : ''}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1 text-sky-300 text-sm font-medium">

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
-import stormEventsData from '../data/storm-events.json';
+import { getStormEventBySlug } from '../services/stormEventsService';
 
 // Status badge colors
 const statusColors = {
@@ -214,26 +214,36 @@ export default function StormEventPage() {
     getAlertsByCategory
   } = useExtremeWeather(true);
 
-  // Find the event by slug
+  // Fetch the event by slug from Supabase
   useEffect(() => {
-    const foundEvent = stormEventsData.events.find(e => e.slug === slug);
-    setEvent(foundEvent || null);
-    setLoading(false);
+    async function fetchEvent() {
+      setLoading(true);
+      const { data, error } = await getStormEventBySlug(slug);
 
-    if (foundEvent) {
-      updateMetaTags(foundEvent);
+      if (error) {
+        console.error('Error fetching storm event:', error);
+      }
 
-      // Track page view
-      if (window.plausible) {
-        window.plausible('Event Page View', {
-          props: {
-            event_slug: foundEvent.slug,
-            event_title: foundEvent.title,
-            event_status: foundEvent.status
-          }
-        });
+      setEvent(data || null);
+      setLoading(false);
+
+      if (data) {
+        updateMetaTags(data);
+
+        // Track page view
+        if (window.plausible) {
+          window.plausible('Event Page View', {
+            props: {
+              event_slug: data.slug,
+              event_title: data.title,
+              event_status: data.status
+            }
+          });
+        }
       }
     }
+
+    fetchEvent();
 
     // Cleanup: reset meta tags when leaving
     return () => resetMetaTags();
@@ -338,76 +348,33 @@ export default function StormEventPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-          {/* Left Column: Map */}
-          <div>
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[]}
-              alerts={mapAlerts}
-              isHero
-              centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
-            />
-          </div>
-
-          {/* Right Column: Alerts & Details */}
-          <div className="space-y-6">
-            {/* Active Alerts */}
-            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-white">
-                  Active Alerts ({filteredAlerts.length})
-                </h2>
-                <button
-                  onClick={refreshAlerts}
-                  disabled={alertsLoading}
-                  className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
-                </button>
-              </div>
-
-              {alertsLoading && filteredAlerts.length === 0 ? (
-                <div className="p-6 text-center">
-                  <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Loading alerts...</p>
-                </div>
-              ) : filteredAlerts.length > 0 ? (
-                <div className="max-h-[400px] overflow-y-auto">
-                  {filteredAlerts.slice(0, 20).map(alert => (
-                    <EventAlertCard key={alert.id} alert={alert} />
-                  ))}
-                  {filteredAlerts.length > 20 && (
-                    <div className="p-3 text-center text-xs text-slate-500 border-t border-slate-700">
-                      +{filteredAlerts.length - 20} more alerts
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-6 text-center">
-                  <p className="text-slate-500 text-sm">
-                    {event.status === 'forecasted'
-                      ? 'Alerts will appear as the event approaches'
-                      : event.status === 'completed'
-                      ? 'This event has concluded'
-                      : 'No active alerts for this event'}
+        {event.status === 'completed' ? (
+          /* COMPLETED EVENT - Historical Summary */
+          <div className="max-w-3xl mx-auto">
+            {/* Historical Notice */}
+            <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📜</span>
+                <div>
+                  <h3 className="font-semibold text-white">Historical Event</h3>
+                  <p className="text-sm text-slate-400">
+                    This storm event concluded on {formatDate(event.endDate)}. Below is a summary of the event.
                   </p>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Expected Impacts */}
+            {/* Event Summary */}
             {event.impacts && event.impacts.length > 0 && (
-              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6">
                 <div className="px-4 py-3 border-b border-slate-700">
-                  <h2 className="text-base font-semibold text-white">Expected Impacts</h2>
+                  <h2 className="text-base font-semibold text-white">Event Summary</h2>
                 </div>
                 <div className="p-4">
                   <ul className="space-y-2">
                     {event.impacts.map((impact, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                        <span className="text-amber-500 mt-0.5">•</span>
+                        <span className="text-sky-400 mt-0.5">•</span>
                         {impact}
                       </li>
                     ))}
@@ -416,15 +383,116 @@ export default function StormEventPage() {
               </div>
             )}
 
+            {/* Static Map showing affected area */}
+            <div className="mb-6">
+              <StormMap
+                weatherData={{}}
+                stormPhase="post-storm"
+                userLocations={[]}
+                alerts={[]}
+                isHero
+                centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
+              />
+            </div>
+
             {/* Back to Main Tracker */}
             <Link
               to="/"
               className="block text-center py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
             >
-              View All Weather Alerts →
+              View Current Weather Alerts →
             </Link>
           </div>
-        </div>
+        ) : (
+          /* ACTIVE/FORECASTED EVENT - Live Tracker */
+          <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+            {/* Left Column: Map */}
+            <div>
+              <StormMap
+                weatherData={{}}
+                stormPhase="active"
+                userLocations={[]}
+                alerts={mapAlerts}
+                isHero
+                centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
+              />
+            </div>
+
+            {/* Right Column: Alerts & Details */}
+            <div className="space-y-6">
+              {/* Active Alerts */}
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-white">
+                    Active Alerts ({filteredAlerts.length})
+                  </h2>
+                  <button
+                    onClick={refreshAlerts}
+                    disabled={alertsLoading}
+                    className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+                  </button>
+                </div>
+
+                {alertsLoading && filteredAlerts.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-xs text-slate-500">Loading alerts...</p>
+                  </div>
+                ) : filteredAlerts.length > 0 ? (
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {filteredAlerts.slice(0, 20).map(alert => (
+                      <EventAlertCard key={alert.id} alert={alert} />
+                    ))}
+                    {filteredAlerts.length > 20 && (
+                      <div className="p-3 text-center text-xs text-slate-500 border-t border-slate-700">
+                        +{filteredAlerts.length - 20} more alerts
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <p className="text-slate-500 text-sm">
+                      {event.status === 'forecasted'
+                        ? 'Alerts will appear as the event approaches'
+                        : 'No active alerts for this event'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Expected Impacts */}
+              {event.impacts && event.impacts.length > 0 && (
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-700">
+                    <h2 className="text-base font-semibold text-white">
+                      {event.status === 'forecasted' ? 'Expected Impacts' : 'Reported Impacts'}
+                    </h2>
+                  </div>
+                  <div className="p-4">
+                    <ul className="space-y-2">
+                      {event.impacts.map((impact, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          {impact}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Back to Main Tracker */}
+              <Link
+                to="/"
+                className="block text-center py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              >
+                View All Weather Alerts →
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
