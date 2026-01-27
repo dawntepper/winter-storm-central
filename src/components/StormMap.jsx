@@ -609,7 +609,6 @@ function UserLocationMarker({ location, stormPhase, isMobile = false, onHover, o
           weight: 0,
           interactive: false
         }}
-        className="pulse-marker-user"
       />
 
       {/* Main marker - gray fill with green border */}
@@ -1150,19 +1149,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         .pulse-marker {
           animation: pulse 2s ease-in-out infinite;
         }
-        .pulse-marker-user {
-          animation: pulse-user 1.5s ease-in-out infinite;
-        }
         .pulse-marker-highlighted {
           animation: pulse-highlighted 0.6s ease-in-out infinite;
         }
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.7; }
-        }
-        @keyframes pulse-user {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.05); }
         }
         @keyframes pulse-highlighted {
           0%, 100% { opacity: 0.5; transform: scale(1); }
