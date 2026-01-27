@@ -113,7 +113,7 @@ function AlertModal({ alert, onClose }) {
 /**
  * Individual city/alert card with expandable warning details
  */
-function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor, isEven = false }) {
+function AlertCard({ alert, onTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, categoryColor, isEven = false }) {
   const [showAddPrompt, setShowAddPrompt] = useState(false);
 
   const handleCardClick = () => {
@@ -136,10 +136,12 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor, isEv
   };
 
   return (
-    <div className={`border-t border-white/5 ${isEven ? 'bg-slate-700/40' : 'bg-slate-800/30'}`}>
+    <div className={`border-t border-slate-600/30 ${isEven ? 'bg-slate-600/40' : 'bg-slate-700/40'}`}>
       <button
         onClick={handleCardClick}
-        className="w-full text-left px-4 py-3 hover:bg-slate-600/50 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
+        onMouseEnter={() => onHoverAlert && onHoverAlert(alert.id)}
+        onMouseLeave={() => onLeaveAlert && onLeaveAlert()}
+        className="w-full text-left px-4 py-3 hover:bg-slate-500/40 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -224,28 +226,47 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, categoryColor, isEv
   );
 }
 
+// Category-specific header colors (solid backgrounds, antiquewhite text, colored borders)
+const categoryHeaderColors = {
+  'winter': { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },  // blue border
+  'severe': { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },  // orange border
+  'flooding': { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' }, // cyan border
+  'default': { bg: '#334155', border: '#64748b', text: 'antiquewhite' }  // slate border
+};
+
 /**
  * Category group with collapsible alerts
  */
-function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail, defaultExpanded = true }) {
+function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, defaultExpanded = true }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   if (!alerts || alerts.length === 0) return null;
 
+  // Get category-specific colors based on category id/name
+  const getCategoryColors = () => {
+    const id = category.id?.toLowerCase() || category.name?.toLowerCase() || '';
+    if (id.includes('winter') || id.includes('snow') || id.includes('ice')) return categoryHeaderColors.winter;
+    if (id.includes('severe') || id.includes('storm') || id.includes('thunder')) return categoryHeaderColors.severe;
+    if (id.includes('flood') || id.includes('coastal') || id.includes('marine')) return categoryHeaderColors.flooding;
+    return categoryHeaderColors.default;
+  };
+
+  const colors = getCategoryColors();
+
   return (
-    <div className="mb-4 rounded-lg overflow-hidden border border-slate-700/50">
-      {/* Category Header - dark gray background */}
+    <div className="mb-4 rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+      {/* Category Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation cursor-pointer"
-        style={{ minHeight: '48px' }}
+        className="w-full flex items-center justify-between px-4 py-3 hover:brightness-110 transition-all touch-manipulation cursor-pointer"
+        style={{ minHeight: '48px', backgroundColor: colors.bg }}
       >
         <div className="flex items-center gap-2">
           <span className="text-xl">{category.icon}</span>
-          <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+          <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: colors.text }}>
             {category.name}
           </h3>
-          <span className="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
             {alerts.length}
           </span>
         </div>
@@ -269,6 +290,8 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
               onTap={onAlertTap}
               onAddToMap={onAddToMap}
               onShowDetail={onShowDetail}
+              onHoverAlert={onHoverAlert}
+              onLeaveAlert={onLeaveAlert}
               categoryColor={category.color}
               isEven={index % 2 === 1}
             />
@@ -357,25 +380,27 @@ export default function ExtremeWeatherSection({
   onRefresh,
   onAlertTap,
   onAddToMap,
-  onAddLocation
+  onAddLocation,
+  onHoverAlert,
+  onLeaveAlert
 }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const hasAlerts = categories && categories.length > 0;
 
   return (
-    <div className="bg-slate-800/30 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="rounded-xl border border-slate-600 overflow-hidden border-l-4 border-l-orange-500" style={{ backgroundColor: '#2d3748' }}>
       {/* Alert Detail Modal */}
       {selectedAlert && (
         <AlertModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
       )}
 
-      {/* Header - dark gray background */}
-      <div className="px-4 py-3 bg-slate-800 border-b border-slate-700/50 flex items-center justify-between">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-600/50 flex items-center justify-between" style={{ backgroundColor: '#374151' }}>
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold" style={{ color: 'antiquewhite' }}>
             Extreme Weather Conditions
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs mt-0.5" style={{ color: '#9ca3af' }}>
             Active warnings across the US
             {lastUpdated && !loading && (
               <span className="ml-2">
@@ -412,6 +437,8 @@ export default function ExtremeWeatherSection({
                 onAlertTap={onAlertTap}
                 onAddToMap={onAddToMap}
                 onShowDetail={setSelectedAlert}
+                onHoverAlert={onHoverAlert}
+                onLeaveAlert={onLeaveAlert}
                 defaultExpanded={false}
               />
             ))}
@@ -423,8 +450,8 @@ export default function ExtremeWeatherSection({
 
       {/* Footer - total count */}
       {hasAlerts && (
-        <div className="px-4 py-2 bg-slate-900/30 border-t border-slate-700/50">
-          <p className="text-xs text-slate-500 text-center">
+        <div className="px-4 py-2 border-t border-slate-600/50" style={{ backgroundColor: '#374151' }}>
+          <p className="text-xs text-slate-400 text-center">
             Tap location to view alert details and show on map
           </p>
         </div>

@@ -157,12 +157,14 @@ export default function App() {
   const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
   const [yourLocationsExpanded, setYourLocationsExpanded] = useState(true); // Your Locations section collapsed state
+  const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
 
   // Extreme weather alerts (for when no active storm event)
   const {
+    alerts: alertsData,
     loading: alertsLoading,
     error: alertsError,
     lastUpdated: alertsLastUpdated,
@@ -171,6 +173,9 @@ export default function App() {
     getAlertsByCategory,
     hasActiveAlerts
   } = useExtremeWeather(true);
+
+  // All alerts for map display (limit to prevent performance issues)
+  const mapAlerts = alertsData?.allAlerts?.slice(0, 100) || [];
 
   // Handle alert tap - center map on that location and track for re-clicking
   const handleAlertTap = (alert) => {
@@ -297,6 +302,16 @@ export default function App() {
     document.querySelector('#location-search')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Handle hovering over an alert in the sidebar (highlight on map)
+  const handleHoverAlert = (alertId) => {
+    setHighlightedAlertId(alertId);
+  };
+
+  // Handle leaving hover on alert
+  const handleLeaveAlert = () => {
+    setHighlightedAlertId(null);
+  };
+
   const hasData = Object.keys(weatherData).length > 0;
 
   if (loading && !hasData) {
@@ -333,7 +348,7 @@ export default function App() {
                 className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 style={{ minHeight: '48px' }}
               >
-                <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'antiquewhite' }}>
                   <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                 </h3>
                 <svg
@@ -362,7 +377,7 @@ export default function App() {
                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <button
                               onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                              className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                             >
                               <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                               <span className="truncate">{loc.name}</span>
@@ -406,7 +421,7 @@ export default function App() {
                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <button
                               onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                              className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                             >
                               <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                               <span className="truncate">{loc.name}</span>
@@ -454,6 +469,8 @@ export default function App() {
             onAlertTap={handleAlertTap}
             onAddToMap={handleAddAlertToMap}
             onAddLocation={handleAddLocation}
+            onHoverAlert={handleHoverAlert}
+            onLeaveAlert={handleLeaveAlert}
           />
 
           {/* 3. Check Your Location - Above map on mobile */}
@@ -467,9 +484,11 @@ export default function App() {
               weatherData={weatherData}
               stormPhase={stormPhase}
               userLocations={userLocations}
+              alerts={mapAlerts}
               isHero
               centerOn={mapCenterOn}
               previewLocation={previewCity}
+              highlightedAlertId={highlightedAlertId}
             />
           </div>
         </div>
@@ -489,10 +508,12 @@ export default function App() {
                 weatherData={weatherData}
                 stormPhase={stormPhase}
                 userLocations={userLocations}
+                alerts={mapAlerts}
                 isHero
                 isSidebar
                 centerOn={mapCenterOn}
                 previewLocation={previewCity}
+                highlightedAlertId={highlightedAlertId}
               />
             </div>
           </div>
@@ -507,7 +528,7 @@ export default function App() {
                   onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
                   className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 >
-                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'antiquewhite' }}>
                     <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
                   </h3>
                   <svg
@@ -536,7 +557,7 @@ export default function App() {
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
                               <button
                                 onClick={() => handleViewedLocationClick(loc)}
-                                className="text-sm text-gray-200 hover:text-emerald-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                                className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                               >
                                 <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                                 <span className="truncate">{loc.name}</span>
@@ -580,7 +601,7 @@ export default function App() {
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
                               <button
                                 onClick={() => handleViewedLocationClick(loc)}
-                                className="text-sm text-gray-200 hover:text-amber-300 hover:underline cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+                                className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                               >
                                 <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
                                 <span className="truncate">{loc.name}</span>
@@ -628,12 +649,28 @@ export default function App() {
               onAlertTap={handleAlertTap}
               onAddToMap={handleAddAlertToMap}
               onAddLocation={handleAddLocation}
+              onHoverAlert={handleHoverAlert}
+              onLeaveAlert={handleLeaveAlert}
             />
           </div>
         </section>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-slate-800 space-y-4">
+        <footer className="text-center py-6 border-t border-slate-800 space-y-6">
+          {/* SEO Content Section */}
+          <section className="max-w-3xl mx-auto px-4">
+            <h2 className="text-lg font-semibold text-slate-300 mb-3">Real-Time Extreme Weather Alerts & Live Tracking</h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-3">
+              Track live weather alerts including winter storms, hurricanes, tornadoes, severe thunderstorms,
+              floods, and heat waves. StormTracking provides real-time notifications from the National Weather
+              Service for all severe weather events across the United States.
+            </p>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Get instant alerts for extreme weather conditions in your area. Monitor active storm systems,
+              weather warnings, watches, and advisories as they're issued by NWS. Free real-time weather tracking.
+            </p>
+          </section>
+
           {/* Ko-fi Support */}
           <a
             href="https://ko-fi.com/dawntepper"

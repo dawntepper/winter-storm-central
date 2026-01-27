@@ -18,8 +18,8 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
   const handleShare = async () => {
     const shareData = {
-      title: 'StormTracking - Extreme Weather Information',
-      text: 'Get extreme weather information for your locations in real-time with live NOAA data',
+      title: 'StormTracking - Real-Time Extreme Weather Alerts',
+      text: 'Track extreme weather alerts in real-time. Live updates on winter storms, hurricanes, and severe weather from the National Weather Service.',
       url: window.location.href
     };
 
@@ -77,7 +77,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 )}
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Get extreme weather information for your locations</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Real-Time Extreme Weather Alerts & Live Tracker</p>
           </div>
         </div>
 

@@ -637,51 +637,44 @@ const getWeatherIcon = (condition) => {
 function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
   return (
     <div className="rounded-xl px-4 py-3 border border-slate-700 bg-slate-800">
-      {/* Compact single-line layout */}
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: Icon + City + Alert + Weather */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-          <span className="font-semibold text-white whitespace-nowrap">
-            {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
-          </span>
-          <span className="text-slate-500">•</span>
-          {data.alertInfo ? (
-            <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {data.alertInfo.event}</span>
+      {/* Single-line layout: City • Alert • Forecast • Add to Map • X */}
+      <div className="flex items-center gap-3 overflow-x-auto">
+        <span className="font-semibold text-white whitespace-nowrap">
+          {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
+        </span>
+        <span className="text-slate-500">•</span>
+        {data.alertInfo ? (
+          <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {data.alertInfo.event}</span>
+        ) : (
+          <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
+        )}
+        <span className="text-slate-500">•</span>
+        <span className="text-xs text-slate-400 whitespace-nowrap">
+          {data.conditions?.temperature ? (
+            <>{data.conditions.temperature}°{data.conditions.temperatureUnit || 'F'} · {data.conditions.shortForecast || ''}</>
           ) : (
-            <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No alerts</span>
+            <>Loading...</>
           )}
-          <span className="text-slate-500">•</span>
-          <span className="text-xs text-slate-400 whitespace-nowrap">
-            {data.conditions?.temperature ? (
-              <>{data.conditions.temperature}°{data.conditions.temperatureUnit || 'F'} · {data.conditions.shortForecast || ''}</>
-            ) : (
-              <>Loading...</>
-            )}
-          </span>
-        </div>
-
-        {/* Right: Add to Map + Close */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isOnMap}
-              onChange={(e) => onToggleMap(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-            />
-            <span className="text-xs text-slate-300">Map</span>
-            {isOnMap && <span className="text-[10px] text-emerald-400">✓</span>}
-          </label>
-          <button
-            onClick={isOnMap ? onDismiss : onRemove}
-            className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1"
-            title={isOnMap ? "Close card" : "Remove"}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        </span>
+        <span className="text-slate-500">•</span>
+        <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={isOnMap}
+            onChange={(e) => onToggleMap(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+          />
+          <span className="text-xs text-slate-300">Add to Map</span>
+        </label>
+        <button
+          onClick={isOnMap ? onDismiss : onRemove}
+          className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1 ml-auto flex-shrink-0"
+          title={isOnMap ? "Close card" : "Remove"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -895,16 +888,16 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
   return (
     <div className="space-y-4">
       {/* Input Section */}
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700">
         {/* Collapsible Header - always clickable */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-700/30"
+          className="w-full px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-700/30 transition-all"
         >
           <div className="flex flex-col items-start gap-0.5">
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-slate-300 cursor-pointer">
+              <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
                 Check Your Location
               </label>
               {/* Show count badge when collapsed */}
@@ -914,7 +907,15 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
                 </span>
               )}
             </div>
-            <span className="text-[10px] sm:text-xs text-slate-500">Get extreme weather alerts and daily forecasts</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1">
+              Get extreme weather alerts and daily forecasts
+              <span className="relative group inline-block">
+                <span className="cursor-help text-slate-400 hover:text-slate-300">ⓘ</span>
+                <span className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 p-2 text-[10px] text-slate-200 bg-slate-900 border border-slate-600 rounded-lg shadow-xl z-[9999] whitespace-normal">
+                  Currently available for the United States and US Territories only. More global locations coming soon!
+                </span>
+              </span>
+            </span>
           </div>
           {/* Chevron */}
           <svg
@@ -1034,21 +1035,53 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
         <p className="text-slate-500 text-[10px] mt-2">
           Locations saved on this device only
         </p>
+
+        {/* Result inline - at bottom of card */}
+        {currentLocationData && !isCardDismissed && (
+          <div className="mt-3 pt-3 border-t border-slate-700/50">
+            <div className="flex items-center gap-3 overflow-x-auto">
+              <span className="font-semibold text-white whitespace-nowrap">
+                {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
+              </span>
+              <span className="text-slate-500">•</span>
+              {currentLocationData.alertInfo ? (
+                <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {currentLocationData.alertInfo.event}</span>
+              ) : (
+                <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
+              )}
+              <span className="text-slate-500">•</span>
+              <span className="text-xs text-slate-400 whitespace-nowrap">
+                {currentLocationData.conditions?.temperature ? (
+                  <>{currentLocationData.conditions.temperature}°{currentLocationData.conditions.temperatureUnit || 'F'} · {currentLocationData.conditions.shortForecast || ''}</>
+                ) : (
+                  <>Loading...</>
+                )}
+              </span>
+              <span className="text-slate-500">•</span>
+              <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={isCurrentOnMap}
+                  onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+                />
+                <span className="text-xs text-slate-300">Add to Map</span>
+              </label>
+              <button
+                onClick={isCurrentOnMap ? handleDismissCard : handleRemove}
+                className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1 ml-auto flex-shrink-0"
+                title={isCurrentOnMap ? "Close" : "Remove"}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
           </div>
         )}
       </div>
-
-      {/* Result Card - Full Width, can be dismissed */}
-      {currentLocationData && !isCardDismissed && (
-        <UserLocationCard
-          data={currentLocationData}
-          isOnMap={isCurrentOnMap}
-          onToggleMap={(checked) => handleToggleMap(currentLocationId, checked)}
-          onRemove={handleRemove}
-          onDismiss={handleDismissCard}
-          stormPhase={stormPhase}
-        />
-      )}
     </div>
   );
 }

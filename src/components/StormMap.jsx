@@ -2,6 +2,110 @@ import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap, useMapE
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
 
+/**
+ * Full Alert Modal - shows complete alert details
+ */
+function AlertModal({ alert, onClose }) {
+  if (!alert) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-xl border border-slate-600 max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-4 py-3 bg-amber-900/30 border-b border-amber-500/30 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-amber-200">{alert.event}</h3>
+            <p className="text-sm text-slate-400">{alert.location}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
+          {alert.headline && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Headline</h4>
+              <p className="text-sm text-amber-200">{alert.headline}</p>
+            </div>
+          )}
+
+          {alert.fullDescription && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Details</h4>
+              <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{alert.fullDescription}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
+            {alert.severity && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Severity</h4>
+                <p className="text-sm text-slate-300">{alert.severity}</p>
+              </div>
+            )}
+            {alert.urgency && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Urgency</h4>
+                <p className="text-sm text-slate-300">{alert.urgency}</p>
+              </div>
+            )}
+            {alert.onset && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Starts</h4>
+                <p className="text-sm text-slate-300">{new Date(alert.onset).toLocaleString()}</p>
+              </div>
+            )}
+            {alert.expires && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Expires</h4>
+                <p className="text-sm text-slate-300">{new Date(alert.expires).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+
+          {alert.areaDesc && (
+            <div className="pt-2 border-t border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Affected Areas</h4>
+              <p className="text-xs text-slate-400">{alert.areaDesc}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-3 bg-slate-900/50 border-t border-slate-700 flex justify-between items-center">
+          <a
+            href="https://www.weather.gov/alerts"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer"
+          >
+            View all alerts on Weather.gov →
+          </a>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Context to share zoom level with marker components
 const ZoomContext = createContext(5.5);
 
@@ -474,19 +578,12 @@ function CityMarker({ city, stormPhase, isMobile = false }) {
   );
 }
 
-// Enhanced user location marker
-function UserLocationMarker({ location, stormPhase, isMobile = false }) {
-  const [isHovered, setIsHovered] = useState(false);
+// Enhanced user location marker with sticky hover support
+function UserLocationMarker({ location, stormPhase, isMobile = false, onHover, onLeave }) {
   const zoomLevel = useContext(ZoomContext);
-  const color = hazardColors[location.hazardType] || hazardColors.none;
-  const forecastSnow = location.forecast?.snowfall || 0;
-  const forecastIce = location.forecast?.ice || 0;
 
   const position = [location.lat, location.lon];
-
-  // Fixed small size for clean, consistent appearance
   const baseRadius = 8;
-  const radius = isHovered ? baseRadius * 1.2 : baseRadius;
 
   // Recreate label icon when zoom changes
   const labelIcon = useMemo(() => createLabelIcon(location.name.split(',')[0], location.hazardType, true, zoomLevel), [location.name, location.hazardType, zoomLevel]);
@@ -496,7 +593,7 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
       {/* Outer glow - green for user locations (non-interactive to allow map dragging) */}
       <CircleMarker
         center={position}
-        radius={radius + 4}
+        radius={baseRadius + 4}
         pathOptions={{
           fillColor: '#10b981',
           fillOpacity: 0.35,
@@ -504,12 +601,13 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
           weight: 0,
           interactive: false
         }}
+        className="pulse-marker-user"
       />
 
       {/* Main marker - gray fill with green border */}
       <CircleMarker
         center={position}
-        radius={radius}
+        radius={baseRadius}
         pathOptions={{
           fillColor: '#475569',
           fillOpacity: 0.9,
@@ -519,78 +617,69 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
           bubblingMouseEvents: true
         }}
         eventHandlers={{
-          mouseover: () => setIsHovered(true),
-          mouseout: () => setIsHovered(false)
+          mouseover: (e) => onHover(location, e),
+          mouseout: onLeave
         }}
-      >
-        <Tooltip direction="top" offset={[0, -15]} opacity={0.98} className="enhanced-tooltip">
-          <div className="min-w-[200px] p-3">
-            {/* Line 1: Weather icon + City name */}
-            <h3 className="font-bold text-lg text-gray-800 mb-2">
-              {getWeatherIcon(location.conditions?.shortForecast)} {location.name}
-            </h3>
+      />
 
-            {/* Line 2: Alert status */}
-            <div className="mb-1">
-              {location.alertInfo ? (
-                <span className="text-sm text-orange-500">⚠️ {location.alertInfo.event}</span>
-              ) : (
-                <span className="text-sm text-cyan-600">✓ No active alerts</span>
-              )}
-            </div>
-
-            {/* Line 3: Temperature · Condition */}
-            <div className="text-sm text-gray-500">
-              {location.conditions?.temperature ? (
-                <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
-              ) : location.alertInfo ? (
-                <span>Tap location in sidebar for details</span>
-              ) : (
-                <span>Weather data unavailable</span>
-              )}
-            </div>
-          </div>
-        </Tooltip>
-      </CircleMarker>
-
-      {/* City label - also interactive for easier hovering */}
+      {/* City label */}
       <Marker
         position={[location.lat, location.lon]}
         icon={labelIcon}
         eventHandlers={{
-          mouseover: () => setIsHovered(true),
-          mouseout: () => setIsHovered(false)
+          mouseover: (e) => onHover(location, e),
+          mouseout: onLeave
         }}
-      >
-        <Tooltip direction="top" offset={[0, -30]} opacity={0.98} className="enhanced-tooltip">
-          <div className="min-w-[200px] p-3">
-            {/* Line 1: Weather icon + City name */}
-            <h3 className="font-bold text-lg text-gray-800 mb-2">
-              {getWeatherIcon(location.conditions?.shortForecast)} {location.name}
-            </h3>
+      />
+    </>
+  );
+}
 
-            {/* Line 2: Alert status */}
-            <div className="mb-1">
-              {location.alertInfo ? (
-                <span className="text-sm text-orange-500">⚠️ {location.alertInfo.event}</span>
-              ) : (
-                <span className="text-sm text-cyan-600">✓ No active alerts</span>
-              )}
-            </div>
+// Alert category colors for dots
+const alertCategoryColors = {
+  winter: '#3b82f6',   // blue
+  severe: '#ef4444',   // red
+  heat: '#f97316',     // orange
+  flood: '#06b6d4',    // cyan - matches flooding card
+  fire: '#92400e',     // brown
+  tropical: '#1e3a8a', // dark blue
+  default: '#ef4444'   // red fallback
+};
 
-            {/* Line 3: Temperature · Condition */}
-            <div className="text-sm text-gray-500">
-              {location.conditions?.temperature ? (
-                <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
-              ) : location.alertInfo ? (
-                <span>Tap location in sidebar for details</span>
-              ) : (
-                <span>Weather data unavailable</span>
-              )}
-            </div>
-          </div>
-        </Tooltip>
-      </Marker>
+// Simple alert dot marker with highlight support
+function AlertDotMarker({ alert, onHover, onLeave, highlighted = false }) {
+  const position = [alert.lat, alert.lon];
+  const color = alertCategoryColors[alert.category] || alertCategoryColors.default;
+
+  return (
+    <>
+      {/* Pulsing outer ring - larger and more prominent when highlighted */}
+      <CircleMarker
+        center={position}
+        radius={highlighted ? 18 : 12}
+        pathOptions={{
+          fillColor: color,
+          fillOpacity: highlighted ? 0.5 : 0.3,
+          color: 'transparent',
+          weight: 0
+        }}
+        className={highlighted ? 'pulse-marker-highlighted' : 'pulse-marker'}
+      />
+      {/* Main dot marker - slightly larger when highlighted */}
+      <CircleMarker
+        center={position}
+        radius={highlighted ? 9 : 7}
+        pathOptions={{
+          fillColor: color,
+          fillOpacity: 0.9,
+          color: '#ffffff',
+          weight: highlighted ? 3 : 2
+        }}
+        eventHandlers={{
+          mouseover: (e) => onHover(alert, e),
+          mouseout: onLeave
+        }}
+      />
     </>
   );
 }
@@ -625,8 +714,13 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null }) {
   const [showRadar, setShowRadar] = useState(true);
+  const [showAlerts, setShowAlerts] = useState(true);
+  const [hoveredAlert, setHoveredAlert] = useState(null);
+  const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
+  const [hoverCardPosition, setHoverCardPosition] = useState(null);
+  const [modalAlert, setModalAlert] = useState(null); // For the full alert modal
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [zoomLevel, setZoomLevel] = useState(isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP);
   const [fitTrigger, setFitTrigger] = useState(0);
@@ -635,7 +729,82 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState(null);
   const [userGeoLocation, setUserGeoLocation] = useState(null);
+  const mapContainerRef = useRef(null);
+  const hideAlertTimeoutRef = useRef(null);
   const cities = Object.values(weatherData);
+
+  // Handle alert marker hover
+  const handleAlertHover = (alert, event) => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    setHoveredUserLocation(null); // Clear any hovered user location
+    setHoveredAlert(alert);
+
+    // Get position relative to map container
+    if (mapContainerRef.current && event) {
+      setHoverCardPosition({
+        x: event.containerPoint.x,
+        y: event.containerPoint.y
+      });
+    }
+  };
+
+  // Handle alert marker leave with delay
+  const handleAlertLeave = () => {
+    hideAlertTimeoutRef.current = setTimeout(() => {
+      setHoveredAlert(null);
+      setHoverCardPosition(null);
+    }, 200);
+  };
+
+  // Handle user location marker hover
+  const handleUserLocationHover = (location, event) => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    setHoveredAlert(null); // Clear any hovered alert
+    setHoveredUserLocation(location);
+
+    // Get position relative to map container
+    if (mapContainerRef.current && event) {
+      setHoverCardPosition({
+        x: event.containerPoint.x,
+        y: event.containerPoint.y
+      });
+    }
+  };
+
+  // Handle user location marker leave with delay
+  const handleUserLocationLeave = () => {
+    hideAlertTimeoutRef.current = setTimeout(() => {
+      setHoveredUserLocation(null);
+      setHoverCardPosition(null);
+    }, 200);
+  };
+
+  // Handle card hover (keep it visible)
+  const handleCardEnter = () => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+  };
+
+  // Handle card leave
+  const handleCardLeave = () => {
+    setHoveredAlert(null);
+    setHoveredUserLocation(null);
+    setHoverCardPosition(null);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideAlertTimeoutRef.current) {
+        clearTimeout(hideAlertTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Initial center/zoom based on screen size
   const initialCenter = isMobile ? CENTER_MOBILE : CENTER_DESKTOP;
@@ -689,8 +858,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <h2 className={`font-bold text-white ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`}>
-              Storm Coverage
+            <h2 className={`font-bold ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
+              Live Weather Map
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -702,6 +871,24 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             >
               Reset View
             </button>
+            {/* Alerts toggle */}
+            {alerts.length > 0 && (
+              <button
+                onClick={() => {
+                  setShowAlerts(!showAlerts);
+                  if (window.plausible) {
+                    window.plausible('Alerts Toggled', { props: { visible: !showAlerts } });
+                  }
+                }}
+                className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                  showAlerts
+                    ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                    : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+                }`}
+              >
+                {showAlerts ? `✓ Alerts (${alerts.length})` : `Show Alerts (${alerts.length})`}
+              </button>
+            )}
             {/* Radar toggle */}
             <button
               onClick={() => {
@@ -722,24 +909,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 sm:gap-5 text-[10px] sm:text-xs text-slate-400 mt-3">
-          {showRadar && (
-            <span className="flex items-center gap-2 text-cyan-400">
-              <span className="w-3 h-3 rounded bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"></span> Radar
-            </span>
-          )}
-          {geoError && (
+        {/* Helper text */}
+        {geoError && (
+          <div className="mt-3">
             <span className="text-red-400 text-[10px]">{geoError}</span>
-          )}
-          <span className="ml-auto text-slate-500 hidden sm:inline">
-            Click an alert to preview on map
-          </span>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
-      <div className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+      <div ref={mapContainerRef} className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         <MapContainer
           center={initialCenter}
           zoom={initialZoom}
@@ -765,6 +944,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
+            {/* Alert dot markers */}
+            {showAlerts && alerts.map((alert) => (
+              <AlertDotMarker
+                key={alert.id}
+                alert={alert}
+                onHover={handleAlertHover}
+                onLeave={handleAlertLeave}
+                highlighted={highlightedAlertId === alert.id}
+              />
+            ))}
+
             {/* User location markers - green circles with labels */}
             {userLocations.map((location) => (
               <UserLocationMarker
@@ -772,11 +962,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 location={location}
                 stormPhase={stormPhase}
                 isMobile={isMobile}
+                onHover={handleUserLocationHover}
+                onLeave={handleUserLocationLeave}
               />
             ))}
 
-            {/* Preview marker for extreme weather alerts */}
-            {previewLocation && (
+            {/* Preview marker for extreme weather alerts - only show if not already a user location */}
+            {previewLocation && !userLocations.some(loc =>
+              loc.lat === previewLocation.lat && loc.lon === previewLocation.lon
+            ) && (
               <PreviewMarker location={previewLocation} />
             )}
           </ZoomContext.Provider>
@@ -787,7 +981,161 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-900/30 to-transparent"></div>
           <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-900/30 to-transparent"></div>
         </div>
+
+        {/* Alert hover card overlay */}
+        {hoveredAlert && hoverCardPosition && (
+          <div
+            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
+            style={{
+              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
+              top: Math.max(hoverCardPosition.y - 160, 8),
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={handleCardEnter}
+            onMouseLeave={handleCardLeave}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">
+                  {hoveredAlert.category === 'winter' ? '❄️' :
+                   hoveredAlert.category === 'severe' ? '⛈️' :
+                   hoveredAlert.category === 'heat' ? '🌡️' :
+                   hoveredAlert.category === 'flood' ? '🌊' :
+                   hoveredAlert.category === 'fire' ? '🔥' :
+                   hoveredAlert.category === 'tropical' ? '🌀' : '⚠️'}
+                </span>
+                <div>
+                  <h4 className="font-semibold text-slate-800 text-sm">{hoveredAlert.location}</h4>
+                  <p className="text-xs text-red-600 font-medium">{hoveredAlert.event}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCardLeave}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Alert headline */}
+            {hoveredAlert.headline && (
+              <p className="text-xs text-slate-600 mb-2 line-clamp-3">{hoveredAlert.headline}</p>
+            )}
+
+            {/* Severity & Urgency */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {hoveredAlert.severity && (
+                <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                  {hoveredAlert.severity}
+                </span>
+              )}
+              {hoveredAlert.urgency && (
+                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                  {hoveredAlert.urgency}
+                </span>
+              )}
+            </div>
+
+            {/* View Alert Details Button */}
+            <button
+              onClick={() => {
+                setModalAlert(hoveredAlert);
+                setHoveredAlert(null);
+                setHoverCardPosition(null);
+              }}
+              className="block w-full text-center py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              View Alert Details →
+            </button>
+          </div>
+        )}
+
+        {/* User location hover card overlay */}
+        {hoveredUserLocation && hoverCardPosition && (
+          <div
+            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
+            style={{
+              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
+              top: Math.max(hoverCardPosition.y - 160, 8),
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={handleCardEnter}
+            onMouseLeave={handleCardLeave}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{getWeatherIcon(hoveredUserLocation.conditions?.shortForecast)}</span>
+                <div>
+                  <h4 className="font-semibold text-slate-800 text-sm">{hoveredUserLocation.name}</h4>
+                  {hoveredUserLocation.alertInfo ? (
+                    <p className="text-xs text-red-600 font-medium">⚠️ {hoveredUserLocation.alertInfo.event}</p>
+                  ) : (
+                    <p className="text-xs text-emerald-600 font-medium">✓ No active alerts</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleCardLeave}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Weather conditions */}
+            <div className="text-sm text-slate-600 mb-2">
+              {hoveredUserLocation.conditions?.temperature ? (
+                <span>{hoveredUserLocation.conditions.temperature}°{hoveredUserLocation.conditions.temperatureUnit || 'F'} · {hoveredUserLocation.conditions.shortForecast || 'No data'}</span>
+              ) : (
+                <span className="text-slate-400">Weather data loading...</span>
+              )}
+            </div>
+
+            {/* Alert headline if present */}
+            {hoveredUserLocation.alertInfo?.headline && (
+              <p className="text-xs text-slate-500 mb-2 line-clamp-2">{hoveredUserLocation.alertInfo.headline}</p>
+            )}
+
+            {/* View Alert Details Button - only show if location has an alert */}
+            {hoveredUserLocation.alertInfo && (
+              <button
+                onClick={() => {
+                  // Create an alert object from alertInfo for the modal
+                  setModalAlert({
+                    event: hoveredUserLocation.alertInfo.event,
+                    location: hoveredUserLocation.name,
+                    headline: hoveredUserLocation.alertInfo.headline,
+                    category: hoveredUserLocation.alertInfo.category,
+                    // These might not be available for user-added locations
+                    severity: hoveredUserLocation.alertInfo.severity,
+                    urgency: hoveredUserLocation.alertInfo.urgency,
+                    fullDescription: hoveredUserLocation.alertInfo.fullDescription,
+                    onset: hoveredUserLocation.alertInfo.onset,
+                    expires: hoveredUserLocation.alertInfo.expires,
+                    areaDesc: hoveredUserLocation.alertInfo.areaDesc
+                  });
+                  setHoveredUserLocation(null);
+                  setHoverCardPosition(null);
+                }}
+                className="block w-full text-center py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                View Alert Details →
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Alert Detail Modal */}
+      {modalAlert && (
+        <AlertModal alert={modalAlert} onClose={() => setModalAlert(null)} />
+      )}
 
       {/* Custom styles for pulse animation and labels */}
       <style>{`
@@ -797,6 +1145,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         .pulse-marker-user {
           animation: pulse-user 1.5s ease-in-out infinite;
         }
+        .pulse-marker-highlighted {
+          animation: pulse-highlighted 0.6s ease-in-out infinite;
+        }
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.7; }
@@ -804,6 +1155,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         @keyframes pulse-user {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        @keyframes pulse-highlighted {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(1.3); }
         }
         .leaflet-tooltip.enhanced-tooltip {
           background: #f8fafc;
