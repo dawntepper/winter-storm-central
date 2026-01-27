@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useWeatherData } from './hooks/useWeatherData';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
@@ -146,19 +145,6 @@ function StaleDataBanner({ isStale, lastSuccessfulUpdate, error }) {
 }
 
 export default function App() {
-  const {
-    weatherData,
-    loading,
-    error,
-    lastRefresh,
-    lastSuccessfulUpdate,
-    stormPhase,
-    isStale,
-    refresh,
-    getSnowLeaderboard,
-    getIceLeaderboard,
-    getCitiesGeoOrdered
-  } = useWeatherData();
 
   const [searchLocations, setSearchLocations] = useState([]); // From ZipCodeSearch
   const [alertLocations, setAlertLocations] = useState([]); // From alert "Add to Map"
@@ -341,30 +327,28 @@ export default function App() {
     setHighlightedAlertId(null);
   };
 
-  const hasData = Object.keys(weatherData).length > 0;
-
-  if (loading && !hasData) {
+  if (alertsLoading && !alertsData) {
     return <LoadingState />;
   }
 
-  if (error && !hasData) {
-    return <ErrorState error={error} onRetry={refresh} />;
+  if (alertsError && !alertsData) {
+    return <ErrorState error={alertsError} onRetry={refreshAlerts} />;
   }
 
   return (
     <div className="min-h-screen">
       <Header
-        lastRefresh={lastRefresh}
-        lastSuccessfulUpdate={lastSuccessfulUpdate}
-        onRefresh={refresh}
-        loading={loading}
-        stormPhase={stormPhase}
-        isStale={isStale}
+        lastRefresh={alertsLastUpdated}
+        lastSuccessfulUpdate={alertsLastUpdated}
+        onRefresh={refreshAlerts}
+        loading={alertsLoading}
+        stormPhase="active"
+        isStale={alertsIsStale}
       />
 
       <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stale Data Warning */}
-        <StaleDataBanner isStale={isStale} lastSuccessfulUpdate={lastSuccessfulUpdate} error={error && hasData ? error : null} />
+        <StaleDataBanner isStale={alertsIsStale} lastSuccessfulUpdate={alertsLastUpdated} error={alertsError && alertsData ? alertsError : null} />
 
         {/* ========== MOBILE LAYOUT ========== */}
         <div className="lg:hidden space-y-4">
@@ -518,14 +502,14 @@ export default function App() {
 
           {/* 3. Check Your Location - Above map on mobile */}
           <div id="location-search-mobile">
-            <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
+            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
           </div>
 
           {/* 4. Storm Coverage Map on mobile */}
           <div id="storm-map-mobile">
             <StormMap
-              weatherData={weatherData}
-              stormPhase={stormPhase}
+              weatherData={{}}
+              stormPhase="active"
               userLocations={userLocations}
               alerts={mapAlerts}
               isHero
@@ -542,14 +526,14 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location - Above map on desktop */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase={stormPhase} onLocationsChange={setSearchLocations} />
+              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
             </div>
 
             {/* Storm Map - Below search on desktop */}
             <div className="lg:min-h-[500px]">
               <StormMap
-                weatherData={weatherData}
-                stormPhase={stormPhase}
+                weatherData={{}}
+                stormPhase="active"
                 userLocations={userLocations}
                 alerts={mapAlerts}
                 isHero
