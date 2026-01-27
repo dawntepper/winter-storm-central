@@ -198,6 +198,7 @@ export default function App() {
     if (!alert.lat || !alert.lon) return;
 
     // Create a user location object from the alert
+    // Note: conditions are null - we don't have weather data from alerts
     const newLocation = {
       id: `alert-${alert.id}`,
       name: alert.location,
@@ -207,10 +208,7 @@ export default function App() {
       hazardType: alert.category === 'winter' ? 'snow' :
                   alert.category === 'heat' ? 'none' :
                   alert.category === 'flood' ? 'none' : 'none',
-      conditions: {
-        shortForecast: alert.event,
-        temperature: null
-      },
+      conditions: null, // No weather data from alerts - only alert info
       alertInfo: {
         event: alert.event,
         headline: alert.headline,
@@ -616,24 +614,6 @@ export default function App() {
                     </div>
                   </>
                 )}
-              </div>
-            )}
-
-            {/* Recently Viewed Locations */}
-            {viewedLocations.length > 0 && (
-              <div className="bg-slate-800/30 rounded-xl border border-slate-700 p-4">
-                <h3 className="text-sm font-medium text-slate-400 mb-3">Recently Viewed</h3>
-                <div className="flex flex-wrap gap-2">
-                  {viewedLocations.slice().reverse().map((loc) => (
-                    <button
-                      key={loc.id}
-                      onClick={() => handleViewedLocationClick(loc)}
-                      className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 text-xs rounded-lg transition-colors cursor-pointer"
-                    >
-                      {loc.location}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
 

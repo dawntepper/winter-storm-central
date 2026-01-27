@@ -636,56 +636,53 @@ const getWeatherIcon = (condition) => {
 
 function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
   return (
-    <div className="rounded-xl p-4 border border-slate-700 bg-slate-800 relative">
-      {/* Action buttons */}
-      <div className="absolute top-3 right-3 flex items-center gap-2">
-        <button
-          onClick={isOnMap ? onDismiss : onRemove}
-          className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
-          title={isOnMap ? "Close card (stays on map)" : "Remove location"}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+    <div className="rounded-xl px-4 py-3 border border-slate-700 bg-slate-800">
+      {/* Compact single-line layout */}
+      <div className="flex items-center justify-between gap-3">
+        {/* Left: Icon + City + Alert + Weather */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+          <span className="font-semibold text-white whitespace-nowrap">
+            {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
+          </span>
+          <span className="text-slate-500">•</span>
+          {data.alertInfo ? (
+            <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {data.alertInfo.event}</span>
+          ) : (
+            <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No alerts</span>
+          )}
+          <span className="text-slate-500">•</span>
+          <span className="text-xs text-slate-400 whitespace-nowrap">
+            {data.conditions?.temperature ? (
+              <>{data.conditions.temperature}°{data.conditions.temperatureUnit || 'F'} · {data.conditions.shortForecast || ''}</>
+            ) : (
+              <>Loading...</>
+            )}
+          </span>
+        </div>
+
+        {/* Right: Add to Map + Close */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isOnMap}
+              onChange={(e) => onToggleMap(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+            />
+            <span className="text-xs text-slate-300">Map</span>
+            {isOnMap && <span className="text-[10px] text-emerald-400">✓</span>}
+          </label>
+          <button
+            onClick={isOnMap ? onDismiss : onRemove}
+            className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1"
+            title={isOnMap ? "Close card" : "Remove"}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
-
-      {/* City name with weather icon */}
-      <h3 className="text-lg font-semibold text-white mb-3 pr-8">
-        {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
-      </h3>
-
-      {/* Alert status */}
-      <div className="mb-2">
-        {data.alertInfo ? (
-          <span className="text-sm text-orange-400">⚠️ {data.alertInfo.event}</span>
-        ) : (
-          <span className="text-sm text-cyan-500">✓ No active alerts</span>
-        )}
-      </div>
-
-      {/* Current conditions */}
-      <div className="text-sm text-slate-400 mb-4">
-        {data.conditions?.temperature ? (
-          <span>{data.conditions.temperature}°{data.conditions.temperatureUnit || 'F'} · {data.conditions.shortForecast || 'No data'}</span>
-        ) : (
-          <span>Loading weather data...</span>
-        )}
-      </div>
-
-      {/* Add to Map checkbox */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={isOnMap}
-          onChange={(e) => onToggleMap(e.target.checked)}
-          className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-        />
-        <span className="text-sm text-slate-300">Add to Map</span>
-        {isOnMap && (
-          <span className="text-xs text-emerald-400">(on map)</span>
-        )}
-      </label>
     </div>
   );
 }
