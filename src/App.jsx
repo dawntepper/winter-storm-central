@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
@@ -141,6 +142,39 @@ function StaleDataBanner({ isStale, lastSuccessfulUpdate, error }) {
         )}
       </div>
     </div>
+  );
+}
+
+// Active Storm Event Banner
+function StormEventBanner() {
+  return (
+    <Link
+      to="/storm/noreaster-january-2026"
+      className="block bg-gradient-to-r from-sky-900/80 to-indigo-900/80 border border-sky-500/30 hover:border-sky-400/50 transition-all"
+    >
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">❄️</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-semibold text-sm sm:text-base">Tracking: Nor'easter - January 2026</span>
+                <span className="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">
+                  Forecasted
+                </span>
+              </div>
+              <p className="text-sky-200/70 text-xs sm:text-sm">Major winter storm expected Jan 28-30 for Northeast US</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 text-sky-300 text-sm font-medium">
+            <span className="hidden sm:inline">View Tracker</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -345,6 +379,9 @@ export default function App() {
         stormPhase="active"
         isStale={alertsIsStale}
       />
+
+      {/* Active Storm Event Banner */}
+      <StormEventBanner />
 
       <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stale Data Warning */}
