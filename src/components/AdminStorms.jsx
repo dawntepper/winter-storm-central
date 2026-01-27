@@ -111,7 +111,10 @@ function StormForm({ event, onSave, onCancel, saving }) {
     mapZoom: 5,
     keywords: [''],
     seoTitle: '',
-    seoDescription: ''
+    seoDescription: '',
+    // Historical stats (for completed storms)
+    peakAlertCount: null,
+    totalAlertsIssued: null
   });
 
   useEffect(() => {
@@ -122,7 +125,9 @@ function StormForm({ event, onSave, onCancel, saving }) {
         keywords: event.keywords?.length ? event.keywords : [''],
         affectedStates: event.affectedStates || [],
         alertCategories: event.alertCategories || ['winter'],
-        mapCenter: event.mapCenter || { lat: 39.0, lon: -98.0 }
+        mapCenter: event.mapCenter || { lat: 39.0, lon: -98.0 },
+        peakAlertCount: event.peakAlertCount || null,
+        totalAlertsIssued: event.totalAlertsIssued || null
       });
     }
   }, [event]);
@@ -301,7 +306,14 @@ function StormForm({ event, onSave, onCancel, saving }) {
 
       {/* Impacts */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Expected Impacts</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1">
+          {formData.status === 'completed' ? 'Final Summary / Impacts' : 'Expected Impacts'}
+        </label>
+        <p className="text-xs text-slate-500 mb-2">
+          {formData.status === 'completed'
+            ? 'Update with actual storm impacts and final totals'
+            : 'List expected impacts based on forecast'}
+        </p>
         {formData.impacts.map((impact, i) => (
           <div key={i} className="flex gap-2 mb-2">
             <input
@@ -309,7 +321,9 @@ function StormForm({ event, onSave, onCancel, saving }) {
               value={impact}
               onChange={(e) => handleArrayChange('impacts', i, e.target.value)}
               className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
-              placeholder="Heavy snow accumulations of 8-16 inches..."
+              placeholder={formData.status === 'completed'
+                ? "Peak snowfall: 24\" in Denver suburbs..."
+                : "Heavy snow accumulations of 8-16 inches..."}
             />
             {formData.impacts.length > 1 && (
               <button
@@ -330,6 +344,39 @@ function StormForm({ event, onSave, onCancel, saving }) {
           + Add impact
         </button>
       </div>
+
+      {/* Historical Stats - only shown for completed storms */}
+      {formData.status === 'completed' && (
+        <div className="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
+          <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+            <span>📊</span> Historical Statistics
+          </h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Peak Alert Count</label>
+              <input
+                type="number"
+                min="0"
+                value={formData.peakAlertCount || ''}
+                onChange={(e) => handleChange('peakAlertCount', e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+                placeholder="Max alerts at any one time"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Total Alerts Issued</label>
+              <input
+                type="number"
+                min="0"
+                value={formData.totalAlertsIssued || ''}
+                onChange={(e) => handleChange('totalAlertsIssued', e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+                placeholder="Total alerts during event"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Affected States */}
       <div>

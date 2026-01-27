@@ -383,6 +383,33 @@ export default function StormEventPage() {
               </div>
             )}
 
+            {/* Historical Statistics */}
+            {(event.peakAlertCount || event.totalAlertsIssued) && (
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6">
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                    <span>📊</span> Event Statistics
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {event.peakAlertCount && (
+                      <div className="text-center p-3 bg-slate-700/50 rounded-lg">
+                        <div className="text-2xl font-bold text-white">{event.peakAlertCount}</div>
+                        <div className="text-xs text-slate-400">Peak Alerts</div>
+                      </div>
+                    )}
+                    {event.totalAlertsIssued && (
+                      <div className="text-center p-3 bg-slate-700/50 rounded-lg">
+                        <div className="text-2xl font-bold text-white">{event.totalAlertsIssued}</div>
+                        <div className="text-xs text-slate-400">Total Alerts Issued</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Static Map showing affected area */}
             <div className="mb-6">
               <StormMap

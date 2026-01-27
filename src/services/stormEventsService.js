@@ -177,6 +177,9 @@ function transformSingleFromDb(record) {
     endDate: record.end_date,
     description: record.description,
     impacts: record.impacts || [],
+    // Historical stats (for completed storms)
+    peakAlertCount: record.peak_alert_count,
+    totalAlertsIssued: record.total_alerts_issued,
     affectedStates: record.affected_states || [],
     alertCategories: record.alert_categories || [],
     mapCenter: record.map_center || { lat: 39.0, lon: -98.0 },
@@ -212,6 +215,9 @@ function transformToDb(event) {
   if (event.keywords !== undefined) dbEvent.keywords = event.keywords;
   if (event.seoTitle !== undefined) dbEvent.seo_title = event.seoTitle;
   if (event.seoDescription !== undefined) dbEvent.seo_description = event.seoDescription;
+  // Historical stats
+  if (event.peakAlertCount !== undefined) dbEvent.peak_alert_count = event.peakAlertCount;
+  if (event.totalAlertsIssued !== undefined) dbEvent.total_alerts_issued = event.totalAlertsIssued;
 
   return dbEvent;
 }
