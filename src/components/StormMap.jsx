@@ -543,8 +543,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
             <div className="text-sm text-gray-500">
               {location.conditions?.temperature ? (
                 <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
+              ) : location.alertInfo ? (
+                <span>Tap location in sidebar for details</span>
               ) : (
-                <span>Loading weather data...</span>
+                <span>Weather data unavailable</span>
               )}
             </div>
           </div>
@@ -580,8 +582,10 @@ function UserLocationMarker({ location, stormPhase, isMobile = false }) {
             <div className="text-sm text-gray-500">
               {location.conditions?.temperature ? (
                 <span>{location.conditions.temperature}°{location.conditions.temperatureUnit || 'F'} · {location.conditions.shortForecast || 'No data'}</span>
+              ) : location.alertInfo ? (
+                <span>Tap location in sidebar for details</span>
               ) : (
-                <span>Loading weather data...</span>
+                <span>Weather data unavailable</span>
               )}
             </div>
           </div>
