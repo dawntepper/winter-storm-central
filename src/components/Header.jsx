@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackShare, trackSupportClick, trackManualRefresh } from '../utils/analytics';
 
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
@@ -26,10 +27,12 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
     try {
       if (navigator.share) {
         await navigator.share(shareData);
+        trackShare('native');
       } else {
         await navigator.clipboard.writeText(window.location.href);
         setShareMessage('Link copied!');
         setTimeout(() => setShareMessage(''), 2000);
+        trackShare('clipboard');
       }
     } catch (err) {
       // User cancelled or error
@@ -37,8 +40,14 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
         await navigator.clipboard.writeText(window.location.href);
         setShareMessage('Link copied!');
         setTimeout(() => setShareMessage(''), 2000);
+        trackShare('clipboard');
       }
     }
+  };
+
+  const handleRefresh = () => {
+    trackManualRefresh();
+    onRefresh();
   };
 
   return (
@@ -93,7 +102,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             )}
             <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
             <p className="text-xs text-slate-500">
-              Contact: <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 cursor-pointer">@dawntepper_</a>
+              Contact: <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" onClick={() => trackSupportClick('twitter')} className="text-sky-400 hover:text-sky-300 cursor-pointer">@dawntepper_</a>
             </p>
           </div>
 
@@ -122,6 +131,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             href="https://ko-fi.com/dawntepper"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackSupportClick('kofi')}
             className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-amber-400 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 hover:border-amber-500/30 cursor-pointer"
             title="Support stormtracking.io"
           >
@@ -131,7 +141,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
           {/* Refresh Button */}
           <button
-            onClick={onRefresh}
+            onClick={handleRefresh}
             disabled={loading}
             className="p-2 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800
                        disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium

@@ -1,0 +1,467 @@
+/**
+ * Storm Event Page Component
+ * Individual page for tracking specific weather events (e.g., Winter Storm Fern, Nor'easter)
+ */
+
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useExtremeWeather } from '../hooks/useExtremeWeather';
+import StormMap from './StormMap';
+import stormEventsData from '../data/storm-events.json';
+
+// Status badge colors
+const statusColors = {
+  active: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+  forecasted: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+  completed: 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+};
+
+const statusLabels = {
+  active: 'Active Now',
+  forecasted: 'Forecasted',
+  completed: 'Completed'
+};
+
+// Event type icons
+const typeIcons = {
+  winter_storm: '❄️',
+  hurricane: '🌀',
+  severe_weather: '⛈️',
+  flooding: '🌊',
+  heat_wave: '🌡️',
+  wildfire: '🔥',
+  default: '⚠️'
+};
+
+// Format date for display
+function formatDate(dateStr) {
+  const date = new Date(dateStr + 'T12:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// SEO helper - update meta tags dynamically
+function updateMetaTags(event) {
+  if (!event) return;
+
+  // Update title
+  document.title = event.seoTitle || `${event.title} Live Tracker | StormTracking`;
+
+  // Update meta description
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) {
+    metaDesc.setAttribute('content', event.seoDescription || event.description);
+  }
+
+  // Update OG tags
+  let ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', `${event.title} Live Tracker`);
+
+  let ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute('content', event.description);
+
+  let ogUrl = document.querySelector('meta[property="og:url"]');
+  if (ogUrl) ogUrl.setAttribute('content', `https://stormtracking.io/storm/${event.slug}`);
+
+  // Update Twitter tags
+  let twTitle = document.querySelector('meta[property="twitter:title"]');
+  if (twTitle) twTitle.setAttribute('content', `${event.title} Live Tracker`);
+
+  let twDesc = document.querySelector('meta[property="twitter:description"]');
+  if (twDesc) twDesc.setAttribute('content', event.description);
+
+  // Update keywords
+  let metaKeywords = document.querySelector('meta[name="keywords"]');
+  if (metaKeywords && event.keywords) {
+    metaKeywords.setAttribute('content', event.keywords.join(', ') + ', live tracker, real-time alerts, weather tracking');
+  }
+
+  // Update canonical URL
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute('href', `https://stormtracking.io/storm/${event.slug}`);
+}
+
+// Reset meta tags to defaults
+function resetMetaTags() {
+  document.title = 'StormTracking - Real-Time Extreme Weather Alerts & Live Tracker';
+
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) {
+    metaDesc.setAttribute('content', 'Track extreme weather alerts in real-time. Live updates on winter storms, hurricanes, severe weather & more from the National Weather Service. Free weather tracker.');
+  }
+
+  let ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', 'StormTracking - Real-Time Extreme Weather Alerts');
+
+  let ogUrl = document.querySelector('meta[property="og:url"]');
+  if (ogUrl) ogUrl.setAttribute('content', 'https://stormtracking.io');
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute('href', 'https://stormtracking.io');
+}
+
+// Alert card component for event page
+function EventAlertCard({ alert }) {
+  return (
+    <div className="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+      <div className="flex items-start gap-3">
+        <span className="text-lg">
+          {alert.category === 'winter' ? '❄️' :
+           alert.category === 'flood' ? '🌊' :
+           alert.category === 'severe' ? '⛈️' : '⚠️'}
+        </span>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-white">{alert.event}</h4>
+          <p className="text-xs text-slate-400">{alert.location}</p>
+          {alert.headline && (
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{alert.headline}</p>
+          )}
+        </div>
+        {alert.severity && (
+          <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full border border-red-500/30">
+            {alert.severity}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Share button component
+function ShareButton({ event }) {
+  const [shareMessage, setShareMessage] = useState('');
+
+  const handleShare = async () => {
+    const shareUrl = `https://stormtracking.io/storm/${event.slug}`;
+    const shareData = {
+      title: `${event.title} Live Tracker`,
+      text: `Track ${event.title} in real-time with live alerts and radar on StormTracking.io`,
+      url: shareUrl
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareMessage('Link copied!');
+        setTimeout(() => setShareMessage(''), 2000);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareMessage('Link copied!');
+        setTimeout(() => setShareMessage(''), 2000);
+      }
+    }
+
+    // Track share
+    if (window.plausible) {
+      window.plausible('Event Page Share', { props: { event_slug: event.slug } });
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleShare}
+        className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center gap-2 border border-slate-600 cursor-pointer"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+        </svg>
+        Share
+      </button>
+      {shareMessage && (
+        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-emerald-400 whitespace-nowrap bg-slate-800 px-2 py-1 rounded">
+          {shareMessage}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// 404 Not Found component
+function EventNotFound({ slug }) {
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
+      <div className="text-center max-w-md">
+        <div className="text-5xl mb-4">🌪️</div>
+        <h1 className="text-2xl font-bold text-white mb-2">Event Not Found</h1>
+        <p className="text-slate-400 mb-6">
+          We couldn't find a storm event matching "{slug}". It may have been removed or the URL is incorrect.
+        </p>
+        <Link
+          to="/"
+          className="inline-block px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors"
+        >
+          Back to Home
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default function StormEventPage() {
+  const { slug } = useParams();
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Get alerts data
+  const {
+    alerts: alertsData,
+    loading: alertsLoading,
+    refresh: refreshAlerts,
+    getAlertsByCategory
+  } = useExtremeWeather(true);
+
+  // Find the event by slug
+  useEffect(() => {
+    const foundEvent = stormEventsData.events.find(e => e.slug === slug);
+    setEvent(foundEvent || null);
+    setLoading(false);
+
+    if (foundEvent) {
+      updateMetaTags(foundEvent);
+
+      // Track page view
+      if (window.plausible) {
+        window.plausible('Event Page View', {
+          props: {
+            event_slug: foundEvent.slug,
+            event_title: foundEvent.title,
+            event_status: foundEvent.status
+          }
+        });
+      }
+    }
+
+    // Cleanup: reset meta tags when leaving
+    return () => resetMetaTags();
+  }, [slug]);
+
+  // Filter alerts for this event's affected states and categories
+  const filteredAlerts = alertsData?.allAlerts?.filter(alert => {
+    // Check if alert is in an affected state
+    const stateMatch = event?.affectedStates?.some(state =>
+      alert.location?.includes(state) || alert.areaDesc?.includes(state)
+    );
+
+    // Check if alert category matches event categories
+    const categoryMatch = !event?.alertCategories ||
+      event.alertCategories.includes(alert.category);
+
+    return stateMatch && categoryMatch;
+  }) || [];
+
+  // Map alerts limited to 100
+  const mapAlerts = filteredAlerts.slice(0, 100);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-400">Loading event...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return <EventNotFound slug={slug} />;
+  }
+
+  const icon = typeIcons[event.type] || typeIcons.default;
+  const statusColor = statusColors[event.status] || statusColors.forecasted;
+  const statusLabel = statusLabels[event.status] || event.status;
+
+  return (
+    <div className="min-h-screen bg-slate-900">
+      {/* Header */}
+      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          {/* Logo & Back Link */}
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span className="hidden sm:inline text-sm">Back</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📡</span>
+              <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
+            </div>
+          </div>
+
+          {/* Share Button */}
+          <ShareButton event={event} />
+        </div>
+      </header>
+
+      {/* Event Header */}
+      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-start gap-4 mb-4">
+            <span className="text-4xl">{icon}</span>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
+                  {statusLabel}
+                </span>
+                <span className="text-sm text-slate-400">
+                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                </span>
+                <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
+                  {event.typeLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-slate-300 text-sm sm:text-base max-w-3xl">
+            {event.description}
+          </p>
+
+          {/* Affected States */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500">Affected Areas:</span>
+            {event.affectedStates.map(state => (
+              <span key={state} className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded">
+                {state}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+          {/* Left Column: Map */}
+          <div>
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={[]}
+              alerts={mapAlerts}
+              isHero
+              centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
+            />
+          </div>
+
+          {/* Right Column: Alerts & Details */}
+          <div className="space-y-6">
+            {/* Active Alerts */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-white">
+                  Active Alerts ({filteredAlerts.length})
+                </h2>
+                <button
+                  onClick={refreshAlerts}
+                  disabled={alertsLoading}
+                  className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+                </button>
+              </div>
+
+              {alertsLoading && filteredAlerts.length === 0 ? (
+                <div className="p-6 text-center">
+                  <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">Loading alerts...</p>
+                </div>
+              ) : filteredAlerts.length > 0 ? (
+                <div className="max-h-[400px] overflow-y-auto">
+                  {filteredAlerts.slice(0, 20).map(alert => (
+                    <EventAlertCard key={alert.id} alert={alert} />
+                  ))}
+                  {filteredAlerts.length > 20 && (
+                    <div className="p-3 text-center text-xs text-slate-500 border-t border-slate-700">
+                      +{filteredAlerts.length - 20} more alerts
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="text-slate-500 text-sm">
+                    {event.status === 'forecasted'
+                      ? 'Alerts will appear as the event approaches'
+                      : event.status === 'completed'
+                      ? 'This event has concluded'
+                      : 'No active alerts for this event'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Expected Impacts */}
+            {event.impacts && event.impacts.length > 0 && (
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <h2 className="text-base font-semibold text-white">Expected Impacts</h2>
+                </div>
+                <div className="p-4">
+                  <ul className="space-y-2">
+                    {event.impacts.map((impact, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                        <span className="text-amber-500 mt-0.5">•</span>
+                        {impact}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Back to Main Tracker */}
+            <Link
+              to="/"
+              className="block text-center py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+            >
+              View All Weather Alerts →
+            </Link>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="text-center py-6 border-t border-slate-800 px-4">
+        <p className="text-slate-500 text-xs max-w-2xl mx-auto">
+          <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
+          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+          {' '}and follow local emergency management guidance.
+        </p>
+      </footer>
+
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": event.title,
+            "description": event.description,
+            "startDate": event.startDate,
+            "endDate": event.endDate,
+            "eventStatus": event.status === 'completed'
+              ? "https://schema.org/EventEnded"
+              : "https://schema.org/EventScheduled",
+            "location": {
+              "@type": "Place",
+              "name": "United States",
+              "address": {
+                "@type": "PostalAddress",
+                "addressRegion": event.affectedStates.join(', ')
+              }
+            },
+            "url": `https://stormtracking.io/storm/${event.slug}`
+          })
+        }}
+      />
+    </div>
+  );
+}

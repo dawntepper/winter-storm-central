@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWeatherData } from './hooks/useWeatherData';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
 import ExtremeWeatherSection from './components/ExtremeWeatherSection';
+import {
+  startSessionTracking,
+  stopSessionTracking,
+  trackLocationCountChanged,
+  trackAlertTapped,
+  trackAlertAddedToMap,
+  trackLocationViewedOnMap,
+  trackLocationRemoved
+} from './utils/analytics';
 
 // Weather condition to icon mapping
 const getWeatherIcon = (condition) => {
@@ -162,6 +171,17 @@ export default function App() {
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
 
+  // Start session tracking on mount
+  useEffect(() => {
+    startSessionTracking();
+    return () => stopSessionTracking();
+  }, []);
+
+  // Track location count changes
+  useEffect(() => {
+    trackLocationCountChanged(userLocations.length);
+  }, [userLocations.length]);
+
   // Extreme weather alerts (for when no active storm event)
   const {
     alerts: alertsData,
@@ -192,9 +212,7 @@ export default function App() {
       });
 
       // Track alert interaction
-      if (window.plausible) {
-        window.plausible('Alert Tapped', { props: { category: alert.category, event: alert.event } });
-      }
+      trackAlertTapped(alert.category, alert.event);
     }
   };
 
@@ -242,18 +260,26 @@ export default function App() {
     }
 
     // Track
-    if (window.plausible) {
-      window.plausible('Alert Added to Map', { props: { category: alert.category } });
-    }
+    trackAlertAddedToMap(alert.category);
   };
 
   // Handle removing an alert location from map
   const handleRemoveAlertLocation = (locationId) => {
+    const location = alertLocations.find(loc => loc.id === locationId);
+    if (location) {
+      trackLocationRemoved(location.name);
+    }
     setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
   };
 
   // Handle removing a search location from map (and localStorage)
   const handleRemoveSearchLocation = (locationId) => {
+    // Find location name for tracking before removing
+    const location = searchLocations.find(loc => loc.id === locationId);
+    if (location) {
+      trackLocationRemoved(location.name);
+    }
+
     // Remove from state
     setSearchLocations(prev => prev.filter(loc => loc.id !== locationId));
 
@@ -286,6 +312,9 @@ export default function App() {
         lat: location.lat,
         lon: location.lon
       });
+
+      // Track location viewed on map
+      trackLocationViewedOnMap(location.name || location.location);
 
       // On mobile, scroll to the map so user can see the location
       const isMobile = window.innerWidth < 1024; // lg breakpoint
@@ -399,9 +428,16 @@ export default function App() {
                             </svg>
                           </button>
                         </div>
-                        {/* Line 2: Temperature · Condition (indented) */}
+                        {/* Line 2: High/Low · Condition (indented) */}
                         <div className="mt-1 text-xs text-slate-400 pl-6">
-                          {loc.conditions?.temperature ? (
+                          {loc.conditions?.highTemp != null || loc.conditions?.lowTemp != null ? (
+                            <span>
+                              {loc.conditions.highTemp != null && <span>H: {loc.conditions.highTemp}°</span>}
+                              {loc.conditions.highTemp != null && loc.conditions.lowTemp != null && ' / '}
+                              {loc.conditions.lowTemp != null && <span>L: {loc.conditions.lowTemp}°</span>}
+                              {' · '}{loc.conditions.shortForecast || 'No data'}
+                            </span>
+                          ) : loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                           ) : (
                             <span>Loading weather data...</span>
@@ -439,9 +475,16 @@ export default function App() {
                             </svg>
                           </button>
                         </div>
-                        {/* Line 2: Temperature · Condition (indented) */}
+                        {/* Line 2: High/Low · Condition (indented) */}
                         <div className="mt-1 text-xs text-slate-400 pl-6">
-                          {loc.conditions?.temperature ? (
+                          {loc.conditions?.highTemp != null || loc.conditions?.lowTemp != null ? (
+                            <span>
+                              {loc.conditions.highTemp != null && <span>H: {loc.conditions.highTemp}°</span>}
+                              {loc.conditions.highTemp != null && loc.conditions.lowTemp != null && ' / '}
+                              {loc.conditions.lowTemp != null && <span>L: {loc.conditions.lowTemp}°</span>}
+                              {' · '}{loc.conditions.shortForecast || 'No data'}
+                            </span>
+                          ) : loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                           ) : (
                             <span>Loading weather data...</span>
@@ -579,9 +622,16 @@ export default function App() {
                               </svg>
                             </button>
                           </div>
-                          {/* Line 2: Temperature · Condition (indented) */}
+                          {/* Line 2: High/Low · Condition (indented) */}
                           <div className="mt-1 text-xs text-slate-400 pl-6">
-                            {loc.conditions?.temperature ? (
+                            {loc.conditions?.highTemp != null || loc.conditions?.lowTemp != null ? (
+                              <span>
+                                {loc.conditions.highTemp != null && <span>H: {loc.conditions.highTemp}°</span>}
+                                {loc.conditions.highTemp != null && loc.conditions.lowTemp != null && ' / '}
+                                {loc.conditions.lowTemp != null && <span>L: {loc.conditions.lowTemp}°</span>}
+                                {' · '}{loc.conditions.shortForecast || 'No data'}
+                              </span>
+                            ) : loc.conditions?.temperature ? (
                               <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                             ) : (
                               <span>Loading weather data...</span>
@@ -619,9 +669,16 @@ export default function App() {
                               </svg>
                             </button>
                           </div>
-                          {/* Line 2: Temperature · Condition (indented) */}
+                          {/* Line 2: High/Low · Condition (indented) */}
                           <div className="mt-1 text-xs text-slate-400 pl-6">
-                            {loc.conditions?.temperature ? (
+                            {loc.conditions?.highTemp != null || loc.conditions?.lowTemp != null ? (
+                              <span>
+                                {loc.conditions.highTemp != null && <span>H: {loc.conditions.highTemp}°</span>}
+                                {loc.conditions.highTemp != null && loc.conditions.lowTemp != null && ' / '}
+                                {loc.conditions.lowTemp != null && <span>L: {loc.conditions.lowTemp}°</span>}
+                                {' · '}{loc.conditions.shortForecast || 'No data'}
+                              </span>
+                            ) : loc.conditions?.temperature ? (
                               <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
                             ) : (
                               <span>Loading weather data...</span>

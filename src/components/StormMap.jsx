@@ -1,6 +1,14 @@
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
+import {
+  trackRadarToggle,
+  trackAlertsToggle,
+  trackMapReset,
+  trackMapAlertClicked,
+  trackAlertDetailView,
+  trackGeolocationUsed
+} from '../utils/analytics';
 
 /**
  * Full Alert Modal - shows complete alert details
@@ -819,14 +827,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   const handleZoomToLocations = () => {
     setFitTrigger(prev => prev + 1);
-    // Track My Locations viewed
-    if (window.plausible) {
-      window.plausible('My Locations Viewed');
-    }
   };
 
   const handleResetView = () => {
     setResetTrigger(prev => prev + 1);
+    trackMapReset();
   };
 
   const handleMyLocation = () => {
@@ -838,10 +843,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const handleGeoLocated = (coords) => {
     setGeoLoading(false);
     setUserGeoLocation(coords);
-    // Track geolocation use
-    if (window.plausible) {
-      window.plausible('My Location Used');
-    }
+    trackGeolocationUsed();
   };
 
   const handleGeoError = (message) => {
@@ -875,10 +877,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {alerts.length > 0 && (
               <button
                 onClick={() => {
-                  setShowAlerts(!showAlerts);
-                  if (window.plausible) {
-                    window.plausible('Alerts Toggled', { props: { visible: !showAlerts } });
-                  }
+                  const newState = !showAlerts;
+                  setShowAlerts(newState);
+                  trackAlertsToggle(newState, alerts.length);
                 }}
                 className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                   showAlerts
@@ -892,11 +893,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {/* Radar toggle */}
             <button
               onClick={() => {
-                setShowRadar(!showRadar);
-                // Track radar toggle
-                if (window.plausible) {
-                  window.plausible('Radar Toggled');
-                }
+                const newState = !showRadar;
+                setShowRadar(newState);
+                trackRadarToggle(newState);
               }}
               className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                 showRadar
@@ -1042,6 +1041,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {/* View Alert Details Button */}
             <button
               onClick={() => {
+                trackAlertDetailView(hoveredAlert.event, hoveredAlert.severity, hoveredAlert.location, hoveredAlert.category);
+                trackMapAlertClicked(hoveredAlert.event, hoveredAlert.location, hoveredAlert.category);
                 setModalAlert(hoveredAlert);
                 setHoveredAlert(null);
                 setHoverCardPosition(null);
@@ -1106,6 +1107,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {hoveredUserLocation.alertInfo && (
               <button
                 onClick={() => {
+                  // Track the view
+                  trackAlertDetailView(
+                    hoveredUserLocation.alertInfo.event,
+                    hoveredUserLocation.alertInfo.severity,
+                    hoveredUserLocation.name,
+                    hoveredUserLocation.alertInfo.category
+                  );
                   // Create an alert object from alertInfo for the modal
                   setModalAlert({
                     event: hoveredUserLocation.alertInfo.event,

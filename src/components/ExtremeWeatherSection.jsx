@@ -4,7 +4,12 @@
  * Displays when no active storm event, grouped by category
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import {
+  trackCategoryExpanded,
+  trackCategoryCollapsed,
+  trackAlertDetailView
+} from '../utils/analytics';
 
 /**
  * Full Alert Modal - shows complete alert details
@@ -239,6 +244,7 @@ const categoryHeaderColors = {
  */
 function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, defaultExpanded = true }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const expandedAtRef = useRef(null);
 
   if (!alerts || alerts.length === 0) return null;
 
@@ -253,11 +259,25 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
 
   const colors = getCategoryColors();
 
+  const handleToggle = () => {
+    if (isExpanded) {
+      // Collapsing - track time it was open
+      const timeOpen = expandedAtRef.current ? (Date.now() - expandedAtRef.current) / 1000 : 0;
+      trackCategoryCollapsed(category.name, timeOpen);
+      expandedAtRef.current = null;
+    } else {
+      // Expanding
+      trackCategoryExpanded(category.name, alerts.length);
+      expandedAtRef.current = Date.now();
+    }
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <div className="mb-4 rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
       {/* Category Header */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleToggle}
         className="w-full flex items-center justify-between px-4 py-3 hover:brightness-110 transition-all touch-manipulation cursor-pointer"
         style={{ minHeight: '48px', backgroundColor: colors.bg }}
       >
@@ -387,6 +407,14 @@ export default function ExtremeWeatherSection({
   const [selectedAlert, setSelectedAlert] = useState(null);
   const hasAlerts = categories && categories.length > 0;
 
+  // Wrap setSelectedAlert to add tracking
+  const handleShowDetail = (alert) => {
+    if (alert) {
+      trackAlertDetailView(alert.event, alert.severity, alert.location, alert.category);
+    }
+    setSelectedAlert(alert);
+  };
+
   return (
     <div className="rounded-xl border border-slate-600 overflow-hidden border-l-4 border-l-orange-500" style={{ backgroundColor: '#2d3748' }}>
       {/* Alert Detail Modal */}
@@ -436,7 +464,7 @@ export default function ExtremeWeatherSection({
                 alerts={category.alerts}
                 onAlertTap={onAlertTap}
                 onAddToMap={onAddToMap}
-                onShowDetail={setSelectedAlert}
+                onShowDetail={handleShowDetail}
                 onHoverAlert={onHoverAlert}
                 onLeaveAlert={onLeaveAlert}
                 defaultExpanded={false}

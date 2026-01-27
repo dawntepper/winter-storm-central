@@ -1,0 +1,55 @@
+{
+  "events": [
+    {
+      "id": "noreaster-january-2026",
+      "slug": "noreaster-january-2026",
+      "title": "Nor'easter - January 2026",
+      "type": "winter_storm",
+      "typeLabel": "Winter Storm",
+      "status": "forecasted",
+      "startDate": "2026-01-28",
+      "endDate": "2026-01-30",
+      "description": "Major nor'easter expected to impact the Northeast United States with heavy snow, strong winds, and coastal flooding starting January 28.",
+      "impacts": [
+        "Heavy snow accumulations of 8-16 inches in eastern New England",
+        "Blizzard conditions possible along the coast",
+        "Strong winds gusting to 50+ mph",
+        "Coastal flooding during high tide cycles",
+        "Significant travel disruptions expected"
+      ],
+      "affectedStates": ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA"],
+      "alertCategories": ["winter", "flood"],
+      "mapCenter": { "lat": 42.0, "lon": -72.0 },
+      "mapZoom": 6,
+      "keywords": ["noreaster", "northeast storm", "nor'easter january 2026", "winter storm northeast", "new england snow storm"],
+      "seoTitle": "Nor'easter January 2026 Live Tracker | Real-Time Alerts & Radar",
+      "seoDescription": "Track the January 2026 nor'easter in real-time. Live weather alerts, radar, and snow forecasts for New England and Mid-Atlantic states.",
+      "created": "2026-01-27"
+    },
+    {
+      "id": "winter-storm-fern",
+      "slug": "winter-storm-fern",
+      "title": "Winter Storm Fern",
+      "type": "winter_storm",
+      "typeLabel": "Winter Storm",
+      "status": "completed",
+      "startDate": "2026-01-23",
+      "endDate": "2026-01-26",
+      "description": "Winter Storm Fern brought heavy snow and significant ice accumulations across the Southern Plains and Mid-South, causing widespread power outages and travel disruptions.",
+      "impacts": [
+        "Heavy snow of 6-12 inches across Texas, Oklahoma, and Arkansas",
+        "Significant ice accumulations up to 0.5 inches",
+        "Widespread power outages affecting millions",
+        "Dangerous travel conditions for several days"
+      ],
+      "affectedStates": ["TX", "OK", "AR", "LA", "MS", "AL", "GA", "SC", "NC", "TN", "KY"],
+      "alertCategories": ["winter"],
+      "mapCenter": { "lat": 34.0, "lon": -92.0 },
+      "mapZoom": 5,
+      "keywords": ["winter storm fern", "fern tracker", "southern winter storm", "texas ice storm 2026"],
+      "seoTitle": "Winter Storm Fern Live Tracker | Real-Time Alerts & Updates",
+      "seoDescription": "Track Winter Storm Fern in real-time. Live weather alerts, radar, and snow/ice totals across the Southern US.",
+      "created": "2026-01-22"
+    }
+  ]
+}

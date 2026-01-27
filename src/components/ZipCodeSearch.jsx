@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { trackLocationSaved, trackLocationSearch, trackLocationSearchFailed } from '../utils/analytics';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -554,8 +555,22 @@ async function fetchWeatherForLocation(lat, lon, name, zip) {
     const observedSnow = parseAccumulation(gridData, 'snowfallAmount', true);
     const observedIce = parseAccumulation(gridData, 'iceAccumulation', true);
 
-    // Get current conditions
-    const currentConditions = forecastData?.properties?.periods?.[0] || {};
+    // Get forecast conditions (first two periods for high/low)
+    const periods = forecastData?.properties?.periods || [];
+    const firstPeriod = periods[0] || {};
+    const secondPeriod = periods[1] || {};
+
+    // Extract high and low temps from day/night periods
+    let highTemp = null;
+    let lowTemp = null;
+
+    if (firstPeriod.isDaytime) {
+      highTemp = firstPeriod.temperature;
+      lowTemp = secondPeriod.temperature;
+    } else {
+      lowTemp = firstPeriod.temperature;
+      highTemp = secondPeriod.temperature;
+    }
 
     // Determine hazard type
     let hazardType = 'none';
@@ -581,9 +596,12 @@ async function fetchWeatherForLocation(lat, lon, name, zip) {
       iceDanger,
       stormPhase: getStormPhase(),
       conditions: {
-        shortForecast: currentConditions.shortForecast || 'Unknown',
-        temperature: currentConditions.temperature,
-        temperatureUnit: currentConditions.temperatureUnit
+        shortForecast: firstPeriod.shortForecast || 'Unknown',
+        temperature: firstPeriod.temperature,
+        temperatureUnit: firstPeriod.temperatureUnit || 'F',
+        highTemp,
+        lowTemp,
+        periodName: firstPeriod.name || 'Today'
       },
       lastUpdated: new Date().toISOString(),
       error: null
