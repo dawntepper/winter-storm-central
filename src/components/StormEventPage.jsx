@@ -658,6 +658,7 @@ function ShareButton({ event }) {
 // NWS Forecast Maps Section
 function ForecastMapsSection() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedMap, setSelectedMap] = useState('snowfall');
   const [selectedDay, setSelectedDay] = useState('day1');
 
   // Generate date labels: "Today (Jan 28)", "Wed Jan 29", "Thu Jan 30"
@@ -673,10 +674,52 @@ function ForecastMapsSection() {
   const day2Label = getDayLabel(1);
   const day3Label = getDayLabel(2);
 
-  // NWS WPC Forecast Map URLs - one composite map per day
+  // NWS WPC Forecast Map URLs - one map per day per category
   const forecastMaps = {
-    winter_outlook: {
-      label: 'Winter Weather Outlook',
+    snowfall: {
+      label: 'Snow',
+      icon: '❄️',
+      maps: {
+        'day1': {
+          label: day1Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_04_conus.gif',
+          description: 'Snow forecast'
+        },
+        'day2': {
+          label: day2Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_psnow_gt_04_conus.gif',
+          description: 'Snow forecast'
+        },
+        'day3': {
+          label: day3Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_psnow_gt_04_conus.gif',
+          description: 'Snow forecast'
+        }
+      }
+    },
+    ice: {
+      label: 'Ice',
+      icon: '🧊',
+      maps: {
+        'day1': {
+          label: day1Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_pice_gt_25_conus.gif',
+          description: 'Ice forecast'
+        },
+        'day2': {
+          label: day2Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_pice_gt_25_conus.gif',
+          description: 'Ice forecast'
+        },
+        'day3': {
+          label: day3Label,
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_pice_gt_25_conus.gif',
+          description: 'Ice forecast'
+        }
+      }
+    },
+    composite: {
+      label: 'Composite',
       icon: '🗺️',
       maps: {
         'day1': {
@@ -698,7 +741,7 @@ function ForecastMapsSection() {
     }
   };
 
-  const currentMapType = forecastMaps.winter_outlook;
+  const currentMapType = forecastMaps[selectedMap];
   const mapOptions = Object.keys(currentMapType.maps);
   const currentMap = currentMapType.maps[selectedDay] || currentMapType.maps[mapOptions[0]];
 
@@ -723,6 +766,25 @@ function ForecastMapsSection() {
       </button>
 
       {isExpanded && (<>
+      {/* Map Type Selector */}
+      <div className="px-4 py-2 border-t border-slate-700 bg-slate-800">
+        <div className="flex items-center gap-2 flex-wrap">
+          {Object.entries(forecastMaps).map(([key, map]) => (
+            <button
+              key={key}
+              onClick={() => setSelectedMap(key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+                selectedMap === key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {map.icon} {map.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Day Selector - Dropdown */}
       <div className="px-4 py-2 border-b border-slate-700 bg-slate-700/30">
         <div className="flex items-center gap-2">
