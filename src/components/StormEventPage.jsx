@@ -862,6 +862,10 @@ export default function StormEventPage() {
                           setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
                           setSelectedStateCode(state);  // Highlight state in alert cards
                           setSelectedAlertId(null);  // Clear any selected alert
+                          // Scroll to map on mobile
+                          if (mobileMapRef.current) {
+                            mobileMapRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
                         }
                       }}
                       title={`${stateName} - ${alertCount} active alert${alertCount !== 1 ? 's' : ''} (click to zoom)`}
