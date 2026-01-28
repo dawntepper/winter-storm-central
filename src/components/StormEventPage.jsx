@@ -467,8 +467,8 @@ export default function StormEventPage() {
     return stateMatch && categoryMatch;
   }) || [];
 
-  // Map alerts limited to 100
-  const mapAlerts = filteredAlerts.slice(0, 100);
+  // Show all alerts for selected states on map
+  const mapAlerts = filteredAlerts;
 
   // Handle alert click - show modal and center map
   const handleAlertClick = (alert) => {
@@ -650,7 +650,7 @@ export default function StormEventPage() {
                 userLocations={[]}
                 alerts={[]}
                 isHero
-                centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
+                centerOn={event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: Date.now() } : null}
               />
             </div>
 
@@ -673,7 +673,7 @@ export default function StormEventPage() {
                 userLocations={[]}
                 alerts={mapAlerts}
                 isHero
-                centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, id: 'initial' } : null)}
+                centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
               />
             </div>
 
