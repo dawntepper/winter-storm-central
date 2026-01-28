@@ -1103,12 +1103,12 @@ export default function StormEventPage() {
         </div>
       </div>
 
-      {/* Forecast Maps Section - Only for active/forecasted events */}
-      {event.status !== 'completed' && (
+      {/* Forecast Maps Section - Hidden for now, revisiting design */}
+      {/* {event.status !== 'completed' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <ForecastMapsSection />
         </div>
-      )}
+      )} */}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
