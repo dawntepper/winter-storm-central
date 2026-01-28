@@ -6,7 +6,7 @@
 import { getStateCentroid, getCoordinatesFromFIPS } from '../data/stateCentroids';
 
 const ALERTS_API = 'https://api.weather.gov/alerts/active';
-const CACHE_KEY = 'stormtracker_noaa_alerts_v2'; // v2: expanded event types + state centroids
+const CACHE_KEY = 'stormtracker_noaa_alerts_v3'; // v3: fixed categorized alerts count
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Event types to include - Warnings, Watches, and significant Advisories
