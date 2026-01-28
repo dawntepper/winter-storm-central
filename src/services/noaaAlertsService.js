@@ -150,6 +150,18 @@ const MARINE_ZONE_PREFIXES = [
 ];
 
 /**
+ * Add small random offset to prevent exact overlaps
+ * Spread is in degrees (roughly 0.1 = ~7 miles)
+ */
+function addJitter(coords, spread = 0.15) {
+  return {
+    ...coords,
+    lat: coords.lat + (Math.random() - 0.5) * spread,
+    lon: coords.lon + (Math.random() - 0.5) * spread
+  };
+}
+
+/**
  * Extract coordinates from alert geometry or use state centroid as fallback
  */
 function extractCoordinates(alert) {
@@ -166,27 +178,36 @@ function extractCoordinates(alert) {
   }
 
   // Check if this is a marine zone (skip these for now)
-  const ugc = alert.properties?.geocode?.UGC?.[0] || '';
-  const zonePrefix = ugc.substring(0, 2);
+  const ugcCodes = alert.properties?.geocode?.UGC || [];
+  const firstUgc = ugcCodes[0] || '';
+  const zonePrefix = firstUgc.substring(0, 2);
   if (MARINE_ZONE_PREFIXES.includes(zonePrefix)) {
     return null; // Skip marine zones
   }
 
-  // Try to get coordinates from SAME/FIPS code (state centroid)
-  const sameCode = alert.properties?.geocode?.SAME?.[0];
-  if (sameCode) {
-    const coords = getCoordinatesFromFIPS(sameCode);
-    if (coords) {
-      return { ...coords, source: 'fips' };
+  // Try to get coordinates from SAME/FIPS codes
+  // Use all SAME codes to calculate average position (better than single code)
+  const sameCodes = alert.properties?.geocode?.SAME || [];
+  if (sameCodes.length > 0) {
+    const coordsList = sameCodes
+      .map(code => getCoordinatesFromFIPS(code))
+      .filter(Boolean);
+
+    if (coordsList.length > 0) {
+      const avgLat = coordsList.reduce((sum, c) => sum + c.lat, 0) / coordsList.length;
+      const avgLon = coordsList.reduce((sum, c) => sum + c.lon, 0) / coordsList.length;
+      // Add jitter to spread out alerts that share similar coordinates
+      return addJitter({ lat: avgLat, lon: avgLon, source: 'fips' }, 0.2);
     }
   }
 
-  // Try to get from UGC state code
-  if (ugc && ugc.length >= 2) {
-    const stateCode = ugc.substring(0, 2);
+  // Try to get from UGC state code with jitter
+  if (firstUgc && firstUgc.length >= 2) {
+    const stateCode = firstUgc.substring(0, 2);
     const coords = getStateCentroid(stateCode);
     if (coords) {
-      return { ...coords, source: 'state' };
+      // Larger jitter for state-level fallback to spread alerts across state
+      return addJitter({ ...coords, source: 'state' }, 0.5);
     }
   }
 
