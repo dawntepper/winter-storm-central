@@ -4,6 +4,7 @@ import { trackShare, trackSupportClick, trackManualRefresh } from '../utils/anal
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [showBetaTooltip, setShowBetaTooltip] = useState(false);
 
   const phaseLabels = {
     'pre-storm': 'Forecast Mode',
@@ -61,6 +62,24 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 <span className="text-xl sm:text-2xl">📡</span>
                 StormTracking
               </h1>
+              {/* Beta Badge with tooltip */}
+              <div
+                className="relative"
+                onMouseEnter={() => setShowBetaTooltip(true)}
+                onMouseLeave={() => setShowBetaTooltip(false)}
+              >
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-900 rounded cursor-help">
+                  BETA
+                </span>
+                {showBetaTooltip && (
+                  <div className="absolute top-full left-0 mt-1 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 w-64">
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      StormTracking is in active development. For official weather information, please visit{' '}
+                      <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+                    </p>
+                  </div>
+                )}
+              </div>
               {/* Info icon with disclaimer tooltip on hover */}
               <div
                 className="relative"
