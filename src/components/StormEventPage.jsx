@@ -660,6 +660,19 @@ function ForecastMapsSection({ eventType }) {
   const [selectedMap, setSelectedMap] = useState('snowfall');
   const [selectedDay, setSelectedDay] = useState('day1_4');
 
+  // Generate date labels: "Today (Jan 28)", "Wed Jan 29", "Thu Jan 30"
+  const getDayLabel = (dayOffset) => {
+    const date = new Date();
+    date.setDate(date.getDate() + dayOffset);
+    const formatted = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    if (dayOffset === 0) return `Today (${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    return formatted;
+  };
+
+  const day1Label = getDayLabel(0);
+  const day2Label = getDayLabel(1);
+  const day3Label = getDayLabel(2);
+
   // NWS WPC Forecast Map URLs
   const forecastMaps = {
     snowfall: {
@@ -667,29 +680,29 @@ function ForecastMapsSection({ eventType }) {
       icon: '❄️',
       maps: {
         'day1_4': {
-          label: 'Day 1 (4"+)',
+          label: `${day1Label} (4"+)`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_04_conus.gif',
-          description: 'Day 1 probability of 4+ inches of snow'
+          description: 'Probability of 4+ inches of snow'
         },
         'day1_8': {
-          label: 'Day 1 (8"+)',
+          label: `${day1Label} (8"+)`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_08_conus.gif',
-          description: 'Day 1 probability of 8+ inches of snow'
+          description: 'Probability of 8+ inches of snow'
         },
         'day1_12': {
-          label: 'Day 1 (12"+)',
+          label: `${day1Label} (12"+)`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_12_conus.gif',
-          description: 'Day 1 probability of 12+ inches of snow'
+          description: 'Probability of 12+ inches of snow'
         },
         'day2_4': {
-          label: 'Day 2 (4"+)',
+          label: `${day2Label} (4"+)`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_psnow_gt_04_conus.gif',
-          description: 'Day 2 probability of 4+ inches of snow'
+          description: 'Probability of 4+ inches of snow'
         },
         'day3_4': {
-          label: 'Day 3 (4"+)',
+          label: `${day3Label} (4"+)`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_psnow_gt_04_conus.gif',
-          description: 'Day 3 probability of 4+ inches of snow'
+          description: 'Probability of 4+ inches of snow'
         }
       }
     },
@@ -698,19 +711,19 @@ function ForecastMapsSection({ eventType }) {
       icon: '🧊',
       maps: {
         'day1': {
-          label: 'Day 1',
+          label: day1Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_pice_gt_25_conus.gif',
-          description: 'Day 1 probability of 0.25"+ ice accumulation'
+          description: 'Probability of 0.25"+ ice accumulation'
         },
         'day2': {
-          label: 'Day 2',
+          label: day2Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_pice_gt_25_conus.gif',
-          description: 'Day 2 probability of 0.25"+ ice accumulation'
+          description: 'Probability of 0.25"+ ice accumulation'
         },
         'day3': {
-          label: 'Day 3',
+          label: day3Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_pice_gt_25_conus.gif',
-          description: 'Day 3 probability of 0.25"+ ice accumulation'
+          description: 'Probability of 0.25"+ ice accumulation'
         }
       }
     },
@@ -719,19 +732,19 @@ function ForecastMapsSection({ eventType }) {
       icon: '🗺️',
       maps: {
         'day1': {
-          label: 'Day 1',
+          label: day1Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_composite_conus.gif',
-          description: 'Day 1 composite winter weather hazards'
+          description: 'Composite winter weather hazards'
         },
         'day2': {
-          label: 'Day 2',
+          label: day2Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_composite_conus.gif',
-          description: 'Day 2 composite winter weather hazards'
+          description: 'Composite winter weather hazards'
         },
         'day3': {
-          label: 'Day 3',
+          label: day3Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_composite_conus.gif',
-          description: 'Day 3 composite winter weather hazards'
+          description: 'Composite winter weather hazards'
         }
       }
     }
@@ -781,23 +794,21 @@ function ForecastMapsSection({ eventType }) {
         </div>
       </div>
 
-      {/* Day/Option Selector */}
+      {/* Day/Option Selector - Dropdown */}
       <div className="px-4 py-2 border-b border-slate-700 bg-slate-700/30">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">View:</span>
-          {Object.entries(currentMapType.maps).map(([key, map]) => (
-            <button
-              key={key}
-              onClick={() => setSelectedDay(key)}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
-                selectedDay === key
-                  ? 'bg-sky-500 text-white'
-                  : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
-              }`}
-            >
-              {map.label}
-            </button>
-          ))}
+          <select
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            className="bg-slate-600 text-white text-xs font-medium rounded-lg px-3 py-1.5 border border-slate-500 focus:outline-none focus:border-sky-500 cursor-pointer"
+          >
+            {Object.entries(currentMapType.maps).map(([key, map]) => (
+              <option key={key} value={key}>
+                {map.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
