@@ -804,6 +804,61 @@ function StormListItem({ event, onEdit, onDelete, onStatusChange, onTogglePublis
   );
 }
 
+// Site Settings Keys
+const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
+
+function getSiteSettings() {
+  try {
+    const saved = localStorage.getItem(SITE_SETTINGS_KEY);
+    return saved ? JSON.parse(saved) : { showBetaBadge: true };
+  } catch {
+    return { showBetaBadge: true };
+  }
+}
+
+function saveSiteSettings(settings) {
+  localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(settings));
+  // Dispatch event so Header can react to changes
+  window.dispatchEvent(new CustomEvent('siteSettingsChanged', { detail: settings }));
+}
+
+// Site Settings Panel
+function SiteSettingsPanel() {
+  const [settings, setSettings] = useState(getSiteSettings);
+
+  const handleToggleBeta = () => {
+    const newSettings = { ...settings, showBetaBadge: !settings.showBetaBadge };
+    setSettings(newSettings);
+    saveSiteSettings(newSettings);
+  };
+
+  return (
+    <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 mb-6">
+      <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <span>⚙️</span> Site Settings
+      </h3>
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-sm text-white">Show Beta Badge</span>
+          <p className="text-xs text-slate-500">Display the BETA badge and tooltip next to the logo</p>
+        </div>
+        <button
+          onClick={handleToggleBeta}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+            settings.showBetaBadge ? 'bg-sky-600' : 'bg-slate-600'
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              settings.showBetaBadge ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Main admin component
 export default function AdminStorms() {
   const [authenticated, setAuthenticated] = useState(
@@ -937,6 +992,9 @@ export default function AdminStorms() {
             <button onClick={() => setError(null)} className="ml-2 underline cursor-pointer">Dismiss</button>
           </div>
         )}
+
+        {/* Site Settings - always visible */}
+        <SiteSettingsPanel />
 
         {showForm ? (
           <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">

@@ -1,10 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trackShare, trackSupportClick, trackManualRefresh } from '../utils/analytics';
+
+const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
+
+function getSiteSettings() {
+  try {
+    const saved = localStorage.getItem(SITE_SETTINGS_KEY);
+    return saved ? JSON.parse(saved) : { showBetaBadge: true };
+  } catch {
+    return { showBetaBadge: true };
+  }
+}
 
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showBetaTooltip, setShowBetaTooltip] = useState(false);
+  const [showBetaBadge, setShowBetaBadge] = useState(() => getSiteSettings().showBetaBadge);
+
+  // Listen for settings changes from admin
+  useEffect(() => {
+    const handleSettingsChange = (e) => {
+      setShowBetaBadge(e.detail?.showBetaBadge ?? true);
+    };
+    window.addEventListener('siteSettingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('siteSettingsChanged', handleSettingsChange);
+  }, []);
 
   const phaseLabels = {
     'pre-storm': 'Forecast Mode',
@@ -63,23 +84,25 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 StormTracking
               </h1>
               {/* Beta Badge with tooltip */}
-              <div
-                className="relative"
-                onMouseEnter={() => setShowBetaTooltip(true)}
-                onMouseLeave={() => setShowBetaTooltip(false)}
-              >
-                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-900 rounded cursor-help">
-                  BETA
-                </span>
-                {showBetaTooltip && (
-                  <div className="absolute top-full left-0 mt-1 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 w-64">
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      StormTracking is in active development. For official weather information, please visit{' '}
-                      <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-                    </p>
-                  </div>
-                )}
-              </div>
+              {showBetaBadge && (
+                <div
+                  className="relative"
+                  onMouseEnter={() => setShowBetaTooltip(true)}
+                  onMouseLeave={() => setShowBetaTooltip(false)}
+                >
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-900 rounded cursor-help">
+                    BETA
+                  </span>
+                  {showBetaTooltip && (
+                    <div className="absolute top-full left-0 mt-1 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 w-64">
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        StormTracking is in active development. For official weather information, please visit{' '}
+                        <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Info icon with disclaimer tooltip on hover */}
               <div
                 className="relative"

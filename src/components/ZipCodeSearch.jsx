@@ -905,13 +905,13 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
 
   return (
     <div className="space-y-4">
-      {/* Input Section */}
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700">
-        {/* Collapsible Header - always clickable */}
+      {/* Input Section - Enhanced contrast */}
+      <div className="rounded-lg border border-slate-600 shadow-lg overflow-hidden">
+        {/* Collapsible Header - darker for better contrast */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-700/30 transition-all"
+          className="w-full px-6 py-4 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all"
         >
           <div className="flex flex-col items-start gap-0.5">
             <div className="flex items-center gap-3">
@@ -946,9 +946,9 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
           </svg>
         </button>
 
-        {/* Collapsible Content */}
+        {/* Collapsible Content - solid background */}
         {isExpanded && (
-          <div className="px-4 pb-4 border-t border-slate-700/50">
+          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600">
             <div className="flex items-center gap-3 pt-3 mb-3">
               {/* Search mode toggle */}
               <div className="flex items-center gap-1 text-xs">
@@ -1011,7 +1011,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
               type="button"
               onClick={handleCitySelect}
               disabled={loading || !selectedState || !selectedCity}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
@@ -1034,7 +1034,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
             <button
               type="submit"
               disabled={loading || zip.length !== 5}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>

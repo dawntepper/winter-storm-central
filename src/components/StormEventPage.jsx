@@ -3,7 +3,7 @@
  * Individual page for tracking specific weather events (e.g., Winter Storm Fern, Nor'easter)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
@@ -258,13 +258,203 @@ function AlertDetailModal({ alert, onClose }) {
   );
 }
 
-// Alert category group with collapsible list
-function AlertCategoryGroup({ category, alerts, onAlertClick, defaultExpanded = true }) {
+// Threshold for grouping by state
+const STATE_GROUP_THRESHOLD = 5;
+
+// Individual alert item with expandable details (similar to main page AlertCard)
+function EventAlertItem({ alert, onZoomToAlert, onShowDetail, isEven = false }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleClick = () => {
+    // First tap: zoom to location and expand details
+    if (!isExpanded) {
+      onZoomToAlert(alert);
+      setIsExpanded(true);
+    }
+  };
+
+  const handleClose = (e) => {
+    e.stopPropagation();
+    setIsExpanded(false);
+  };
+
+  return (
+    <div className={`border-t border-slate-600/30 ${isEven ? 'bg-slate-600/40' : 'bg-slate-700/40'}`}>
+      {/* Main row - city info on left, buttons on right when expanded */}
+      <div className="flex items-center px-3 py-2 hover:bg-slate-500/40 transition-colors">
+        <button
+          onClick={handleClick}
+          className="flex-1 text-left cursor-pointer min-w-0"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-medium text-white truncate">{alert.location}</h4>
+              <p className="text-xs text-slate-400">{alert.event}</p>
+            </div>
+            {!isExpanded && alert.severity && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded-full border border-red-500/30 flex-shrink-0">
+                {alert.severity}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* Inline action buttons when expanded */}
+        {isExpanded && (
+          <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShowDetail(alert);
+              }}
+              className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            >
+              View Alert
+            </button>
+            <button
+              onClick={handleClose}
+              className="p-1 text-slate-400 hover:text-white bg-slate-600 hover:bg-slate-500 rounded transition-colors cursor-pointer"
+              title="Close"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Alert headline preview - shown below when expanded */}
+      {isExpanded && alert.headline && (
+        <div className="px-3 py-2 bg-amber-900/20 border-t border-amber-500/20">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-400 mt-0.5 text-sm">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm text-amber-200 font-medium">{alert.headline}</p>
+              {alert.expires && (
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Expires: {new Date(alert.expires).toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Group alerts by state code
+function groupAlertsByState(alerts) {
+  const byState = {};
+  for (const alert of alerts) {
+    const state = alert.state || 'Unknown';
+    if (!byState[state]) {
+      byState[state] = [];
+    }
+    byState[state].push(alert);
+  }
+  return Object.entries(byState)
+    .map(([code, stateAlerts]) => ({
+      code,
+      name: STATE_NAMES[code] || code,
+      alerts: stateAlerts
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// State group within a category (collapsible)
+function StateAlertGroup({ state, alerts, onZoomToAlert, onShowDetail, onStateZoom, categoryColor, isSelected = false }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Auto-expand when selected
+  useEffect(() => {
+    if (isSelected) {
+      setIsExpanded(true);
+    }
+  }, [isSelected]);
+
+  const handleStateZoom = (e) => {
+    e.stopPropagation();
+    if (onStateZoom) {
+      onStateZoom(state.code);
+    }
+  };
+
+  return (
+    <div
+      className="border-t border-slate-600/30"
+      style={isSelected ? {
+        borderLeft: '4px solid #10b981',
+        backgroundColor: 'rgba(6, 78, 59, 0.4)'
+      } : {}}
+    >
+      <div
+        className={`flex items-center transition-colors ${isSelected ? '' : 'bg-slate-700/50 hover:bg-slate-600/50'}`}
+        style={isSelected ? { backgroundColor: 'rgba(6, 78, 59, 0.5)' } : {}}
+      >
+        <button
+          onClick={(e) => {
+            setIsExpanded(!isExpanded);
+            // Also zoom to state when clicking the title
+            if (onStateZoom) {
+              onStateZoom(state.code);
+            }
+          }}
+          className="flex-1 flex items-center justify-between px-3 py-2 cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-200">{state.name}</span>
+            <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+              {alerts.length}
+            </span>
+          </div>
+          <svg
+            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {/* Zoom to state button */}
+        <button
+          onClick={handleStateZoom}
+          className="p-2 text-slate-400 hover:text-sky-400 transition-colors cursor-pointer"
+          title={`Zoom to ${state.name}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </button>
+      </div>
+      {isExpanded && (
+        <div>
+          {alerts.map((alert, index) => (
+            <EventAlertItem
+              key={alert.id}
+              alert={alert}
+              onZoomToAlert={onZoomToAlert}
+              onShowDetail={onShowDetail}
+              isEven={index % 2 === 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Alert category group with collapsible list (groups by state if many alerts)
+function AlertCategoryGroup({ category, alerts, onZoomToAlert, onShowDetail, onStateZoom, selectedStateCode, defaultExpanded = true }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   if (!alerts || alerts.length === 0) return null;
 
   const colors = categoryHeaderColors[category.id] || categoryHeaderColors.default;
+  const shouldGroupByState = alerts.length > STATE_GROUP_THRESHOLD;
+  const stateGroups = shouldGroupByState ? groupAlertsByState(alerts) : null;
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
@@ -293,30 +483,111 @@ function AlertCategoryGroup({ category, alerts, onAlertClick, defaultExpanded = 
         </svg>
       </button>
 
-      {/* Alerts List */}
+      {/* Content - either state groups or flat alert list */}
       {isExpanded && (
-        <div className="max-h-[250px] overflow-y-auto">
-          {alerts.map((alert, index) => (
-            <div
-              key={alert.id}
-              onClick={() => onAlertClick(alert)}
-              className={`px-3 py-2 border-t border-slate-600/30 cursor-pointer hover:bg-slate-600/50 transition-colors ${
-                index % 2 === 0 ? 'bg-slate-700/40' : 'bg-slate-600/40'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-white truncate">{alert.location}</h4>
-                  <p className="text-xs text-slate-400">{alert.event}</p>
-                </div>
-                {alert.severity && (
-                  <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded-full border border-red-500/30 flex-shrink-0">
-                    {alert.severity}
-                  </span>
-                )}
-              </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {shouldGroupByState ? (
+            stateGroups.map((state) => (
+              <StateAlertGroup
+                key={state.code}
+                state={state}
+                alerts={state.alerts}
+                onZoomToAlert={onZoomToAlert}
+                onShowDetail={onShowDetail}
+                onStateZoom={onStateZoom}
+                categoryColor={colors.border}
+                isSelected={selectedStateCode === state.code}
+              />
+            ))
+          ) : (
+            alerts.map((alert, index) => (
+              <EventAlertItem
+                key={alert.id}
+                alert={alert}
+                onZoomToAlert={onZoomToAlert}
+                onShowDetail={onShowDetail}
+                isEven={index % 2 === 1}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mobile-only collapsed alerts card (shown above map on mobile)
+function MobileAlertsCard({ filteredAlerts, alertsLoading, refreshAlerts, handleZoomToAlert, handleShowDetail, handleStateZoom, selectedStateCode }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-amber-500">⚠️</span>
+          <h2 className="text-base font-semibold text-white">
+            Active Alerts ({filteredAlerts.length})
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              refreshAlerts();
+            }}
+            disabled={alertsLoading}
+            className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+          </button>
+          <svg
+            className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Expandable Content */}
+      {isExpanded && (
+        <div className="border-t border-slate-700">
+          {alertsLoading && filteredAlerts.length === 0 ? (
+            <div className="p-6 text-center">
+              <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-500">Loading alerts...</p>
             </div>
-          ))}
+          ) : filteredAlerts.length > 0 ? (
+            <div className="max-h-[400px] overflow-y-auto">
+              {CATEGORY_ORDER.map(categoryId => {
+                const category = ALERT_CATEGORIES[categoryId];
+                const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
+                if (categoryAlerts.length === 0) return null;
+                return (
+                  <AlertCategoryGroup
+                    key={categoryId}
+                    category={category}
+                    alerts={categoryAlerts}
+                    onZoomToAlert={handleZoomToAlert}
+                    onShowDetail={handleShowDetail}
+                    onStateZoom={handleStateZoom}
+                    selectedStateCode={selectedStateCode}
+                    defaultExpanded={false}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-6 text-center">
+              <p className="text-slate-500 text-sm">No active alerts for this event</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -402,8 +673,11 @@ export default function StormEventPage() {
   const { slug } = useParams();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState(null);  // For the detail modal
+  const [selectedAlertId, setSelectedAlertId] = useState(null);  // For green marker on map
+  const [selectedStateCode, setSelectedStateCode] = useState(null);  // For highlighted state border
   const [mapCenterOn, setMapCenterOn] = useState(null);
+  const mobileMapRef = useRef(null);  // Ref for scrolling to map on mobile
 
   // Get alerts data
   const {
@@ -470,11 +744,31 @@ export default function StormEventPage() {
   // Show all alerts for selected states on map
   const mapAlerts = filteredAlerts;
 
-  // Handle alert click - show modal and center map
-  const handleAlertClick = (alert) => {
-    setSelectedAlert(alert);
+  // Handle zoom to alert - center map on alert location (first click) and scroll to map
+  const handleZoomToAlert = (alert) => {
     if (alert.lat && alert.lon) {
       setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+      setSelectedAlertId(alert.id);  // Mark this alert as selected (green marker)
+
+      // Scroll to map on mobile
+      if (mobileMapRef.current) {
+        mobileMapRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  // Handle showing alert detail modal (separate action)
+  const handleShowDetail = (alert) => {
+    setSelectedAlert(alert);
+  };
+
+  // Handle state zoom - center map on state centroid
+  const handleStateZoom = (stateCode) => {
+    const coords = STATE_CENTROIDS[stateCode];
+    if (coords) {
+      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+      setSelectedStateCode(stateCode);  // Mark this state as selected (border highlight)
+      setSelectedAlertId(null);  // Clear any selected alert
     }
   };
 
@@ -554,16 +848,23 @@ export default function StormEventPage() {
               const stateName = STATE_NAMES[state] || state;
               const alertCount = filteredAlerts.filter(a => a.state === state).length;
 
+              const isStateSelected = selectedStateCode === state;
               return (
                 <button
                   key={state}
                   onClick={() => {
                     if (coords) {
                       setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+                      setSelectedStateCode(state);  // Highlight state in alert cards
+                      setSelectedAlertId(null);  // Clear any selected alert
                     }
                   }}
                   title={`${stateName} - ${alertCount} active alert${alertCount !== 1 ? 's' : ''} (click to zoom)`}
-                  className="text-xs px-2 py-0.5 bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white rounded cursor-pointer transition-colors flex items-center gap-1"
+                  className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors flex items-center gap-1 ${
+                    isStateSelected
+                      ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                      : 'bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white'
+                  }`}
                 >
                   {state}
                   {alertCount > 0 && (
@@ -664,54 +965,87 @@ export default function StormEventPage() {
           </div>
         ) : (
           /* ACTIVE/FORECASTED EVENT - Live Tracker */
-          <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-            {/* Left Column: Map */}
-            <div>
-              <StormMap
-                weatherData={{}}
-                stormPhase="active"
-                userLocations={[]}
-                alerts={mapAlerts}
-                isHero
-                centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+          <>
+            {/* ===== MOBILE LAYOUT ===== */}
+            <div className="lg:hidden space-y-4">
+              {/* Mobile: Collapsed Alerts Card (above map) */}
+              <MobileAlertsCard
+                filteredAlerts={filteredAlerts}
+                alertsLoading={alertsLoading}
+                refreshAlerts={refreshAlerts}
+                handleZoomToAlert={handleZoomToAlert}
+                handleShowDetail={handleShowDetail}
+                handleStateZoom={handleStateZoom}
+                selectedStateCode={selectedStateCode}
               />
+
+              {/* Mobile: Map */}
+              <div ref={mobileMapRef}>
+                <StormMap
+                  weatherData={{}}
+                  stormPhase="active"
+                  userLocations={[]}
+                  alerts={mapAlerts}
+                  isHero
+                  centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                  selectedAlertId={selectedAlertId}
+                />
+              </div>
             </div>
 
-            {/* Right Column: Alerts & Details */}
-            <div className="space-y-4">
-              {/* Active Alerts Header */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-white">
-                  Active Alerts ({filteredAlerts.length})
-                </h2>
-                <button
-                  onClick={refreshAlerts}
-                  disabled={alertsLoading}
-                  className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
-                </button>
+            {/* ===== DESKTOP LAYOUT ===== */}
+            <div className="hidden lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
+              {/* Left Column: Map (~60% on desktop) */}
+              <div>
+                <StormMap
+                  weatherData={{}}
+                  stormPhase="active"
+                  userLocations={[]}
+                  alerts={mapAlerts}
+                  isHero
+                  centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                  selectedAlertId={selectedAlertId}
+                />
               </div>
 
-              {alertsLoading && filteredAlerts.length === 0 ? (
-                <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
-                  <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Loading alerts...</p>
+              {/* Right Column: Alerts & Details (~40% on desktop) */}
+              <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+                {/* Active Alerts Header */}
+                <div className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3 border border-slate-700">
+                  <h2 className="text-base font-semibold text-white">
+                    Active Alerts ({filteredAlerts.length})
+                  </h2>
+                  <button
+                    onClick={refreshAlerts}
+                    disabled={alertsLoading}
+                    className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+                  </button>
                 </div>
-              ) : filteredAlerts.length > 0 ? (
-                <div className="space-y-3">
-                  {/* Group alerts by category */}
-                  {CATEGORY_ORDER.map(categoryId => {
-                    const category = ALERT_CATEGORIES[categoryId];
-                    const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
-                    if (categoryAlerts.length === 0) return null;
-                    return (
-                      <AlertCategoryGroup
-                        key={categoryId}
-                        category={category}
-                        alerts={categoryAlerts}
-                        onAlertClick={handleAlertClick}
-                        defaultExpanded={true}
+
+                {alertsLoading && filteredAlerts.length === 0 ? (
+                  <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
+                    <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-xs text-slate-500">Loading alerts...</p>
+                  </div>
+                ) : filteredAlerts.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* Group alerts by category */}
+                    {CATEGORY_ORDER.map(categoryId => {
+                      const category = ALERT_CATEGORIES[categoryId];
+                      const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
+                      if (categoryAlerts.length === 0) return null;
+                      return (
+                        <AlertCategoryGroup
+                          key={categoryId}
+                          category={category}
+                          alerts={categoryAlerts}
+                          onZoomToAlert={handleZoomToAlert}
+                          onShowDetail={handleShowDetail}
+                          onStateZoom={handleStateZoom}
+                          selectedStateCode={selectedStateCode}
+                          defaultExpanded={true}
                       />
                     );
                   })}
@@ -756,6 +1090,7 @@ export default function StormEventPage() {
               </Link>
             </div>
           </div>
+          </>
         )}
       </main>
 

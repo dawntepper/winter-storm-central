@@ -4,7 +4,7 @@
  * Displays when no active storm event, grouped by category
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   trackCategoryExpanded,
   trackCategoryCollapsed,
@@ -283,31 +283,72 @@ function groupAlertsByState(alerts) {
 /**
  * State group within a category (collapsible)
  */
-function StateGroup({ state, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, categoryColor }) {
+function StateGroup({ state, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, onStateZoom, categoryColor, isSelected = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Auto-expand when selected
+  useEffect(() => {
+    if (isSelected) {
+      setIsExpanded(true);
+    }
+  }, [isSelected]);
+
+  const handleStateZoom = (e) => {
+    e.stopPropagation();
+    if (onStateZoom) {
+      onStateZoom(state.code);
+    }
+  };
+
   return (
-    <div className="border-t border-slate-600/30">
+    <div
+      className="border-t border-slate-600/30"
+      style={isSelected ? {
+        borderLeft: '4px solid #10b981',
+        backgroundColor: 'rgba(6, 78, 59, 0.4)'
+      } : {}}
+    >
       {/* State Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-slate-700/50 hover:bg-slate-600/50 transition-colors cursor-pointer"
+      <div
+        className={`flex items-center transition-colors ${isSelected ? '' : 'bg-slate-700/50 hover:bg-slate-600/50'}`}
+        style={isSelected ? { backgroundColor: 'rgba(6, 78, 59, 0.5)' } : {}}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-200">{state.name}</span>
-          <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
-            {alerts.length}
-          </span>
-        </div>
-        <svg
-          className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <button
+          onClick={(e) => {
+            setIsExpanded(!isExpanded);
+            // Also zoom to state when clicking the title
+            if (onStateZoom) {
+              onStateZoom(state.code);
+            }
+          }}
+          className="flex-1 flex items-center justify-between px-4 py-2 cursor-pointer"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-200">{state.name}</span>
+            <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+              {alerts.length}
+            </span>
+          </div>
+          <svg
+            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {/* Zoom to state button */}
+        <button
+          onClick={handleStateZoom}
+          className="p-2 text-slate-400 hover:text-sky-400 transition-colors cursor-pointer"
+          title={`Zoom to ${state.name}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </button>
+      </div>
 
       {/* Alerts List */}
       {isExpanded && (
@@ -335,7 +376,7 @@ function StateGroup({ state, alerts, onAlertTap, onAddToMap, onShowDetail, onHov
  * Category group with collapsible alerts
  * Groups by state if there are many alerts (> STATE_GROUP_THRESHOLD)
  */
-function CategoryGroup({ category, alerts, allAlerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, defaultExpanded = true }) {
+function CategoryGroup({ category, alerts, allAlerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, onStateZoom, selectedStateCode, defaultExpanded = true }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const expandedAtRef = useRef(null);
 
@@ -416,7 +457,9 @@ function CategoryGroup({ category, alerts, allAlerts, onAlertTap, onAddToMap, on
                 onShowDetail={onShowDetail}
                 onHoverAlert={onHoverAlert}
                 onLeaveAlert={onLeaveAlert}
+                onStateZoom={onStateZoom}
                 categoryColor={category.color}
+                isSelected={selectedStateCode === state.code}
               />
             ))
           ) : (
@@ -521,7 +564,9 @@ export default function ExtremeWeatherSection({
   onAddToMap,
   onAddLocation,
   onHoverAlert,
-  onLeaveAlert
+  onLeaveAlert,
+  onStateZoom,
+  selectedStateCode
 }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const hasAlerts = categories && categories.length > 0;
@@ -587,6 +632,8 @@ export default function ExtremeWeatherSection({
                 onShowDetail={handleShowDetail}
                 onHoverAlert={onHoverAlert}
                 onLeaveAlert={onLeaveAlert}
+                onStateZoom={onStateZoom}
+                selectedStateCode={selectedStateCode}
                 defaultExpanded={false}
               />
             ))}

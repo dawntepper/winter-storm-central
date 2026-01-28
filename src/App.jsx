@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import { getActiveStormEvents } from './services/stormEventsService';
+import { STATE_CENTROIDS } from './data/stateCentroids';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
@@ -245,6 +246,7 @@ export default function App() {
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
   const [yourLocationsExpanded, setYourLocationsExpanded] = useState(true); // Your Locations section collapsed state
   const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map
+  const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
@@ -422,6 +424,15 @@ export default function App() {
     setHighlightedAlertId(null);
   };
 
+  // Handle state zoom - center map on state centroid
+  const handleStateZoom = (stateCode) => {
+    const coords = STATE_CENTROIDS[stateCode];
+    if (coords) {
+      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+      setSelectedStateCode(stateCode);  // Highlight state in alert cards
+    }
+  };
+
   if (alertsLoading && !alertsData) {
     return <LoadingState />;
   }
@@ -583,7 +594,12 @@ export default function App() {
             </div>
           )}
 
-          {/* 2. EXTREME WEATHER - KEY FEATURE on mobile */}
+          {/* 2. Check Your Location - Above Extreme Weather on mobile */}
+          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e' }}>
+            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
+          </div>
+
+          {/* 3. EXTREME WEATHER - KEY FEATURE on mobile */}
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
             loading={alertsLoading}
@@ -596,12 +612,9 @@ export default function App() {
             onAddLocation={handleAddLocation}
             onHoverAlert={handleHoverAlert}
             onLeaveAlert={handleLeaveAlert}
+            onStateZoom={handleStateZoom}
+            selectedStateCode={selectedStateCode}
           />
-
-          {/* 3. Check Your Location - Above map on mobile */}
-          <div id="location-search-mobile">
-            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
-          </div>
 
           {/* 4. Storm Coverage Map on mobile */}
           <div id="storm-map-mobile">
@@ -790,6 +803,8 @@ export default function App() {
               onAddLocation={handleAddLocation}
               onHoverAlert={handleHoverAlert}
               onLeaveAlert={handleLeaveAlert}
+              onStateZoom={handleStateZoom}
+              selectedStateCode={selectedStateCode}
             />
           </div>
         </section>

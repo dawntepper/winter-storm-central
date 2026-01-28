@@ -656,34 +656,36 @@ const alertCategoryColors = {
   default: '#ef4444'   // red fallback
 };
 
-// Simple alert dot marker with highlight support
-function AlertDotMarker({ alert, onHover, onLeave, highlighted = false }) {
+// Simple alert dot marker with highlight and selected support
+function AlertDotMarker({ alert, onHover, onLeave, highlighted = false, selected = false }) {
   const position = [alert.lat, alert.lon];
-  const color = alertCategoryColors[alert.category] || alertCategoryColors.default;
+  const baseColor = alertCategoryColors[alert.category] || alertCategoryColors.default;
+  // Green when selected, otherwise use category color
+  const color = selected ? '#10b981' : baseColor;
 
   return (
     <>
-      {/* Pulsing outer ring - larger and more prominent when highlighted */}
+      {/* Pulsing outer ring - larger and more prominent when highlighted or selected */}
       <CircleMarker
         center={position}
-        radius={highlighted ? 18 : 12}
+        radius={selected ? 20 : (highlighted ? 18 : 12)}
         pathOptions={{
           fillColor: color,
-          fillOpacity: highlighted ? 0.5 : 0.3,
+          fillOpacity: selected ? 0.5 : (highlighted ? 0.5 : 0.3),
           color: 'transparent',
           weight: 0
         }}
-        className={highlighted ? 'pulse-marker-highlighted' : 'pulse-marker'}
+        className={selected ? 'pulse-marker-selected' : (highlighted ? 'pulse-marker-highlighted' : 'pulse-marker')}
       />
-      {/* Main dot marker - slightly larger when highlighted */}
+      {/* Main dot marker - slightly larger when highlighted or selected */}
       <CircleMarker
         center={position}
-        radius={highlighted ? 9 : 7}
+        radius={selected ? 10 : (highlighted ? 9 : 7)}
         pathOptions={{
           fillColor: color,
           fillOpacity: 0.9,
           color: '#ffffff',
-          weight: highlighted ? 3 : 2
+          weight: selected ? 3 : (highlighted ? 3 : 2)
         }}
         eventHandlers={{
           mouseover: (e) => onHover(alert, e),
@@ -724,7 +726,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [hoveredAlert, setHoveredAlert] = useState(null);
@@ -953,6 +955,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 onHover={handleAlertHover}
                 onLeave={handleAlertLeave}
                 highlighted={highlightedAlertId === alert.id}
+                selected={selectedAlertId === alert.id}
               />
             ))}
 
@@ -1155,6 +1158,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         .pulse-marker-highlighted {
           animation: pulse-highlighted 0.6s ease-in-out infinite;
         }
+        .pulse-marker-selected {
+          animation: pulse-selected 1.5s ease-in-out infinite;
+        }
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.7; }
@@ -1162,6 +1168,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         @keyframes pulse-highlighted {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 0.9; transform: scale(1.3); }
+        }
+        @keyframes pulse-selected {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
         }
         .leaflet-tooltip.enhanced-tooltip {
           background: #f8fafc;
