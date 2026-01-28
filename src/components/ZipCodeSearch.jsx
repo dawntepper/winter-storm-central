@@ -1057,6 +1057,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
         {/* Result inline - at bottom of card */}
         {currentLocationData && !isCardDismissed && (
           <div className="mt-3 pt-3 border-t border-slate-700/50">
+            {/* Line 1: City, Alert, Forecast with H/L, X button */}
             <div className="flex items-center gap-3 overflow-x-auto">
               <span className="font-semibold text-white whitespace-nowrap">
                 {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
@@ -1069,22 +1070,19 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
               )}
               <span className="text-slate-500">•</span>
               <span className="text-xs text-slate-400 whitespace-nowrap">
-                {currentLocationData.conditions?.temperature ? (
+                {currentLocationData.conditions?.highTemp != null || currentLocationData.conditions?.lowTemp != null ? (
+                  <>
+                    {currentLocationData.conditions.highTemp != null && <span>H: {currentLocationData.conditions.highTemp}°</span>}
+                    {currentLocationData.conditions.highTemp != null && currentLocationData.conditions.lowTemp != null && ' / '}
+                    {currentLocationData.conditions.lowTemp != null && <span>L: {currentLocationData.conditions.lowTemp}°</span>}
+                    {' · '}{currentLocationData.conditions.shortForecast || ''}
+                  </>
+                ) : currentLocationData.conditions?.temperature ? (
                   <>{currentLocationData.conditions.temperature}°{currentLocationData.conditions.temperatureUnit || 'F'} · {currentLocationData.conditions.shortForecast || ''}</>
                 ) : (
                   <>Loading...</>
                 )}
               </span>
-              <span className="text-slate-500">•</span>
-              <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={isCurrentOnMap}
-                  onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-                />
-                <span className="text-xs text-slate-300">Add to Map</span>
-              </label>
               <button
                 onClick={isCurrentOnMap ? handleDismissCard : handleRemove}
                 className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1 ml-auto flex-shrink-0"
@@ -1094,6 +1092,18 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            </div>
+            {/* Line 2: Add to Map checkbox */}
+            <div className="mt-2">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isCurrentOnMap}
+                  onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+                />
+                <span className="text-xs text-slate-300">Add to Map</span>
+              </label>
             </div>
           </div>
         )}
