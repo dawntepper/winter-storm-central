@@ -156,6 +156,40 @@ export async function deleteStormEvent(id) {
 }
 
 /**
+ * Helper to ensure a value is an array
+ * Handles: arrays, JSON strings, null/undefined
+ */
+function ensureArray(value, defaultValue = []) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Helper to ensure a value is an object
+ * Handles: objects, JSON strings, null/undefined
+ */
+function ensureObject(value, defaultValue = {}) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return (parsed && typeof parsed === 'object') ? parsed : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
+/**
  * Transform database records to frontend format
  * Maps snake_case DB columns to camelCase JS properties
  */
@@ -176,15 +210,15 @@ function transformSingleFromDb(record) {
     startDate: record.start_date,
     endDate: record.end_date,
     description: record.description,
-    impacts: record.impacts || [],
+    impacts: ensureArray(record.impacts),
     // Historical stats (for completed storms)
     peakAlertCount: record.peak_alert_count,
     totalAlertsIssued: record.total_alerts_issued,
-    affectedStates: record.affected_states || [],
-    alertCategories: record.alert_categories || [],
-    mapCenter: record.map_center || { lat: 39.0, lon: -98.0 },
+    affectedStates: ensureArray(record.affected_states),
+    alertCategories: ensureArray(record.alert_categories),
+    mapCenter: ensureObject(record.map_center, { lat: 39.0, lon: -98.0 }),
     mapZoom: record.map_zoom || 5,
-    keywords: record.keywords || [],
+    keywords: ensureArray(record.keywords),
     seoTitle: record.seo_title,
     seoDescription: record.seo_description,
     created: record.created_at,
