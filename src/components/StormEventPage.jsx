@@ -818,68 +818,70 @@ export default function StormEventPage() {
       {/* Event Header */}
       <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          {/* Desktop: side by side | Mobile: stacked */}
-          <div className="lg:flex lg:items-start lg:gap-6">
-            {/* Left: Icon, Title, Status */}
-            <div className="flex flex-wrap items-start gap-4 mb-4 lg:mb-0 lg:flex-shrink-0">
-              <span className="text-4xl">{icon}</span>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
-                    {statusLabel}
-                  </span>
-                  <span className="text-sm text-slate-400">
-                    {formatDate(event.startDate)} - {formatDate(event.endDate)}
-                  </span>
-                  <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
-                    {event.typeLabel}
-                  </span>
-                </div>
+          {/* Icon, Title, Status - stays outside the card */}
+          <div className="flex flex-wrap items-start gap-4 mb-6">
+            <span className="text-4xl">{icon}</span>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
+                  {statusLabel}
+                </span>
+                <span className="text-sm text-slate-400">
+                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                </span>
+                <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
+                  {event.typeLabel}
+                </span>
               </div>
             </div>
-
-            {/* Right: Description (desktop) / Below (mobile) */}
-            <p className="text-slate-300 text-sm sm:text-base lg:flex-1">
-              {event.description}
-            </p>
           </div>
 
-          {/* Affected States - Clickable to zoom map (sorted alphabetically) */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-500">Affected Areas:</span>
-            {[...event.affectedStates].sort((a, b) => (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b)).map(state => {
-              const coords = STATE_CENTROIDS[state];
-              const stateName = STATE_NAMES[state] || state;
-              const alertCount = filteredAlerts.filter(a => a.state === state).length;
+          {/* Storm Overview Card - Description + Affected Areas */}
+          <div className="rounded-lg border border-slate-600 bg-slate-800/50 p-6">
+            {/* Description */}
+            <p className="text-slate-100 leading-relaxed mb-4">
+              {event.description}
+            </p>
 
-              const isStateSelected = selectedStateCode === state;
-              return (
-                <button
-                  key={state}
-                  onClick={() => {
-                    if (coords) {
-                      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
-                      setSelectedStateCode(state);  // Highlight state in alert cards
-                      setSelectedAlertId(null);  // Clear any selected alert
-                    }
-                  }}
-                  title={`${stateName} - ${alertCount} active alert${alertCount !== 1 ? 's' : ''} (click to zoom)`}
-                  className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors flex items-center gap-1 ${
-                    isStateSelected
-                      ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
-                      : 'bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {state}
-                  {alertCount > 0 && (
-                    <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1 rounded">
-                      {alertCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {/* Divider + Affected States */}
+            <div className="pt-4 border-t border-slate-700">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-slate-400 text-sm font-medium mr-4">Affected Areas:</span>
+                {[...event.affectedStates].sort((a, b) => (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b)).map(state => {
+                  const coords = STATE_CENTROIDS[state];
+                  const stateName = STATE_NAMES[state] || state;
+                  const alertCount = filteredAlerts.filter(a => a.state === state).length;
+
+                  const isStateSelected = selectedStateCode === state;
+                  return (
+                    <button
+                      key={state}
+                      onClick={() => {
+                        if (coords) {
+                          setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+                          setSelectedStateCode(state);  // Highlight state in alert cards
+                          setSelectedAlertId(null);  // Clear any selected alert
+                        }
+                      }}
+                      title={`${stateName} - ${alertCount} active alert${alertCount !== 1 ? 's' : ''} (click to zoom)`}
+                      className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors flex items-center gap-1 ${
+                        isStateSelected
+                          ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                          : 'bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {state}
+                      {alertCount > 0 && (
+                        <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1 rounded">
+                          {alertCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
