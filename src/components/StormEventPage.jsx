@@ -840,10 +840,10 @@ export default function StormEventPage() {
             {event.description}
           </p>
 
-          {/* Affected States - Clickable to zoom map */}
+          {/* Affected States - Clickable to zoom map (sorted alphabetically) */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500">Affected Areas:</span>
-            {event.affectedStates.map(state => {
+            {[...event.affectedStates].sort((a, b) => (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b)).map(state => {
               const coords = STATE_CENTROIDS[state];
               const stateName = STATE_NAMES[state] || state;
               const alertCount = filteredAlerts.filter(a => a.state === state).length;
