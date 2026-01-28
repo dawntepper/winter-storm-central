@@ -436,12 +436,17 @@ export default function StormEventPage() {
   // Filter alerts for this event's affected states and categories
   const filteredAlerts = alertsData?.allAlerts?.filter(alert => {
     // Check if alert is in an affected state
-    const stateMatch = event?.affectedStates?.some(state =>
-      alert.location?.includes(state) || alert.areaDesc?.includes(state)
-    );
+    // Use the state field first (most reliable), fallback to location string
+    const stateMatch = event?.affectedStates?.length > 0
+      ? event.affectedStates.some(state =>
+          alert.state === state ||
+          alert.location?.endsWith(`, ${state}`) ||
+          alert.areaDesc?.includes(state)
+        )
+      : true; // If no states specified, show all
 
     // Check if alert category matches event categories
-    const categoryMatch = !event?.alertCategories ||
+    const categoryMatch = !event?.alertCategories?.length ||
       event.alertCategories.includes(alert.category);
 
     return stateMatch && categoryMatch;

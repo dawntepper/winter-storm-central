@@ -194,6 +194,31 @@ function extractCoordinates(alert) {
 }
 
 /**
+ * Extract state code from alert
+ */
+function extractStateCode(alert) {
+  // Try UGC first (most reliable)
+  const ugc = alert.properties?.geocode?.UGC?.[0] || '';
+  if (ugc && ugc.length >= 2) {
+    const stateCode = ugc.substring(0, 2);
+    // Make sure it's not a marine zone
+    if (!MARINE_ZONE_PREFIXES.includes(stateCode)) {
+      return stateCode;
+    }
+  }
+
+  // Try SAME/FIPS code (first 2 digits map to state)
+  const sameCode = alert.properties?.geocode?.SAME?.[0];
+  if (sameCode && sameCode.length >= 2) {
+    // FIPS codes: first 2 digits are state code
+    // We'd need a mapping from FIPS state codes to postal codes
+    // For now, skip this fallback
+  }
+
+  return null;
+}
+
+/**
  * Parse NOAA alert into our format
  */
 function parseAlert(alert) {
@@ -206,6 +231,9 @@ function parseAlert(alert) {
   const coords = extractCoordinates(alert);
   if (!coords) return null; // Skip alerts without coordinates
 
+  // Extract state code for filtering
+  const state = extractStateCode(alert);
+
   // Link to weather.gov alerts page - individual alert URLs no longer work
   // The main alerts page shows all active alerts and is the best user experience
   const alertUrl = 'https://www.weather.gov/alerts';
@@ -214,6 +242,7 @@ function parseAlert(alert) {
     id: alert.id || props.id,
     event: eventType,
     category,
+    state, // State code (e.g., "PA", "NY")
     location: extractLocationName(alert),
     lat: coords.lat,
     lon: coords.lon,
