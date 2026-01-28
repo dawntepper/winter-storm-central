@@ -258,6 +258,64 @@ export function stopSessionTracking() {
 }
 
 // ============================================
+// STORM PAGE EVENTS
+// ============================================
+
+/**
+ * Track storm page view with storm details
+ */
+export function trackStormPageView({ stormName, stormSlug, stormType, stormStatus, affectedStates }) {
+  track('Storm Page View', {
+    stormName,
+    stormSlug,
+    stormType,
+    stormStatus,
+    affectedStates // comma-separated string
+  });
+}
+
+/**
+ * Track when user expands a state alert group on storm page
+ */
+export function trackStormAlertExpanded({ stormSlug, stateExpanded, alertCount }) {
+  track('Storm Alert Expanded', {
+    stormSlug,
+    stateExpanded,
+    alertCount
+  });
+}
+
+/**
+ * Track storm page share
+ */
+export function trackStormShare({ stormSlug, stormName }) {
+  track('Storm Share', {
+    stormSlug,
+    stormName
+  });
+}
+
+/**
+ * Track map interactions on storm page
+ */
+export function trackStormMapInteraction({ stormSlug, interactionType }) {
+  track('Storm Map Interaction', {
+    stormSlug,
+    interactionType // 'zoom', 'pan', 'radar_toggle', 'alerts_toggle', 'state_click', 'city_click'
+  });
+}
+
+/**
+ * Track storm page refresh
+ */
+export function trackStormPageRefresh({ stormSlug, timeSinceLastView }) {
+  track('Storm Page Refresh', {
+    stormSlug,
+    timeSinceLastView
+  });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -367,5 +425,11 @@ export default {
   trackLocationSearchFailed,
   startSessionTracking,
   stopSessionTracking,
-  testAllTracking
+  testAllTracking,
+  // Storm page events
+  trackStormPageView,
+  trackStormAlertExpanded,
+  trackStormShare,
+  trackStormMapInteraction,
+  trackStormPageRefresh
 };

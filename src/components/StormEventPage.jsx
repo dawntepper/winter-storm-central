@@ -10,6 +10,12 @@ import StormMap from './StormMap';
 import { getStormEventBySlug } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { STATE_CENTROIDS } from '../data/stateCentroids';
+import {
+  trackStormPageView,
+  trackStormAlertExpanded,
+  trackStormShare,
+  trackStormMapInteraction
+} from '../utils/analytics';
 
 // Full state names for tooltips
 const STATE_NAMES = {
@@ -623,9 +629,10 @@ function ShareButton({ event }) {
     }
 
     // Track share
-    if (window.plausible) {
-      window.plausible('Event Page Share', { props: { event_slug: event.slug } });
-    }
+    trackStormShare({
+      stormSlug: event.slug,
+      stormName: event.title
+    });
   };
 
   return (
@@ -703,16 +710,14 @@ export default function StormEventPage() {
       if (data) {
         updateMetaTags(data);
 
-        // Track page view
-        if (window.plausible) {
-          window.plausible('Event Page View', {
-            props: {
-              event_slug: data.slug,
-              event_title: data.title,
-              event_status: data.status
-            }
-          });
-        }
+        // Track storm page view with full details
+        trackStormPageView({
+          stormName: data.title,
+          stormSlug: data.slug,
+          stormType: data.type,
+          stormStatus: data.status,
+          affectedStates: data.affectedStates?.join(',') || ''
+        });
       }
     }
 
@@ -754,6 +759,14 @@ export default function StormEventPage() {
       if (mobileMapRef.current) {
         mobileMapRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+
+      // Track city click on map
+      if (event) {
+        trackStormMapInteraction({
+          stormSlug: event.slug,
+          interactionType: 'city_click'
+        });
+      }
     }
   };
 
@@ -769,6 +782,20 @@ export default function StormEventPage() {
       setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
       setSelectedStateCode(stateCode);  // Mark this state as selected (border highlight)
       setSelectedAlertId(null);  // Clear any selected alert
+
+      // Track state alert expansion
+      const stateAlertCount = filteredAlerts.filter(a => a.state === stateCode).length;
+      if (event) {
+        trackStormAlertExpanded({
+          stormSlug: event.slug,
+          stateExpanded: stateCode,
+          alertCount: stateAlertCount
+        });
+        trackStormMapInteraction({
+          stormSlug: event.slug,
+          interactionType: 'state_click'
+        });
+      }
     }
   };
 
