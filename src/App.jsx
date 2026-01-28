@@ -297,6 +297,14 @@ export default function App() {
         return prev;
       });
 
+      // Scroll to map on mobile
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        setTimeout(() => {
+          document.querySelector('#storm-map-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+
       // Track alert interaction
       trackAlertTapped(alert.category, alert.event);
     }
