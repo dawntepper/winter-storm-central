@@ -9,6 +9,21 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import { getStormEventBySlug } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
+import { STATE_CENTROIDS } from '../data/stateCentroids';
+
+// Full state names for tooltips
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'Washington D.C.', FL: 'Florida',
+  GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana',
+  IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine',
+  MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota',
+  OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island',
+  SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah',
+  VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
+};
 
 // Category header colors
 const categoryHeaderColors = {
@@ -531,14 +546,34 @@ export default function StormEventPage() {
             {event.description}
           </p>
 
-          {/* Affected States */}
+          {/* Affected States - Clickable to zoom map */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500">Affected Areas:</span>
-            {event.affectedStates.map(state => (
-              <span key={state} className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded">
-                {state}
-              </span>
-            ))}
+            {event.affectedStates.map(state => {
+              const coords = STATE_CENTROIDS[state];
+              const stateName = STATE_NAMES[state] || state;
+              const alertCount = filteredAlerts.filter(a => a.state === state).length;
+
+              return (
+                <button
+                  key={state}
+                  onClick={() => {
+                    if (coords) {
+                      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+                    }
+                  }}
+                  title={`${stateName} - ${alertCount} active alert${alertCount !== 1 ? 's' : ''} (click to zoom)`}
+                  className="text-xs px-2 py-0.5 bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white rounded cursor-pointer transition-colors flex items-center gap-1"
+                >
+                  {state}
+                  {alertCount > 0 && (
+                    <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1 rounded">
+                      {alertCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

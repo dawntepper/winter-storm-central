@@ -323,9 +323,12 @@ function CenterOnLocation({ location }) {
       const latOffset = isMobile ? 0.1 : -0.2;
       const adjustedLat = location.lat + latOffset;
 
-      map.setView([adjustedLat, location.lon], 7, { animate: true, duration: 0.5 });
+      // Use provided zoom level or default to 7
+      const zoomLevel = location.zoom || 7;
+
+      map.setView([adjustedLat, location.lon], zoomLevel, { animate: true, duration: 0.5 });
     }
-  }, [location?.id, location?.lat, location?.lon, map]);
+  }, [location?.id, location?.lat, location?.lon, location?.zoom, map]);
 
   return null;
 }
