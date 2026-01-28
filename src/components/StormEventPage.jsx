@@ -675,56 +675,57 @@ function ForecastMapsSection({ eventType }) {
   const day3Label = getDayLabel(2);
 
   // NWS WPC Forecast Map URLs
+  // These maps show the PROBABILITY (%) that a location will exceed the given snow/ice threshold
   const forecastMaps = {
     snowfall: {
-      label: 'Snowfall Forecast',
+      label: 'Snow Probability',
       icon: '❄️',
       maps: {
         'day1_4': {
-          label: `${day1Label} (4"+)`,
+          label: `${day1Label} — chance of 4"+ snow`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_04_conus.gif',
-          description: 'Probability of 4+ inches of snow'
+          description: 'Chance of exceeding 4 inches of snowfall'
         },
         'day1_8': {
-          label: `${day1Label} (8"+)`,
+          label: `${day1Label} — chance of 8"+ snow`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_08_conus.gif',
-          description: 'Probability of 8+ inches of snow'
+          description: 'Chance of exceeding 8 inches of snowfall'
         },
         'day1_12': {
-          label: `${day1Label} (12"+)`,
+          label: `${day1Label} — chance of 12"+ snow`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_12_conus.gif',
-          description: 'Probability of 12+ inches of snow'
+          description: 'Chance of exceeding 12 inches of snowfall'
         },
         'day2_4': {
-          label: `${day2Label} (4"+)`,
+          label: `${day2Label} — chance of 4"+ snow`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_psnow_gt_04_conus.gif',
-          description: 'Probability of 4+ inches of snow'
+          description: 'Chance of exceeding 4 inches of snowfall'
         },
         'day3_4': {
-          label: `${day3Label} (4"+)`,
+          label: `${day3Label} — chance of 4"+ snow`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_psnow_gt_04_conus.gif',
-          description: 'Probability of 4+ inches of snow'
+          description: 'Chance of exceeding 4 inches of snowfall'
         }
       }
     },
     ice: {
-      label: 'Ice Forecast',
+      label: 'Ice Probability',
       icon: '🧊',
       maps: {
         'day1': {
-          label: day1Label,
+          label: `${day1Label} — chance of 0.25"+ ice`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_pice_gt_25_conus.gif',
-          description: 'Probability of 0.25"+ ice accumulation'
+          description: 'Chance of exceeding 0.25 inches of ice accumulation'
         },
         'day2': {
-          label: day2Label,
+          label: `${day2Label} — chance of 0.25"+ ice`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_pice_gt_25_conus.gif',
-          description: 'Probability of 0.25"+ ice accumulation'
+          description: 'Chance of exceeding 0.25 inches of ice accumulation'
         },
         'day3': {
-          label: day3Label,
+          label: `${day3Label} — chance of 0.25"+ ice`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_pice_gt_25_conus.gif',
-          description: 'Probability of 0.25"+ ice accumulation'
+          description: 'Chance of exceeding 0.25 inches of ice accumulation'
         }
       }
     },
@@ -733,19 +734,19 @@ function ForecastMapsSection({ eventType }) {
       icon: '🗺️',
       maps: {
         'day1': {
-          label: day1Label,
+          label: `${day1Label} — all winter hazards`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_composite_conus.gif',
-          description: 'Composite winter weather hazards'
+          description: 'Combined winter weather hazards (snow, ice, wind)'
         },
         'day2': {
-          label: day2Label,
+          label: `${day2Label} — all winter hazards`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_composite_conus.gif',
-          description: 'Composite winter weather hazards'
+          description: 'Combined winter weather hazards (snow, ice, wind)'
         },
         'day3': {
-          label: day3Label,
+          label: `${day3Label} — all winter hazards`,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_composite_conus.gif',
-          description: 'Composite winter weather hazards'
+          description: 'Combined winter weather hazards (snow, ice, wind)'
         }
       }
     }
@@ -841,7 +842,7 @@ function ForecastMapsSection({ eventType }) {
           />
         </div>
         <p className="text-xs text-slate-400 mt-2 text-center">
-          {currentMap.description} • Source: NOAA Weather Prediction Center
+          {currentMap.description} • Colors show % probability • Source: NOAA Weather Prediction Center
         </p>
       </div>
 
