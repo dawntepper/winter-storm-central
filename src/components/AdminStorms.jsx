@@ -3,8 +3,11 @@
  * Password-protected page to manage storm events
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   getAllStormEvents,
   createStormEvent,
@@ -45,10 +48,118 @@ const ALERT_CATEGORIES = [
 
 // Status options
 const STATUS_OPTIONS = [
-  { value: 'forecasted', label: 'Forecasted', color: 'bg-amber-500/20 text-amber-400' },
-  { value: 'active', label: 'Active', color: 'bg-emerald-500/20 text-emerald-400' },
-  { value: 'completed', label: 'Completed', color: 'bg-slate-500/20 text-slate-400' }
+  { value: 'draft', label: 'Draft', color: 'bg-purple-500/20 text-purple-400', isPublic: false },
+  { value: 'forecasted', label: 'Forecasted', color: 'bg-amber-500/20 text-amber-400', isPublic: true },
+  { value: 'active', label: 'Active', color: 'bg-emerald-500/20 text-emerald-400', isPublic: true },
+  { value: 'completed', label: 'Completed', color: 'bg-slate-500/20 text-slate-400', isPublic: true }
 ];
+
+// Custom marker icon (Leaflet default icons have path issues with bundlers)
+const markerIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="
+    width: 24px;
+    height: 24px;
+    background: #0ea5e9;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
+});
+
+// Map click handler component
+function MapClickHandler({ onLocationSelect }) {
+  useMapEvents({
+    click(e) {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
+}
+
+// Map picker modal
+function MapPicker({ currentLat, currentLon, onSelect, onClose }) {
+  const [selectedLat, setSelectedLat] = useState(currentLat || 39.0);
+  const [selectedLon, setSelectedLon] = useState(currentLon || -98.0);
+
+  const handleLocationSelect = (lat, lon) => {
+    setSelectedLat(Math.round(lat * 1000) / 1000);
+    setSelectedLon(Math.round(lon * 1000) / 1000);
+  };
+
+  const handleConfirm = () => {
+    onSelect(selectedLat, selectedLon);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-2xl overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-4 py-3 bg-slate-700 border-b border-slate-600 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-white">Pick Map Center</h3>
+            <p className="text-xs text-slate-400">Click on the map to select coordinates</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Map */}
+        <div className="h-80">
+          <MapContainer
+            center={[selectedLat, selectedLon]}
+            zoom={5}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            />
+            <MapClickHandler onLocationSelect={handleLocationSelect} />
+            <Marker position={[selectedLat, selectedLon]} icon={markerIcon} />
+          </MapContainer>
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-3 bg-slate-700 border-t border-slate-600 flex items-center justify-between">
+          <div className="text-sm text-slate-300">
+            <span className="text-slate-500">Lat:</span> {selectedLat.toFixed(3)}
+            <span className="text-slate-500 ml-4">Lon:</span> {selectedLon.toFixed(3)}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm bg-slate-600 hover:bg-slate-500 text-white rounded-lg cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-lg cursor-pointer"
+            >
+              Use This Location
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Password login component
 function PasswordGate({ onAuthenticate }) {
@@ -95,12 +206,13 @@ function PasswordGate({ onAuthenticate }) {
 
 // Storm form component
 function StormForm({ event, onSave, onCancel, saving }) {
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
     type: 'winter_storm',
     typeLabel: 'Winter Storm',
-    status: 'forecasted',
+    status: 'draft',
     startDate: '',
     endDate: '',
     description: '',
@@ -421,39 +533,65 @@ function StormForm({ event, onSave, onCancel, saving }) {
       </div>
 
       {/* Map Center */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Map Center Lat</label>
-          <input
-            type="number"
-            step="0.1"
-            value={formData.mapCenter.lat}
-            onChange={(e) => handleChange('mapCenter', { ...formData.mapCenter, lat: parseFloat(e.target.value) })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
-          />
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-slate-300">Map Center & Zoom</label>
+          <button
+            type="button"
+            onClick={() => setShowMapPicker(true)}
+            className="text-sm text-sky-400 hover:text-sky-300 cursor-pointer flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Pick on Map
+          </button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Map Center Lon</label>
-          <input
-            type="number"
-            step="0.1"
-            value={formData.mapCenter.lon}
-            onChange={(e) => handleChange('mapCenter', { ...formData.mapCenter, lon: parseFloat(e.target.value) })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Map Zoom</label>
-          <input
-            type="number"
-            min="1"
-            max="15"
-            value={formData.mapZoom}
-            onChange={(e) => handleChange('mapZoom', parseInt(e.target.value))}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
-          />
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Latitude</label>
+            <input
+              type="number"
+              step="0.001"
+              value={formData.mapCenter.lat}
+              onChange={(e) => handleChange('mapCenter', { ...formData.mapCenter, lat: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Longitude</label>
+            <input
+              type="number"
+              step="0.001"
+              value={formData.mapCenter.lon}
+              onChange={(e) => handleChange('mapCenter', { ...formData.mapCenter, lon: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Zoom (1-15)</label>
+            <input
+              type="number"
+              min="1"
+              max="15"
+              value={formData.mapZoom}
+              onChange={(e) => handleChange('mapZoom', parseInt(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+            />
+          </div>
         </div>
       </div>
+
+      {/* Map Picker Modal */}
+      {showMapPicker && (
+        <MapPicker
+          currentLat={formData.mapCenter.lat}
+          currentLon={formData.mapCenter.lon}
+          onSelect={(lat, lon) => handleChange('mapCenter', { lat, lon })}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
 
       {/* SEO */}
       <div className="border-t border-slate-700 pt-4">
@@ -514,11 +652,12 @@ function StormForm({ event, onSave, onCancel, saving }) {
 }
 
 // Storm list item
-function StormListItem({ event, onEdit, onDelete, onStatusChange }) {
+function StormListItem({ event, onEdit, onDelete, onStatusChange, onTogglePublish }) {
   const statusOption = STATUS_OPTIONS.find(s => s.value === event.status);
+  const isDraft = event.status === 'draft';
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
+    <div className={`bg-slate-800 rounded-lg border p-4 ${isDraft ? 'border-purple-500/50' : 'border-slate-700'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -526,6 +665,9 @@ function StormListItem({ event, onEdit, onDelete, onStatusChange }) {
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusOption?.color}`}>
               {statusOption?.label}
             </span>
+            {isDraft && (
+              <span className="text-xs text-purple-400">(not visible on site)</span>
+            )}
           </div>
           <p className="text-sm text-slate-400 mb-2">/{event.slug}</p>
           <p className="text-sm text-slate-300 line-clamp-2">{event.description}</p>
@@ -535,6 +677,19 @@ function StormListItem({ event, onEdit, onDelete, onStatusChange }) {
           </div>
         </div>
         <div className="flex flex-col gap-2">
+          {/* Quick Publish/Unpublish Toggle */}
+          <button
+            onClick={() => onTogglePublish(event)}
+            className={`px-3 py-1.5 text-xs font-medium rounded cursor-pointer transition-colors ${
+              isDraft
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                : 'bg-purple-600/30 hover:bg-purple-600/50 text-purple-300'
+            }`}
+          >
+            {isDraft ? '▶ Publish' : '⏸ Unpublish'}
+          </button>
+
+          {/* Status dropdown for fine control */}
           <select
             value={event.status}
             onChange={(e) => onStatusChange(event.id, e.target.value)}
@@ -544,6 +699,7 @@ function StormListItem({ event, onEdit, onDelete, onStatusChange }) {
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
+
           <div className="flex gap-1">
             <button
               onClick={() => onEdit(event)}
@@ -647,6 +803,26 @@ export default function AdminStorms() {
     }
   };
 
+  const handleTogglePublish = async (event) => {
+    if (event.status === 'draft') {
+      // Publishing: set to forecasted (user can change to active via dropdown)
+      const { error } = await updateStormEvent(event.id, { status: 'forecasted' });
+      if (error) {
+        setError(error.message || 'Failed to publish');
+      } else {
+        await loadEvents();
+      }
+    } else {
+      // Unpublishing: set to draft
+      const { error } = await updateStormEvent(event.id, { status: 'draft' });
+      if (error) {
+        setError(error.message || 'Failed to unpublish');
+      } else {
+        await loadEvents();
+      }
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem('admin_authenticated');
     setAuthenticated(false);
@@ -732,6 +908,7 @@ export default function AdminStorms() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onStatusChange={handleStatusChange}
+                    onTogglePublish={handleTogglePublish}
                   />
                 ))}
               </div>
