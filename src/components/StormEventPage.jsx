@@ -655,6 +655,170 @@ function ShareButton({ event }) {
   );
 }
 
+// NWS Forecast Maps Section
+function ForecastMapsSection({ eventType }) {
+  const [selectedMap, setSelectedMap] = useState('snowfall');
+  const [selectedDay, setSelectedDay] = useState('1-3');
+
+  // NWS WPC Forecast Map URLs
+  const forecastMaps = {
+    snowfall: {
+      label: 'Snowfall Forecast',
+      icon: '❄️',
+      maps: {
+        '1-3': {
+          label: 'Days 1-3',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_wbzsnow_prob.gif',
+          description: 'Probability of 4+ inches of snow'
+        },
+        '4-7': {
+          label: 'Days 4-7',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d47/gif/pwpf_snow_ge04_d47.gif',
+          description: 'Extended snowfall probability'
+        }
+      }
+    },
+    accumulation: {
+      label: 'Snow Accumulation',
+      icon: '📊',
+      maps: {
+        '4inch': {
+          label: '4+ Inches',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge04_d14.gif',
+          description: 'Probability of 4+ inches total'
+        },
+        '8inch': {
+          label: '8+ Inches',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge08_d14.gif',
+          description: 'Probability of 8+ inches total'
+        },
+        '12inch': {
+          label: '12+ Inches',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge12_d14.gif',
+          description: 'Probability of 12+ inches total'
+        }
+      }
+    },
+    winter_outlook: {
+      label: 'Winter Weather Outlook',
+      icon: '🗺️',
+      maps: {
+        'day1': {
+          label: 'Day 1',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d1.png',
+          description: 'Winter weather hazards outlook'
+        },
+        'day2': {
+          label: 'Day 2',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d2.png',
+          description: 'Day 2 winter weather outlook'
+        },
+        'day3': {
+          label: 'Day 3',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d3.png',
+          description: 'Day 3 winter weather outlook'
+        }
+      }
+    }
+  };
+
+  // Only show winter-related maps for winter storms
+  const availableMaps = eventType === 'winter_storm' || eventType === 'nor_easter'
+    ? forecastMaps
+    : { winter_outlook: forecastMaps.winter_outlook };
+
+  const currentMapType = availableMaps[selectedMap] || Object.values(availableMaps)[0];
+  const mapOptions = Object.keys(currentMapType.maps);
+  const currentMap = currentMapType.maps[selectedDay] || currentMapType.maps[mapOptions[0]];
+
+  // Reset day selection when map type changes
+  useEffect(() => {
+    const mapOptions = Object.keys(currentMapType.maps);
+    if (!mapOptions.includes(selectedDay)) {
+      setSelectedDay(mapOptions[0]);
+    }
+  }, [selectedMap, currentMapType.maps, selectedDay]);
+
+  return (
+    <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-700 bg-slate-800">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <span>🔮</span> NWS Forecast Maps
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Map Type Selector */}
+            {Object.entries(availableMaps).map(([key, map]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedMap(key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+                  selectedMap === key
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {map.icon} {map.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Day/Option Selector */}
+      <div className="px-4 py-2 border-b border-slate-700 bg-slate-700/30">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400">View:</span>
+          {Object.entries(currentMapType.maps).map(([key, map]) => (
+            <button
+              key={key}
+              onClick={() => setSelectedDay(key)}
+              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                selectedDay === key
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+              }`}
+            >
+              {map.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Map Display */}
+      <div className="p-4">
+        <div className="bg-slate-900 rounded-lg overflow-hidden">
+          <img
+            src={currentMap.url}
+            alt={`${currentMapType.label} - ${currentMap.label}`}
+            className="w-full h-auto"
+            style={{ maxHeight: '500px', objectFit: 'contain' }}
+          />
+        </div>
+        <p className="text-xs text-slate-400 mt-2 text-center">
+          {currentMap.description} • Source: NOAA Weather Prediction Center
+        </p>
+      </div>
+
+      {/* Footer with links */}
+      <div className="px-4 py-2 border-t border-slate-700 bg-slate-900/50">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-500">Updates every 6 hours</span>
+          <a
+            href="https://www.wpc.ncep.noaa.gov/wwd/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sky-400 hover:text-sky-300"
+          >
+            View more at WPC →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 404 Not Found component
 function EventNotFound({ slug }) {
   return (
@@ -916,6 +1080,13 @@ export default function StormEventPage() {
           </div>
         </div>
       </div>
+
+      {/* Forecast Maps Section - Only for active/forecasted events */}
+      {event.status !== 'completed' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <ForecastMapsSection eventType={event.type} />
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
