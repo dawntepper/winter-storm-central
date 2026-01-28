@@ -204,10 +204,15 @@ function PasswordGate({ onAuthenticate }) {
   );
 }
 
+const LOCALSTORAGE_KEY = 'storm_admin_draft';
+
 // Storm form component
 function StormForm({ event, onSave, onCancel, saving }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
-  const [formData, setFormData] = useState({
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+
+  const defaultFormData = {
     title: '',
     slug: '',
     type: 'winter_storm',
@@ -224,10 +229,28 @@ function StormForm({ event, onSave, onCancel, saving }) {
     keywords: [''],
     seoTitle: '',
     seoDescription: '',
-    // Historical stats (for completed storms)
     peakAlertCount: null,
     totalAlertsIssued: null
-  });
+  };
+
+  const [formData, setFormData] = useState(defaultFormData);
+
+  // Load saved draft from localStorage on mount (only for new storms)
+  useEffect(() => {
+    if (!event) {
+      const saved = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setFormData(parsed.data);
+          setHasSavedDraft(true);
+          setLastSaved(new Date(parsed.timestamp));
+        } catch (e) {
+          console.error('Failed to parse saved draft:', e);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (event) {
@@ -243,6 +266,22 @@ function StormForm({ event, onSave, onCancel, saving }) {
       });
     }
   }, [event]);
+
+  const saveToBrowser = () => {
+    const saveData = {
+      data: formData,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(saveData));
+    setHasSavedDraft(true);
+    setLastSaved(new Date());
+  };
+
+  const clearSavedDraft = () => {
+    localStorage.removeItem(LOCALSTORAGE_KEY);
+    setHasSavedDraft(false);
+    setLastSaved(null);
+  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -315,6 +354,8 @@ function StormForm({ event, onSave, onCancel, saving }) {
       impacts: formData.impacts.filter(i => i.trim()),
       keywords: formData.keywords.filter(k => k.trim())
     };
+    // Clear saved draft on submit (will be cleared after successful save)
+    clearSavedDraft();
     onSave(cleanedData);
   };
 
@@ -631,21 +672,58 @@ function StormForm({ event, onSave, onCancel, saving }) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-slate-700">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 text-white font-medium rounded-lg transition-colors cursor-pointer"
-        >
-          {saving ? 'Saving...' : (event ? 'Update Storm' : 'Create Storm')}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
+      <div className="pt-4 border-t border-slate-700 space-y-3">
+        {/* Save to browser indicator */}
+        {!event && (
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              {hasSavedDraft && lastSaved && (
+                <span className="text-emerald-400">
+                  ✓ Saved to browser {lastSaved.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasSavedDraft && (
+                <button
+                  type="button"
+                  onClick={clearSavedDraft}
+                  className="text-slate-400 hover:text-red-400 cursor-pointer"
+                >
+                  Clear saved
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={saveToBrowser}
+                className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded cursor-pointer flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Save to Browser
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main action buttons */}
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 text-white font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            {saving ? 'Saving...' : (event ? 'Update Storm' : 'Create Storm')}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </form>
   );
