@@ -603,7 +603,22 @@ export default function App() {
             </div>
           )}
 
-          {/* 3. EXTREME WEATHER - KEY FEATURE on mobile */}
+          {/* 3. Storm Coverage Map on mobile - Below Your Locations */}
+          <div id="storm-map-mobile">
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={userLocations}
+              alerts={mapAlerts}
+              isHero
+              centerOn={mapCenterOn}
+              previewLocation={previewCity}
+              highlightedAlertId={highlightedAlertId}
+              selectedAlertId={selectedAlertId}
+            />
+          </div>
+
+          {/* 4. EXTREME WEATHER on mobile */}
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
             loading={alertsLoading}
@@ -619,21 +634,6 @@ export default function App() {
             onStateZoom={handleStateZoom}
             selectedStateCode={selectedStateCode}
           />
-
-          {/* 4. Storm Coverage Map on mobile */}
-          <div id="storm-map-mobile">
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={userLocations}
-              alerts={mapAlerts}
-              isHero
-              centerOn={mapCenterOn}
-              previewLocation={previewCity}
-              highlightedAlertId={highlightedAlertId}
-              selectedAlertId={selectedAlertId}
-            />
-          </div>
         </div>
 
         {/* ========== DESKTOP LAYOUT ========== */}
