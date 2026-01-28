@@ -818,27 +818,32 @@ export default function StormEventPage() {
       {/* Event Header */}
       <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap items-start gap-4 mb-4">
-            <span className="text-4xl">{icon}</span>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
-                  {statusLabel}
-                </span>
-                <span className="text-sm text-slate-400">
-                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
-                </span>
-                <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
-                  {event.typeLabel}
-                </span>
+          {/* Desktop: side by side | Mobile: stacked */}
+          <div className="lg:flex lg:items-start lg:gap-6">
+            {/* Left: Icon, Title, Status */}
+            <div className="flex flex-wrap items-start gap-4 mb-4 lg:mb-0 lg:flex-shrink-0">
+              <span className="text-4xl">{icon}</span>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
+                    {statusLabel}
+                  </span>
+                  <span className="text-sm text-slate-400">
+                    {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                  </span>
+                  <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded">
+                    {event.typeLabel}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <p className="text-slate-300 text-sm sm:text-base max-w-3xl">
-            {event.description}
-          </p>
+            {/* Right: Description (desktop) / Below (mobile) */}
+            <p className="text-slate-300 text-sm sm:text-base lg:flex-1">
+              {event.description}
+            </p>
+          </div>
 
           {/* Affected States - Clickable to zoom map (sorted alphabetically) */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
