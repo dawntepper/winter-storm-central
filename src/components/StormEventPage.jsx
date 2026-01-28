@@ -404,13 +404,13 @@ function StateAlertGroup({ state, alerts, onZoomToAlert, onShowDetail, onStateZo
           className="flex-1 flex items-center justify-between px-3 py-2 cursor-pointer"
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-200">{state.name}</span>
-            <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+            <span className={`text-sm font-medium ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>{state.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-slate-300'}`}>
               {alerts.length}
             </span>
           </div>
           <svg
-            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 transition-transform ${isSelected ? 'text-emerald-400' : 'text-slate-400'} ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -421,7 +421,7 @@ function StateAlertGroup({ state, alerts, onZoomToAlert, onShowDetail, onStateZo
         {/* Zoom to state button */}
         <button
           onClick={handleStateZoom}
-          className="p-2 text-slate-400 hover:text-sky-400 transition-colors cursor-pointer"
+          className={`p-2 transition-colors cursor-pointer ${isSelected ? 'text-emerald-400' : 'text-slate-400 hover:text-sky-400'}`}
           title={`Zoom to ${state.name}`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -324,8 +324,8 @@ function StateGroup({ state, alerts, onAlertTap, onAddToMap, onShowDetail, onHov
           className="flex-1 flex items-center justify-between px-4 py-2 cursor-pointer"
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-200">{state.name}</span>
-            <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+            <span className={`text-sm font-medium ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>{state.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-slate-300'}`}>
               {alerts.length}
             </span>
           </div>
