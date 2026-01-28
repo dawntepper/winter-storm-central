@@ -254,7 +254,7 @@ const STATE_NAMES = {
 };
 
 // Threshold for grouping by state (if more than this many alerts, group by state)
-const STATE_GROUP_THRESHOLD = 15;
+const STATE_GROUP_THRESHOLD = 5;
 
 /**
  * Group alerts by state code
