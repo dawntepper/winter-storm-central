@@ -657,6 +657,7 @@ function ShareButton({ event }) {
 
 // NWS Forecast Maps Section
 function ForecastMapsSection({ eventType }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedMap, setSelectedMap] = useState('snowfall');
   const [selectedDay, setSelectedDay] = useState('day1_4');
 
@@ -769,28 +770,41 @@ function ForecastMapsSection({ eventType }) {
 
   return (
     <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-700 bg-slate-800">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <span>🔮</span> NWS Forecast Maps
-          </h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Map Type Selector */}
-            {Object.entries(availableMaps).map(([key, map]) => (
-              <button
-                key={key}
-                onClick={() => setSelectedMap(key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
-                  selectedMap === key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                {map.icon} {map.label}
-              </button>
-            ))}
-          </div>
+      {/* Header - Collapsible */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700/50 transition-colors cursor-pointer"
+      >
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <span>🔮</span> NWS Forecast Maps
+        </h2>
+        <svg
+          className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isExpanded && (<>
+      {/* Map Type Selector */}
+      <div className="px-4 py-2 border-t border-slate-700 bg-slate-800">
+        <div className="flex items-center gap-2 flex-wrap">
+          {Object.entries(availableMaps).map(([key, map]) => (
+            <button
+              key={key}
+              onClick={() => setSelectedMap(key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+                selectedMap === key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {map.icon} {map.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -845,6 +859,7 @@ function ForecastMapsSection({ eventType }) {
           </a>
         </div>
       </div>
+      </>)}
     </div>
   );
 }
