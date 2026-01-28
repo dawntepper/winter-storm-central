@@ -916,7 +916,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
           <div className="flex flex-col items-start gap-0.5">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
-                Check Your Location
+                Check Location
               </label>
               {/* Show count badge when collapsed */}
               {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (

@@ -245,7 +245,8 @@ export default function App() {
   const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
   const [yourLocationsExpanded, setYourLocationsExpanded] = useState(true); // Your Locations section collapsed state
-  const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map
+  const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map (hover)
+  const [selectedAlertId, setSelectedAlertId] = useState(null); // Alert ID for selected/clicked state (green marker)
   const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
 
   // Combine search and alert locations for the map
@@ -284,6 +285,8 @@ export default function App() {
   const handleAlertTap = (alert) => {
     if (alert.lat && alert.lon) {
       setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+      setSelectedAlertId(alert.id); // Mark this alert as selected (green marker)
+      setSelectedStateCode(null); // Clear any selected state
 
       // Add to viewed locations if not already there
       setViewedLocations(prev => {
@@ -430,6 +433,7 @@ export default function App() {
     if (coords) {
       setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
       setSelectedStateCode(stateCode);  // Highlight state in alert cards
+      setSelectedAlertId(null);  // Clear any selected alert
     }
   };
 
@@ -461,9 +465,14 @@ export default function App() {
 
         {/* ========== MOBILE LAYOUT ========== */}
         <div className="lg:hidden space-y-4">
-          {/* 1. Your Locations (if any) - TOP on mobile - COLLAPSIBLE */}
+          {/* 1. Check Location - TOP on mobile */}
+          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
+            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
+          </div>
+
+          {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
           {userLocations.length > 0 && (
-            <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
+            <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
               {/* Collapsible Header - dark gray background */}
               <button
                 onClick={() => setYourLocationsExpanded(!yourLocationsExpanded)}
@@ -594,11 +603,6 @@ export default function App() {
             </div>
           )}
 
-          {/* 2. Check Your Location - Above Extreme Weather on mobile */}
-          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
-          </div>
-
           {/* 3. EXTREME WEATHER - KEY FEATURE on mobile */}
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
@@ -627,6 +631,7 @@ export default function App() {
               centerOn={mapCenterOn}
               previewLocation={previewCity}
               highlightedAlertId={highlightedAlertId}
+              selectedAlertId={selectedAlertId}
             />
           </div>
         </div>
@@ -652,6 +657,7 @@ export default function App() {
                 centerOn={mapCenterOn}
                 previewLocation={previewCity}
                 highlightedAlertId={highlightedAlertId}
+                selectedAlertId={selectedAlertId}
               />
             </div>
           </div>
