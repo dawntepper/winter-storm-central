@@ -595,7 +595,7 @@ export default function App() {
           )}
 
           {/* 2. Check Your Location - Above Extreme Weather on mobile */}
-          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e' }}>
+          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
             <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
           </div>
 
