@@ -658,7 +658,7 @@ function ShareButton({ event }) {
 // NWS Forecast Maps Section
 function ForecastMapsSection({ eventType }) {
   const [selectedMap, setSelectedMap] = useState('snowfall');
-  const [selectedDay, setSelectedDay] = useState('1-3');
+  const [selectedDay, setSelectedDay] = useState('day1_4');
 
   // NWS WPC Forecast Map URLs
   const forecastMaps = {
@@ -666,57 +666,72 @@ function ForecastMapsSection({ eventType }) {
       label: 'Snowfall Forecast',
       icon: '❄️',
       maps: {
-        '1-3': {
-          label: 'Days 1-3',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_wbzsnow_prob.gif',
-          description: 'Probability of 4+ inches of snow'
+        'day1_4': {
+          label: 'Day 1 (4"+)',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_04_conus.gif',
+          description: 'Day 1 probability of 4+ inches of snow'
         },
-        '4-7': {
-          label: 'Days 4-7',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d47/gif/pwpf_snow_ge04_d47.gif',
-          description: 'Extended snowfall probability'
+        'day1_8': {
+          label: 'Day 1 (8"+)',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_08_conus.gif',
+          description: 'Day 1 probability of 8+ inches of snow'
+        },
+        'day1_12': {
+          label: 'Day 1 (12"+)',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_12_conus.gif',
+          description: 'Day 1 probability of 12+ inches of snow'
+        },
+        'day2_4': {
+          label: 'Day 2 (4"+)',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_psnow_gt_04_conus.gif',
+          description: 'Day 2 probability of 4+ inches of snow'
+        },
+        'day3_4': {
+          label: 'Day 3 (4"+)',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_psnow_gt_04_conus.gif',
+          description: 'Day 3 probability of 4+ inches of snow'
         }
       }
     },
-    accumulation: {
-      label: 'Snow Accumulation',
-      icon: '📊',
+    ice: {
+      label: 'Ice Forecast',
+      icon: '🧊',
       maps: {
-        '4inch': {
-          label: '4+ Inches',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge04_d14.gif',
-          description: 'Probability of 4+ inches total'
+        'day1': {
+          label: 'Day 1',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_pice_gt_25_conus.gif',
+          description: 'Day 1 probability of 0.25"+ ice accumulation'
         },
-        '8inch': {
-          label: '8+ Inches',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge08_d14.gif',
-          description: 'Probability of 8+ inches total'
+        'day2': {
+          label: 'Day 2',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_pice_gt_25_conus.gif',
+          description: 'Day 2 probability of 0.25"+ ice accumulation'
         },
-        '12inch': {
-          label: '12+ Inches',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/pwpf_d14/gif/pwpf_snow_ge12_d14.gif',
-          description: 'Probability of 12+ inches total'
+        'day3': {
+          label: 'Day 3',
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_pice_gt_25_conus.gif',
+          description: 'Day 3 probability of 0.25"+ ice accumulation'
         }
       }
     },
     winter_outlook: {
-      label: 'Winter Weather Outlook',
+      label: 'Winter Composite',
       icon: '🗺️',
       maps: {
         'day1': {
           label: 'Day 1',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d1.png',
-          description: 'Winter weather hazards outlook'
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_composite_conus.gif',
+          description: 'Day 1 composite winter weather hazards'
         },
         'day2': {
           label: 'Day 2',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d2.png',
-          description: 'Day 2 winter weather outlook'
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_composite_conus.gif',
+          description: 'Day 2 composite winter weather hazards'
         },
         'day3': {
           label: 'Day 3',
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/images/winter_hazards_d3.png',
-          description: 'Day 3 winter weather outlook'
+          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_composite_conus.gif',
+          description: 'Day 3 composite winter weather hazards'
         }
       }
     }
@@ -794,6 +809,10 @@ function ForecastMapsSection({ eventType }) {
             alt={`${currentMapType.label} - ${currentMap.label}`}
             className="w-full h-auto"
             style={{ maxHeight: '500px', objectFit: 'contain' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.insertAdjacentHTML('afterend', '<p class="text-slate-400 text-sm text-center py-8">Map temporarily unavailable</p>');
+            }}
           />
         </div>
         <p className="text-xs text-slate-400 mt-2 text-center">
