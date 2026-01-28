@@ -656,10 +656,9 @@ function ShareButton({ event }) {
 }
 
 // NWS Forecast Maps Section
-function ForecastMapsSection({ eventType }) {
+function ForecastMapsSection() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedMap, setSelectedMap] = useState('snowfall');
-  const [selectedDay, setSelectedDay] = useState('day1_4');
+  const [selectedDay, setSelectedDay] = useState('day1');
 
   // Generate date labels: "Today (Jan 28)", "Wed Jan 29", "Thu Jan 30"
   const getDayLabel = (dayOffset) => {
@@ -674,100 +673,34 @@ function ForecastMapsSection({ eventType }) {
   const day2Label = getDayLabel(1);
   const day3Label = getDayLabel(2);
 
-  // NWS WPC Forecast Map URLs
-  // These maps show the PROBABILITY (%) that a location will exceed the given snow/ice threshold
+  // NWS WPC Forecast Map URLs - one composite map per day
   const forecastMaps = {
-    snowfall: {
-      label: 'Snow Probability',
-      icon: '❄️',
-      maps: {
-        'day1_4': {
-          label: `${day1Label} — chance of 4"+ snow`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_04_conus.gif',
-          description: 'Chance of exceeding 4 inches of snowfall'
-        },
-        'day1_8': {
-          label: `${day1Label} — chance of 8"+ snow`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_08_conus.gif',
-          description: 'Chance of exceeding 8 inches of snowfall'
-        },
-        'day1_12': {
-          label: `${day1Label} — chance of 12"+ snow`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_psnow_gt_12_conus.gif',
-          description: 'Chance of exceeding 12 inches of snowfall'
-        },
-        'day2_4': {
-          label: `${day2Label} — chance of 4"+ snow`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_psnow_gt_04_conus.gif',
-          description: 'Chance of exceeding 4 inches of snowfall'
-        },
-        'day3_4': {
-          label: `${day3Label} — chance of 4"+ snow`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_psnow_gt_04_conus.gif',
-          description: 'Chance of exceeding 4 inches of snowfall'
-        }
-      }
-    },
-    ice: {
-      label: 'Ice Probability',
-      icon: '🧊',
-      maps: {
-        'day1': {
-          label: `${day1Label} — chance of 0.25"+ ice`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_pice_gt_25_conus.gif',
-          description: 'Chance of exceeding 0.25 inches of ice accumulation'
-        },
-        'day2': {
-          label: `${day2Label} — chance of 0.25"+ ice`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_pice_gt_25_conus.gif',
-          description: 'Chance of exceeding 0.25 inches of ice accumulation'
-        },
-        'day3': {
-          label: `${day3Label} — chance of 0.25"+ ice`,
-          url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_pice_gt_25_conus.gif',
-          description: 'Chance of exceeding 0.25 inches of ice accumulation'
-        }
-      }
-    },
     winter_outlook: {
-      label: 'Winter Composite',
+      label: 'Winter Weather Outlook',
       icon: '🗺️',
       maps: {
         'day1': {
-          label: `${day1Label} — all winter hazards`,
+          label: day1Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day1_composite_conus.gif',
-          description: 'Combined winter weather hazards (snow, ice, wind)'
+          description: 'Winter weather hazards outlook'
         },
         'day2': {
-          label: `${day2Label} — all winter hazards`,
+          label: day2Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day2_composite_conus.gif',
-          description: 'Combined winter weather hazards (snow, ice, wind)'
+          description: 'Winter weather hazards outlook'
         },
         'day3': {
-          label: `${day3Label} — all winter hazards`,
+          label: day3Label,
           url: 'https://www.wpc.ncep.noaa.gov/wwd/day3_composite_conus.gif',
-          description: 'Combined winter weather hazards (snow, ice, wind)'
+          description: 'Winter weather hazards outlook'
         }
       }
     }
   };
 
-  // Only show winter-related maps for winter storms
-  const availableMaps = eventType === 'winter_storm' || eventType === 'nor_easter'
-    ? forecastMaps
-    : { winter_outlook: forecastMaps.winter_outlook };
-
-  const currentMapType = availableMaps[selectedMap] || Object.values(availableMaps)[0];
+  const currentMapType = forecastMaps.winter_outlook;
   const mapOptions = Object.keys(currentMapType.maps);
   const currentMap = currentMapType.maps[selectedDay] || currentMapType.maps[mapOptions[0]];
-
-  // Reset day selection when map type changes
-  useEffect(() => {
-    const mapOptions = Object.keys(currentMapType.maps);
-    if (!mapOptions.includes(selectedDay)) {
-      setSelectedDay(mapOptions[0]);
-    }
-  }, [selectedMap, currentMapType.maps, selectedDay]);
 
   return (
     <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
@@ -790,26 +723,7 @@ function ForecastMapsSection({ eventType }) {
       </button>
 
       {isExpanded && (<>
-      {/* Map Type Selector */}
-      <div className="px-4 py-2 border-t border-slate-700 bg-slate-800">
-        <div className="flex items-center gap-2 flex-wrap">
-          {Object.entries(availableMaps).map(([key, map]) => (
-            <button
-              key={key}
-              onClick={() => setSelectedMap(key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
-                selectedMap === key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              {map.icon} {map.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Day/Option Selector - Dropdown */}
+      {/* Day Selector - Dropdown */}
       <div className="px-4 py-2 border-b border-slate-700 bg-slate-700/30">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">View:</span>
@@ -842,7 +756,7 @@ function ForecastMapsSection({ eventType }) {
           />
         </div>
         <p className="text-xs text-slate-400 mt-2 text-center">
-          {currentMap.description} • Colors show % probability • Source: NOAA Weather Prediction Center
+          {currentMap.description} • Source: NOAA Weather Prediction Center
         </p>
       </div>
 
@@ -1130,7 +1044,7 @@ export default function StormEventPage() {
       {/* Forecast Maps Section - Only for active/forecasted events */}
       {event.status !== 'completed' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <ForecastMapsSection eventType={event.type} />
+          <ForecastMapsSection />
         </div>
       )}
 
