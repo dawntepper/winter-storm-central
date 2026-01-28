@@ -239,14 +239,115 @@ const categoryHeaderColors = {
   'default': { bg: '#334155', border: '#64748b', text: 'antiquewhite' }  // slate border
 };
 
+// Full state names
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'Washington D.C.', FL: 'Florida',
+  GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana',
+  IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine',
+  MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota',
+  OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island',
+  SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah',
+  VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
+};
+
+// Threshold for grouping by state (if more than this many alerts, group by state)
+const STATE_GROUP_THRESHOLD = 15;
+
+/**
+ * Group alerts by state code
+ */
+function groupAlertsByState(alerts) {
+  const byState = {};
+
+  for (const alert of alerts) {
+    const state = alert.state || 'Unknown';
+    if (!byState[state]) {
+      byState[state] = [];
+    }
+    byState[state].push(alert);
+  }
+
+  // Sort states alphabetically by full name
+  return Object.entries(byState)
+    .map(([code, stateAlerts]) => ({
+      code,
+      name: STATE_NAMES[code] || code,
+      alerts: stateAlerts
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * State group within a category (collapsible)
+ */
+function StateGroup({ state, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, categoryColor }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="border-t border-slate-600/30">
+      {/* State Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-4 py-2 bg-slate-700/50 hover:bg-slate-600/50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-200">{state.name}</span>
+          <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+            {alerts.length}
+          </span>
+        </div>
+        <svg
+          className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Alerts List */}
+      {isExpanded && (
+        <div>
+          {alerts.map((alert, index) => (
+            <AlertCard
+              key={alert.id}
+              alert={alert}
+              onTap={onAlertTap}
+              onAddToMap={onAddToMap}
+              onShowDetail={onShowDetail}
+              onHoverAlert={onHoverAlert}
+              onLeaveAlert={onLeaveAlert}
+              categoryColor={categoryColor}
+              isEven={index % 2 === 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Category group with collapsible alerts
+ * Groups by state if there are many alerts (> STATE_GROUP_THRESHOLD)
  */
-function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, defaultExpanded = true }) {
+function CategoryGroup({ category, alerts, allAlerts, onAlertTap, onAddToMap, onShowDetail, onHoverAlert, onLeaveAlert, defaultExpanded = true }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const expandedAtRef = useRef(null);
 
+  // Use allAlerts for grouping if provided, otherwise use alerts
+  const alertsForGrouping = allAlerts || alerts;
+  const totalCount = category.totalCount || alertsForGrouping?.length || 0;
+
   if (!alerts || alerts.length === 0) return null;
+
+  // Determine if we should group by state
+  const shouldGroupByState = totalCount > STATE_GROUP_THRESHOLD;
+  const stateGroups = shouldGroupByState ? groupAlertsByState(alertsForGrouping) : null;
 
   // Get category-specific colors based on category id/name
   const getCategoryColors = () => {
@@ -267,7 +368,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
       expandedAtRef.current = null;
     } else {
       // Expanding
-      trackCategoryExpanded(category.name, alerts.length);
+      trackCategoryExpanded(category.name, totalCount);
       expandedAtRef.current = Date.now();
     }
     setIsExpanded(!isExpanded);
@@ -287,7 +388,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
             {category.name}
           </h3>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
-            {category.totalCount || alerts.length}
+            {totalCount}
           </span>
         </div>
         <svg
@@ -300,22 +401,40 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
         </svg>
       </button>
 
-      {/* Alerts List with zebra striping */}
+      {/* Content - either state groups or flat alert list */}
       {isExpanded && (
-        <div>
-          {alerts.map((alert, index) => (
-            <AlertCard
-              key={alert.id}
-              alert={alert}
-              onTap={onAlertTap}
-              onAddToMap={onAddToMap}
-              onShowDetail={onShowDetail}
-              onHoverAlert={onHoverAlert}
-              onLeaveAlert={onLeaveAlert}
-              categoryColor={category.color}
-              isEven={index % 2 === 1}
-            />
-          ))}
+        <div className="max-h-[400px] overflow-y-auto">
+          {shouldGroupByState ? (
+            // Group by state for large categories
+            stateGroups.map((state) => (
+              <StateGroup
+                key={state.code}
+                state={state}
+                alerts={state.alerts}
+                onAlertTap={onAlertTap}
+                onAddToMap={onAddToMap}
+                onShowDetail={onShowDetail}
+                onHoverAlert={onHoverAlert}
+                onLeaveAlert={onLeaveAlert}
+                categoryColor={category.color}
+              />
+            ))
+          ) : (
+            // Flat list for smaller categories
+            alerts.map((alert, index) => (
+              <AlertCard
+                key={alert.id}
+                alert={alert}
+                onTap={onAlertTap}
+                onAddToMap={onAddToMap}
+                onShowDetail={onShowDetail}
+                onHoverAlert={onHoverAlert}
+                onLeaveAlert={onLeaveAlert}
+                categoryColor={category.color}
+                isEven={index % 2 === 1}
+              />
+            ))
+          )}
         </div>
       )}
     </div>
@@ -462,6 +581,7 @@ export default function ExtremeWeatherSection({
                 key={category.id}
                 category={category}
                 alerts={category.alerts}
+                allAlerts={category.allAlerts}
                 onAlertTap={onAlertTap}
                 onAddToMap={onAddToMap}
                 onShowDetail={handleShowDetail}

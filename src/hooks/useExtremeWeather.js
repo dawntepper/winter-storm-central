@@ -89,7 +89,8 @@ export function useExtremeWeather(enabled = true) {
       .filter(categoryId => alerts.byCategory[categoryId]?.length > 0)
       .map(categoryId => ({
         ...ALERT_CATEGORIES[categoryId],
-        alerts: alerts.byCategory[categoryId].slice(0, 10), // Show up to 10 per category in list
+        alerts: alerts.byCategory[categoryId].slice(0, 10), // Show up to 10 per category in flat list
+        allAlerts: alerts.byCategory[categoryId], // All alerts for state grouping
         totalCount: alerts.byCategory[categoryId].length // Actual count for badge
       }));
   }, [alerts]);
