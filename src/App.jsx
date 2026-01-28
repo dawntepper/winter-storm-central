@@ -272,8 +272,8 @@ export default function App() {
     hasActiveAlerts
   } = useExtremeWeather(true);
 
-  // All alerts for map display (limit to prevent performance issues)
-  const mapAlerts = alertsData?.allAlerts?.slice(0, 100) || [];
+  // All alerts for map display
+  const mapAlerts = alertsData?.allAlerts || [];
 
   // Handle alert tap - center map on that location and track for re-clicking
   const handleAlertTap = (alert) => {
