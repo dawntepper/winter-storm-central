@@ -8,6 +8,18 @@ import { useParams, Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import { getStormEventBySlug } from '../services/stormEventsService';
+import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
+
+// Category header colors
+const categoryHeaderColors = {
+  'winter': { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },
+  'severe': { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },
+  'flood': { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' },
+  'heat': { bg: '#7c2d12', border: '#ef4444', text: 'antiquewhite' },
+  'fire': { bg: '#78350f', border: '#d97706', text: 'antiquewhite' },
+  'tropical': { bg: '#1e3a8a', border: '#6366f1', text: 'antiquewhite' },
+  'default': { bg: '#334155', border: '#64748b', text: 'antiquewhite' }
+};
 
 // Status badge colors
 const statusColors = {
@@ -100,9 +112,12 @@ function resetMetaTags() {
 }
 
 // Alert card component for event page
-function EventAlertCard({ alert }) {
+function EventAlertCard({ alert, onClick }) {
   return (
-    <div className="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+    <div
+      className="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors cursor-pointer"
+      onClick={() => onClick && onClick(alert)}
+    >
       <div className="flex items-start gap-3">
         <span className="text-lg">
           {alert.category === 'winter' ? '❄️' :
@@ -122,6 +137,173 @@ function EventAlertCard({ alert }) {
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+// Alert detail modal
+function AlertDetailModal({ alert, onClose }) {
+  if (!alert) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-800 rounded-xl border border-slate-600 max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-4 py-3 bg-amber-900/30 border-b border-amber-500/30 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-amber-200">{alert.event}</h3>
+            <p className="text-sm text-slate-400">{alert.location}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
+          {alert.headline && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Headline</h4>
+              <p className="text-sm text-amber-200">{alert.headline}</p>
+            </div>
+          )}
+
+          {alert.fullDescription && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Details</h4>
+              <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{alert.fullDescription}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
+            {alert.severity && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Severity</h4>
+                <p className="text-sm text-slate-300">{alert.severity}</p>
+              </div>
+            )}
+            {alert.urgency && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Urgency</h4>
+                <p className="text-sm text-slate-300">{alert.urgency}</p>
+              </div>
+            )}
+            {alert.onset && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Starts</h4>
+                <p className="text-sm text-slate-300">{new Date(alert.onset).toLocaleString()}</p>
+              </div>
+            )}
+            {alert.expires && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Expires</h4>
+                <p className="text-sm text-slate-300">{new Date(alert.expires).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+
+          {alert.areaDesc && (
+            <div className="pt-2 border-t border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Affected Areas</h4>
+              <p className="text-xs text-slate-400">{alert.areaDesc}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-3 bg-slate-900/50 border-t border-slate-700 flex justify-between items-center">
+          <a
+            href="https://www.weather.gov/alerts"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-sky-400 hover:text-sky-300"
+          >
+            View on Weather.gov →
+          </a>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Alert category group with collapsible list
+function AlertCategoryGroup({ category, alerts, onAlertClick, defaultExpanded = true }) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  if (!alerts || alerts.length === 0) return null;
+
+  const colors = categoryHeaderColors[category.id] || categoryHeaderColors.default;
+
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+      {/* Category Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-3 py-2 hover:brightness-110 transition-all cursor-pointer"
+        style={{ backgroundColor: colors.bg }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{category.icon}</span>
+          <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.text }}>
+            {category.name}
+          </h3>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
+            {alerts.length}
+          </span>
+        </div>
+        <svg
+          className={`w-4 h-4 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Alerts List */}
+      {isExpanded && (
+        <div className="max-h-[250px] overflow-y-auto">
+          {alerts.map((alert, index) => (
+            <div
+              key={alert.id}
+              onClick={() => onAlertClick(alert)}
+              className={`px-3 py-2 border-t border-slate-600/30 cursor-pointer hover:bg-slate-600/50 transition-colors ${
+                index % 2 === 0 ? 'bg-slate-700/40' : 'bg-slate-600/40'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium text-white truncate">{alert.location}</h4>
+                  <p className="text-xs text-slate-400">{alert.event}</p>
+                </div>
+                {alert.severity && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded-full border border-red-500/30 flex-shrink-0">
+                    {alert.severity}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -205,6 +387,8 @@ export default function StormEventPage() {
   const { slug } = useParams();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [mapCenterOn, setMapCenterOn] = useState(null);
 
   // Get alerts data
   const {
@@ -265,6 +449,14 @@ export default function StormEventPage() {
 
   // Map alerts limited to 100
   const mapAlerts = filteredAlerts.slice(0, 100);
+
+  // Handle alert click - show modal and center map
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert);
+    if (alert.lat && alert.lon) {
+      setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+    }
+  };
 
   if (loading) {
     return (
@@ -441,53 +633,58 @@ export default function StormEventPage() {
                 userLocations={[]}
                 alerts={mapAlerts}
                 isHero
-                centerOn={event.mapCenter ? { ...event.mapCenter, id: Date.now() } : null}
+                centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, id: 'initial' } : null)}
               />
             </div>
 
             {/* Right Column: Alerts & Details */}
-            <div className="space-y-6">
-              {/* Active Alerts */}
-              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-white">
-                    Active Alerts ({filteredAlerts.length})
-                  </h2>
-                  <button
-                    onClick={refreshAlerts}
-                    disabled={alertsLoading}
-                    className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
-                  </button>
-                </div>
-
-                {alertsLoading && filteredAlerts.length === 0 ? (
-                  <div className="p-6 text-center">
-                    <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">Loading alerts...</p>
-                  </div>
-                ) : filteredAlerts.length > 0 ? (
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {filteredAlerts.slice(0, 20).map(alert => (
-                      <EventAlertCard key={alert.id} alert={alert} />
-                    ))}
-                    {filteredAlerts.length > 20 && (
-                      <div className="p-3 text-center text-xs text-slate-500 border-t border-slate-700">
-                        +{filteredAlerts.length - 20} more alerts
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-6 text-center">
-                    <p className="text-slate-500 text-sm">
-                      {event.status === 'forecasted'
-                        ? 'Alerts will appear as the event approaches'
-                        : 'No active alerts for this event'}
-                    </p>
-                  </div>
-                )}
+            <div className="space-y-4">
+              {/* Active Alerts Header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-white">
+                  Active Alerts ({filteredAlerts.length})
+                </h2>
+                <button
+                  onClick={refreshAlerts}
+                  disabled={alertsLoading}
+                  className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+                </button>
               </div>
+
+              {alertsLoading && filteredAlerts.length === 0 ? (
+                <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
+                  <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">Loading alerts...</p>
+                </div>
+              ) : filteredAlerts.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Group alerts by category */}
+                  {CATEGORY_ORDER.map(categoryId => {
+                    const category = ALERT_CATEGORIES[categoryId];
+                    const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
+                    if (categoryAlerts.length === 0) return null;
+                    return (
+                      <AlertCategoryGroup
+                        key={categoryId}
+                        category={category}
+                        alerts={categoryAlerts}
+                        onAlertClick={handleAlertClick}
+                        defaultExpanded={true}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
+                  <p className="text-slate-500 text-sm">
+                    {event.status === 'forecasted'
+                      ? 'Alerts will appear as the event approaches'
+                      : 'No active alerts for this event'}
+                  </p>
+                </div>
+              )}
 
               {/* Expected Impacts */}
               {event.impacts && event.impacts.length > 0 && (
@@ -557,6 +754,14 @@ export default function StormEventPage() {
           })
         }}
       />
+
+      {/* Alert Detail Modal */}
+      {selectedAlert && (
+        <AlertDetailModal
+          alert={selectedAlert}
+          onClose={() => setSelectedAlert(null)}
+        />
+      )}
     </div>
   );
 }
