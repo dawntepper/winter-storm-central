@@ -287,7 +287,7 @@ function CategoryGroup({ category, alerts, onAlertTap, onAddToMap, onShowDetail,
             {category.name}
           </h3>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
-            {alerts.length}
+            {category.totalCount || alerts.length}
           </span>
         </div>
         <svg

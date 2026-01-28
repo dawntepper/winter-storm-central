@@ -272,8 +272,8 @@ export default function App() {
     hasActiveAlerts
   } = useExtremeWeather(true);
 
-  // Get categorized alerts for map display (matches Conditions card)
-  // Flatten byCategory to get all alerts that match our tracked categories
+  // Get all categorized alerts for map display
+  // Uses byCategory which has ALL alerts per category (matches card badge totals)
   const mapAlerts = alertsData?.byCategory
     ? Object.values(alertsData.byCategory).flat()
     : [];
