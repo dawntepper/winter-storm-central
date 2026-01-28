@@ -698,7 +698,7 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
   );
 }
 
-export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
+export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocationClick }) {
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -1057,11 +1057,18 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange }) {
         {/* Result inline - at bottom of card */}
         {currentLocationData && !isCardDismissed && (
           <div className="mt-3 pt-3 border-t border-slate-700/50">
-            {/* Line 1: City, Alert, Forecast with H/L, X button */}
+            {/* Line 1: City (clickable), Alert, Forecast with H/L, X button */}
             <div className="flex items-center gap-3 overflow-x-auto">
-              <span className="font-semibold text-white whitespace-nowrap">
+              <button
+                onClick={() => {
+                  if (onLocationClick && currentLocationData.lat && currentLocationData.lon) {
+                    onLocationClick(currentLocationData);
+                  }
+                }}
+                className="font-semibold text-white whitespace-nowrap hover:text-emerald-300 transition-colors cursor-pointer"
+              >
                 {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
-              </span>
+              </button>
               <span className="text-slate-500">•</span>
               {currentLocationData.alertInfo ? (
                 <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {currentLocationData.alertInfo.event}</span>

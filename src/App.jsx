@@ -435,6 +435,31 @@ export default function App() {
     setHighlightedAlertId(null);
   };
 
+  // Handle clicking a searched location name to zoom map
+  const handleSearchLocationClick = (locationData) => {
+    if (locationData.lat && locationData.lon) {
+      setMapCenterOn({ lat: locationData.lat, lon: locationData.lon, id: Date.now() });
+      // Show preview marker
+      setPreviewCity({
+        id: locationData.id || `search-${Date.now()}`,
+        name: locationData.name,
+        lat: locationData.lat,
+        lon: locationData.lon
+      });
+
+      // Track
+      trackLocationViewedOnMap(locationData.name);
+
+      // On mobile, scroll to the map
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        setTimeout(() => {
+          document.querySelector('#storm-map-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  };
+
   // Handle state zoom - center map on state centroid
   const handleStateZoom = (stateCode) => {
     const coords = STATE_CENTROIDS[stateCode];
@@ -475,7 +500,7 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Check Location - TOP on mobile */}
           <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
+            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} />
           </div>
 
           {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
@@ -650,7 +675,7 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location - Above map on desktop */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} />
+              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} />
             </div>
 
             {/* Storm Map - Below search on desktop */}

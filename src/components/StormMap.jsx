@@ -1094,9 +1094,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               </button>
             </div>
 
-            {/* Weather conditions */}
+            {/* Weather conditions with H/L */}
             <div className="text-sm text-slate-600 mb-2">
-              {hoveredUserLocation.conditions?.temperature ? (
+              {hoveredUserLocation.conditions?.highTemp != null || hoveredUserLocation.conditions?.lowTemp != null ? (
+                <span>
+                  {hoveredUserLocation.conditions.highTemp != null && <span>H: {hoveredUserLocation.conditions.highTemp}°</span>}
+                  {hoveredUserLocation.conditions.highTemp != null && hoveredUserLocation.conditions.lowTemp != null && ' / '}
+                  {hoveredUserLocation.conditions.lowTemp != null && <span>L: {hoveredUserLocation.conditions.lowTemp}°</span>}
+                  {' · '}{hoveredUserLocation.conditions.shortForecast || 'No data'}
+                </span>
+              ) : hoveredUserLocation.conditions?.temperature ? (
                 <span>{hoveredUserLocation.conditions.temperature}°{hoveredUserLocation.conditions.temperatureUnit || 'F'} · {hoveredUserLocation.conditions.shortForecast || 'No data'}</span>
               ) : (
                 <span className="text-slate-400">Weather data loading...</span>
