@@ -272,8 +272,11 @@ export default function App() {
     hasActiveAlerts
   } = useExtremeWeather(true);
 
-  // All alerts for map display
-  const mapAlerts = alertsData?.allAlerts || [];
+  // Get categorized alerts for map display (matches Conditions card)
+  // Flatten byCategory to get all alerts that match our tracked categories
+  const mapAlerts = alertsData?.byCategory
+    ? Object.values(alertsData.byCategory).flat()
+    : [];
 
   // Handle alert tap - center map on that location and track for re-clicking
   const handleAlertTap = (alert) => {
