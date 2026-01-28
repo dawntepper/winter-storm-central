@@ -838,7 +838,7 @@ export default function StormEventPage() {
           </div>
 
           {/* Storm Overview Card - Description + Affected Areas */}
-          <div className="rounded-lg border border-slate-600 bg-slate-800/50 p-6">
+          <div className="rounded-lg border border-blue-500/50 p-6" style={{ backgroundColor: '#1e3a5f' }}>
             {/* Description */}
             <p className="text-slate-100 leading-relaxed mb-4">
               {event.description}
