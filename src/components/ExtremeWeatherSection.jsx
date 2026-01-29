@@ -142,37 +142,41 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, onHoverAlert, onLea
 
   return (
     <div className={`border-t border-slate-600/30 ${isEven ? 'bg-slate-600/40' : 'bg-slate-700/40'}`}>
-      <button
-        onClick={handleCardClick}
+      {/* Main row - city info on left, action buttons on right when expanded */}
+      <div
+        className="flex items-center px-4 py-3 hover:bg-slate-500/40 transition-colors"
         onMouseEnter={() => onHoverAlert && onHoverAlert(alert.id)}
         onMouseLeave={() => onLeaveAlert && onLeaveAlert()}
-        className="w-full text-left px-4 py-3 hover:bg-slate-500/40 transition-colors active:scale-[0.98] touch-manipulation cursor-pointer"
         style={{ minHeight: '48px' }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className={`flex-1 min-w-0 ${isEven ? 'text-slate-300' : 'text-gray-200'}`}>
-            <h4 className="text-base font-medium truncate">
-              {alert.location}
-            </h4>
-            <p className="text-sm mt-0.5 opacity-80">
-              {alert.event}
-            </p>
+        <button
+          onClick={handleCardClick}
+          className="flex-1 text-left active:scale-[0.98] touch-manipulation cursor-pointer min-w-0"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className={`flex-1 min-w-0 ${isEven ? 'text-slate-300' : 'text-gray-200'}`}>
+              <h4 className="text-base font-medium truncate">
+                {alert.location}
+              </h4>
+              <p className="text-sm mt-0.5 opacity-80">
+                {alert.event}
+              </p>
+            </div>
+            {!showAddPrompt && (
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: categoryColor }}
+              />
+            )}
           </div>
-          <div
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: categoryColor }}
-          />
-        </div>
-      </button>
+        </button>
 
-      {/* Add to Map prompt with alert details */}
-      {showAddPrompt && (
-        <div className="border-t border-slate-600/50">
-          {/* Action buttons - upper right */}
-          <div className="px-4 py-2 bg-slate-700/50 flex items-center justify-end gap-2">
+        {/* Inline action buttons when expanded */}
+        {showAddPrompt && (
+          <div className="flex items-center gap-2 ml-2 flex-shrink-0">
             <button
               onClick={handleAddToMap}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors touch-manipulation cursor-pointer whitespace-nowrap"
             >
               + Add to Map
             </button>
@@ -186,44 +190,44 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, onHoverAlert, onLea
               </svg>
             </button>
           </div>
+        )}
+      </div>
 
-          {/* Alert details - shown automatically when card expands */}
-          {alert.headline && (
-            <div className="px-4 py-3 bg-amber-900/20 border-t border-amber-500/20">
-              <div className="flex items-start gap-2">
-                <span className="text-amber-400 mt-0.5">📡</span>
-                <div className="flex-1">
-                  <p className="text-sm text-amber-200 font-medium mb-1">
-                    {alert.headline}
-                  </p>
-                  {alert.description && (
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {alert.description}
-                      {alert.description.length >= 200 && (
-                        <>
-                          ...{' '}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onShowDetail(alert);
-                            }}
-                            className="text-sky-400 hover:text-sky-300 font-medium cursor-pointer"
-                          >
-                            Full Alert
-                          </button>
-                        </>
-                      )}
-                    </p>
+      {/* Alert details - shown below when expanded */}
+      {showAddPrompt && alert.headline && (
+        <div className="px-4 py-3 bg-amber-900/20 border-t border-amber-500/20">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-400 mt-0.5">📡</span>
+            <div className="flex-1">
+              <p className="text-sm text-amber-200 font-medium mb-1">
+                {alert.headline}
+              </p>
+              {alert.description && (
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {alert.description}
+                  {alert.description.length >= 200 && (
+                    <>
+                      ...{' '}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShowDetail(alert);
+                        }}
+                        className="text-sky-400 hover:text-sky-300 font-medium cursor-pointer"
+                      >
+                        Full Alert
+                      </button>
+                    </>
                   )}
-                  {alert.expires && (
-                    <p className="text-[10px] text-slate-500 mt-2">
-                      Expires: {new Date(alert.expires).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
+                </p>
+              )}
+              {alert.expires && (
+                <p className="text-[10px] text-slate-500 mt-2">
+                  Expires: {new Date(alert.expires).toLocaleString()}
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 

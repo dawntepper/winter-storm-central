@@ -1,3 +1,6 @@
+# Dynamic sitemap from Netlify Function
+/sitemap.xml  /.netlify/functions/sitemap  200
+
 # Don't redirect API calls - let them go to Netlify Functions
 /api/*  /api/:splat  200
 

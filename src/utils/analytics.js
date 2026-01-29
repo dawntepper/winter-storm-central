@@ -315,6 +315,40 @@ export function trackStormPageRefresh({ stormSlug, timeSinceLastView }) {
   });
 }
 
+/**
+ * Track storm banner click (homepage → storm page)
+ */
+export function trackStormBannerClick({ stormSlug, stormName, source }) {
+  track('Storm Banner Click', {
+    stormSlug,
+    stormName,
+    source
+  });
+}
+
+/**
+ * Track alert detail view from storm page
+ */
+export function trackStormAlertDetailView({ stormSlug, alertType, alertSeverity, alertLocation }) {
+  track('Storm Alert Detail View', {
+    stormSlug,
+    alertType,
+    alertSeverity,
+    alertLocation
+  });
+}
+
+/**
+ * Track storm page entry with referrer info
+ */
+export function trackStormPageEntry({ stormSlug, referrer, isDirect }) {
+  track('Storm Page Entry', {
+    stormSlug,
+    referrer,
+    isDirect
+  });
+}
+
 // ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
@@ -384,8 +418,14 @@ export function testAllTracking() {
   trackLocationSearch('80301');
   trackLocationSearchFailed('xyz123', 'Location not found');
 
+  // Storm page events
+  console.log('\n6. Storm Page Events:');
+  trackStormBannerClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test', source: 'homepage_banner' });
+  trackStormAlertDetailView({ stormSlug: 'winter-storm-test', alertType: 'Winter Storm Warning', alertSeverity: 'Severe', alertLocation: 'Denver, CO' });
+  trackStormPageEntry({ stormSlug: 'winter-storm-test', referrer: 'google.com', isDirect: false });
+
   // Session events
-  console.log('\n6. Session Events (would track over time):');
+  console.log('\n7. Session Events (would track over time):');
   console.log('   - Engaged Session (2min) - tracked via timer');
   console.log('   - High Engagement Session (5min) - tracked via timer');
 
@@ -431,5 +471,8 @@ export default {
   trackStormAlertExpanded,
   trackStormShare,
   trackStormMapInteraction,
-  trackStormPageRefresh
+  trackStormPageRefresh,
+  trackStormBannerClick,
+  trackStormAlertDetailView,
+  trackStormPageEntry
 };

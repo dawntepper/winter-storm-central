@@ -14,7 +14,9 @@ import {
   trackStormPageView,
   trackStormAlertExpanded,
   trackStormShare,
-  trackStormMapInteraction
+  trackStormMapInteraction,
+  trackStormAlertDetailView,
+  trackStormPageEntry
 } from '../utils/analytics';
 
 // Full state names for tooltips
@@ -115,18 +117,28 @@ function updateMetaTags(event) {
 
 // Reset meta tags to defaults
 function resetMetaTags() {
-  document.title = 'StormTracking - Real-Time Extreme Weather Alerts & Live Tracker';
+  const defaultTitle = 'StormTracking - Real-Time Extreme Weather Alerts & Live Tracker';
+  const defaultDesc = 'Track extreme weather alerts in real-time. Live updates on winter storms, hurricanes, severe weather & more from the National Weather Service. Free weather tracker.';
+
+  document.title = defaultTitle;
 
   let metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) {
-    metaDesc.setAttribute('content', 'Track extreme weather alerts in real-time. Live updates on winter storms, hurricanes, severe weather & more from the National Weather Service. Free weather tracker.');
-  }
+  if (metaDesc) metaDesc.setAttribute('content', defaultDesc);
 
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', 'StormTracking - Real-Time Extreme Weather Alerts');
+  if (ogTitle) ogTitle.setAttribute('content', defaultTitle);
+
+  let ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute('content', defaultDesc);
 
   let ogUrl = document.querySelector('meta[property="og:url"]');
   if (ogUrl) ogUrl.setAttribute('content', 'https://stormtracking.io');
+
+  let twTitle = document.querySelector('meta[property="twitter:title"]');
+  if (twTitle) twTitle.setAttribute('content', defaultTitle);
+
+  let twDesc = document.querySelector('meta[property="twitter:description"]');
+  if (twDesc) twDesc.setAttribute('content', defaultDesc);
 
   let canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', 'https://stormtracking.io');
@@ -904,6 +916,12 @@ export default function StormEventPage() {
           stormStatus: data.status,
           affectedStates: data.affectedStates?.join(',') || ''
         });
+
+        trackStormPageEntry({
+          stormSlug: data.slug,
+          referrer: document.referrer ? new URL(document.referrer).hostname : '',
+          isDirect: !document.referrer
+        });
       }
     }
 
@@ -959,6 +977,14 @@ export default function StormEventPage() {
   // Handle showing alert detail modal (separate action)
   const handleShowDetail = (alert) => {
     setSelectedAlert(alert);
+    if (event) {
+      trackStormAlertDetailView({
+        stormSlug: event.slug,
+        alertType: alert.event,
+        alertSeverity: alert.severity,
+        alertLocation: alert.location
+      });
+    }
   };
 
   // Handle state zoom - center map on state centroid

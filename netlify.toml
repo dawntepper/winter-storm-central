@@ -6,6 +6,12 @@
 [functions]
   node_bundler = "esbuild"
 
+# Dynamic sitemap from Netlify Function
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

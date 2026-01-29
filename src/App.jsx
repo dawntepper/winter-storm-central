@@ -14,7 +14,8 @@ import {
   trackAlertTapped,
   trackAlertAddedToMap,
   trackLocationViewedOnMap,
-  trackLocationRemoved
+  trackLocationRemoved,
+  trackStormBannerClick
 } from './utils/analytics';
 
 // Weather condition to icon mapping
@@ -201,6 +202,11 @@ function StormEventBanner() {
   return (
     <Link
       to={`/storm/${primaryEvent.slug}`}
+      onClick={() => trackStormBannerClick({
+        stormSlug: primaryEvent.slug,
+        stormName: primaryEvent.title,
+        source: 'homepage_banner'
+      })}
       className={`block border transition-all ${
         primaryEvent.status === 'active'
           ? 'bg-gradient-to-r from-emerald-900/80 to-teal-900/80 border-emerald-500/30 hover:border-emerald-400/50'
