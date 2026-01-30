@@ -64,40 +64,53 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Get year from event start date
+function getEventYear(event) {
+  if (!event?.startDate) return new Date().getFullYear();
+  return new Date(event.startDate + 'T12:00:00').getFullYear();
+}
+
 // SEO helper - update meta tags dynamically
 function updateMetaTags(event) {
   if (!event) return;
 
+  const year = getEventYear(event);
+  const titleWithYear = `${event.title} ${year}`;
+  const stateNames = event.affectedStates?.map(s => STATE_NAMES[s] || s).filter(Boolean);
+  const stateList = stateNames?.slice(0, 3).join(', ') || 'the US';
+
   // Update title
-  document.title = event.seoTitle || `${event.title} Live Radar | Real-Time Alerts & Tracking`;
+  document.title = event.seoTitle || `${titleWithYear} Tracker | Live Radar & Updates`;
 
   // Update meta description
   let metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) {
-    metaDesc.setAttribute('content', event.seoDescription || `Track ${event.title} with live weather radar. Real-time alerts, interactive radar maps, and forecasts for affected areas.`);
+    metaDesc.setAttribute('content', event.seoDescription || `Track ${titleWithYear} with live radar and real-time updates. Current forecasts, weather alerts, and conditions for ${stateList}. Updated continuously.`);
   }
 
   // Update OG tags
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', `${event.title} Live Radar & Alerts`);
+  if (ogTitle) ogTitle.setAttribute('content', event.seoTitle || `${titleWithYear} Tracker | Live Updates`);
 
   let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', `Track ${event.title} with live weather radar. Real-time alerts and interactive radar maps.`);
+  if (ogDesc) ogDesc.setAttribute('content', `Track ${titleWithYear} with live radar. Real-time updates for ${stateList}.`);
 
   let ogUrl = document.querySelector('meta[property="og:url"]');
   if (ogUrl) ogUrl.setAttribute('content', `https://stormtracking.io/storm/${event.slug}`);
 
   // Update Twitter tags
   let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', `${event.title} Live Radar & Alerts`);
+  if (twTitle) twTitle.setAttribute('content', event.seoTitle || `${titleWithYear} Tracker | Live Updates`);
 
   let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', `Track ${event.title} with live weather radar and real-time alerts.`);
+  if (twDesc) twDesc.setAttribute('content', `Track ${titleWithYear} with live radar and real-time weather alerts.`);
 
   // Update keywords
   let metaKeywords = document.querySelector('meta[name="keywords"]');
-  if (metaKeywords && event.keywords) {
-    metaKeywords.setAttribute('content', event.keywords.join(', ') + ', live radar, real-time alerts, weather radar, storm tracking');
+  const titleLower = event.title.toLowerCase();
+  const defaultKeywords = `${titleLower} ${year}, ${titleLower} tracker, ${titleLower} ${year} tracker, ${titleLower} update, ${titleLower} track, live radar, real-time alerts, weather radar, storm tracking`;
+  if (metaKeywords) {
+    metaKeywords.setAttribute('content', event.keywords ? event.keywords.join(', ') + ', ' + defaultKeywords : defaultKeywords);
   }
 
   // Update canonical URL
@@ -106,10 +119,10 @@ function updateMetaTags(event) {
 
   // Update OG image to dynamic storm-specific image
   let ogImage = document.querySelector('meta[property="og:image"]');
-  if (ogImage) ogImage.setAttribute('content', `https://stormtracking.io/api/og-image/storm/${event.slug}`);
+  if (ogImage) ogImage.setAttribute('content', event.ogImageUrl || `https://stormtracking.io/api/og-image/storm/${event.slug}`);
 
   let twImage = document.querySelector('meta[property="twitter:image"]');
-  if (twImage) twImage.setAttribute('content', `https://stormtracking.io/api/og-image/storm/${event.slug}`);
+  if (twImage) twImage.setAttribute('content', event.ogImageUrl || `https://stormtracking.io/api/og-image/storm/${event.slug}`);
 }
 
 // Reset meta tags to defaults
@@ -1086,11 +1099,19 @@ export default function StormEventPage() {
           <div className="flex flex-wrap items-start gap-4 mb-6">
             <span className="text-4xl">{icon}</span>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                {event.title} {getEventYear(event)} Tracker
+              </h1>
               <div className="flex flex-wrap items-center gap-3">
                 <span className={`text-xs px-3 py-1 rounded-full border ${statusColor}`}>
                   {statusLabel}
                 </span>
+                {event.status === 'active' && (
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    LIVE
+                  </span>
+                )}
                 <span className="text-sm text-slate-400">
                   {formatDate(event.startDate)} - {formatDate(event.endDate)}
                 </span>
@@ -1098,6 +1119,11 @@ export default function StormEventPage() {
                   {event.typeLabel}
                 </span>
               </div>
+              {(event.status === 'active' || event.status === 'forecasted') && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Last updated: {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1159,7 +1185,7 @@ export default function StormEventPage() {
         <div className="bg-slate-800/50 border-b border-slate-700 px-4 sm:px-6 py-4">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-white mb-1">{event.title} Live Radar</h2>
+              <h2 className="text-base font-semibold text-white mb-1">{event.title} {getEventYear(event)} Live Radar</h2>
               <p className="text-sm text-slate-400">
                 View {event.title} on our interactive weather radar map showing real-time
                 conditions and severe weather alerts for {event.affectedStates?.slice(0, 5).join(', ')}{event.affectedStates?.length > 5 ? '...' : ''}.
@@ -1414,12 +1440,14 @@ export default function StormEventPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Event",
-            "name": event.title,
+            "name": `${event.title} ${getEventYear(event)}`,
             "description": event.description,
             "startDate": event.startDate,
             "endDate": event.endDate,
             "eventStatus": event.status === 'completed'
               ? "https://schema.org/EventEnded"
+              : event.status === 'active'
+              ? "https://schema.org/EventScheduled"
               : "https://schema.org/EventScheduled",
             "location": {
               "@type": "Place",
@@ -1429,8 +1457,12 @@ export default function StormEventPage() {
                 "addressRegion": event.affectedStates.join(', ')
               }
             },
+            "organizer": {
+              "@type": "Organization",
+              "name": "National Weather Service"
+            },
             "url": `https://stormtracking.io/storm/${event.slug}`,
-            "image": `https://stormtracking.io/api/og-image/storm/${event.slug}`
+            "image": event.ogImageUrl || `https://stormtracking.io/api/og-image/storm/${event.slug}`
           })
         }}
       />

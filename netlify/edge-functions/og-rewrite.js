@@ -39,7 +39,7 @@ async function fetchStormData(slug) {
 
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,seo_title,seo_description,affected_states,og_image_url&limit=1`,
+      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,seo_title,seo_description,affected_states,og_image_url,start_date&limit=1`,
       {
         headers: {
           apikey: supabaseKey,
@@ -112,12 +112,15 @@ export default async function handler(request, context) {
       });
     }
 
+    const year = storm.start_date ? new Date(storm.start_date + 'T12:00:00').getFullYear() : new Date().getFullYear();
+    const titleWithYear = `${storm.title} ${year}`;
+
     ogTitle =
       storm.seo_title ||
-      `${storm.title} Live Radar & Alerts | StormTracking`;
+      `${titleWithYear} Tracker | Live Radar & Updates | StormTracking`;
     ogDescription =
       storm.seo_description ||
-      `Track ${storm.title} with live weather radar and real-time severe weather alerts. Free NOAA data.`;
+      `Track ${titleWithYear} with live radar and real-time updates. Current forecasts, weather alerts, and conditions. Updated continuously.`;
     ogImage = storm.og_image_url || `${BASE_URL}/api/og-image/storm/${slug}`;
     ogUrl = `${BASE_URL}/storm/${slug}`;
   } else if (alertsMatch) {
