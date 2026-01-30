@@ -89,8 +89,8 @@ function resetMetaTags() {
   if (metaKeywords) metaKeywords.setAttribute('content', 'weather radar, live weather radar, radar weather, weather map, storm tracking, severe weather alerts, real-time weather, interactive radar, storm radar');
 }
 
-// Active storms list
-function ActiveStormsList() {
+// Active storms highlight section
+function ActiveStormsHighlight() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,41 +103,43 @@ function ActiveStormsList() {
     fetchEvents();
   }, []);
 
-  if (loading) return null;
-
-  if (events.length === 0) {
-    return (
-      <p className="text-slate-500 text-sm">
-        No major storm events currently active. Check back during severe weather.
-      </p>
-    );
-  }
+  if (loading || events.length === 0) return null;
 
   return (
-    <ul className="space-y-2">
-      {events.map((storm) => {
-        const icon = typeIcons[storm.type] || typeIcons.default;
-        const statusColor = statusColors[storm.status] || 'text-slate-400';
-        return (
-          <li key={storm.id || storm.slug}>
+    <section className="rounded-xl p-5 sm:p-6 border-2 border-blue-400/50 bg-gradient-to-br from-blue-900 to-blue-700">
+      <h2 className="text-lg sm:text-xl font-bold text-white mb-1 flex items-center gap-2">
+        <span>🚨</span> Active Storm Events
+      </h2>
+      <p className="text-sm text-blue-200/80 mb-4">Track major weather events with dedicated storm pages</p>
+      <div className="space-y-3">
+        {events.map((storm) => {
+          const icon = typeIcons[storm.type] || typeIcons.default;
+          return (
             <Link
+              key={storm.id || storm.slug}
               to={`/storm/${storm.slug}`}
               onClick={() => trackRadarStormEventClick({ stormSlug: storm.slug, stormName: storm.title })}
-              className="flex items-center gap-3 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"
+              className="flex items-center gap-4 px-4 py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg transition-all"
             >
-              <span className="text-xl">{icon}</span>
+              <span className="text-2xl">{icon}</span>
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-white">{storm.title}</span>
-                <span className={`ml-2 text-xs ${statusColor}`}>
+                <span className="text-sm sm:text-base font-semibold text-white block">{storm.title}</span>
+                <span className={`text-xs font-semibold inline-block mt-0.5 px-2.5 py-0.5 rounded-full ${
+                  storm.status === 'active'
+                    ? 'bg-emerald-500/30 text-emerald-300'
+                    : 'bg-amber-400/30 text-amber-300'
+                }`}>
                   {storm.status === 'active' ? 'Active Now' : 'Forecasted'}
                 </span>
               </div>
-              <span className="text-xs text-sky-400 flex-shrink-0">View on Radar →</span>
+              <span className="text-sm font-medium text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors">
+                View Details →
+              </span>
             </Link>
-          </li>
-        );
-      })}
-    </ul>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -243,6 +245,9 @@ export default function RadarPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
+        {/* Active Storms - prominent placement at top */}
+        <ActiveStormsHighlight />
+
         {/* Radar Controls */}
         <section className="flex flex-col sm:flex-row gap-4">
           {/* Layer Type */}
@@ -294,13 +299,6 @@ export default function RadarPage() {
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
           />
-        </section>
-
-        {/* Active Storms */}
-        <section>
-          <h2 className="text-xl font-semibold text-white mb-3">Active Storm Events</h2>
-          <p className="text-slate-400 text-sm mb-4">Track major weather events with dedicated storm pages:</p>
-          <ActiveStormsList />
         </section>
 
         {/* How to Use */}
