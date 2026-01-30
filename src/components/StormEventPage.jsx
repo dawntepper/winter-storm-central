@@ -117,8 +117,8 @@ function updateMetaTags(event) {
 
 // Reset meta tags to defaults
 function resetMetaTags() {
-  const defaultTitle = 'StormTracking - Real-Time Extreme Weather Alerts & Live Tracker';
-  const defaultDesc = 'Track extreme weather alerts in real-time. Live updates on winter storms, hurricanes, severe weather & more from the National Weather Service. Free weather tracker.';
+  const defaultTitle = 'StormTracking - Live Weather Radar & Real-Time Storm Alerts';
+  const defaultDesc = 'Live weather radar with real-time severe weather alerts. Track winter storms, hurricanes, and severe weather with interactive radar maps. Free NOAA/NWS data.';
 
   document.title = defaultTitle;
 
