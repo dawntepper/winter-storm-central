@@ -476,14 +476,6 @@ export default function App() {
     }
   };
 
-  if (alertsLoading && !alertsData) {
-    return <LoadingState />;
-  }
-
-  if (alertsError && !alertsData) {
-    return <ErrorState error={alertsError} onRetry={refreshAlerts} />;
-  }
-
   return (
     <div className="min-h-screen">
       <Header
@@ -494,6 +486,21 @@ export default function App() {
         stormPhase="active"
         isStale={alertsIsStale}
       />
+
+      {/* Inline loading/error banners (non-blocking — page still renders) */}
+      {alertsLoading && !alertsData && (
+        <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 text-center">
+          <p className="text-sm text-slate-400">Loading weather alerts from NOAA...</p>
+        </div>
+      )}
+      {alertsError && !alertsData && (
+        <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 text-center">
+          <p className="text-sm text-slate-400">
+            Unable to load weather data.{' '}
+            <button onClick={refreshAlerts} className="text-sky-400 hover:text-sky-300 font-medium cursor-pointer">Try again</button>
+          </p>
+        </div>
+      )}
 
       {/* Active Storm Event Banner */}
       <StormEventBanner />
