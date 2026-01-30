@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
+import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -121,6 +122,7 @@ function ActiveStormsList() {
           <li key={storm.id || storm.slug}>
             <Link
               to={`/storm/${storm.slug}`}
+              onClick={() => trackRadarStormEventClick({ stormSlug: storm.slug, stormName: storm.title })}
               className="flex items-center gap-3 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"
             >
               <span className="text-xl">{icon}</span>
@@ -250,7 +252,7 @@ export default function RadarPage() {
               {LAYER_TYPES.map(type => (
                 <button
                   key={type.id}
-                  onClick={() => setRadarType(type.id)}
+                  onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id); }}
                   className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
                     radarType === type.id
                       ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
@@ -270,7 +272,7 @@ export default function RadarPage() {
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Color Scheme</label>
               <select
                 value={colorScheme}
-                onChange={(e) => setColorScheme(Number(e.target.value))}
+                onChange={(e) => { const val = Number(e.target.value); setColorScheme(val); trackRadarColorSchemeChange(RADAR_COLOR_SCHEMES[val]); }}
                 className="w-full px-3 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
               >
                 {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
@@ -292,6 +294,13 @@ export default function RadarPage() {
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
           />
+        </section>
+
+        {/* Active Storms */}
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">Active Storm Events</h2>
+          <p className="text-slate-400 text-sm mb-4">Track major weather events with dedicated storm pages:</p>
+          <ActiveStormsList />
         </section>
 
         {/* How to Use */}
@@ -327,13 +336,6 @@ export default function RadarPage() {
               </p>
             </div>
           </div>
-        </section>
-
-        {/* Active Storms */}
-        <section>
-          <h2 className="text-xl font-semibold text-white mb-3">Active Storm Events</h2>
-          <p className="text-slate-400 text-sm mb-4">Track major weather events with dedicated storm pages:</p>
-          <ActiveStormsList />
         </section>
 
         {/* FAQ */}

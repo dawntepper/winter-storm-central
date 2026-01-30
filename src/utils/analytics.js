@@ -368,6 +368,31 @@ export function trackStormRadarClick({ stormSlug, source }) {
 }
 
 // ============================================
+// RADAR PAGE INTERACTION EVENTS
+// ============================================
+
+/**
+ * Track radar type change on /radar page
+ */
+export function trackRadarTypeChange(radarType) {
+  track('Radar Type Change', { radar_type: radarType });
+}
+
+/**
+ * Track color scheme change on /radar page
+ */
+export function trackRadarColorSchemeChange(colorScheme) {
+  track('Radar Color Scheme Change', { color_scheme: colorScheme });
+}
+
+/**
+ * Track click on active storm event link from /radar page
+ */
+export function trackRadarStormEventClick({ stormSlug, stormName }) {
+  track('Radar Storm Event Click', { stormSlug, stormName });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -441,6 +466,12 @@ export function testAllTracking() {
   trackRadarLinkClick('header');
   trackStormRadarClick({ stormSlug: 'winter-storm-test', source: 'storm_page_cta' });
 
+  // Radar page interaction events
+  console.log('\n6b. Radar Page Interaction Events:');
+  trackRadarTypeChange('satellite');
+  trackRadarColorSchemeChange('NEXRAD Level III');
+  trackRadarStormEventClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test' });
+
   // Storm page events
   console.log('\n7. Storm Page Events:');
   trackStormBannerClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test', source: 'homepage_banner' });
@@ -499,5 +530,8 @@ export default {
   trackStormAlertDetailView,
   trackStormPageEntry,
   trackRadarLinkClick,
-  trackStormRadarClick
+  trackStormRadarClick,
+  trackRadarTypeChange,
+  trackRadarColorSchemeChange,
+  trackRadarStormEventClick
 };
