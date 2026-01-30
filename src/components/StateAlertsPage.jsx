@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
@@ -17,7 +17,8 @@ import {
   trackStateAlertsPageView,
   trackStateAlertDetailView,
   trackStateNearbyClick,
-  trackBrowseByStateClick
+  trackBrowseByStateClick,
+  trackRadarLinkClick
 } from '../utils/analytics';
 
 // =============================================
@@ -376,6 +377,7 @@ function NearbyStatesSection({ stateAbbr, alertCountsByState }) {
 
 export default function StateAlertsPage() {
   const { state: stateSlug } = useParams();
+  const navigate = useNavigate();
   const stateAbbr = SLUG_TO_ABBR[stateSlug];
   const stateData = stateAbbr ? US_STATES[stateSlug] : null;
 
@@ -473,17 +475,34 @@ export default function StateAlertsPage() {
               </svg>
               <span className="hidden sm:inline text-sm">Back</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📡</span>
-              <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📡</span>
+                <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                <Link to="/radar" onClick={() => trackRadarLinkClick('state_header')} className="text-[10px] sm:text-xs text-sky-400 hover:text-sky-300 transition-colors">Live Weather Radar</Link>
+                <span className="text-slate-600 text-[10px]">|</span>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const abbr = US_STATES[e.target.value]?.abbr;
+                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'state_header' });
+                      navigate(`/alerts/${e.target.value}`);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+                >
+                  <option value="" disabled>State Weather Tracker ▾</option>
+                  {Object.entries(US_STATES).map(([slug, s]) => (
+                    <option key={slug} value={slug}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-          <Link
-            to="/radar"
-            className="text-sm text-sky-400 hover:text-sky-300 font-medium transition-colors"
-          >
-            Full Radar →
-          </Link>
         </div>
       </header>
 

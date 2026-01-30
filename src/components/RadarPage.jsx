@@ -4,11 +4,12 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
-import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick } from '../utils/analytics';
+import { US_STATES } from '../data/stateConfig';
+import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -165,6 +166,8 @@ const LAYER_TYPES = [
 ];
 
 export default function RadarPage() {
+  const navigate = useNavigate();
+
   // Get alerts for the map
   const {
     alerts: alertsData,
@@ -198,9 +201,30 @@ export default function RadarPage() {
               </svg>
               <span className="hidden sm:inline text-sm">Back</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📡</span>
-              <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📡</span>
+                <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const abbr = US_STATES[e.target.value]?.abbr;
+                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'radar_header' });
+                      navigate(`/alerts/${e.target.value}`);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+                >
+                  <option value="" disabled>State Weather Tracker ▾</option>
+                  {Object.entries(US_STATES).map(([slug, s]) => (
+                    <option key={slug} value={slug}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

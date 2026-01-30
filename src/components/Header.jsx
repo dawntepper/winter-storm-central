@@ -147,7 +147,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                   }}
                   className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
                 >
-                  <option value="" disabled>State Alerts ▾</option>
+                  <option value="" disabled>State Weather Tracker ▾</option>
                   {Object.entries(US_STATES).map(([slug, s]) => (
                     <option key={slug} value={slug}>{s.name}</option>
                   ))}

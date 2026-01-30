@@ -895,8 +895,8 @@ export default function App() {
 
         {/* Browse by State */}
         <section id="browse-states" className="mt-8 pt-6 border-t border-slate-800">
-          <h2 className="text-lg font-semibold text-white mb-1">Weather Alerts by State</h2>
-          <p className="text-sm text-slate-400 mb-4">Browse active NWS alerts for your state</p>
+          <h2 className="text-lg font-semibold text-white mb-1">State Weather Tracker</h2>
+          <p className="text-sm text-slate-400 mb-4">Track weather alerts and live radar for your state</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {Object.entries(US_STATES).map(([slug, state]) => {
               const count = alertsData?.allAlerts
