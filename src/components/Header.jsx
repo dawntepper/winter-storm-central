@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick } from '../utils/analytics';
+import { Link, useNavigate } from 'react-router-dom';
+import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick } from '../utils/analytics';
+import { US_STATES } from '../data/stateConfig';
 
 const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
 
@@ -14,6 +15,7 @@ function getSiteSettings() {
 }
 
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
+  const navigate = useNavigate();
   const [shareMessage, setShareMessage] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showBetaTooltip, setShowBetaTooltip] = useState(false);
@@ -129,9 +131,28 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 )}
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap">
               <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-sky-400 hover:text-sky-300 transition-colors">Live Weather Radar</Link>
-              {' & Real-Time Storm Alerts'}
+              <span className="text-slate-600">|</span>
+              <span className="relative inline-flex items-center">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const abbr = US_STATES[e.target.value]?.abbr;
+                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'header_dropdown' });
+                      navigate(`/alerts/${e.target.value}`);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="appearance-none bg-transparent text-sky-400 hover:text-sky-300 cursor-pointer pr-3 focus:outline-none text-[10px] sm:text-xs font-normal"
+                >
+                  <option value="" disabled>State Alerts ▾</option>
+                  {Object.entries(US_STATES).map(([slug, s]) => (
+                    <option key={slug} value={slug}>{s.name}</option>
+                  ))}
+                </select>
+              </span>
             </p>
           </div>
         </div>
