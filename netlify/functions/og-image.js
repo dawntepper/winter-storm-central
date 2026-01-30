@@ -210,10 +210,10 @@ function truncate(str, max) {
 }
 
 function buildTextOverlay({ title, subtitle, statusText, statusColor, brandingSubtitle }) {
-  const FONT = '"DejaVu Sans", "Liberation Sans", Arial, Helvetica, sans-serif';
+  const FONT = "'DejaVu Sans', 'Liberation Sans', Arial, Helvetica, sans-serif";
   const escapedTitle = escapeXml(truncate(title, 35));
   const escapedSubtitle = subtitle ? escapeXml(truncate(subtitle, 70)) : '';
-  const escapedBrandingSub = escapeXml(brandingSubtitle || 'Live Weather Radar &amp; Alerts');
+  const escapedBrandingSub = escapeXml(brandingSubtitle || 'Live Weather Radar & Alerts');
 
   // Calculate status badge width based on text length
   const badgeWidth = statusText ? statusText.length * 11 + 36 : 0;
@@ -236,26 +236,26 @@ function buildTextOverlay({ title, subtitle, statusText, statusColor, brandingSu
   <rect x="0" y="0" width="${OG_WIDTH}" height="4" fill="#38bdf8" />
 
   <!-- Branding -->
-  <text x="48" y="52" font-family=${FONT} font-size="28" font-weight="bold" fill="#38bdf8">StormTracking</text>
-  <text x="48" y="78" font-family=${FONT} font-size="15" fill="#94a3b8">${escapedBrandingSub}</text>
+  <text x="48" y="52" font-family="${FONT}" font-size="28" font-weight="bold" fill="#38bdf8">StormTracking</text>
+  <text x="48" y="78" font-family="${FONT}" font-size="15" fill="#94a3b8">${escapedBrandingSub}</text>
 
   <!-- LIVE indicator -->
   <rect x="${OG_WIDTH - 110}" y="30" width="80" height="32" rx="6" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
   <circle cx="${OG_WIDTH - 90}" cy="46" r="5" fill="#10b981" />
-  <text x="${OG_WIDTH - 78}" y="52" font-family=${FONT} font-size="14" font-weight="bold" fill="#10b981">LIVE</text>
+  <text x="${OG_WIDTH - 78}" y="52" font-family="${FONT}" font-size="14" font-weight="bold" fill="#10b981">LIVE</text>
 
   ${statusText ? `
   <!-- Status badge -->
   <rect x="48" y="470" width="${badgeWidth}" height="34" rx="8" fill="${statusColor}" />
-  <text x="${48 + badgeWidth / 2}" y="493" font-family=${FONT} font-size="14" font-weight="bold" fill="white" text-anchor="middle">${escapeXml(statusText)}</text>
+  <text x="${48 + badgeWidth / 2}" y="493" font-family="${FONT}" font-size="14" font-weight="bold" fill="white" text-anchor="middle">${escapeXml(statusText)}</text>
   ` : ''}
 
   <!-- Title -->
-  <text x="48" y="${statusText ? '548' : '530'}" font-family=${FONT} font-size="52" font-weight="bold" fill="white">${escapedTitle}</text>
+  <text x="48" y="${statusText ? '548' : '530'}" font-family="${FONT}" font-size="52" font-weight="bold" fill="white">${escapedTitle}</text>
 
   ${escapedSubtitle ? `
   <!-- Subtitle -->
-  <text x="48" y="${statusText ? '580' : '568'}" font-family=${FONT} font-size="18" fill="#cbd5e1">${escapedSubtitle}</text>
+  <text x="48" y="${statusText ? '580' : '568'}" font-family="${FONT}" font-size="18" fill="#cbd5e1">${escapedSubtitle}</text>
   ` : ''}
 
   <!-- Bottom accent line -->
