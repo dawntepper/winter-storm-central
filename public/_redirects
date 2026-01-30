@@ -1,8 +1,11 @@
 # Dynamic sitemap from Netlify Function
 /sitemap.xml  /.netlify/functions/sitemap  200
 
-# Don't redirect API calls - let them go to Netlify Functions
-/api/*  /api/:splat  200
+# OG image generation (must be before generic /api/* catch-all)
+/api/og-image/*  /.netlify/functions/og-image  200
+
+# API calls → Netlify Functions
+/api/*  /.netlify/functions/:splat  200
 
 # SPA routing - serve index.html for all other routes
 /*    /index.html   200
