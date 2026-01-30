@@ -126,7 +126,8 @@ async function compositeMapImage(lat, lon, zoom) {
 
     let radarBuffer = null;
     if (radar) {
-      const radarUrl = `${radar.host}${radar.path}/256/${zoom}/${tile.x}/${tile.y}/4/1_1.png`;
+      // Color scheme 6 = Rainbow (more vibrant for OG thumbnails)
+      const radarUrl = `${radar.host}${radar.path}/256/${zoom}/${tile.x}/${tile.y}/6/1_1.png`;
       radarBuffer = await fetchTile(radarUrl);
     }
 
@@ -161,10 +162,22 @@ async function compositeMapImage(lat, lon, zoom) {
 
   let mapBuffer = await image.png().toBuffer();
 
+  // Brighten the base map slightly so it's not so dark
+  mapBuffer = await sharp(mapBuffer)
+    .modulate({ brightness: 1.2 })
+    .png()
+    .toBuffer();
+
   // Add radar overlay
   if (radarLayers.length > 0) {
     mapBuffer = await sharp(mapBuffer).composite(radarLayers).png().toBuffer();
   }
+
+  // Boost saturation so radar colors pop
+  mapBuffer = await sharp(mapBuffer)
+    .modulate({ saturation: 1.4 })
+    .png()
+    .toBuffer();
 
   // Center-crop to OG dimensions
   const cropLeft = Math.floor((gridWidth - OG_WIDTH) / 2);
@@ -197,48 +210,56 @@ function truncate(str, max) {
 }
 
 function buildTextOverlay({ title, subtitle, statusText, statusColor, brandingSubtitle }) {
-  const escapedTitle = escapeXml(truncate(title, 40));
+  const FONT = '"DejaVu Sans", "Liberation Sans", Arial, Helvetica, sans-serif';
+  const escapedTitle = escapeXml(truncate(title, 35));
   const escapedSubtitle = subtitle ? escapeXml(truncate(subtitle, 70)) : '';
-  const escapedBrandingSub = escapeXml(brandingSubtitle || 'Live Weather Radar & Alerts');
+  const escapedBrandingSub = escapeXml(brandingSubtitle || 'Live Weather Radar &amp; Alerts');
 
   // Calculate status badge width based on text length
-  const badgeWidth = statusText ? statusText.length * 10 + 32 : 0;
+  const badgeWidth = statusText ? statusText.length * 11 + 36 : 0;
 
   return Buffer.from(`<svg width="${OG_WIDTH}" height="${OG_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <!-- Strong gradient: dark at top and bottom for text, transparent in middle for map -->
     <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" style="stop-color:rgb(15,23,42);stop-opacity:0.92" />
-      <stop offset="30%" style="stop-color:rgb(15,23,42);stop-opacity:0.5" />
-      <stop offset="60%" style="stop-color:rgb(15,23,42);stop-opacity:0.35" />
-      <stop offset="100%" style="stop-color:rgb(15,23,42);stop-opacity:0.88" />
+      <stop offset="0%" style="stop-color:rgb(15,23,42);stop-opacity:0.95" />
+      <stop offset="18%" style="stop-color:rgb(15,23,42);stop-opacity:0.7" />
+      <stop offset="40%" style="stop-color:rgb(15,23,42);stop-opacity:0.15" />
+      <stop offset="60%" style="stop-color:rgb(15,23,42);stop-opacity:0.15" />
+      <stop offset="78%" style="stop-color:rgb(15,23,42);stop-opacity:0.75" />
+      <stop offset="100%" style="stop-color:rgb(15,23,42);stop-opacity:0.97" />
     </linearGradient>
   </defs>
   <rect width="100%" height="100%" fill="url(#grad)" />
 
+  <!-- Top accent line -->
+  <rect x="0" y="0" width="${OG_WIDTH}" height="4" fill="#38bdf8" />
+
   <!-- Branding -->
-  <text x="48" y="60" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#38bdf8">StormTracking</text>
-  <text x="48" y="84" font-family="system-ui, Helvetica, Arial, sans-serif" font-size="14" fill="#94a3b8">${escapedBrandingSub}</text>
+  <text x="48" y="52" font-family=${FONT} font-size="28" font-weight="bold" fill="#38bdf8">StormTracking</text>
+  <text x="48" y="78" font-family=${FONT} font-size="15" fill="#94a3b8">${escapedBrandingSub}</text>
 
   <!-- LIVE indicator -->
-  <circle cx="${OG_WIDTH - 76}" cy="52" r="6" fill="#10b981" />
-  <text x="${OG_WIDTH - 64}" y="58" font-family="system-ui, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#10b981">LIVE</text>
+  <rect x="${OG_WIDTH - 110}" y="30" width="80" height="32" rx="6" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
+  <circle cx="${OG_WIDTH - 90}" cy="46" r="5" fill="#10b981" />
+  <text x="${OG_WIDTH - 78}" y="52" font-family=${FONT} font-size="14" font-weight="bold" fill="#10b981">LIVE</text>
 
   ${statusText ? `
   <!-- Status badge -->
-  <rect x="48" y="440" width="${badgeWidth}" height="30" rx="6" fill="${statusColor}" fill-opacity="0.9" />
-  <text x="${48 + badgeWidth / 2}" y="460" font-family="system-ui, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="white" text-anchor="middle" letter-spacing="0.5">${escapeXml(statusText)}</text>
+  <rect x="48" y="470" width="${badgeWidth}" height="34" rx="8" fill="${statusColor}" />
+  <text x="${48 + badgeWidth / 2}" y="493" font-family=${FONT} font-size="14" font-weight="bold" fill="white" text-anchor="middle">${escapeXml(statusText)}</text>
   ` : ''}
 
   <!-- Title -->
-  <text x="48" y="520" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="46" font-weight="800" fill="white">${escapedTitle}</text>
+  <text x="48" y="${statusText ? '548' : '530'}" font-family=${FONT} font-size="52" font-weight="bold" fill="white">${escapedTitle}</text>
 
   ${escapedSubtitle ? `
   <!-- Subtitle -->
-  <text x="48" y="560" font-family="system-ui, Helvetica, Arial, sans-serif" font-size="18" fill="#cbd5e1">${escapedSubtitle}</text>
+  <text x="48" y="${statusText ? '580' : '568'}" font-family=${FONT} font-size="18" fill="#cbd5e1">${escapedSubtitle}</text>
   ` : ''}
 
-  <!-- Bottom bar -->
-  <rect x="0" y="${OG_HEIGHT - 4}" width="${OG_WIDTH}" height="4" fill="#38bdf8" />
+  <!-- Bottom accent line -->
+  <rect x="0" y="${OG_HEIGHT - 5}" width="${OG_WIDTH}" height="5" fill="#38bdf8" />
 </svg>`);
 }
 
