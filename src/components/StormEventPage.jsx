@@ -16,7 +16,8 @@ import {
   trackStormShare,
   trackStormMapInteraction,
   trackStormAlertDetailView,
-  trackStormPageEntry
+  trackStormPageEntry,
+  trackStormRadarClick
 } from '../utils/analytics';
 
 // Full state names for tooltips
@@ -1142,6 +1143,7 @@ export default function StormEventPage() {
             </div>
             <Link
               to="/radar"
+              onClick={() => trackStormRadarClick({ stormSlug: event.slug, source: 'storm_page_cta' })}
               className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
             >
               <span>📡</span> View Full Radar Map

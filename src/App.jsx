@@ -15,7 +15,8 @@ import {
   trackAlertAddedToMap,
   trackLocationViewedOnMap,
   trackLocationRemoved,
-  trackStormBannerClick
+  trackStormBannerClick,
+  trackRadarLinkClick
 } from './utils/analytics';
 
 // Weather condition to icon mapping
@@ -672,7 +673,7 @@ export default function App() {
               Switch between precipitation radar, satellite infrared, and forecast views
               with multiple color schemes on the full Radar Maps page.
             </p>
-            <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+            <Link to="/radar" onClick={() => trackRadarLinkClick('homepage_mobile')} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
               Explore Radar Maps →
             </Link>
           </section>
@@ -731,7 +732,7 @@ export default function App() {
                 Choose from 9 color schemes on the full Radar Maps page. Perfect for tracking
                 winter storms, hurricanes, thunderstorms, and other extreme weather events.
               </p>
-              <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+              <Link to="/radar" onClick={() => trackRadarLinkClick('homepage_desktop')} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
                 Explore Radar Maps →
               </Link>
             </section>

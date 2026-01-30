@@ -350,6 +350,24 @@ export function trackStormPageEntry({ stormSlug, referrer, isDirect }) {
 }
 
 // ============================================
+// RADAR PAGE NAVIGATION EVENTS
+// ============================================
+
+/**
+ * Track click on "Live Weather Radar" link in header
+ */
+export function trackRadarLinkClick(source) {
+  track('Radar Link Click', { source });
+}
+
+/**
+ * Track click on "View Full Radar Map" from storm event pages
+ */
+export function trackStormRadarClick({ stormSlug, source }) {
+  track('Storm Radar Click', { stormSlug, source });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -418,14 +436,19 @@ export function testAllTracking() {
   trackLocationSearch('80301');
   trackLocationSearchFailed('xyz123', 'Location not found');
 
+  // Radar navigation events
+  console.log('\n6. Radar Navigation Events:');
+  trackRadarLinkClick('header');
+  trackStormRadarClick({ stormSlug: 'winter-storm-test', source: 'storm_page_cta' });
+
   // Storm page events
-  console.log('\n6. Storm Page Events:');
+  console.log('\n7. Storm Page Events:');
   trackStormBannerClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test', source: 'homepage_banner' });
   trackStormAlertDetailView({ stormSlug: 'winter-storm-test', alertType: 'Winter Storm Warning', alertSeverity: 'Severe', alertLocation: 'Denver, CO' });
   trackStormPageEntry({ stormSlug: 'winter-storm-test', referrer: 'google.com', isDirect: false });
 
   // Session events
-  console.log('\n7. Session Events (would track over time):');
+  console.log('\n8. Session Events (would track over time):');
   console.log('   - Engaged Session (2min) - tracked via timer');
   console.log('   - High Engagement Session (5min) - tracked via timer');
 
@@ -474,5 +497,7 @@ export default {
   trackStormPageRefresh,
   trackStormBannerClick,
   trackStormAlertDetailView,
-  trackStormPageEntry
+  trackStormPageEntry,
+  trackRadarLinkClick,
+  trackStormRadarClick
 };

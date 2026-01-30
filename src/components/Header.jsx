@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { trackShare, trackSupportClick, trackManualRefresh } from '../utils/analytics';
+import { Link } from 'react-router-dom';
+import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick } from '../utils/analytics';
 
 const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
 
@@ -128,7 +129,10 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 )}
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Live Weather Radar & Real-Time Storm Alerts</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">
+              <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-sky-400 hover:text-sky-300 transition-colors">Live Weather Radar</Link>
+              {' & Real-Time Storm Alerts'}
+            </p>
           </div>
         </div>
 
