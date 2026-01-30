@@ -1,5 +1,5 @@
 // Netlify Edge Function: Rewrite OG meta tags for social crawlers
-// Intercepts /storm/* and /radar requests from bots and injects
+// Intercepts /storm/*, /radar, and /alerts/* requests from bots and injects
 // page-specific og:title, og:description, og:image into the HTML
 
 const CRAWLER_AGENTS = [
@@ -9,6 +9,23 @@ const CRAWLER_AGENTS = [
 ];
 
 const BASE_URL = 'https://stormtracking.io';
+
+// State slug → name for /alerts/* pages (duplicated here since edge functions can't import from Vite bundle)
+const SLUG_TO_STATE_NAME = {
+  'alabama': 'Alabama', 'alaska': 'Alaska', 'arizona': 'Arizona', 'arkansas': 'Arkansas',
+  'california': 'California', 'colorado': 'Colorado', 'connecticut': 'Connecticut', 'delaware': 'Delaware',
+  'florida': 'Florida', 'georgia': 'Georgia', 'hawaii': 'Hawaii', 'idaho': 'Idaho',
+  'illinois': 'Illinois', 'indiana': 'Indiana', 'iowa': 'Iowa', 'kansas': 'Kansas',
+  'kentucky': 'Kentucky', 'louisiana': 'Louisiana', 'maine': 'Maine', 'maryland': 'Maryland',
+  'massachusetts': 'Massachusetts', 'michigan': 'Michigan', 'minnesota': 'Minnesota', 'mississippi': 'Mississippi',
+  'missouri': 'Missouri', 'montana': 'Montana', 'nebraska': 'Nebraska', 'nevada': 'Nevada',
+  'new-hampshire': 'New Hampshire', 'new-jersey': 'New Jersey', 'new-mexico': 'New Mexico', 'new-york': 'New York',
+  'north-carolina': 'North Carolina', 'north-dakota': 'North Dakota', 'ohio': 'Ohio', 'oklahoma': 'Oklahoma',
+  'oregon': 'Oregon', 'pennsylvania': 'Pennsylvania', 'rhode-island': 'Rhode Island',
+  'south-carolina': 'South Carolina', 'south-dakota': 'South Dakota', 'tennessee': 'Tennessee',
+  'texas': 'Texas', 'utah': 'Utah', 'vermont': 'Vermont', 'virginia': 'Virginia',
+  'washington': 'Washington', 'west-virginia': 'West Virginia', 'wisconsin': 'Wisconsin', 'wyoming': 'Wyoming',
+};
 
 function isCrawler(userAgent) {
   const ua = (userAgent || '').toLowerCase();
@@ -22,7 +39,7 @@ async function fetchStormData(slug) {
 
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,seo_title,seo_description,affected_states&limit=1`,
+      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,seo_title,seo_description,affected_states,og_image_url&limit=1`,
       {
         headers: {
           apikey: supabaseKey,
@@ -70,9 +87,10 @@ export default async function handler(request, context) {
 
   // Match routes
   const stormMatch = pathname.match(/^\/storm\/([a-z0-9-]+)$/);
+  const alertsMatch = pathname.match(/^\/alerts\/([a-z-]+)$/);
   const isRadar = pathname === '/radar';
 
-  if (!stormMatch && !isRadar) {
+  if (!stormMatch && !isRadar && !alertsMatch) {
     return context.next();
   }
 
@@ -100,8 +118,24 @@ export default async function handler(request, context) {
     ogDescription =
       storm.seo_description ||
       `Track ${storm.title} with live weather radar and real-time severe weather alerts. Free NOAA data.`;
-    ogImage = `${BASE_URL}/api/og-image/storm/${slug}`;
+    ogImage = storm.og_image_url || `${BASE_URL}/api/og-image/storm/${slug}`;
     ogUrl = `${BASE_URL}/storm/${slug}`;
+  } else if (alertsMatch) {
+    // /alerts/:state page
+    const stateSlug = alertsMatch[1];
+    const stateName = SLUG_TO_STATE_NAME[stateSlug];
+
+    if (!stateName) {
+      return new Response(html, {
+        status: response.status,
+        headers: response.headers,
+      });
+    }
+
+    ogTitle = `${stateName} Weather Alerts | Live NWS Alerts | StormTracking`;
+    ogDescription = `Active weather alerts for ${stateName}. Track winter storms, severe weather, flood warnings, and more with live radar and real-time NWS data.`;
+    ogImage = `${BASE_URL}/og-image.png`;
+    ogUrl = `${BASE_URL}/alerts/${stateSlug}`;
   } else {
     // /radar page
     ogTitle = 'Live Weather Radar Map | Real-Time Storm Tracking | StormTracking';

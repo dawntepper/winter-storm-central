@@ -82,7 +82,7 @@ async function fetchStormData(slug) {
 
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,affected_states,map_center,map_zoom,seo_title,seo_description&limit=1`,
+      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,affected_states,map_center,map_zoom,seo_title,seo_description,og_image_url&limit=1`,
       {
         headers: {
           apikey: supabaseKey,
@@ -295,6 +295,22 @@ async function generateRadarOgImage() {
 
 async function generateStormOgImage(slug) {
   const storm = await fetchStormData(slug);
+
+  // If a custom OG image URL is set, fetch and resize it
+  if (storm?.og_image_url) {
+    try {
+      const res = await fetch(storm.og_image_url);
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        return sharp(buf)
+          .resize(OG_WIDTH, OG_HEIGHT, { fit: 'cover' })
+          .png({ compressionLevel: 8 })
+          .toBuffer();
+      }
+    } catch (e) {
+      console.warn('Custom OG image fetch failed, falling back to generated:', e.message);
+    }
+  }
 
   const title = storm?.title || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const lat = storm?.map_center?.lat ?? 39.0;

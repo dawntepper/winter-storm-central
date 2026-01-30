@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import { getActiveStormEvents } from './services/stormEventsService';
 import { STATE_CENTROIDS } from './data/stateCentroids';
+import { US_STATES, STATE_NAMES, ABBR_TO_SLUG } from './data/stateConfig';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
@@ -16,7 +17,8 @@ import {
   trackLocationViewedOnMap,
   trackLocationRemoved,
   trackStormBannerClick,
-  trackRadarLinkClick
+  trackRadarLinkClick,
+  trackBrowseByStateClick
 } from './utils/analytics';
 
 // Weather condition to icon mapping
@@ -888,6 +890,34 @@ export default function App() {
               onStateZoom={handleStateZoom}
               selectedStateCode={selectedStateCode}
             />
+          </div>
+        </section>
+
+        {/* Browse by State */}
+        <section id="browse-states" className="mt-8 pt-6 border-t border-slate-800">
+          <h2 className="text-lg font-semibold text-white mb-1">Weather Alerts by State</h2>
+          <p className="text-sm text-slate-400 mb-4">Browse active NWS alerts for your state</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {Object.entries(US_STATES).map(([slug, state]) => {
+              const count = alertsData?.allAlerts
+                ? alertsData.allAlerts.filter(a => a.state === state.abbr).length
+                : 0;
+              return (
+                <Link
+                  key={slug}
+                  to={`/alerts/${slug}`}
+                  onClick={() => trackBrowseByStateClick({ stateCode: state.abbr, source: 'homepage_grid' })}
+                  className="flex items-center justify-between px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm"
+                >
+                  <span className="text-slate-200 font-medium truncate">{state.name}</span>
+                  {count > 0 && (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold flex-shrink-0">
+                      {count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </section>
 

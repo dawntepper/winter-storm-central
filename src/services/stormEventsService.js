@@ -221,6 +221,7 @@ function transformSingleFromDb(record) {
     keywords: ensureArray(record.keywords),
     seoTitle: record.seo_title,
     seoDescription: record.seo_description,
+    ogImageUrl: record.og_image_url || '',
     created: record.created_at,
     updated: record.updated_at
   };
@@ -249,6 +250,7 @@ function transformToDb(event) {
   if (event.keywords !== undefined) dbEvent.keywords = event.keywords;
   if (event.seoTitle !== undefined) dbEvent.seo_title = event.seoTitle;
   if (event.seoDescription !== undefined) dbEvent.seo_description = event.seoDescription;
+  if (event.ogImageUrl !== undefined) dbEvent.og_image_url = event.ogImageUrl;
   // Historical stats
   if (event.peakAlertCount !== undefined) dbEvent.peak_alert_count = event.peakAlertCount;
   if (event.totalAlertsIssued !== undefined) dbEvent.total_alerts_issued = event.totalAlertsIssued;

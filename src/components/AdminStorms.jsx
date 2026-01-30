@@ -229,6 +229,7 @@ function StormForm({ event, onSave, onCancel, saving }) {
     keywords: [''],
     seoTitle: '',
     seoDescription: '',
+    ogImageUrl: '',
     peakAlertCount: null,
     totalAlertsIssued: null
   };
@@ -657,6 +658,28 @@ function StormForm({ event, onSave, onCancel, saving }) {
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
               placeholder="Track the January 2026 nor'easter in real-time..."
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">OG Image URL</label>
+            <input
+              type="url"
+              value={formData.ogImageUrl}
+              onChange={(e) => handleChange('ogImageUrl', e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+              placeholder="https://example.com/storm-image.jpg"
+            />
+            <p className="text-xs text-slate-500 mt-1">Custom Open Graph image URL. Leave empty to auto-generate from radar map.</p>
+            {formData.ogImageUrl && (
+              <div className="mt-2">
+                <img
+                  src={formData.ogImageUrl}
+                  alt="OG image preview"
+                  className="h-32 rounded border border-slate-600 object-cover"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                  onLoad={(e) => { e.target.style.display = 'block'; }}
+                />
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Keywords (comma-separated)</label>

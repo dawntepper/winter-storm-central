@@ -39,3 +39,7 @@
 [[edge_functions]]
   path = "/radar"
   function = "og-rewrite"
+
+[[edge_functions]]
+  path = "/alerts/*"
+  function = "og-rewrite"

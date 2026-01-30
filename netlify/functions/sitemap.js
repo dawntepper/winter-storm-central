@@ -5,8 +5,29 @@ const { createClient } = require('@supabase/supabase-js');
 
 const BASE_URL = 'https://stormtracking.io';
 
+// All 50 state slugs for /alerts/:state pages
+const STATE_SLUGS = [
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california',
+  'colorado', 'connecticut', 'delaware', 'florida', 'georgia',
+  'hawaii', 'idaho', 'illinois', 'indiana', 'iowa',
+  'kansas', 'kentucky', 'louisiana', 'maine', 'maryland',
+  'massachusetts', 'michigan', 'minnesota', 'mississippi', 'missouri',
+  'montana', 'nebraska', 'nevada', 'new-hampshire', 'new-jersey',
+  'new-mexico', 'new-york', 'north-carolina', 'north-dakota', 'ohio',
+  'oklahoma', 'oregon', 'pennsylvania', 'rhode-island', 'south-carolina',
+  'south-dakota', 'tennessee', 'texas', 'utah', 'vermont',
+  'virginia', 'washington', 'west-virginia', 'wisconsin', 'wyoming',
+];
+
 function generateSitemap(storms) {
   const now = new Date().toISOString();
+
+  const stateUrls = STATE_SLUGS.map(slug => `  <url>
+    <loc>${BASE_URL}/alerts/${slug}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
 
   const stormUrls = storms.map(storm => {
     const changefreq = storm.status === 'active' ? 'hourly' :
@@ -37,6 +58,7 @@ function generateSitemap(storms) {
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
+${stateUrls}
 ${stormUrls}
 </urlset>`;
 }

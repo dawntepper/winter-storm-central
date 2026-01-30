@@ -393,6 +393,38 @@ export function trackRadarStormEventClick({ stormSlug, stormName }) {
 }
 
 // ============================================
+// STATE ALERTS PAGE EVENTS
+// ============================================
+
+/**
+ * Track state alerts page view
+ */
+export function trackStateAlertsPageView({ stateCode, stateName, alertCount }) {
+  track('State Alerts Page View', { stateCode, stateName, alertCount });
+}
+
+/**
+ * Track alert detail view from state alerts page
+ */
+export function trackStateAlertDetailView({ stateCode, alertType }) {
+  track('State Alert Detail View', { stateCode, alertType });
+}
+
+/**
+ * Track nearby state link click
+ */
+export function trackStateNearbyClick({ fromState, toState }) {
+  track('State Nearby Click', { fromState, toState });
+}
+
+/**
+ * Track click on a state from browse-by-state grid
+ */
+export function trackBrowseByStateClick({ stateCode, source }) {
+  track('Browse By State Click', { stateCode, source });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -472,8 +504,15 @@ export function testAllTracking() {
   trackRadarColorSchemeChange('NEXRAD Level III');
   trackRadarStormEventClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test' });
 
+  // State alerts events
+  console.log('\n7. State Alerts Events:');
+  trackStateAlertsPageView({ stateCode: 'NY', stateName: 'New York', alertCount: 5 });
+  trackStateAlertDetailView({ stateCode: 'NY', alertType: 'Winter Storm Warning' });
+  trackStateNearbyClick({ fromState: 'NY', toState: 'NJ' });
+  trackBrowseByStateClick({ stateCode: 'NY', source: 'homepage_grid' });
+
   // Storm page events
-  console.log('\n7. Storm Page Events:');
+  console.log('\n8. Storm Page Events:');
   trackStormBannerClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test', source: 'homepage_banner' });
   trackStormAlertDetailView({ stormSlug: 'winter-storm-test', alertType: 'Winter Storm Warning', alertSeverity: 'Severe', alertLocation: 'Denver, CO' });
   trackStormPageEntry({ stormSlug: 'winter-storm-test', referrer: 'google.com', isDirect: false });
@@ -533,5 +572,10 @@ export default {
   trackStormRadarClick,
   trackRadarTypeChange,
   trackRadarColorSchemeChange,
-  trackRadarStormEventClick
+  trackRadarStormEventClick,
+  // State alerts events
+  trackStateAlertsPageView,
+  trackStateAlertDetailView,
+  trackStateNearbyClick,
+  trackBrowseByStateClick
 };
