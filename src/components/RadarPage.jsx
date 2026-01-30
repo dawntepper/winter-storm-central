@@ -212,8 +212,18 @@ export default function RadarPage() {
 
         {/* Collapsible info panel */}
         {showInfo && (
-          <div className="max-w-7xl mx-auto mt-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700">
-            <h2 className="text-sm font-semibold text-white mb-2">Interactive Weather Radar</h2>
+          <div className="max-w-7xl mx-auto mt-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700 relative">
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-sm font-semibold text-white mb-2">Interactive Weather Radar</h2>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="p-1 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-2">
               Our live weather radar map displays real-time precipitation, storm movements,
               and severe weather alerts across the United States. The interactive radar
