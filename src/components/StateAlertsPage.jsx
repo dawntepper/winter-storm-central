@@ -499,13 +499,16 @@ export default function StateAlertsPage() {
             </div>
             <div className="flex items-center gap-3">
               {!alertsLoading && (
-                <div className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${
-                  stateAlerts.length > 0
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-emerald-500/20 text-emerald-400'
-                }`}>
-                  {stateAlerts.length} Active {stateAlerts.length === 1 ? 'Alert' : 'Alerts'}
-                </div>
+                <a
+                  href="#state-alerts"
+                  className={`text-xs sm:text-sm font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors ${
+                    stateAlerts.length > 0
+                      ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  }`}
+                >
+                  {stateAlerts.length} {stateAlerts.length === 1 ? 'Alert' : 'Alerts'}
+                </a>
               )}
             </div>
           </div>
@@ -545,7 +548,7 @@ export default function StateAlertsPage() {
         <ActiveStormsForState stateAbbr={stateAbbr} />
 
         {/* Alerts */}
-        <section>
+        <section id="state-alerts">
           <h2 className="text-lg font-semibold text-white mb-3">
             Active Weather Alerts in {stateData.name}
             {!alertsLoading && (

@@ -131,9 +131,9 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 )}
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap">
-              <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-sky-400 hover:text-sky-300 transition-colors">Live Weather Radar</Link>
-              <span className="text-slate-600">|</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
+              <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-[10px] sm:text-xs text-sky-400 hover:text-sky-300 transition-colors">Live Weather Radar</Link>
+              <span className="text-slate-600 text-[10px]">|</span>
               <span className="relative inline-flex items-center">
                 <select
                   defaultValue=""
@@ -145,7 +145,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                       e.target.value = '';
                     }
                   }}
-                  className="appearance-none bg-transparent text-sky-400 hover:text-sky-300 cursor-pointer pr-3 focus:outline-none text-[10px] sm:text-xs font-normal"
+                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
                 >
                   <option value="" disabled>State Alerts ▾</option>
                   {Object.entries(US_STATES).map(([slug, s]) => (
@@ -153,7 +153,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                   ))}
                 </select>
               </span>
-            </p>
+            </div>
           </div>
         </div>
 

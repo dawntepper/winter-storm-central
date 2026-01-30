@@ -694,7 +694,7 @@ const alertCategoryColors = {
 };
 
 // Simple alert dot marker with highlight and selected support
-function AlertDotMarker({ alert, onHover, onLeave, highlighted = false, selected = false }) {
+function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false }) {
   const position = [alert.lat, alert.lon];
   const baseColor = alertCategoryColors[alert.category] || alertCategoryColors.default;
   // Green when selected, otherwise use category color
@@ -726,7 +726,8 @@ function AlertDotMarker({ alert, onHover, onLeave, highlighted = false, selected
         }}
         eventHandlers={{
           mouseover: (e) => onHover(alert, e),
-          mouseout: onLeave
+          mouseout: onLeave,
+          click: (e) => onClick(alert, e)
         }}
       />
     </>
@@ -780,6 +781,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [userGeoLocation, setUserGeoLocation] = useState(null);
   const mapContainerRef = useRef(null);
   const hideAlertTimeoutRef = useRef(null);
+  const pinnedAlertRef = useRef(false);
   const cities = Object.values(weatherData);
 
   // Handle alert marker hover
@@ -799,12 +801,36 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
   };
 
-  // Handle alert marker leave with delay
+  // Handle alert marker leave with delay (skipped when pinned via click/tap)
   const handleAlertLeave = () => {
+    if (pinnedAlertRef.current) return;
     hideAlertTimeoutRef.current = setTimeout(() => {
       setHoveredAlert(null);
       setHoverCardPosition(null);
     }, 200);
+  };
+
+  // Handle alert marker click/tap — pins the card so it stays visible on mobile
+  const handleAlertClick = (alert, event) => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    // If same alert is already pinned, dismiss it
+    if (pinnedAlertRef.current && hoveredAlert?.id === alert.id) {
+      pinnedAlertRef.current = false;
+      setHoveredAlert(null);
+      setHoverCardPosition(null);
+      return;
+    }
+    pinnedAlertRef.current = true;
+    setHoveredUserLocation(null);
+    setHoveredAlert(alert);
+    if (mapContainerRef.current && event) {
+      setHoverCardPosition({
+        x: event.containerPoint.x,
+        y: event.containerPoint.y
+      });
+    }
   };
 
   // Handle user location marker hover
@@ -841,6 +867,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   // Handle card leave
   const handleCardLeave = () => {
+    pinnedAlertRef.current = false;
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoverCardPosition(null);
@@ -991,6 +1018,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 alert={alert}
                 onHover={handleAlertHover}
                 onLeave={handleAlertLeave}
+                onClick={handleAlertClick}
                 highlighted={highlightedAlertId === alert.id}
                 selected={selectedAlertId === alert.id}
               />
