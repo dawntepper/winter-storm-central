@@ -2,9 +2,11 @@
   publish = "dist"
   command = "npm run build"
   functions = "netlify/functions"
+  edge_functions = "netlify/edge-functions"
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["sharp"]
 
 # Dynamic sitemap from Netlify Function
 [[redirects]]
@@ -12,13 +14,28 @@
   to = "/.netlify/functions/sitemap"
   status = 200
 
+# OG image generation (must be before /api/* catch-all)
+[[redirects]]
+  from = "/api/og-image/*"
+  to = "/.netlify/functions/og-image"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# SPA fallback
+# SPA fallback (must be last)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Edge functions for crawler OG meta tag injection
+[[edge_functions]]
+  path = "/storm/*"
+  function = "og-rewrite"
+
+[[edge_functions]]
+  path = "/radar"
+  function = "og-rewrite"

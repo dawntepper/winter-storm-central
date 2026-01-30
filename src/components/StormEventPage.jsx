@@ -114,6 +114,13 @@ function updateMetaTags(event) {
   // Update canonical URL
   let canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', `https://stormtracking.io/storm/${event.slug}`);
+
+  // Update OG image to dynamic storm-specific image
+  let ogImage = document.querySelector('meta[property="og:image"]');
+  if (ogImage) ogImage.setAttribute('content', `https://stormtracking.io/api/og-image/storm/${event.slug}`);
+
+  let twImage = document.querySelector('meta[property="twitter:image"]');
+  if (twImage) twImage.setAttribute('content', `https://stormtracking.io/api/og-image/storm/${event.slug}`);
 }
 
 // Reset meta tags to defaults
@@ -143,6 +150,13 @@ function resetMetaTags() {
 
   let canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', 'https://stormtracking.io');
+
+  // Reset OG image to default
+  let ogImage = document.querySelector('meta[property="og:image"]');
+  if (ogImage) ogImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
+
+  let twImage = document.querySelector('meta[property="twitter:image"]');
+  if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
 }
 
 // Alert card component for event page
@@ -1405,7 +1419,8 @@ export default function StormEventPage() {
                 "addressRegion": event.affectedStates.join(', ')
               }
             },
-            "url": `https://stormtracking.io/storm/${event.slug}`
+            "url": `https://stormtracking.io/storm/${event.slug}`,
+            "image": `https://stormtracking.io/api/og-image/storm/${event.slug}`
           })
         }}
       />

@@ -55,6 +55,13 @@ function setRadarMetaTags() {
 
   let metaKeywords = document.querySelector('meta[name="keywords"]');
   if (metaKeywords) metaKeywords.setAttribute('content', 'weather radar, live radar map, weather radar map, interactive radar, real-time radar, storm radar, precipitation radar');
+
+  // Update OG image to dynamic radar image
+  let ogImage = document.querySelector('meta[property="og:image"]');
+  if (ogImage) ogImage.setAttribute('content', 'https://stormtracking.io/api/og-image/radar');
+
+  let twImage = document.querySelector('meta[property="twitter:image"]');
+  if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/api/og-image/radar');
 }
 
 // Reset meta tags to homepage defaults
@@ -87,6 +94,13 @@ function resetMetaTags() {
 
   let metaKeywords = document.querySelector('meta[name="keywords"]');
   if (metaKeywords) metaKeywords.setAttribute('content', 'weather radar, live weather radar, radar weather, weather map, storm tracking, severe weather alerts, real-time weather, interactive radar, storm radar');
+
+  // Reset OG image to default
+  let ogImage = document.querySelector('meta[property="og:image"]');
+  if (ogImage) ogImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
+
+  let twImage = document.querySelector('meta[property="twitter:image"]');
+  if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
 }
 
 // Active storms highlight section
