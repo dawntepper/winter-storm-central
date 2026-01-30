@@ -79,35 +79,35 @@ function updateMetaTags(event) {
   if (!event) return;
 
   // Update title
-  document.title = event.seoTitle || `${event.title} Live Tracker | StormTracking`;
+  document.title = event.seoTitle || `${event.title} Live Radar | Real-Time Alerts & Tracking`;
 
   // Update meta description
   let metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) {
-    metaDesc.setAttribute('content', event.seoDescription || event.description);
+    metaDesc.setAttribute('content', event.seoDescription || `Track ${event.title} with live weather radar. Real-time alerts, interactive radar maps, and forecasts for affected areas.`);
   }
 
   // Update OG tags
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', `${event.title} Live Tracker`);
+  if (ogTitle) ogTitle.setAttribute('content', `${event.title} Live Radar & Alerts`);
 
   let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', event.description);
+  if (ogDesc) ogDesc.setAttribute('content', `Track ${event.title} with live weather radar. Real-time alerts and interactive radar maps.`);
 
   let ogUrl = document.querySelector('meta[property="og:url"]');
   if (ogUrl) ogUrl.setAttribute('content', `https://stormtracking.io/storm/${event.slug}`);
 
   // Update Twitter tags
   let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', `${event.title} Live Tracker`);
+  if (twTitle) twTitle.setAttribute('content', `${event.title} Live Radar & Alerts`);
 
   let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', event.description);
+  if (twDesc) twDesc.setAttribute('content', `Track ${event.title} with live weather radar and real-time alerts.`);
 
   // Update keywords
   let metaKeywords = document.querySelector('meta[name="keywords"]');
   if (metaKeywords && event.keywords) {
-    metaKeywords.setAttribute('content', event.keywords.join(', ') + ', live tracker, real-time alerts, weather tracking');
+    metaKeywords.setAttribute('content', event.keywords.join(', ') + ', live radar, real-time alerts, weather radar, storm tracking');
   }
 
   // Update canonical URL
@@ -1128,6 +1128,27 @@ export default function StormEventPage() {
           </div>
         </div>
       </div>
+
+      {/* Storm Radar Section */}
+      {event.status !== 'completed' && (
+        <div className="bg-slate-800/50 border-b border-slate-700 px-4 sm:px-6 py-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-white mb-1">{event.title} Live Radar</h2>
+              <p className="text-sm text-slate-400">
+                View {event.title} on our interactive weather radar map showing real-time
+                conditions and severe weather alerts for {event.affectedStates?.slice(0, 5).join(', ')}{event.affectedStates?.length > 5 ? '...' : ''}.
+              </p>
+            </div>
+            <Link
+              to="/radar"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
+            >
+              <span>📡</span> View Full Radar Map
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Forecast Maps Section - Hidden for now, revisiting design */}
       {/* {event.status !== 'completed' && (

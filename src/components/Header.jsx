@@ -128,7 +128,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 )}
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Real-Time Extreme Weather Alerts & Live Tracker</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Live Weather Radar & Real-Time Storm Alerts</p>
           </div>
         </div>
 

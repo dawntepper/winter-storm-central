@@ -31,6 +31,12 @@ function generateSitemap(storms) {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>${BASE_URL}/radar</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
 ${stormUrls}
 </urlset>`;
 }

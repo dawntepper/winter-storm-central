@@ -657,6 +657,20 @@ export default function App() {
             />
           </div>
 
+          {/* Live Weather Radar section */}
+          <section className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+            <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
+            <p className="text-sm text-slate-400 leading-relaxed mb-3">
+              Track severe weather in real-time with our interactive weather radar map.
+              View live radar showing precipitation, storm movements, and severe weather
+              alerts across the United States. Our weather radar updates automatically
+              with the latest NOAA data.
+            </p>
+            <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+              View Full Weather Radar →
+            </Link>
+          </section>
+
           {/* 4. EXTREME WEATHER on mobile */}
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
@@ -699,6 +713,24 @@ export default function App() {
                 selectedAlertId={selectedAlertId}
               />
             </div>
+
+            {/* Live Weather Radar section */}
+            <section className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+              <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
+              <p className="text-sm text-slate-400 leading-relaxed mb-2">
+                Track severe weather in real-time with our interactive weather radar map.
+                View live radar showing precipitation, storm movements, and severe weather
+                alerts across the United States.
+              </p>
+              <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                Toggle radar overlay to see real-time weather conditions, or view individual
+                severe weather alerts on the map. Perfect for tracking winter storms,
+                hurricanes, thunderstorms, and other extreme weather events.
+              </p>
+              <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+                View Full Weather Radar →
+              </Link>
+            </section>
           </div>
 
           {/* Right Column: Your Locations + Extreme Weather */}
@@ -856,27 +888,19 @@ export default function App() {
 
         {/* Footer */}
         <footer className="text-center py-6 border-t border-slate-800 space-y-6">
-          {/* SEO Content Sections */}
-          <section className="max-w-3xl mx-auto px-4">
-            <h2 className="text-lg font-semibold text-slate-300 mb-3">Live Weather Radar</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-3">
-              View live weather radar with real-time radar weather updates across the United States. Our interactive
-              weather map shows current precipitation, storm cells, and severe weather patterns as they develop.
-              StormTracking overlays NOAA radar data with active weather alerts so you can see exactly what's
-              heading your way.
-            </p>
-          </section>
+          {/* Footer Links */}
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
+            <span className="text-slate-600">|</span>
+            <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-sky-400 transition-colors">Contact</a>
+          </div>
 
-          <section className="max-w-3xl mx-auto px-4 mt-4">
-            <h2 className="text-lg font-semibold text-slate-300 mb-3">Real-Time Severe Weather Alerts</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-3">
-              Track live weather alerts including winter storms, hurricanes, tornadoes, severe thunderstorms,
-              floods, and heat waves. StormTracking provides real-time notifications from the National Weather
-              Service for all severe weather events across the United States.
-            </p>
+          {/* SEO Content */}
+          <section className="max-w-3xl mx-auto px-4">
             <p className="text-slate-500 text-xs leading-relaxed">
-              Get instant alerts for extreme weather conditions in your area. Monitor active storm systems,
-              weather warnings, watches, and advisories as they're issued by NWS. Free NOAA/NWS data.
+              StormTracking provides live weather radar and real-time severe weather alerts from the National Weather
+              Service. Track winter storms, hurricanes, tornadoes, severe thunderstorms, floods, and heat waves
+              with interactive radar maps and instant NWS notifications.
             </p>
           </section>
 
