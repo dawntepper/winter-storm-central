@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap from './StormMap';
+import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
 
 // Event type icons
 const typeIcons = {
@@ -139,6 +139,13 @@ function ActiveStormsList() {
   );
 }
 
+// Radar layer type options
+const LAYER_TYPES = [
+  { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow radar' },
+  { id: 'satellite', label: 'Satellite IR', description: 'Infrared cloud imagery' },
+  { id: 'forecast', label: 'Forecast', description: '30-min radar prediction' }
+];
+
 export default function RadarPage() {
   // Get alerts for the map
   const {
@@ -149,6 +156,10 @@ export default function RadarPage() {
   const mapAlerts = alertsData?.byCategory
     ? Object.values(alertsData.byCategory).flat()
     : [];
+
+  // Radar controls
+  const [radarType, setRadarType] = useState('precipitation');
+  const [colorScheme, setColorScheme] = useState(4);
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -204,6 +215,46 @@ export default function RadarPage() {
           </p>
         </section>
 
+        {/* Radar Controls */}
+        <section className="flex flex-col sm:flex-row gap-4">
+          {/* Layer Type */}
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Radar Type</label>
+            <div className="flex gap-2">
+              {LAYER_TYPES.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setRadarType(type.id)}
+                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
+                    radarType === type.id
+                      ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                  }`}
+                >
+                  <span className="block">{type.label}</span>
+                  <span className="block text-[10px] mt-0.5 opacity-70">{type.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Scheme - only for precipitation and forecast */}
+          {radarType !== 'satellite' && (
+            <div className="sm:w-56">
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Color Scheme</label>
+              <select
+                value={colorScheme}
+                onChange={(e) => setColorScheme(Number(e.target.value))}
+                className="w-full px-3 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
+              >
+                {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </section>
+
         {/* Map */}
         <section>
           <StormMap
@@ -212,6 +263,8 @@ export default function RadarPage() {
             userLocations={[]}
             alerts={mapAlerts}
             isHero
+            radarLayerType={radarType}
+            radarColorScheme={colorScheme}
           />
         </section>
 

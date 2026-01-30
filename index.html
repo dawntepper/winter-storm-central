@@ -72,7 +72,59 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static fallback content for search engine crawlers (replaced by React on mount) -->
+      <div style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:100vh;padding:0">
+        <header style="background:#1e293b;border-bottom:1px solid #334155;padding:16px 24px">
+          <h1 style="font-size:24px;font-weight:bold;color:white;margin:0">StormTracking</h1>
+          <p style="font-size:12px;color:#94a3b8;margin:4px 0 0">Live Weather Radar &amp; Real-Time Storm Alerts</p>
+        </header>
+        <main style="max-width:1200px;margin:0 auto;padding:24px">
+          <section style="margin-bottom:32px">
+            <h2 style="font-size:20px;color:white;margin:0 0 12px">Live Weather Radar Map</h2>
+            <p style="font-size:14px;color:#94a3b8;line-height:1.6">
+              Track severe weather across the United States with real-time radar data from NOAA.
+              Our interactive weather radar map displays live precipitation, storm movements,
+              and severe weather alerts. Toggle between precipitation radar, satellite infrared,
+              and forecast views.
+            </p>
+          </section>
+          <section style="margin-bottom:32px">
+            <h2 style="font-size:20px;color:white;margin:0 0 12px">Real-Time Severe Weather Alerts</h2>
+            <p style="font-size:14px;color:#94a3b8;line-height:1.6">
+              Monitor active weather warnings, watches, and advisories from the National Weather Service.
+              StormTracking tracks winter storms, hurricanes, tornadoes, flooding, extreme heat,
+              and wildfire weather across all 50 states with alerts updated every 30 minutes.
+            </p>
+          </section>
+          <section style="margin-bottom:32px">
+            <h2 style="font-size:20px;color:white;margin:0 0 12px">Storm Tracking Features</h2>
+            <ul style="font-size:14px;color:#94a3b8;line-height:1.8;padding-left:20px">
+              <li>Interactive weather radar with precipitation and satellite views</li>
+              <li>Real-time NWS severe weather alerts and warnings</li>
+              <li>Search any US location for local weather conditions</li>
+              <li>Live storm event pages with forecasts and impact tracking</li>
+              <li>Multiple radar color schemes including NEXRAD and Dark Sky</li>
+              <li>Auto-refreshing data from NOAA and the National Weather Service</li>
+            </ul>
+          </section>
+          <nav style="margin-bottom:32px">
+            <h2 style="font-size:20px;color:white;margin:0 0 12px">Explore</h2>
+            <ul style="font-size:14px;list-style:none;padding:0">
+              <li style="margin-bottom:8px"><a href="/radar" style="color:#38bdf8">Radar Maps — Precipitation, Satellite &amp; Forecast Views</a></li>
+              <li style="margin-bottom:8px"><a href="https://weather.gov" style="color:#38bdf8">Official NWS Weather Data at weather.gov</a></li>
+            </ul>
+          </nav>
+          <footer style="border-top:1px solid #334155;padding-top:16px;font-size:12px;color:#64748b">
+            <p>StormTracking uses NOAA/National Weather Service data for informational purposes only.
+            Always verify with official sources at <a href="https://weather.gov" style="color:#38bdf8">weather.gov</a>.</p>
+          </footer>
+        </main>
+      </div>
+      <noscript>
+        <p>StormTracking requires JavaScript to display the interactive weather radar and live alerts. Please enable JavaScript to use this application.</p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

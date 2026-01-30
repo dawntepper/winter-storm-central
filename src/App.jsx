@@ -662,12 +662,11 @@ export default function App() {
             <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
             <p className="text-sm text-slate-400 leading-relaxed mb-3">
               Track severe weather in real-time with our interactive weather radar map.
-              View live radar showing precipitation, storm movements, and severe weather
-              alerts across the United States. Our weather radar updates automatically
-              with the latest NOAA data.
+              Switch between precipitation radar, satellite infrared, and forecast views
+              with multiple color schemes on the full Radar Maps page.
             </p>
             <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
-              View Full Weather Radar →
+              Explore Radar Maps →
             </Link>
           </section>
 
@@ -719,16 +718,14 @@ export default function App() {
               <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
               <p className="text-sm text-slate-400 leading-relaxed mb-2">
                 Track severe weather in real-time with our interactive weather radar map.
-                View live radar showing precipitation, storm movements, and severe weather
-                alerts across the United States.
+                Switch between precipitation radar, satellite infrared, and forecast views.
               </p>
               <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                Toggle radar overlay to see real-time weather conditions, or view individual
-                severe weather alerts on the map. Perfect for tracking winter storms,
-                hurricanes, thunderstorms, and other extreme weather events.
+                Choose from 9 color schemes on the full Radar Maps page. Perfect for tracking
+                winter storms, hurricanes, thunderstorms, and other extreme weather events.
               </p>
               <Link to="/radar" className="text-sm text-sky-400 hover:text-sky-300 font-medium">
-                View Full Weather Radar →
+                Explore Radar Maps →
               </Link>
             </section>
           </div>

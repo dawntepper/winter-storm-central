@@ -349,8 +349,29 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
+// Radar layer types - exported for use by RadarPage controls
+export const RADAR_LAYER_TYPES = {
+  precipitation: 'precipitation',
+  satellite: 'satellite',
+  forecast: 'forecast'
+};
+
+// Color scheme options for precipitation radar - exported for use by RadarPage controls
+export const RADAR_COLOR_SCHEMES = {
+  0: 'Original',
+  1: 'Universal Blue',
+  2: 'TITAN',
+  3: 'The Weather Channel',
+  4: 'Meteored',
+  5: 'NEXRAD Level III',
+  6: 'Rainbow',
+  7: 'Dark Sky',
+  8: 'Black & White'
+};
+
 // Radar layer component using RainViewer API
-function RadarLayer({ show }) {
+// Supports precipitation radar, satellite infrared, and radar forecast
+function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
   const map = useMap();
   const layerRef = useRef(null);
 
@@ -369,25 +390,41 @@ function RadarLayer({ show }) {
         const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
         const data = await response.json();
         const host = data.host || 'https://tilecache.rainviewer.com';
-        const latest = data.radar?.past?.slice(-1)[0];
 
-        if (latest && show) {
+        let tilePath = null;
+
+        if (layerType === 'satellite') {
+          // Satellite infrared
+          const latest = data.satellite?.infrared?.slice(-1)[0];
+          if (latest) {
+            tilePath = `${host}${latest.path}/256/{z}/{x}/{y}/0/0_0.png`;
+          }
+        } else if (layerType === 'forecast') {
+          // Radar nowcast/forecast (use first forecast frame, or latest past if none)
+          const forecast = data.radar?.nowcast?.[0] || data.radar?.past?.slice(-1)[0];
+          if (forecast) {
+            tilePath = `${host}${forecast.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
+          }
+        } else {
+          // Default: precipitation radar (latest past frame)
+          const latest = data.radar?.past?.slice(-1)[0];
+          if (latest) {
+            tilePath = `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
+          }
+        }
+
+        if (tilePath && show) {
           // Remove existing layer before adding new one
           if (layerRef.current) {
             map.removeLayer(layerRef.current);
           }
 
-          // Color scheme 4 = "The Weather Channel" style (more vibrant)
-          // Options: 1_1 = smooth radar with snow detection
-          const layer = L.tileLayer(
-            `${host}${latest.path}/256/{z}/{x}/{y}/4/1_1.png`,
-            {
-              opacity: 0.7,
-              zIndex: 400,
-              tileSize: 256,
-              attribution: '<a href="https://rainviewer.com">RainViewer</a>'
-            }
-          );
+          const layer = L.tileLayer(tilePath, {
+            opacity: 0.7,
+            zIndex: 400,
+            tileSize: 256,
+            attribution: '<a href="https://rainviewer.com">RainViewer</a>'
+          });
 
           layer.addTo(map);
           layerRef.current = layer;
@@ -409,7 +446,7 @@ function RadarLayer({ show }) {
         layerRef.current = null;
       }
     };
-  }, [show, map]);
+  }, [show, map, layerType, colorScheme]);
 
   return null;
 }
@@ -726,7 +763,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [hoveredAlert, setHoveredAlert] = useState(null);
@@ -943,7 +980,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           />
 
           {/* Radar overlay */}
-          <RadarLayer show={showRadar} />
+          <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} />
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
