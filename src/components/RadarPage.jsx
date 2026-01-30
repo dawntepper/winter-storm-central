@@ -160,6 +160,7 @@ export default function RadarPage() {
   // Radar controls
   const [radarType, setRadarType] = useState('precipitation');
   const [colorScheme, setColorScheme] = useState(4);
+  const [showInfo, setShowInfo] = useState(false);
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -188,32 +189,47 @@ export default function RadarPage() {
       </header>
 
       {/* Page Header */}
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Live Weather Radar Map</h1>
-          <p className="text-slate-400">
-            Track severe weather across the United States with real-time radar data from NOAA
-          </p>
+      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Live Weather Radar Map</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Real-time radar data from NOAA</p>
+          </div>
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+              showInfo
+                ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
+                : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Info
+          </button>
         </div>
+
+        {/* Collapsible info panel */}
+        {showInfo && (
+          <div className="max-w-7xl mx-auto mt-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700">
+            <h2 className="text-sm font-semibold text-white mb-2">Interactive Weather Radar</h2>
+            <p className="text-xs text-slate-400 leading-relaxed mb-2">
+              Our live weather radar map displays real-time precipitation, storm movements,
+              and severe weather alerts across the United States. The interactive radar
+              updates every 30 minutes with the latest data from the National Weather Service.
+            </p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Toggle the radar overlay to view current weather conditions, zoom in to see
+              local detail, or click on alert markers to view severe weather warnings.
+              Switch between precipitation radar, satellite infrared imagery, and 30-minute
+              forecast views using the controls below.
+            </p>
+          </div>
+        )}
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-        {/* Intro */}
-        <section>
-          <h2 className="text-xl font-semibold text-white mb-3">Interactive Weather Radar</h2>
-          <p className="text-slate-400 text-sm leading-relaxed mb-2">
-            Our live weather radar map displays real-time precipitation, storm movements,
-            and severe weather alerts across the United States. The interactive radar
-            updates every 30 minutes with the latest data from the National Weather Service,
-            giving you accurate weather tracking 24/7.
-          </p>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            Toggle the radar overlay to view current weather conditions, zoom in to see
-            local detail, or click on alert markers to view severe weather warnings.
-            Perfect for tracking winter storms, hurricanes, thunderstorms, and other
-            extreme weather events.
-          </p>
-        </section>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
         {/* Radar Controls */}
         <section className="flex flex-col sm:flex-row gap-4">

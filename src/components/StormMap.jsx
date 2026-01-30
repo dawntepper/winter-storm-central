@@ -928,7 +928,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                     : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
                 }`}
               >
-                {showAlerts ? `✓ Alerts (${alerts.length})` : `Show Alerts (${alerts.length})`}
+                {showAlerts ? '✓ Alerts On' : 'Show Alerts'}
               </button>
             )}
             {/* Radar toggle */}
