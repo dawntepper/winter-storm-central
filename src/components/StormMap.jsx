@@ -1,7 +1,7 @@
-import { MapContainer, TileLayer, CircleMarker, Marker, Rectangle, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
-import { STATE_BOUNDS } from '../data/stateBounds';
+import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -735,20 +735,17 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
-// Highlighted state border rectangle when a state is selected
+// Highlighted state border outline when a state is selected
 function StateBorderHighlight({ stateCode }) {
-  if (!stateCode || !STATE_BOUNDS[stateCode]) return null;
+  if (!stateCode || !STATE_GEOJSON[stateCode]) return null;
 
-  const bounds = STATE_BOUNDS[stateCode];
-  const rectangle = [
-    [bounds.south, bounds.west],
-    [bounds.north, bounds.east],
-  ];
+  const geoData = STATE_GEOJSON[stateCode];
 
   return (
-    <Rectangle
-      bounds={rectangle}
-      pathOptions={{
+    <GeoJSON
+      key={stateCode}
+      data={geoData}
+      style={{
         color: '#10b981',
         weight: 3,
         opacity: 0.9,
