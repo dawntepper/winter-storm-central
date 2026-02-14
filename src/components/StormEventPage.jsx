@@ -1319,6 +1319,7 @@ export default function StormEventPage() {
                   isHero
                   centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
                   selectedAlertId={selectedAlertId}
+                  selectedStateCode={selectedStateCode}
                 />
               </div>
             </div>
@@ -1335,6 +1336,7 @@ export default function StormEventPage() {
                   isHero
                   centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
                   selectedAlertId={selectedAlertId}
+                  selectedStateCode={selectedStateCode}
                 />
               </div>
 

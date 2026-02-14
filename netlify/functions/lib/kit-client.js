@@ -342,6 +342,9 @@ async function deleteBroadcast(broadcastId) {
  * Kit doesn't have a transactional email API, so this creates a broadcast
  * filtered to one subscriber and schedules it for immediate send.
  *
+ * Includes retry logic because new subscribers added via v3 Forms API
+ * may not be immediately visible in the v4 Subscribers API.
+ *
  * @param {Object} options
  * @param {string} options.email - Subscriber email address
  * @param {string} options.subject - Email subject line
@@ -349,9 +352,22 @@ async function deleteBroadcast(broadcastId) {
  * @param {string} [options.previewText] - Preview/preheader text
  */
 async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
-  const subscriber = await findSubscriberByEmail(email);
+  // Retry subscriber lookup to handle v3→v4 replication delay
+  let subscriber = null;
+  const lookupRetries = 5;
+  const lookupDelayMs = 2000;
+
+  for (let i = 0; i < lookupRetries; i++) {
+    if (i > 0) {
+      console.log(`[Kit] Subscriber lookup retry ${i}/${lookupRetries - 1} for ${email}, waiting ${lookupDelayMs}ms...`);
+      await sleep(lookupDelayMs);
+    }
+    subscriber = await findSubscriberByEmail(email);
+    if (subscriber?.id) break;
+  }
+
   if (!subscriber?.id) {
-    throw new Error(`Subscriber not found for email: ${email}`);
+    throw new Error(`Subscriber not found for email after ${lookupRetries} attempts: ${email}`);
   }
 
   return kitRequest('POST', '/broadcasts', {

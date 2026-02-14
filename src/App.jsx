@@ -673,6 +673,7 @@ export default function App() {
               previewLocation={previewCity}
               highlightedAlertId={highlightedAlertId}
               selectedAlertId={selectedAlertId}
+              selectedStateCode={selectedStateCode}
             />
           </div>
 
@@ -729,6 +730,7 @@ export default function App() {
                 previewLocation={previewCity}
                 highlightedAlertId={highlightedAlertId}
                 selectedAlertId={selectedAlertId}
+                selectedStateCode={selectedStateCode}
               />
             </div>
 

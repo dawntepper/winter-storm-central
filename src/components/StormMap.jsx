@@ -1,6 +1,7 @@
-import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Marker, Rectangle, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
+import { STATE_BOUNDS } from '../data/stateBounds';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -734,6 +735,31 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
+// Highlighted state border rectangle when a state is selected
+function StateBorderHighlight({ stateCode }) {
+  if (!stateCode || !STATE_BOUNDS[stateCode]) return null;
+
+  const bounds = STATE_BOUNDS[stateCode];
+  const rectangle = [
+    [bounds.south, bounds.west],
+    [bounds.north, bounds.east],
+  ];
+
+  return (
+    <Rectangle
+      bounds={rectangle}
+      pathOptions={{
+        color: '#10b981',
+        weight: 3,
+        opacity: 0.9,
+        fillColor: '#10b981',
+        fillOpacity: 0.06,
+        dashArray: '8, 6',
+      }}
+    />
+  );
+}
+
 // Preview marker - just a green label, no circle (shown before user clicks Add)
 function PreviewMarker({ location }) {
   if (!location) return null;
@@ -764,7 +790,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [hoveredAlert, setHoveredAlert] = useState(null);
@@ -1008,6 +1034,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Radar overlay */}
           <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} />
+
+          {/* State border highlight */}
+          <StateBorderHighlight stateCode={selectedStateCode} />
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
