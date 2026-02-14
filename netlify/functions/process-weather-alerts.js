@@ -18,135 +18,51 @@
  *   KIT_ZIP_FIELD_KEY      - Custom field key for zip codes (default: "zip_code")
  */
 
-const {
+// Shared NWS alert parsing (single source of truth with client-side)
+import {
+  ALERTS_API,
+  NWS_HEADERS,
+  getCategoryForEvent,
+  extractLocationName,
+  extractStateCode,
+  extractGeometryCoordinates,
+  filterAlertFeatures,
+} from '../../shared/nws-alert-parser.js';
+
+import {
   getAlreadySentAlertIds,
   recordSentAlert,
   logBroadcastSend,
   cleanupOldRecords,
-} = require('./lib/supabase-admin');
+} from './lib/supabase-admin.js';
 
-const {
-  getAllSubscribers,
+import {
   listTags,
   createTag,
   createAndSendBroadcast,
-} = require('./lib/kit-client');
+} from './lib/kit-client.js';
 
-const {
+import {
   getAffectedStates,
   groupAlertsByState,
-  groupSubscribersByState,
-  matchAlertsToSubscribers,
-} = require('./lib/alert-matcher');
+} from './lib/alert-matcher.js';
 
-const {
+import {
   buildAlertEmail,
   buildAlertSubject,
   buildPreviewText,
-} = require('./lib/email-templates');
+} from './lib/email-templates.js';
 
 // ============================================
-// NWS ALERT FETCHING (server-side version)
-// Mirrors the client-side noaaAlertsService.js
+// SERVER-SIDE ALERT PARSING
+// Uses shared parser + simplified coordinate extraction
 // ============================================
 
-const ALERTS_API = 'https://api.weather.gov/alerts/active';
-
-const INCLUDED_EVENTS = [
-  'Tornado Warning', 'Tornado Watch',
-  'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch',
-  'Flash Flood Warning', 'Flash Flood Watch',
-  'Flood Warning', 'Flood Watch', 'Flood Advisory',
-  'Coastal Flood Warning', 'Coastal Flood Watch',
-  'Blizzard Warning', 'Blizzard Watch',
-  'Ice Storm Warning',
-  'Winter Storm Warning', 'Winter Storm Watch',
-  'Winter Weather Advisory',
-  'Extreme Cold Warning', 'Extreme Cold Watch',
-  'Wind Chill Warning', 'Wind Chill Watch', 'Wind Chill Advisory',
-  'Heavy Snow Warning',
-  'Lake Effect Snow Warning', 'Lake Effect Snow Watch', 'Lake Effect Snow Advisory',
-  'Freeze Warning', 'Freeze Watch',
-  'Frost Advisory',
-  'Cold Weather Advisory',
-  'Excessive Heat Warning', 'Excessive Heat Watch',
-  'Heat Advisory',
-  'Hurricane Warning', 'Hurricane Watch',
-  'Tropical Storm Warning', 'Tropical Storm Watch',
-  'Storm Surge Warning', 'Storm Surge Watch',
-  'Red Flag Warning', 'Fire Weather Watch',
-  'Fire Warning',
-  'High Wind Warning', 'High Wind Watch',
-  'Wind Advisory',
-];
-
-const ALERT_CATEGORIES = {
-  winter: {
-    events: ['Blizzard', 'Ice Storm', 'Winter Storm', 'Winter Weather',
-      'Extreme Cold', 'Wind Chill', 'Heavy Snow', 'Lake Effect Snow',
-      'Freeze', 'Frost', 'Cold Weather'],
-  },
-  severe: { events: ['Tornado', 'Severe Thunderstorm', 'High Wind', 'Wind Advisory'] },
-  heat: { events: ['Excessive Heat', 'Heat Advisory'] },
-  flood: { events: ['Flash Flood', 'Flood', 'Coastal Flood'] },
-  fire: { events: ['Red Flag', 'Fire Weather', 'Fire Warning'] },
-  tropical: { events: ['Hurricane', 'Tropical Storm', 'Storm Surge'] },
-};
-
-const MARINE_ZONE_PREFIXES = [
-  'AM', 'AN', 'GM', 'LE', 'LM', 'LO', 'LS', 'LH', 'LC', 'LZ',
-  'PH', 'PK', 'PM', 'PS', 'PZ', 'SL',
-];
-
-function getCategoryForEvent(eventType) {
-  for (const [categoryId, category] of Object.entries(ALERT_CATEGORIES)) {
-    if (category.events.some((keyword) => eventType.includes(keyword))) {
-      return categoryId;
-    }
-  }
-  return null;
-}
-
-function extractStateCode(alert) {
-  const ugc = alert.properties?.geocode?.UGC?.[0] || '';
-  if (ugc && ugc.length >= 2) {
-    const stateCode = ugc.substring(0, 2);
-    if (!MARINE_ZONE_PREFIXES.includes(stateCode)) {
-      return stateCode;
-    }
-  }
-  return null;
-}
-
-function extractLocationName(alert) {
-  const areaDesc = alert.properties?.areaDesc || '';
-  const firstArea = areaDesc.split(';')[0].trim();
-  let location = firstArea
-    .replace(/\s+(County|Parish|Borough|Municipality|City and Borough)/gi, '')
-    .trim();
-  const hasStateAbbrev = /,\s*[A-Z]{2}$/.test(location);
-  if (!hasStateAbbrev) {
-    const state = alert.properties?.geocode?.UGC?.[0]?.substring(0, 2) || '';
-    if (location && state) {
-      return `${location}, ${state}`;
-    }
-  }
-  return location || 'Unknown Location';
-}
-
-function extractCoordinates(alert) {
-  if (alert.geometry?.type === 'Polygon' && alert.geometry?.coordinates?.[0]) {
-    const coords = alert.geometry.coordinates[0];
-    const lats = coords.map((c) => c[1]);
-    const lons = coords.map((c) => c[0]);
-    return {
-      lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-      lon: lons.reduce((a, b) => a + b, 0) / lons.length,
-    };
-  }
-  return null;
-}
-
+/**
+ * Parse a raw NWS alert feature for email use.
+ * Simpler than the client-side version — doesn't require coordinates
+ * (alerts without geometry still get sent, just without a map link).
+ */
 function parseAlertForEmail(rawAlert) {
   const props = rawAlert.properties || {};
   const eventType = props.event || '';
@@ -154,7 +70,7 @@ function parseAlertForEmail(rawAlert) {
   if (!category) return null;
 
   const state = extractStateCode(rawAlert);
-  const coords = extractCoordinates(rawAlert);
+  const coords = extractGeometryCoordinates(rawAlert);
 
   return {
     id: rawAlert.id || props.id,
@@ -180,10 +96,7 @@ function parseAlertForEmail(rawAlert) {
 async function fetchNWSAlerts() {
   console.log('[NWS] Fetching active alerts...');
   const response = await fetch(ALERTS_API, {
-    headers: {
-      'User-Agent': 'StormTracking.io (contact@stormtracking.io)',
-      Accept: 'application/geo+json',
-    },
+    headers: NWS_HEADERS,
   });
 
   if (!response.ok) {
@@ -193,13 +106,10 @@ async function fetchNWSAlerts() {
   const data = await response.json();
   const features = data.features || [];
 
-  // Filter to included event types and exclude marine zones
-  const filtered = features.filter((f) => {
-    const event = f.properties?.event || '';
-    return INCLUDED_EVENTS.some((e) => event.includes(e));
-  });
+  // Filter using shared logic
+  const filtered = filterAlertFeatures(features);
 
-  // Parse alerts
+  // Parse alerts for email
   const parsed = filtered.map(parseAlertForEmail).filter(Boolean);
   console.log(`[NWS] Fetched ${features.length} total alerts, ${parsed.length} after filtering`);
 
@@ -230,7 +140,7 @@ const STATE_NAMES = {
 
 /**
  * Ensure state-based tags exist in Kit
- * Creates missing tags and returns a map of state → tagId
+ * Creates missing tags and returns a map of state -> tagId
  */
 async function ensureStateTags(states) {
   const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
@@ -381,7 +291,6 @@ async function processAlerts() {
             });
           } catch (recordError) {
             console.error(`[Process] Error recording alert ${alert.id}:`, recordError.message);
-            // Don't fail the whole batch for a recording error
           }
         }
 
@@ -438,7 +347,7 @@ async function processAlerts() {
 // ============================================
 
 // Support both scheduled invocation and HTTP trigger (for manual runs)
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache',
