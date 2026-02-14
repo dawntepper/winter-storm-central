@@ -340,7 +340,7 @@ async function deleteBroadcast(broadcastId) {
 /**
  * Send a one-off email to a single subscriber via a targeted broadcast.
  * Kit doesn't have a transactional email API, so this creates a broadcast
- * filtered to one subscriber and schedules it for immediate send.
+ * filtered to one subscriber via a temporary tag and schedules it.
  *
  * Includes retry logic because new subscribers added via v3 Forms API
  * may not be immediately visible in the v4 Subscribers API.
@@ -370,14 +370,55 @@ async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
     throw new Error(`Subscriber not found for email after ${lookupRetries} attempts: ${email}`);
   }
 
-  return kitRequest('POST', '/broadcasts', {
+  // Ensure a "welcome-email" tag exists and tag the subscriber with it
+  // Kit broadcasts can only target tags/segments, not individual subscribers
+  const WELCOME_TAG_NAME = '_welcome-email';
+  let welcomeTagId = null;
+
+  const tagsResponse = await listTags();
+  const existingTag = (tagsResponse.tags || []).find(
+    (t) => t.name === WELCOME_TAG_NAME
+  );
+
+  if (existingTag) {
+    welcomeTagId = existingTag.id;
+  } else {
+    const created = await createTag(WELCOME_TAG_NAME);
+    welcomeTagId = created?.tag?.id;
+  }
+
+  if (!welcomeTagId) {
+    throw new Error('Failed to create/find welcome email tag');
+  }
+
+  // Tag the subscriber so the broadcast filter can target them
+  await tagSubscriber(welcomeTagId, subscriber.id);
+  console.log(`[Kit] Tagged subscriber ${subscriber.id} with welcome tag ${welcomeTagId}`);
+
+  // Create broadcast filtered to the welcome tag, scheduled 1 min out
+  const broadcast = await kitRequest('POST', '/broadcasts', {
     subject,
     content,
     preview_text: previewText,
-    public: false,
-    subscriber_filter: [{ type: 'subscriber', id: subscriber.id }],
-    send_at: new Date(Date.now() + 60 * 1000).toISOString(), // 1 minute from now
+    public: true,
+    send_at: new Date(Date.now() + 60 * 1000).toISOString(),
+    subscriber_filter: [
+      {
+        all: [{ type: 'tag', ids: [welcomeTagId] }],
+        any: null,
+        none: null,
+      },
+    ],
   });
+
+  // Remove the tag after broadcast is created (Kit snapshots recipients at creation)
+  try {
+    await untagSubscriber(welcomeTagId, subscriber.id);
+  } catch (untagError) {
+    console.warn(`[Kit] Failed to remove welcome tag: ${untagError.message}`);
+  }
+
+  return broadcast;
 }
 
 // ============================================
