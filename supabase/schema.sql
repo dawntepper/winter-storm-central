@@ -189,3 +189,75 @@ CREATE TRIGGER update_user_preferences_updated_at
 --   AND tier IN ('premium', 'pro')
 --   AND (current_period_end IS NULL OR current_period_end > NOW())
 -- ) as is_premium;
+
+
+-- ============================================
+-- SENT ALERTS TRACKING TABLE
+-- Tracks which NWS alerts have been processed
+-- to prevent duplicate email sends via Kit
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.sent_alerts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+
+  -- NWS alert identifier (from NOAA API)
+  nws_alert_id TEXT NOT NULL UNIQUE,
+
+  -- Alert metadata
+  event_type TEXT NOT NULL,
+  severity TEXT,
+  affected_states TEXT[] DEFAULT '{}',
+  area_description TEXT,
+  headline TEXT,
+
+  -- Kit broadcast tracking
+  kit_broadcast_ids TEXT[] DEFAULT '{}',
+  subscriber_count INTEGER DEFAULT 0,
+  states_notified TEXT[] DEFAULT '{}',
+
+  -- Alert timing
+  alert_onset TIMESTAMPTZ,
+  alert_expires TIMESTAMPTZ,
+
+  -- Processing metadata
+  processed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  status TEXT DEFAULT 'sent' CHECK (status IN ('sent', 'failed', 'skipped')),
+  error_message TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sent_alerts_nws_id ON public.sent_alerts(nws_alert_id);
+CREATE INDEX IF NOT EXISTS idx_sent_alerts_status ON public.sent_alerts(status, processed_at);
+CREATE INDEX IF NOT EXISTS idx_sent_alerts_states ON public.sent_alerts USING GIN(affected_states);
+
+ALTER TABLE public.sent_alerts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role manages sent_alerts"
+  ON public.sent_alerts FOR ALL
+  USING (auth.role() = 'service_role');
+
+
+-- ============================================
+-- ALERT EMAIL LOG TABLE
+-- Detailed log of each email broadcast sent
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.alert_email_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sent_alert_id UUID REFERENCES public.sent_alerts(id) ON DELETE CASCADE,
+  nws_alert_id TEXT NOT NULL,
+  kit_broadcast_id TEXT,
+  target_state TEXT,
+  status TEXT DEFAULT 'created' CHECK (status IN ('created', 'sent', 'failed')),
+  error_message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_email_log_alert ON public.alert_email_log(sent_alert_id);
+
+ALTER TABLE public.alert_email_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role manages alert_email_log"
+  ON public.alert_email_log FOR ALL
+  USING (auth.role() = 'service_role');

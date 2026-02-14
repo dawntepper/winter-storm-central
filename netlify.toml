@@ -8,6 +8,10 @@
   node_bundler = "esbuild"
   external_node_modules = ["sharp"]
 
+# Scheduled function: process weather alerts every 30 minutes
+[functions."process-weather-alerts"]
+  schedule = "*/30 * * * *"
+
 # Dynamic sitemap from Netlify Function
 [[redirects]]
   from = "/sitemap.xml"

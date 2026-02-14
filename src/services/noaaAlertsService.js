@@ -1,156 +1,33 @@
 /**
  * NOAA Alerts Service
  * Fetches and parses active weather warnings from NOAA Weather.gov API
+ *
+ * Uses shared parsing logic from shared/nws-alert-parser.js
+ * Adds client-side features: coordinate fallbacks, caching, balanced selection
  */
 
 import { getStateCentroid, getCoordinatesFromFIPS } from '../data/stateCentroids';
+import {
+  ALERTS_API,
+  NWS_HEADERS,
+  ALERT_CATEGORIES,
+  CATEGORY_ORDER,
+  MARINE_ZONE_PREFIXES,
+  INCLUDED_EVENTS,
+  getCategoryForEvent,
+  extractLocationName,
+  extractStateCode,
+  extractGeometryCoordinates,
+  filterAlertFeatures,
+} from '../../shared/nws-alert-parser';
 
-const ALERTS_API = 'https://api.weather.gov/alerts/active';
+export { ALERT_CATEGORIES, CATEGORY_ORDER };
+
 const CACHE_KEY = 'stormtracker_noaa_alerts_v3'; // v3: fixed categorized alerts count
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
-// Event types to include - Warnings, Watches, and significant Advisories
-const INCLUDED_EVENTS = [
-  // Tornado/Severe
-  'Tornado Warning', 'Tornado Watch',
-  'Severe Thunderstorm Warning', 'Severe Thunderstorm Watch',
-  // Flooding
-  'Flash Flood Warning', 'Flash Flood Watch',
-  'Flood Warning', 'Flood Watch', 'Flood Advisory',
-  'Coastal Flood Warning', 'Coastal Flood Watch',
-  // Winter Weather
-  'Blizzard Warning', 'Blizzard Watch',
-  'Ice Storm Warning',
-  'Winter Storm Warning', 'Winter Storm Watch',
-  'Winter Weather Advisory',
-  'Extreme Cold Warning', 'Extreme Cold Watch',
-  'Wind Chill Warning', 'Wind Chill Watch', 'Wind Chill Advisory',
-  'Heavy Snow Warning',
-  'Lake Effect Snow Warning', 'Lake Effect Snow Watch', 'Lake Effect Snow Advisory',
-  'Freeze Warning', 'Freeze Watch',
-  'Frost Advisory',
-  'Cold Weather Advisory',
-  // Heat
-  'Excessive Heat Warning', 'Excessive Heat Watch',
-  'Heat Advisory',
-  // Tropical
-  'Hurricane Warning', 'Hurricane Watch',
-  'Tropical Storm Warning', 'Tropical Storm Watch',
-  'Storm Surge Warning', 'Storm Surge Watch',
-  // Fire
-  'Red Flag Warning', 'Fire Weather Watch',
-  'Fire Warning',
-  // Wind
-  'High Wind Warning', 'High Wind Watch',
-  'Wind Advisory'
-];
-
-// Category definitions
-export const ALERT_CATEGORIES = {
-  winter: {
-    id: 'winter',
-    name: 'Winter Weather',
-    icon: '❄️',
-    color: '#3b82f6', // blue
-    events: [
-      'Blizzard', 'Ice Storm', 'Winter Storm', 'Winter Weather',
-      'Extreme Cold', 'Wind Chill', 'Heavy Snow', 'Lake Effect Snow',
-      'Freeze', 'Frost', 'Cold Weather'
-    ]
-  },
-  severe: {
-    id: 'severe',
-    name: 'Severe Storms',
-    icon: '⛈️',
-    color: '#ef4444', // red
-    events: ['Tornado', 'Severe Thunderstorm', 'High Wind', 'Wind Advisory']
-  },
-  heat: {
-    id: 'heat',
-    name: 'Extreme Heat',
-    icon: '🌡️',
-    color: '#f97316', // orange
-    events: ['Excessive Heat', 'Heat Advisory']
-  },
-  flood: {
-    id: 'flood',
-    name: 'Flooding',
-    icon: '🌊',
-    color: '#a855f7', // purple
-    events: ['Flash Flood', 'Flood', 'Coastal Flood']
-  },
-  fire: {
-    id: 'fire',
-    name: 'Fire Weather',
-    icon: '🔥',
-    color: '#92400e', // brown
-    events: ['Red Flag', 'Fire Weather', 'Fire Warning']
-  },
-  tropical: {
-    id: 'tropical',
-    name: 'Tropical',
-    icon: '🌀',
-    color: '#1e3a8a', // dark blue
-    events: ['Hurricane', 'Tropical Storm', 'Storm Surge']
-  }
-};
-
-// Category order for display
-export const CATEGORY_ORDER = ['winter', 'severe', 'heat', 'flood', 'fire', 'tropical'];
-
 /**
- * Get category for an alert event type
- */
-function getCategoryForEvent(eventType) {
-  for (const [categoryId, category] of Object.entries(ALERT_CATEGORIES)) {
-    // Check if any category event keyword is found in the event type
-    if (category.events.some(keyword => eventType.includes(keyword))) {
-      return categoryId;
-    }
-  }
-  return null;
-}
-
-/**
- * Extract city/location name from alert area description
- */
-function extractLocationName(alert) {
-  // Try to get a clean location name from areaDesc
-  const areaDesc = alert.properties?.areaDesc || '';
-
-  // areaDesc often contains multiple areas separated by semicolons
-  // Take the first one and clean it up
-  const firstArea = areaDesc.split(';')[0].trim();
-
-  // Remove common suffixes like "County", "Parish", etc.
-  let location = firstArea
-    .replace(/\s+(County|Parish|Borough|Municipality|City and Borough)/gi, '')
-    .trim();
-
-  // Check if location already ends with a state abbreviation (e.g., "Attala, MS")
-  const hasStateAbbrev = /,\s*[A-Z]{2}$/.test(location);
-
-  // If we have geocode info, try to get state (only if not already present)
-  if (!hasStateAbbrev) {
-    const state = alert.properties?.geocode?.UGC?.[0]?.substring(0, 2) || '';
-    if (location && state) {
-      return `${location}, ${state}`;
-    }
-  }
-
-  return location || 'Unknown Location';
-}
-
-/**
- * Marine zone prefixes - these are for ocean/coastal areas, not land
- */
-const MARINE_ZONE_PREFIXES = [
-  'AM', 'AN', 'GM', 'LE', 'LM', 'LO', 'LS', 'LH', 'LC', 'LZ',
-  'PH', 'PK', 'PM', 'PS', 'PZ', 'SL'
-];
-
-/**
- * Add small random offset to prevent exact overlaps
+ * Add small random offset to prevent exact overlaps on the map
  * Spread is in degrees (roughly 0.1 = ~7 miles)
  */
 function addJitter(coords, spread = 0.15) {
@@ -162,19 +39,14 @@ function addJitter(coords, spread = 0.15) {
 }
 
 /**
- * Extract coordinates from alert geometry or use state centroid as fallback
+ * Extract coordinates from alert geometry or use state centroid as fallback.
+ * Client-side version with full FIPS/centroid fallback chain for map display.
  */
 function extractCoordinates(alert) {
-  // Try to get from geometry first (most accurate)
-  if (alert.geometry?.type === 'Polygon' && alert.geometry?.coordinates?.[0]) {
-    const coords = alert.geometry.coordinates[0];
-    const lats = coords.map(c => c[1]);
-    const lons = coords.map(c => c[0]);
-    return {
-      lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-      lon: lons.reduce((a, b) => a + b, 0) / lons.length,
-      source: 'geometry'
-    };
+  // Try polygon geometry first (most accurate)
+  const geomCoords = extractGeometryCoordinates(alert);
+  if (geomCoords) {
+    return { ...geomCoords, source: 'geometry' };
   }
 
   // Check if this is a marine zone (skip these for now)
@@ -209,31 +81,6 @@ function extractCoordinates(alert) {
       // Larger jitter for state-level fallback to spread alerts across state
       return addJitter({ ...coords, source: 'state' }, 0.5);
     }
-  }
-
-  return null;
-}
-
-/**
- * Extract state code from alert
- */
-function extractStateCode(alert) {
-  // Try UGC first (most reliable)
-  const ugc = alert.properties?.geocode?.UGC?.[0] || '';
-  if (ugc && ugc.length >= 2) {
-    const stateCode = ugc.substring(0, 2);
-    // Make sure it's not a marine zone
-    if (!MARINE_ZONE_PREFIXES.includes(stateCode)) {
-      return stateCode;
-    }
-  }
-
-  // Try SAME/FIPS code (first 2 digits map to state)
-  const sameCode = alert.properties?.geocode?.SAME?.[0];
-  if (sameCode && sameCode.length >= 2) {
-    // FIPS codes: first 2 digits are state code
-    // We'd need a mapping from FIPS state codes to postal codes
-    // For now, skip this fallback
   }
 
   return null;
@@ -284,10 +131,7 @@ function parseAlert(alert) {
  */
 async function fetchAlertsFromAPI() {
   const response = await fetch(ALERTS_API, {
-    headers: {
-      'User-Agent': 'StormTracking.io (contact@stormtracking.io)',
-      'Accept': 'application/geo+json'
-    }
+    headers: NWS_HEADERS,
   });
 
   if (!response.ok) {
@@ -384,10 +228,7 @@ export async function fetchExtremeWeather(forceRefresh = false) {
     const features = response.features || [];
 
     // Filter to only included event types
-    const warnings = features.filter(f => {
-      const event = f.properties?.event || '';
-      return INCLUDED_EVENTS.some(e => event.includes(e));
-    });
+    const warnings = filterAlertFeatures(features);
 
     // Parse alerts
     const parsed = warnings

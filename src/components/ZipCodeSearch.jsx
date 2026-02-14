@@ -698,7 +698,7 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
   );
 }
 
-export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocationClick }) {
+export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocationClick, initialLocation }) {
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -711,6 +711,9 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
   // Mobile collapse state - collapsed by default on mobile
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Track whether we've processed the initial location
+  const [initialProcessed, setInitialProcessed] = useState(false);
 
   // Store all saved locations with their map visibility
   const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
@@ -747,6 +750,59 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
       }
     }
   }, []);
+
+  // Handle initial location from URL parameter
+  useEffect(() => {
+    if (!initialLocation || initialProcessed) return;
+    setInitialProcessed(true);
+
+    if (initialLocation.type === 'zip') {
+      // Auto-expand and search the zip
+      setIsExpanded(true);
+      setSearchMode('zip');
+      setZip(initialLocation.value);
+      fetchLocationWeather(initialLocation.value);
+    } else if (initialLocation.type === 'search') {
+      // Try to match city,state from the search term
+      const value = initialLocation.value;
+      const parts = value.split(',').map(s => s.trim());
+
+      if (parts.length === 2) {
+        const cityName = parts[0];
+        const stateInput = parts[1].toUpperCase();
+
+        // Find state code
+        let stateCode = null;
+        if (STATES_AND_CITIES[stateInput]) {
+          stateCode = stateInput;
+        } else {
+          // Try matching by full state name
+          for (const [code, stateData] of Object.entries(STATES_AND_CITIES)) {
+            if (stateData.name.toLowerCase() === stateInput.toLowerCase()) {
+              stateCode = code;
+              break;
+            }
+          }
+        }
+
+        if (stateCode) {
+          const stateData = STATES_AND_CITIES[stateCode];
+          const cityData = stateData.cities.find(
+            c => c.name.toLowerCase() === cityName.toLowerCase()
+          );
+
+          setIsExpanded(true);
+          setSearchMode('city');
+          setSelectedState(stateCode);
+          setSelectedCity(cityData ? cityData.name : '');
+
+          if (cityData) {
+            fetchCityWeather(stateCode, cityData);
+          }
+        }
+      }
+    }
+  }, [initialLocation, initialProcessed]);
 
   // Save to localStorage whenever savedLocations changes
   const updateSavedLocations = (newLocations) => {
