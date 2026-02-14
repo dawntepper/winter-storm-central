@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 
 const DISMISSED_KEY = 'stormtracking_signup_dismissed';
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
@@ -84,6 +85,7 @@ export default function AlertSignupBar() {
 
       setStatus('success');
       setIsReturning(true);
+      trackAlertSignup({ type: isReturning ? 'update' : 'new', zipCode: cleanZip });
       // Auto-dismiss after success
       setTimeout(() => {
         handleDismiss();
@@ -91,6 +93,7 @@ export default function AlertSignupBar() {
     } catch (err) {
       setStatus('error');
       setErrorMsg(err.message || 'Something went wrong. Please try again.');
+      trackAlertSignupError(err.message || 'Unknown error');
     }
   };
 

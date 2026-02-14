@@ -328,11 +328,145 @@ function buildPreviewText({ stateName, alerts }) {
   return `${alerts.length} active alerts in ${stateName}: ${types.slice(0, 3).join(', ')}${types.length > 3 ? '...' : ''}`;
 }
 
+/**
+ * Build the welcome/confirmation email HTML for new subscribers.
+ * This template can be pasted into Kit's sequence editor,
+ * or used programmatically if Kit adds transactional email support.
+ */
+function buildWelcomeEmail() {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to StormTracking.io</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;padding:24px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);background-color:#1e3a5f;border-radius:12px 12px 0 0;padding:32px 24px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:8px;">
+                    <span style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
+                      StormTracking.io
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <span style="font-size:13px;color:#93c5fd;text-transform:uppercase;letter-spacing:1px;">
+                      You're signed up for weather alerts
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background:#ffffff;padding:32px 24px;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="font-size:22px;font-weight:700;color:#111827;padding-bottom:16px;">
+                    Welcome! You're all set.
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:15px;color:#374151;line-height:1.7;padding-bottom:16px;">
+                    Thanks for signing up for weather alerts from StormTracking.io. Here's what to expect:
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What you get -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:14px;color:#0c4a6e;line-height:1.8;">
+                          <strong style="font-size:15px;color:#075985;">What you'll receive:</strong><br>
+                          \u26A0\uFE0F Email alerts when the National Weather Service issues severe weather warnings for your area<br>
+                          \u2744\uFE0F Winter storms, severe thunderstorms, flooding, extreme heat, and more<br>
+                          \uD83D\uDDFA\uFE0F Direct links to view conditions on the live map
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                      <tr>
+                        <td align="center" style="background:#2563eb;border-radius:10px;">
+                          <a href="${SITE_URL}" style="display:block;padding:18px 32px;font-size:18px;font-weight:700;color:#ffffff;text-decoration:none;text-align:center;">
+                            View Live Weather Map &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-size:14px;color:#6b7280;line-height:1.6;">
+                    You can update your zip code or unsubscribe at any time. We only send alerts when there's an active warning for your area &mdash; no spam, no daily digests.
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;padding:24px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-size:12px;color:#9ca3af;line-height:1.5;padding-bottom:8px;">
+                    Data sourced from the
+                    <a href="https://www.weather.gov/" style="color:#2563eb;text-decoration:none;">National Weather Service</a>.
+                    Always follow official guidance from local authorities.
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:11px;color:#d1d5db;">
+                    &copy; ${new Date().getFullYear()} StormTracking.io
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 module.exports = {
   buildAlertEmail,
   buildAlertSubject,
   buildPreviewText,
   buildAlertCard,
+  buildWelcomeEmail,
   getSubscriberMapLink,
   SITE_URL,
 };

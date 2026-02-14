@@ -334,6 +334,55 @@ async function deleteBroadcast(broadcastId) {
 }
 
 // ============================================
+// ONE-OFF EMAILS (via targeted broadcast)
+// ============================================
+
+/**
+ * Send a one-off email to a single subscriber via a targeted broadcast.
+ * Kit doesn't have a transactional email API, so this creates a broadcast
+ * filtered to one subscriber and schedules it for immediate send.
+ *
+ * @param {Object} options
+ * @param {string} options.email - Subscriber email address
+ * @param {string} options.subject - Email subject line
+ * @param {string} options.content - HTML email content
+ * @param {string} [options.previewText] - Preview/preheader text
+ */
+async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
+  const subscriber = await findSubscriberByEmail(email);
+  if (!subscriber?.id) {
+    throw new Error(`Subscriber not found for email: ${email}`);
+  }
+
+  return kitRequest('POST', '/broadcasts', {
+    subject,
+    content,
+    preview_text: previewText,
+    public: false,
+    subscriber_filter: [{ type: 'subscriber', id: subscriber.id }],
+    send_at: new Date(Date.now() + 60 * 1000).toISOString(), // 1 minute from now
+  });
+}
+
+// ============================================
+// SEQUENCES
+// ============================================
+
+/**
+ * Add a subscriber to a sequence by email.
+ * This triggers Kit's sequence automation for the subscriber.
+ *
+ * @param {Object} options
+ * @param {string} options.sequenceId - Kit sequence ID
+ * @param {string} options.email - Subscriber email address
+ */
+async function addSubscriberToSequence({ sequenceId, email }) {
+  return kitRequest('POST', `/sequences/${sequenceId}/subscribers`, {
+    email_address: email,
+  });
+}
+
+// ============================================
 // CUSTOM FIELDS
 // ============================================
 
@@ -366,6 +415,8 @@ module.exports = {
   createAndSendBroadcast,
   getBroadcast,
   deleteBroadcast,
+  sendOneOffEmail,
+  addSubscriberToSequence,
   listCustomFields,
   createCustomField,
 };
