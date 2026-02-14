@@ -192,23 +192,32 @@ exports.handler = async (event) => {
 
   try {
     const apiKey = getApiKey();
+    console.log(`[Subscribe] === START subscribe flow for ${email}, zip: ${zip_code} ===`);
+    console.log(`[Subscribe] API key present: ${!!apiKey}, length: ${apiKey?.length}`);
+
     const state = getStateFromZip(zip_code);
+    console.log(`[Subscribe] Resolved zip ${zip_code} -> state: ${state || 'UNKNOWN'}`);
     const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
 
     // 1. Check if subscriber already exists BEFORE adding to form
     let isExistingSubscriber = false;
     try {
+      console.log(`[Subscribe] Step 1: Checking if ${email} already exists in Kit...`);
       const existing = await findSubscriberByEmail(email);
       if (existing?.id) {
         isExistingSubscriber = true;
+        console.log(`[Subscribe] Existing subscriber found: ID=${existing.id}, state=${existing.state}`);
+      } else {
+        console.log(`[Subscribe] No existing subscriber found — this is a NEW signup`);
       }
     } catch (lookupError) {
       console.warn(`[Subscribe] Pre-check lookup failed for ${email}:`, lookupError.message);
     }
 
     // 2. Subscribe to Kit form with zip_code field
-    await kitFormSubscribe({ email, zipCode: zip_code, apiKey });
-    console.log(`[Subscribe] Added ${email} to form ${KIT_FORM_ID}`);
+    console.log(`[Subscribe] Step 2: Adding ${email} to Kit form ${KIT_FORM_ID}...`);
+    const formResult = await kitFormSubscribe({ email, zipCode: zip_code, apiKey });
+    console.log(`[Subscribe] Form subscribe result:`, JSON.stringify(formResult)?.substring(0, 500));
 
     // 3. Handle state tagging (and clean up old tags for returning subscribers)
     if (state) {
@@ -242,22 +251,27 @@ exports.handler = async (event) => {
     }
 
     // 4. Send welcome email — only for new subscribers (single one-off broadcast)
+    console.log(`[Subscribe] Step 4: Welcome email decision — isExistingSubscriber: ${isExistingSubscriber}`);
     if (!isExistingSubscriber) {
       try {
-        await sendOneOffEmail({
+        console.log(`[Subscribe] Sending welcome email to ${email}...`);
+        const welcomeResult = await sendOneOffEmail({
           email,
           subject: 'Welcome to StormTracking.io — You\'re signed up for weather alerts',
           content: buildWelcomeEmail(),
           previewText: 'You\'ll receive email alerts when severe weather is detected in your area.',
         });
-        console.log(`[Subscribe] Sent welcome email to ${email}`);
+        console.log(`[Subscribe] Welcome email broadcast result:`, JSON.stringify(welcomeResult)?.substring(0, 500));
+        console.log(`[Subscribe] Welcome email SENT successfully to ${email}`);
       } catch (welcomeError) {
-        console.warn(`[Subscribe] Welcome email failed for ${email}:`, welcomeError.message);
+        console.error(`[Subscribe] !!! Welcome email FAILED for ${email}:`, welcomeError.message);
+        console.error(`[Subscribe] Welcome email error stack:`, welcomeError.stack);
       }
     } else {
-      console.log(`[Subscribe] Skipping welcome email for returning subscriber ${email}`);
+      console.log(`[Subscribe] Skipping welcome email — returning subscriber ${email}`);
     }
 
+    console.log(`[Subscribe] === COMPLETE subscribe flow for ${email} ===`);
     return {
       statusCode: 200,
       headers,
@@ -267,7 +281,9 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('[Subscribe] Error:', error);
+    console.error(`[Subscribe] === FAILED subscribe flow ===`);
+    console.error('[Subscribe] Error:', error.message);
+    console.error('[Subscribe] Stack:', error.stack);
     const isConfigError = error.message?.includes('Missing');
     return {
       statusCode: isConfigError ? 503 : 500,
