@@ -365,6 +365,24 @@ async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
 }
 
 // ============================================
+// SEQUENCES
+// ============================================
+
+/**
+ * Add a subscriber to a sequence by email.
+ * This triggers Kit's sequence automation for the subscriber.
+ *
+ * @param {Object} options
+ * @param {string} options.sequenceId - Kit sequence ID
+ * @param {string} options.email - Subscriber email address
+ */
+async function addSubscriberToSequence({ sequenceId, email }) {
+  return kitRequest('POST', `/sequences/${sequenceId}/subscribers`, {
+    email_address: email,
+  });
+}
+
+// ============================================
 // CUSTOM FIELDS
 // ============================================
 
@@ -398,6 +416,7 @@ module.exports = {
   getBroadcast,
   deleteBroadcast,
   sendOneOffEmail,
+  addSubscriberToSequence,
   listCustomFields,
   createCustomField,
 };
