@@ -745,6 +745,7 @@ function StateBorderHighlight({ stateCode }) {
     <GeoJSON
       key={stateCode}
       data={geoData}
+      interactive={false}
       style={{
         color: '#10b981',
         weight: 3,
