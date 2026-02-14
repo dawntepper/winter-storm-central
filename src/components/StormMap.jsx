@@ -1084,7 +1084,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
             style={{
               left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
-              top: Math.max(hoverCardPosition.y - 240, 8),
+              top: Math.max(hoverCardPosition.y - 12, 8),
+              transform: 'translateY(-100%)',
               pointerEvents: 'auto'
             }}
             onMouseEnter={handleCardEnter}
@@ -1157,7 +1158,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
             style={{
               left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
-              top: Math.max(hoverCardPosition.y - 160, 8),
+              top: Math.max(hoverCardPosition.y - 12, 8),
+              transform: 'translateY(-100%)',
               pointerEvents: 'auto'
             }}
             onMouseEnter={handleCardEnter}
