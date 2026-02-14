@@ -192,30 +192,41 @@ exports.handler = async (event) => {
 
   try {
     const apiKey = getApiKey();
+    const state = getStateFromZip(zip_code);
+    const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
 
-    // 1. Subscribe to Kit form with zip_code field
+    // 1. Check if subscriber already exists BEFORE adding to form
+    let isExistingSubscriber = false;
+    try {
+      const existing = await findSubscriberByEmail(email);
+      if (existing?.id) {
+        isExistingSubscriber = true;
+      }
+    } catch (lookupError) {
+      console.warn(`[Subscribe] Pre-check lookup failed for ${email}:`, lookupError.message);
+    }
+
+    // 2. Subscribe to Kit form with zip_code field
     await kitFormSubscribe({ email, zipCode: zip_code, apiKey });
     console.log(`[Subscribe] Added ${email} to form ${KIT_FORM_ID}`);
 
-    // 2. Check if this is an existing subscriber (used for tag cleanup + sequence guard)
-    let isExistingSubscriber = false;
-    const state = getStateFromZip(zip_code);
-    const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
+    // 3. Handle state tagging (and clean up old tags for returning subscribers)
     if (state) {
       try {
-        const existing = await findSubscriberByEmail(email);
-        if (existing?.id) {
-          isExistingSubscriber = true;
-          // Remove old location tags if this is a re-subscribe with a new zip
-          const currentTags = await getSubscriberTags(existing.id);
-          const newTagName = `${prefix}${state}`.toLowerCase();
-          for (const tag of currentTags) {
-            if (
-              tag.name.toLowerCase().startsWith(prefix.toLowerCase()) &&
-              tag.name.toLowerCase() !== newTagName
-            ) {
-              await untagSubscriber(tag.id, existing.id);
-              console.log(`[Subscribe] Removed old tag ${tag.name} from ${email}`);
+        if (isExistingSubscriber) {
+          const existing = await findSubscriberByEmail(email);
+          if (existing?.id) {
+            // Remove old location tags if this is a re-subscribe with a new zip
+            const currentTags = await getSubscriberTags(existing.id);
+            const newTagName = `${prefix}${state}`.toLowerCase();
+            for (const tag of currentTags) {
+              if (
+                tag.name.toLowerCase().startsWith(prefix.toLowerCase()) &&
+                tag.name.toLowerCase() !== newTagName
+              ) {
+                await untagSubscriber(tag.id, existing.id);
+                console.log(`[Subscribe] Removed old tag ${tag.name} from ${email}`);
+              }
             }
           }
         }
@@ -230,7 +241,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // 3. Send welcome email — only for new subscribers (single one-off broadcast)
+    // 4. Send welcome email — only for new subscribers (single one-off broadcast)
     if (!isExistingSubscriber) {
       try {
         await sendOneOffEmail({
