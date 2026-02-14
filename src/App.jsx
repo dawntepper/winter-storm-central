@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
+import { useLocationParam } from './hooks/useLocationParam';
 import { getActiveStormEvents } from './services/stormEventsService';
 import { STATE_CENTROIDS } from './data/stateCentroids';
 import { US_STATES, STATE_NAMES, ABBR_TO_SLUG } from './data/stateConfig';
@@ -8,6 +9,7 @@ import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
 import ExtremeWeatherSection from './components/ExtremeWeatherSection';
+import AlertSignupBar from './components/AlertSignupBar';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -257,6 +259,13 @@ export default function App() {
   const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map (hover)
   const [selectedAlertId, setSelectedAlertId] = useState(null); // Alert ID for selected/clicked state (green marker)
   const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
+  const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
+
+  // Handle ?location= URL parameter
+  const handleLocationParam = useCallback((locationData) => {
+    setInitialLocation(locationData);
+  }, []);
+  useLocationParam(handleLocationParam);
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
@@ -516,7 +525,7 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Check Location - TOP on mobile */}
           <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} />
+            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 
           {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
@@ -704,7 +713,7 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location - Above map on desktop */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} />
+              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
             </div>
 
             {/* Storm Map - Below search on desktop */}
@@ -957,6 +966,9 @@ export default function App() {
           </p>
         </footer>
       </main>
+
+      {/* Sticky email signup bar */}
+      <AlertSignupBar />
     </div>
   );
 }

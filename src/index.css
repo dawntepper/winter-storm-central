@@ -64,3 +64,57 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* Alert Signup Bar - responsive layout */
+.signup-bar-form {
+  width: 100%;
+}
+
+.signup-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.signup-bar-headline {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.signup-bar-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 768px) {
+  .signup-bar-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .signup-bar-headline {
+    text-align: center;
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  .signup-bar-inputs {
+    flex-direction: column;
+  }
+
+  .signup-bar-inputs input,
+  .signup-bar-inputs button {
+    flex: none !important;
+    width: 100% !important;
+  }
+}

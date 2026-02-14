@@ -48,15 +48,29 @@ function formatDate(isoString) {
 
 /**
  * Generate the map link for a specific alert location
+ * Prefers ?location= parameter for seamless map integration
  */
 function getMapLink(alert) {
+  if (alert.subscriberZip) {
+    return `${SITE_URL}?location=${alert.subscriberZip}`;
+  }
   if (alert.lat && alert.lon) {
-    return `${SITE_URL}?lat=${alert.lat}&lon=${alert.lon}&zoom=8`;
+    return `${SITE_URL}?location=${alert.lat},${alert.lon}`;
   }
   if (alert.state) {
     return `${SITE_URL}/alerts/${alert.state.toLowerCase()}`;
   }
   return `${SITE_URL}/alerts`;
+}
+
+/**
+ * Generate a subscriber-specific "View Live Map" link
+ */
+function getSubscriberMapLink(subscriberZip) {
+  if (subscriberZip) {
+    return `${SITE_URL}?location=${subscriberZip}`;
+  }
+  return SITE_URL;
 }
 
 /**
@@ -226,15 +240,15 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
               <!-- Alert Cards -->
               ${alertCards}
 
-              <!-- View All CTA -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+              <!-- View Live Map CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
                 <tr>
                   <td align="center">
-                    <table cellpadding="0" cellspacing="0" border="0">
+                    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                       <tr>
-                        <td style="background:#1e3a5f;border-radius:8px;">
-                          <a href="${stateAlertsUrl}" style="display:inline-block;padding:14px 32px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;">
-                            View All ${stateName} Alerts
+                        <td align="center" style="background:#2563eb;border-radius:10px;">
+                          <a href="${stateAlertsUrl}" style="display:block;padding:18px 32px;font-size:18px;font-weight:700;color:#ffffff;text-decoration:none;text-align:center;">
+                            View Live Map &rarr;
                           </a>
                         </td>
                       </tr>
@@ -284,9 +298,11 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
  * Generate the email subject line for a weather alert broadcast
  */
 function buildAlertSubject({ stateName, alerts }) {
+  const emoji = '\uD83D\uDEA8'; // 🚨
   if (alerts.length === 1) {
     const alert = alerts[0];
-    return `${alert.severity === 'Extreme' ? 'URGENT: ' : ''}${alert.event} - ${stateName}`;
+    const location = alert.location || stateName;
+    return `${emoji} ${alert.severity === 'Extreme' ? 'URGENT: ' : ''}${alert.event} for ${location}`;
   }
 
   // Multiple alerts — summarize
@@ -294,10 +310,10 @@ function buildAlertSubject({ stateName, alerts }) {
   const uniqueTypes = [...new Set(alerts.map((a) => a.event))];
 
   if (uniqueTypes.length <= 2) {
-    return `${hasExtreme ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} - ${stateName}`;
+    return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} for ${stateName}`;
   }
 
-  return `${hasExtreme ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${stateName}`;
+  return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${stateName}`;
 }
 
 /**
@@ -317,5 +333,6 @@ module.exports = {
   buildAlertSubject,
   buildPreviewText,
   buildAlertCard,
+  getSubscriberMapLink,
   SITE_URL,
 };

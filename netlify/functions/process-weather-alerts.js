@@ -354,8 +354,11 @@ export const handler = async (event) => {
   };
 
   // Check for required environment variables
-  const requiredVars = ['KIT_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const requiredVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
   const missing = requiredVars.filter((v) => !process.env[v]);
+  if (!process.env.CONVERTKIT_API_KEY && !process.env.KIT_API_KEY) {
+    missing.push('CONVERTKIT_API_KEY or KIT_API_KEY');
+  }
   if (missing.length > 0) {
     const msg = `Missing environment variables: ${missing.join(', ')}`;
     console.error(msg);

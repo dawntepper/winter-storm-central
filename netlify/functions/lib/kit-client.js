@@ -54,9 +54,9 @@ function sleep(ms) {
  * Get API key from environment
  */
 function getApiKey() {
-  const apiKey = process.env.KIT_API_KEY;
+  const apiKey = process.env.CONVERTKIT_API_KEY || process.env.KIT_API_KEY;
   if (!apiKey) {
-    throw new Error('Missing KIT_API_KEY environment variable');
+    throw new Error('Missing CONVERTKIT_API_KEY or KIT_API_KEY environment variable');
   }
   return apiKey;
 }
