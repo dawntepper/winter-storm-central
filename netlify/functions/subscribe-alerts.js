@@ -10,6 +10,11 @@
  */
 
 const { getStateFromZip } = require('./lib/alert-matcher.js');
+const {
+  findSubscriberByEmail,
+  getSubscriberTags,
+  untagSubscriber,
+} = require('./lib/kit-client.js');
 
 const KIT_V3_BASE = 'https://api.convertkit.com/v3';
 const KIT_V4_BASE = 'https://api.kit.com/v4';
@@ -192,8 +197,25 @@ exports.handler = async (event) => {
 
     // 2. Tag by state (best-effort — don't fail the signup if tagging fails)
     const state = getStateFromZip(zip_code);
+    const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
     if (state) {
       try {
+        // Remove old location tags if this is a re-subscribe with a new zip
+        const existing = await findSubscriberByEmail(email);
+        if (existing?.id) {
+          const currentTags = await getSubscriberTags(existing.id);
+          const newTagName = `${prefix}${state}`.toLowerCase();
+          for (const tag of currentTags) {
+            if (
+              tag.name.toLowerCase().startsWith(prefix.toLowerCase()) &&
+              tag.name.toLowerCase() !== newTagName
+            ) {
+              await untagSubscriber(tag.id, existing.id);
+              console.log(`[Subscribe] Removed old tag ${tag.name} from ${email}`);
+            }
+          }
+        }
+
         const tagId = await ensureStateTag({ state, apiKey });
         if (tagId) {
           await tagSubscriber({ tagId, email, apiKey });
