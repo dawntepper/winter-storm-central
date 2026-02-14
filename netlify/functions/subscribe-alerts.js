@@ -236,11 +236,14 @@ exports.handler = async (event) => {
     };
   } catch (error) {
     console.error('[Subscribe] Error:', error);
+    const isConfigError = error.message?.includes('Missing');
     return {
-      statusCode: 500,
+      statusCode: isConfigError ? 503 : 500,
       headers,
       body: JSON.stringify({
-        error: 'Failed to subscribe. Please try again later.',
+        error: isConfigError
+          ? 'Email service not configured. Please try again later.'
+          : `Failed to subscribe: ${error.message}`,
       }),
     };
   }
