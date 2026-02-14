@@ -75,9 +75,9 @@ export default function AlertSignupBar() {
         left: 0,
         right: 0,
         zIndex: 9999,
-        background: '#ffffff',
+        background: '#1e293b',
         borderTop: '3px solid #2563eb',
-        boxShadow: '0 -2px 16px rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
         transform: visible ? 'translateY(0)' : 'translateY(100%)',
         transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
@@ -101,7 +101,7 @@ export default function AlertSignupBar() {
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: '#6b7280',
+            color: '#94a3b8',
             fontSize: '20px',
             lineHeight: 1,
             padding: '4px 8px',
@@ -112,7 +112,7 @@ export default function AlertSignupBar() {
 
         {status === 'success' ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <p style={{ color: '#059669', fontWeight: 600, fontSize: '15px', margin: 0 }}>
+            <p style={{ color: '#34d399', fontWeight: 600, fontSize: '15px', margin: 0 }}>
               You're signed up! You'll receive alerts when severe weather is detected in your area.
             </p>
           </div>
@@ -136,10 +136,10 @@ export default function AlertSignupBar() {
                     flex: '1 1 220px',
                     minWidth: 0,
                     padding: '10px 14px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #475569',
                     borderRadius: '6px',
-                    background: '#f9fafb',
-                    color: '#1f2937',
+                    background: '#0f172a',
+                    color: '#e2e8f0',
                     fontSize: '14px',
                     outline: 'none',
                   }}
@@ -154,10 +154,10 @@ export default function AlertSignupBar() {
                   style={{
                     flex: '0 0 110px',
                     padding: '10px 14px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #475569',
                     borderRadius: '6px',
-                    background: '#f9fafb',
-                    color: '#1f2937',
+                    background: '#0f172a',
+                    color: '#e2e8f0',
                     fontSize: '14px',
                     outline: 'none',
                   }}
@@ -168,7 +168,7 @@ export default function AlertSignupBar() {
                   style={{
                     flex: '0 0 auto',
                     padding: '10px 24px',
-                    background: status === 'submitting' ? '#93c5fd' : '#2563eb',
+                    background: status === 'submitting' ? '#1e40af' : '#2563eb',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',
@@ -178,7 +178,7 @@ export default function AlertSignupBar() {
                     whiteSpace: 'nowrap',
                     transition: 'background 0.2s',
                   }}
-                  onMouseEnter={(e) => { if (status !== 'submitting') e.target.style.background = '#1d4ed8'; }}
+                  onMouseEnter={(e) => { if (status !== 'submitting') e.target.style.background = '#3b82f6'; }}
                   onMouseLeave={(e) => { if (status !== 'submitting') e.target.style.background = '#2563eb'; }}
                 >
                   {status === 'submitting' ? 'Signing up...' : 'Get Alerts'}
@@ -188,7 +188,7 @@ export default function AlertSignupBar() {
 
             {/* Error message */}
             {errorMsg && (
-              <p style={{ color: '#dc2626', fontSize: '13px', margin: '8px 0 0', textAlign: 'center' }}>
+              <p style={{ color: '#f87171', fontSize: '13px', margin: '8px 0 0', textAlign: 'center' }}>
                 {errorMsg}
               </p>
             )}
