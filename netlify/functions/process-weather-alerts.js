@@ -19,7 +19,7 @@
  */
 
 // Shared NWS alert parsing (single source of truth with client-side)
-import {
+const {
   ALERTS_API,
   NWS_HEADERS,
   getCategoryForEvent,
@@ -27,31 +27,31 @@ import {
   extractStateCode,
   extractGeometryCoordinates,
   filterAlertFeatures,
-} from '../../shared/nws-alert-parser.js';
+} = require('../../shared/nws-alert-parser.js');
 
-import {
+const {
   getAlreadySentAlertIds,
   recordSentAlert,
   logBroadcastSend,
   cleanupOldRecords,
-} from './lib/supabase-admin.js';
+} = require('./lib/supabase-admin.js');
 
-import {
+const {
   listTags,
   createTag,
   createAndSendBroadcast,
-} from './lib/kit-client.js';
+} = require('./lib/kit-client.js');
 
-import {
+const {
   getAffectedStates,
   groupAlertsByState,
-} from './lib/alert-matcher.js';
+} = require('./lib/alert-matcher.js');
 
-import {
+const {
   buildAlertEmail,
   buildAlertSubject,
   buildPreviewText,
-} from './lib/email-templates.js';
+} = require('./lib/email-templates.js');
 
 // ============================================
 // SERVER-SIDE ALERT PARSING
@@ -347,7 +347,7 @@ async function processAlerts() {
 // ============================================
 
 // Support both scheduled invocation and HTTP trigger (for manual runs)
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache',

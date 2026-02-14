@@ -9,7 +9,7 @@
  * Body: { email: string, zip_code: string }
  */
 
-import { getStateFromZip } from './lib/alert-matcher.js';
+const { getStateFromZip } = require('./lib/alert-matcher.js');
 
 const KIT_V3_BASE = 'https://api.convertkit.com/v3';
 const KIT_V4_BASE = 'https://api.kit.com/v4';
@@ -134,7 +134,7 @@ async function tagSubscriber({ tagId, email, apiKey }) {
   });
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
