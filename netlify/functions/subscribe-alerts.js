@@ -14,6 +14,7 @@ const {
   findSubscriberByEmail,
   getSubscriberTags,
   untagSubscriber,
+  addSubscriberToSequence,
 } = require('./lib/kit-client.js');
 
 const KIT_V3_BASE = 'https://api.convertkit.com/v3';
@@ -223,6 +224,17 @@ exports.handler = async (event) => {
         }
       } catch (tagError) {
         console.warn(`[Subscribe] State tagging failed for ${email}:`, tagError.message);
+      }
+    }
+
+    // 3. Enroll in welcome sequence (best-effort — don't fail signup)
+    const welcomeSequenceId = process.env.KIT_WELCOME_SEQUENCE_ID;
+    if (welcomeSequenceId) {
+      try {
+        await addSubscriberToSequence(welcomeSequenceId, email);
+        console.log(`[Subscribe] Enrolled ${email} in welcome sequence ${welcomeSequenceId}`);
+      } catch (seqError) {
+        console.warn(`[Subscribe] Welcome sequence enrollment failed for ${email}:`, seqError.message);
       }
     }
 

@@ -334,6 +334,20 @@ async function deleteBroadcast(broadcastId) {
 }
 
 // ============================================
+// SEQUENCES
+// ============================================
+
+/**
+ * Add a subscriber to a sequence by email address
+ * Used for welcome/confirmation emails after signup
+ */
+async function addSubscriberToSequence(sequenceId, email) {
+  return kitRequest('POST', `/sequences/${sequenceId}/subscribers`, {
+    email_address: email,
+  });
+}
+
+// ============================================
 // CUSTOM FIELDS
 // ============================================
 
@@ -366,6 +380,7 @@ module.exports = {
   createAndSendBroadcast,
   getBroadcast,
   deleteBroadcast,
+  addSubscriberToSequence,
   listCustomFields,
   createCustomField,
 };
