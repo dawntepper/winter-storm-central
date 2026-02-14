@@ -196,14 +196,16 @@ exports.handler = async (event) => {
     await kitFormSubscribe({ email, zipCode: zip_code, apiKey });
     console.log(`[Subscribe] Added ${email} to form ${KIT_FORM_ID}`);
 
-    // 2. Tag by state (best-effort — don't fail the signup if tagging fails)
+    // 2. Check if this is an existing subscriber (used for tag cleanup + sequence guard)
+    let isExistingSubscriber = false;
     const state = getStateFromZip(zip_code);
     const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
     if (state) {
       try {
-        // Remove old location tags if this is a re-subscribe with a new zip
         const existing = await findSubscriberByEmail(email);
         if (existing?.id) {
+          isExistingSubscriber = true;
+          // Remove old location tags if this is a re-subscribe with a new zip
           const currentTags = await getSubscriberTags(existing.id);
           const newTagName = `${prefix}${state}`.toLowerCase();
           for (const tag of currentTags) {
@@ -227,15 +229,17 @@ exports.handler = async (event) => {
       }
     }
 
-    // 3. Enroll in welcome sequence (best-effort — don't fail signup)
+    // 3. Enroll in welcome sequence — only for new subscribers
     const welcomeSequenceId = process.env.KIT_WELCOME_SEQUENCE_ID;
-    if (welcomeSequenceId) {
+    if (welcomeSequenceId && !isExistingSubscriber) {
       try {
         await addSubscriberToSequence(welcomeSequenceId, email);
         console.log(`[Subscribe] Enrolled ${email} in welcome sequence ${welcomeSequenceId}`);
       } catch (seqError) {
         console.warn(`[Subscribe] Welcome sequence enrollment failed for ${email}:`, seqError.message);
       }
+    } else if (isExistingSubscriber) {
+      console.log(`[Subscribe] Skipping welcome sequence for returning subscriber ${email}`);
     }
 
     return {
