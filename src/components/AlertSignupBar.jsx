@@ -63,11 +63,18 @@ export default function AlertSignupBar() {
         body: JSON.stringify({ email: cleanEmail, zip_code: cleanZip }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Subscription failed');
+        let msg = `Server error (${response.status})`;
+        try {
+          const data = await response.json();
+          msg = data.error || msg;
+        } catch {
+          // non-JSON response (e.g. 502 gateway error)
+        }
+        throw new Error(msg);
       }
+
+      const data = await response.json();
 
       // Remember subscriber for future visits
       localStorage.setItem(
