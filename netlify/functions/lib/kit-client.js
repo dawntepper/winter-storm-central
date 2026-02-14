@@ -228,6 +228,21 @@ async function tagSubscriber(tagId, subscriberId) {
 }
 
 /**
+ * Remove a tag from a subscriber
+ */
+async function untagSubscriber(tagId, subscriberId) {
+  return kitRequest('DELETE', `/tags/${tagId}/subscribers/${subscriberId}`);
+}
+
+/**
+ * Get all tags for a subscriber
+ */
+async function getSubscriberTags(subscriberId) {
+  const response = await kitRequest('GET', `/subscribers/${subscriberId}/tags`);
+  return response.tags || [];
+}
+
+/**
  * List subscribers for a tag
  */
 async function listSubscribersForTag(tagId, { cursor = null, perPage = 500 } = {}) {
@@ -344,6 +359,8 @@ module.exports = {
   listTags,
   createTag,
   tagSubscriber,
+  untagSubscriber,
+  getSubscriberTags,
   listSubscribersForTag,
   createBroadcast,
   createAndSendBroadcast,
