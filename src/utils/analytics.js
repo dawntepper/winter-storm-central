@@ -425,6 +425,29 @@ export function trackBrowseByStateClick({ stateCode, source }) {
 }
 
 // ============================================
+// ALERT SIGNUP EVENTS
+// ============================================
+
+/**
+ * Track successful alert signup
+ */
+export function trackAlertSignup({ type = 'new', zipCode }) {
+  track('Alert Signup', {
+    signup_type: type, // 'new' or 'update'
+    zip_code: zipCode
+  });
+}
+
+/**
+ * Track alert signup failure
+ */
+export function trackAlertSignupError(error) {
+  track('Alert Signup Error', {
+    error: error
+  });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -488,8 +511,13 @@ export function testAllTracking() {
   trackManualRefresh();
   trackGeolocationUsed();
 
+  // Alert signup events
+  console.log('\n5. Alert Signup Events:');
+  trackAlertSignup({ type: 'new', zipCode: '80301' });
+  trackAlertSignupError('Server error (500)');
+
   // Search events
-  console.log('\n5. Search Events:');
+  console.log('\n6. Search Events:');
   trackLocationSearch('80301');
   trackLocationSearchFailed('xyz123', 'Location not found');
 
@@ -554,6 +582,8 @@ export default {
   trackSupportClick,
   trackManualRefresh,
   trackGeolocationUsed,
+  trackAlertSignup,
+  trackAlertSignupError,
   trackLocationSearch,
   trackLocationSearchFailed,
   startSessionTracking,
