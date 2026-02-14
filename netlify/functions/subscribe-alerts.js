@@ -14,8 +14,9 @@ const {
   findSubscriberByEmail,
   getSubscriberTags,
   untagSubscriber,
-  addSubscriberToSequence,
+  sendOneOffEmail,
 } = require('./lib/kit-client.js');
+const { buildWelcomeEmail } = require('./lib/email-templates.js');
 
 const KIT_V3_BASE = 'https://api.convertkit.com/v3';
 const KIT_V4_BASE = 'https://api.kit.com/v4';
@@ -229,17 +230,21 @@ exports.handler = async (event) => {
       }
     }
 
-    // 3. Enroll in welcome sequence — only for new subscribers
-    const welcomeSequenceId = process.env.KIT_WELCOME_SEQUENCE_ID;
-    if (welcomeSequenceId && !isExistingSubscriber) {
+    // 3. Send welcome email — only for new subscribers
+    if (!isExistingSubscriber) {
       try {
-        await addSubscriberToSequence(welcomeSequenceId, email);
-        console.log(`[Subscribe] Enrolled ${email} in welcome sequence ${welcomeSequenceId}`);
-      } catch (seqError) {
-        console.warn(`[Subscribe] Welcome sequence enrollment failed for ${email}:`, seqError.message);
+        await sendOneOffEmail({
+          email,
+          subject: 'Welcome to StormTracking.io — You\'re signed up for weather alerts',
+          content: buildWelcomeEmail(),
+          previewText: 'You\'ll receive email alerts when severe weather is detected in your area.',
+        });
+        console.log(`[Subscribe] Sent welcome email to ${email}`);
+      } catch (welcomeError) {
+        console.warn(`[Subscribe] Welcome email failed for ${email}:`, welcomeError.message);
       }
-    } else if (isExistingSubscriber) {
-      console.log(`[Subscribe] Skipping welcome sequence for returning subscriber ${email}`);
+    } else {
+      console.log(`[Subscribe] Skipping welcome email for returning subscriber ${email}`);
     }
 
     return {
