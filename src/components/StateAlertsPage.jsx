@@ -555,6 +555,7 @@ export default function StateAlertsPage() {
               zoom: stateData.zoom,
               id: `state-${stateAbbr}`
             }}
+            selectedStateCode={stateAbbr}
             radarLayerType="precipitation"
             radarColorScheme={4}
           />
