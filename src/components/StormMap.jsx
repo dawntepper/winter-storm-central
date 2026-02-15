@@ -747,12 +747,11 @@ function StateBorderHighlight({ stateCode }) {
       data={geoData}
       interactive={false}
       style={{
-        color: '#10b981',
+        color: '#3b82f6',
         weight: 3,
         opacity: 0.9,
-        fillColor: '#10b981',
+        fillColor: '#3b82f6',
         fillOpacity: 0.06,
-        dashArray: '8, 6',
       }}
     />
   );
