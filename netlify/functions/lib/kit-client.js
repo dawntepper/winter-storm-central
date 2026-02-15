@@ -194,12 +194,16 @@ async function getAllSubscribers() {
  * Find subscriber by email
  */
 async function findSubscriberByEmail(email) {
-  const response = await kitRequest(
-    'GET',
-    `/subscribers?email_address=${encodeURIComponent(email)}`
-  );
-  const subscribers = response.subscribers || [];
-  return subscribers.length > 0 ? subscribers[0] : null;
+  // Search active subscribers first, then inactive if not found
+  for (const status of ['active', 'inactive']) {
+    const response = await kitRequest(
+      'GET',
+      `/subscribers?email_address=${encodeURIComponent(email)}&status=${status}`
+    );
+    const subscribers = response.subscribers || [];
+    if (subscribers.length > 0) return subscribers[0];
+  }
+  return null;
 }
 
 // ============================================
@@ -351,32 +355,39 @@ async function deleteBroadcast(broadcastId) {
  * @param {string} options.content - HTML email content
  * @param {string} [options.previewText] - Preview/preheader text
  */
-async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
+async function sendOneOffEmail({ email, subscriberId, subject, content, previewText = '' }) {
   console.log(`[Kit] === sendOneOffEmail START for ${email} ===`);
   console.log(`[Kit] Subject: "${subject}"`);
   console.log(`[Kit] Content length: ${content?.length || 0} chars`);
 
-  // Retry subscriber lookup to handle eventual consistency delay
   let subscriber = null;
-  const lookupRetries = 5;
-  const lookupDelayMs = 2000;
 
-  for (let i = 0; i < lookupRetries; i++) {
-    if (i > 0) {
-      console.log(`[Kit] Subscriber lookup retry ${i}/${lookupRetries - 1} for ${email}, waiting ${lookupDelayMs}ms...`);
-      await sleep(lookupDelayMs);
+  if (subscriberId) {
+    // Use the subscriber ID we already have from creation
+    subscriber = { id: subscriberId, email_address: email };
+    console.log(`[Kit] Using provided subscriber ID: ${subscriberId}`);
+  } else {
+    // Retry subscriber lookup to handle eventual consistency delay
+    const lookupRetries = 5;
+    const lookupDelayMs = 2000;
+
+    for (let i = 0; i < lookupRetries; i++) {
+      if (i > 0) {
+        console.log(`[Kit] Subscriber lookup retry ${i}/${lookupRetries - 1} for ${email}, waiting ${lookupDelayMs}ms...`);
+        await sleep(lookupDelayMs);
+      }
+      subscriber = await findSubscriberByEmail(email);
+      console.log(`[Kit] Lookup attempt ${i + 1}: found=${!!subscriber?.id}, id=${subscriber?.id || 'none'}, state=${subscriber?.state || 'none'}`);
+      if (subscriber?.id) break;
     }
-    subscriber = await findSubscriberByEmail(email);
-    console.log(`[Kit] Lookup attempt ${i + 1}: found=${!!subscriber?.id}, id=${subscriber?.id || 'none'}, state=${subscriber?.state || 'none'}`);
-    if (subscriber?.id) break;
   }
 
   if (!subscriber?.id) {
-    console.error(`[Kit] !!! Subscriber NOT FOUND after ${lookupRetries} attempts for ${email}`);
-    throw new Error(`Subscriber not found for email after ${lookupRetries} attempts: ${email}`);
+    console.error(`[Kit] !!! Subscriber NOT FOUND for ${email}`);
+    throw new Error(`Subscriber not found for email: ${email}`);
   }
 
-  console.log(`[Kit] Subscriber found: id=${subscriber.id}, email=${subscriber.email_address}, state=${subscriber.state}`);
+  console.log(`[Kit] Subscriber found: id=${subscriber.id}`);
 
   // Ensure a "welcome-email" tag exists and tag the subscriber with it
   // Kit broadcasts can only target tags/segments, not individual subscribers

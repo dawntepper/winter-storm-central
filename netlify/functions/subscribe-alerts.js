@@ -141,7 +141,8 @@ exports.handler = async (event) => {
     // 2. Create/update subscriber with zip_code field
     console.log(`[Subscribe] Step 2: Creating/updating subscriber ${email}...`);
     const subscribeResult = await createSubscriber({ email, zipCode: zip_code });
-    console.log(`[Subscribe] Subscribe result:`, JSON.stringify(subscribeResult)?.substring(0, 500));
+    const subscriberId = subscribeResult?.subscriber?.id;
+    console.log(`[Subscribe] Subscribe result: id=${subscriberId}`, JSON.stringify(subscribeResult)?.substring(0, 500));
 
     // 2b. Add subscriber to Kit form
     try {
@@ -190,6 +191,7 @@ exports.handler = async (event) => {
         console.log(`[Subscribe] Sending welcome email to ${email}...`);
         const welcomeResult = await sendOneOffEmail({
           email,
+          subscriberId,
           subject: 'Welcome to StormTracking.io — You\'re signed up for weather alerts',
           content: buildWelcomeEmail(),
           previewText: 'You\'ll receive email alerts when severe weather is detected in your area.',
