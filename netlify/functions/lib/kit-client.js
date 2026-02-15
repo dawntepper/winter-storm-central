@@ -342,8 +342,8 @@ async function deleteBroadcast(broadcastId) {
  * Kit doesn't have a transactional email API, so this creates a broadcast
  * filtered to one subscriber via a temporary tag and schedules it.
  *
- * Includes retry logic because new subscribers added via v3 Forms API
- * may not be immediately visible in the v4 Subscribers API.
+ * Includes retry logic because newly created subscribers may not be
+ * immediately visible due to eventual consistency.
  *
  * @param {Object} options
  * @param {string} options.email - Subscriber email address
@@ -356,7 +356,7 @@ async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
   console.log(`[Kit] Subject: "${subject}"`);
   console.log(`[Kit] Content length: ${content?.length || 0} chars`);
 
-  // Retry subscriber lookup to handle v3→v4 replication delay
+  // Retry subscriber lookup to handle eventual consistency delay
   let subscriber = null;
   const lookupRetries = 5;
   const lookupDelayMs = 2000;

@@ -1,8 +1,8 @@
 /**
  * Subscribe Alerts — Netlify Function
  *
- * Handles email signups for weather alerts via Kit (ConvertKit) Forms API.
- * Adds subscriber to Kit form with zip_code custom field, then tags
+ * Handles email signups for weather alerts via Kit (ConvertKit) v4 API.
+ * Creates subscriber with zip_code custom field, then tags
  * them by state for targeted broadcasts.
  *
  * POST /api/subscribe-alerts
@@ -11,134 +11,50 @@
 
 const { getStateFromZip } = require('./lib/alert-matcher.js');
 const {
+  kitRequest,
   findSubscriberByEmail,
   getSubscriberTags,
+  listTags,
+  createTag,
+  tagSubscriber: kitTagSubscriber,
   untagSubscriber,
   sendOneOffEmail,
 } = require('./lib/kit-client.js');
 const { buildWelcomeEmail } = require('./lib/email-templates.js');
 
-const KIT_V4_BASE = 'https://api.kit.com/v4';
-const KIT_FORM_ID = '9086634';
-
-function getApiKey() {
-  // Support both env var names
-  const apiKey = process.env.CONVERTKIT_API_KEY || process.env.KIT_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing CONVERTKIT_API_KEY or KIT_API_KEY environment variable');
-  }
-  return apiKey;
-}
-
 /**
- * Subscribe via Kit v4 Forms API
+ * Create or update a subscriber with zip_code field via Kit v4 Subscribers API.
+ * Uses the direct subscribers endpoint (API-key auth) instead of the forms
+ * endpoint (which requires OAuth).
  */
-async function kitFormSubscribe({ email, zipCode, apiKey }) {
-  const url = `${KIT_V4_BASE}/forms/${KIT_FORM_ID}/subscribers`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-Kit-Api-Key': apiKey,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+async function createSubscriber({ email, zipCode }) {
+  return kitRequest('POST', '/subscribers', {
+    email_address: email,
+    fields: {
+      zip_code: zipCode,
     },
-    body: JSON.stringify({
-      email_address: email,
-      fields: {
-        zip_code: zipCode,
-      },
-    }),
   });
-
-  const responseText = await response.text();
-  console.log(`[Subscribe] Kit v4 form response ${response.status}:`, responseText);
-
-  if (!response.ok) {
-    throw new Error(`Kit API error ${response.status}: ${responseText}`);
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch {
-    return null;
-  }
 }
 
-async function ensureStateTag({ state, apiKey }) {
+async function ensureStateTag({ state }) {
   const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
   const tagName = `${prefix}${state}`;
 
-  // List existing tags to find or create (v4 API)
-  const listResponse = await fetch(`${KIT_V4_BASE}/tags`, {
-    headers: {
-      'X-Kit-Api-Key': apiKey,
-      Accept: 'application/json',
-    },
-  });
-
-  if (!listResponse.ok) {
-    console.warn(`[Subscribe] Failed to list tags: ${listResponse.status}`);
-    return null;
-  }
-
-  const data = await listResponse.json();
+  const data = await listTags();
   const existingTag = (data.tags || []).find(
     (t) => t.name.toLowerCase() === tagName.toLowerCase()
   );
 
   if (existingTag) return existingTag.id;
 
-  // Create the tag
-  const createResponse = await fetch(`${KIT_V4_BASE}/tags`, {
-    method: 'POST',
-    headers: {
-      'X-Kit-Api-Key': apiKey,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({ name: tagName }),
-  });
-
-  if (!createResponse.ok) {
-    console.warn(`[Subscribe] Failed to create tag ${tagName}: ${createResponse.status}`);
-    return null;
-  }
-
-  const created = await createResponse.json();
+  const created = await createTag(tagName);
   return created?.tag?.id || null;
 }
 
-async function tagSubscriber({ tagId, email, apiKey }) {
-  // Find subscriber by email (v4 API)
-  const findResponse = await fetch(
-    `${KIT_V4_BASE}/subscribers?email_address=${encodeURIComponent(email)}`,
-    {
-      headers: {
-        'X-Kit-Api-Key': apiKey,
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  if (!findResponse.ok) {
-    console.warn(`[Subscribe] Failed to find subscriber: ${findResponse.status}`);
-    return;
-  }
-
-  const findData = await findResponse.json();
-  const subscriber = (findData.subscribers || [])[0];
+async function tagSubscriberByEmail({ tagId, email }) {
+  const subscriber = await findSubscriberByEmail(email);
   if (!subscriber?.id) return;
-
-  // Tag the subscriber
-  await fetch(`${KIT_V4_BASE}/tags/${tagId}/subscribers/${subscriber.id}`, {
-    method: 'POST',
-    headers: {
-      'X-Kit-Api-Key': apiKey,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-  });
+  await kitTagSubscriber(tagId, subscriber.id);
 }
 
 exports.handler = async (event) => {
@@ -191,15 +107,13 @@ exports.handler = async (event) => {
   }
 
   try {
-    const apiKey = getApiKey();
     console.log(`[Subscribe] === START subscribe flow for ${email}, zip: ${zip_code} ===`);
-    console.log(`[Subscribe] API key present: ${!!apiKey}, length: ${apiKey?.length}`);
 
     const state = getStateFromZip(zip_code);
     console.log(`[Subscribe] Resolved zip ${zip_code} -> state: ${state || 'UNKNOWN'}`);
     const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
 
-    // 1. Check if subscriber already exists BEFORE adding to form
+    // 1. Check if subscriber already exists BEFORE creating
     let isExistingSubscriber = false;
     try {
       console.log(`[Subscribe] Step 1: Checking if ${email} already exists in Kit...`);
@@ -214,10 +128,10 @@ exports.handler = async (event) => {
       console.warn(`[Subscribe] Pre-check lookup failed for ${email}:`, lookupError.message);
     }
 
-    // 2. Subscribe to Kit form with zip_code field
-    console.log(`[Subscribe] Step 2: Adding ${email} to Kit form ${KIT_FORM_ID}...`);
-    const formResult = await kitFormSubscribe({ email, zipCode: zip_code, apiKey });
-    console.log(`[Subscribe] Form subscribe result:`, JSON.stringify(formResult)?.substring(0, 500));
+    // 2. Create/update subscriber with zip_code field
+    console.log(`[Subscribe] Step 2: Creating/updating subscriber ${email}...`);
+    const subscribeResult = await createSubscriber({ email, zipCode: zip_code });
+    console.log(`[Subscribe] Subscribe result:`, JSON.stringify(subscribeResult)?.substring(0, 500));
 
     // 3. Handle state tagging (and clean up old tags for returning subscribers)
     if (state) {
@@ -240,9 +154,9 @@ exports.handler = async (event) => {
           }
         }
 
-        const tagId = await ensureStateTag({ state, apiKey });
+        const tagId = await ensureStateTag({ state });
         if (tagId) {
-          await tagSubscriber({ tagId, email, apiKey });
+          await tagSubscriberByEmail({ tagId, email });
           console.log(`[Subscribe] Tagged ${email} with state ${state}`);
         }
       } catch (tagError) {
