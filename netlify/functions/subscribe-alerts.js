@@ -18,9 +18,8 @@ const {
   createTag,
   tagSubscriber: kitTagSubscriber,
   untagSubscriber,
-  sendOneOffEmail,
+  triggerTagAutomation,
 } = require('./lib/kit-client.js');
-const { buildWelcomeEmail } = require('./lib/email-templates.js');
 
 const KIT_FORM_ID = process.env.KIT_FORM_ID || '9086634';
 
@@ -184,23 +183,18 @@ exports.handler = async (event) => {
       }
     }
 
-    // 4. Send welcome email — only for new subscribers (single one-off broadcast)
+    // 4. Trigger welcome email automation — only for new subscribers
     console.log(`[Subscribe] Step 4: Welcome email decision — isExistingSubscriber: ${isExistingSubscriber}`);
-    if (!isExistingSubscriber) {
+    if (!isExistingSubscriber && subscriberId) {
       try {
-        console.log(`[Subscribe] Sending welcome email to ${email}...`);
-        const welcomeResult = await sendOneOffEmail({
-          email,
+        console.log(`[Subscribe] Triggering welcome email automation for ${email}...`);
+        await triggerTagAutomation({
           subscriberId,
-          subject: 'Welcome to StormTracking.io — You\'re signed up for weather alerts',
-          content: buildWelcomeEmail(),
-          previewText: 'You\'ll receive email alerts when severe weather is detected in your area.',
+          tagName: '_welcome-email',
         });
-        console.log(`[Subscribe] Welcome email broadcast result:`, JSON.stringify(welcomeResult)?.substring(0, 500));
-        console.log(`[Subscribe] Welcome email SENT successfully to ${email}`);
+        console.log(`[Subscribe] Welcome tag applied — Kit automation will send the email`);
       } catch (welcomeError) {
-        console.error(`[Subscribe] !!! Welcome email FAILED for ${email}:`, welcomeError.message);
-        console.error(`[Subscribe] Welcome email error stack:`, welcomeError.stack);
+        console.error(`[Subscribe] !!! Welcome tag FAILED for ${email}:`, welcomeError.message);
       }
     } else {
       console.log(`[Subscribe] Skipping welcome email — returning subscriber ${email}`);

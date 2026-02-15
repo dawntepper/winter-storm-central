@@ -338,123 +338,43 @@ async function deleteBroadcast(broadcastId) {
 }
 
 // ============================================
-// ONE-OFF EMAILS (via targeted broadcast)
+// TRIGGER TAGS (for Kit automations)
 // ============================================
 
 /**
- * Send a one-off email to a single subscriber via a targeted broadcast.
- * Kit doesn't have a transactional email API, so this creates a broadcast
- * filtered to one subscriber via a temporary tag and schedules it.
- *
- * Includes retry logic because newly created subscribers may not be
- * immediately visible due to eventual consistency.
+ * Tag a subscriber to trigger a Kit automation (e.g. welcome email).
+ * The actual email is sent by a Kit Visual Automation triggered by the tag.
  *
  * @param {Object} options
- * @param {string} options.email - Subscriber email address
- * @param {string} options.subject - Email subject line
- * @param {string} options.content - HTML email content
- * @param {string} [options.previewText] - Preview/preheader text
+ * @param {string} options.subscriberId - Kit subscriber ID
+ * @param {string} options.tagName - Tag name to apply (must match Kit automation trigger)
  */
-async function sendOneOffEmail({ email, subscriberId, subject, content, previewText = '' }) {
-  console.log(`[Kit] === sendOneOffEmail START for ${email} ===`);
-  console.log(`[Kit] Subject: "${subject}"`);
-  console.log(`[Kit] Content length: ${content?.length || 0} chars`);
+async function triggerTagAutomation({ subscriberId, tagName }) {
+  console.log(`[Kit] === triggerTagAutomation for subscriber ${subscriberId}, tag "${tagName}" ===`);
 
-  let subscriber = null;
-
-  if (subscriberId) {
-    // Use the subscriber ID we already have from creation
-    subscriber = { id: subscriberId, email_address: email };
-    console.log(`[Kit] Using provided subscriber ID: ${subscriberId}`);
-  } else {
-    // Retry subscriber lookup to handle eventual consistency delay
-    const lookupRetries = 5;
-    const lookupDelayMs = 2000;
-
-    for (let i = 0; i < lookupRetries; i++) {
-      if (i > 0) {
-        console.log(`[Kit] Subscriber lookup retry ${i}/${lookupRetries - 1} for ${email}, waiting ${lookupDelayMs}ms...`);
-        await sleep(lookupDelayMs);
-      }
-      subscriber = await findSubscriberByEmail(email);
-      console.log(`[Kit] Lookup attempt ${i + 1}: found=${!!subscriber?.id}, id=${subscriber?.id || 'none'}, state=${subscriber?.state || 'none'}`);
-      if (subscriber?.id) break;
-    }
-  }
-
-  if (!subscriber?.id) {
-    console.error(`[Kit] !!! Subscriber NOT FOUND for ${email}`);
-    throw new Error(`Subscriber not found for email: ${email}`);
-  }
-
-  console.log(`[Kit] Subscriber found: id=${subscriber.id}`);
-
-  // Ensure a "welcome-email" tag exists and tag the subscriber with it
-  // Kit broadcasts can only target tags/segments, not individual subscribers
-  const WELCOME_TAG_NAME = '_welcome-email';
-  let welcomeTagId = null;
-
-  console.log(`[Kit] Looking for welcome tag "${WELCOME_TAG_NAME}"...`);
   const tagsResponse = await listTags();
-  console.log(`[Kit] Found ${tagsResponse?.tags?.length || 0} total tags`);
   const existingTag = (tagsResponse.tags || []).find(
-    (t) => t.name === WELCOME_TAG_NAME
+    (t) => t.name === tagName
   );
 
+  let tagId;
   if (existingTag) {
-    welcomeTagId = existingTag.id;
-    console.log(`[Kit] Welcome tag already exists: id=${welcomeTagId}`);
+    tagId = existingTag.id;
+    console.log(`[Kit] Tag "${tagName}" found: id=${tagId}`);
   } else {
-    console.log(`[Kit] Creating welcome tag "${WELCOME_TAG_NAME}"...`);
-    const created = await createTag(WELCOME_TAG_NAME);
-    welcomeTagId = created?.tag?.id;
-    console.log(`[Kit] Created welcome tag: id=${welcomeTagId}, response:`, JSON.stringify(created)?.substring(0, 200));
+    console.log(`[Kit] Creating tag "${tagName}"...`);
+    const created = await createTag(tagName);
+    tagId = created?.tag?.id;
+    console.log(`[Kit] Created tag: id=${tagId}`);
   }
 
-  if (!welcomeTagId) {
-    console.error(`[Kit] !!! Failed to create/find welcome email tag`);
-    throw new Error('Failed to create/find welcome email tag');
+  if (!tagId) {
+    throw new Error(`Failed to create/find tag: ${tagName}`);
   }
 
-  // Tag the subscriber so the broadcast filter can target them
-  console.log(`[Kit] Tagging subscriber ${subscriber.id} with welcome tag ${welcomeTagId}...`);
-  const tagResult = await tagSubscriber(welcomeTagId, subscriber.id);
-  console.log(`[Kit] Tag result:`, JSON.stringify(tagResult)?.substring(0, 200));
-
-  // Create broadcast filtered to the welcome tag, scheduled 1 min out
-  const sendAt = new Date(Date.now() + 60 * 1000).toISOString();
-  const broadcastPayload = {
-    subject,
-    content,
-    preview_text: previewText,
-    public: true,
-    send_at: sendAt,
-    subscriber_filter: [
-      {
-        all: [{ type: 'tag', ids: [welcomeTagId] }],
-        any: null,
-        none: null,
-      },
-    ],
-  };
-  console.log(`[Kit] Creating broadcast scheduled for ${sendAt}`);
-  console.log(`[Kit] Broadcast payload (without content):`, JSON.stringify({ ...broadcastPayload, content: `[${content?.length} chars]` }));
-
-  const broadcast = await kitRequest('POST', '/broadcasts', broadcastPayload);
-  console.log(`[Kit] Broadcast created:`, JSON.stringify(broadcast)?.substring(0, 500));
-  console.log(`[Kit] Broadcast ID: ${broadcast?.broadcast?.id || 'UNKNOWN'}`);
-
-  // Remove the tag after broadcast is created (Kit snapshots recipients at creation)
-  try {
-    console.log(`[Kit] Removing welcome tag from subscriber ${subscriber.id}...`);
-    await untagSubscriber(welcomeTagId, subscriber.id);
-    console.log(`[Kit] Welcome tag removed successfully`);
-  } catch (untagError) {
-    console.warn(`[Kit] Failed to remove welcome tag: ${untagError.message}`);
-  }
-
-  console.log(`[Kit] === sendOneOffEmail COMPLETE for ${email} ===`);
-  return broadcast;
+  const result = await tagSubscriber(tagId, subscriberId);
+  console.log(`[Kit] Tagged subscriber ${subscriberId} with "${tagName}"`);
+  return result;
 }
 
 // ============================================
@@ -508,7 +428,7 @@ module.exports = {
   createAndSendBroadcast,
   getBroadcast,
   deleteBroadcast,
-  sendOneOffEmail,
+  triggerTagAutomation,
   addSubscriberToSequence,
   listCustomFields,
   createCustomField,
