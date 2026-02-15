@@ -342,8 +342,8 @@ async function deleteBroadcast(broadcastId) {
  * Kit doesn't have a transactional email API, so this creates a broadcast
  * filtered to one subscriber via a temporary tag and schedules it.
  *
- * Includes retry logic because new subscribers added via v3 Forms API
- * may not be immediately visible in the v4 Subscribers API.
+ * Includes retry logic because newly created subscribers may not be
+ * immediately visible due to eventual consistency.
  *
  * @param {Object} options
  * @param {string} options.email - Subscriber email address
@@ -352,7 +352,11 @@ async function deleteBroadcast(broadcastId) {
  * @param {string} [options.previewText] - Preview/preheader text
  */
 async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
-  // Retry subscriber lookup to handle v3→v4 replication delay
+  console.log(`[Kit] === sendOneOffEmail START for ${email} ===`);
+  console.log(`[Kit] Subject: "${subject}"`);
+  console.log(`[Kit] Content length: ${content?.length || 0} chars`);
+
+  // Retry subscriber lookup to handle eventual consistency delay
   let subscriber = null;
   const lookupRetries = 5;
   const lookupDelayMs = 2000;
@@ -363,45 +367,57 @@ async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
       await sleep(lookupDelayMs);
     }
     subscriber = await findSubscriberByEmail(email);
+    console.log(`[Kit] Lookup attempt ${i + 1}: found=${!!subscriber?.id}, id=${subscriber?.id || 'none'}, state=${subscriber?.state || 'none'}`);
     if (subscriber?.id) break;
   }
 
   if (!subscriber?.id) {
+    console.error(`[Kit] !!! Subscriber NOT FOUND after ${lookupRetries} attempts for ${email}`);
     throw new Error(`Subscriber not found for email after ${lookupRetries} attempts: ${email}`);
   }
+
+  console.log(`[Kit] Subscriber found: id=${subscriber.id}, email=${subscriber.email_address}, state=${subscriber.state}`);
 
   // Ensure a "welcome-email" tag exists and tag the subscriber with it
   // Kit broadcasts can only target tags/segments, not individual subscribers
   const WELCOME_TAG_NAME = '_welcome-email';
   let welcomeTagId = null;
 
+  console.log(`[Kit] Looking for welcome tag "${WELCOME_TAG_NAME}"...`);
   const tagsResponse = await listTags();
+  console.log(`[Kit] Found ${tagsResponse?.tags?.length || 0} total tags`);
   const existingTag = (tagsResponse.tags || []).find(
     (t) => t.name === WELCOME_TAG_NAME
   );
 
   if (existingTag) {
     welcomeTagId = existingTag.id;
+    console.log(`[Kit] Welcome tag already exists: id=${welcomeTagId}`);
   } else {
+    console.log(`[Kit] Creating welcome tag "${WELCOME_TAG_NAME}"...`);
     const created = await createTag(WELCOME_TAG_NAME);
     welcomeTagId = created?.tag?.id;
+    console.log(`[Kit] Created welcome tag: id=${welcomeTagId}, response:`, JSON.stringify(created)?.substring(0, 200));
   }
 
   if (!welcomeTagId) {
+    console.error(`[Kit] !!! Failed to create/find welcome email tag`);
     throw new Error('Failed to create/find welcome email tag');
   }
 
   // Tag the subscriber so the broadcast filter can target them
-  await tagSubscriber(welcomeTagId, subscriber.id);
-  console.log(`[Kit] Tagged subscriber ${subscriber.id} with welcome tag ${welcomeTagId}`);
+  console.log(`[Kit] Tagging subscriber ${subscriber.id} with welcome tag ${welcomeTagId}...`);
+  const tagResult = await tagSubscriber(welcomeTagId, subscriber.id);
+  console.log(`[Kit] Tag result:`, JSON.stringify(tagResult)?.substring(0, 200));
 
   // Create broadcast filtered to the welcome tag, scheduled 1 min out
-  const broadcast = await kitRequest('POST', '/broadcasts', {
+  const sendAt = new Date(Date.now() + 60 * 1000).toISOString();
+  const broadcastPayload = {
     subject,
     content,
     preview_text: previewText,
     public: true,
-    send_at: new Date(Date.now() + 60 * 1000).toISOString(),
+    send_at: sendAt,
     subscriber_filter: [
       {
         all: [{ type: 'tag', ids: [welcomeTagId] }],
@@ -409,15 +425,24 @@ async function sendOneOffEmail({ email, subject, content, previewText = '' }) {
         none: null,
       },
     ],
-  });
+  };
+  console.log(`[Kit] Creating broadcast scheduled for ${sendAt}`);
+  console.log(`[Kit] Broadcast payload (without content):`, JSON.stringify({ ...broadcastPayload, content: `[${content?.length} chars]` }));
+
+  const broadcast = await kitRequest('POST', '/broadcasts', broadcastPayload);
+  console.log(`[Kit] Broadcast created:`, JSON.stringify(broadcast)?.substring(0, 500));
+  console.log(`[Kit] Broadcast ID: ${broadcast?.broadcast?.id || 'UNKNOWN'}`);
 
   // Remove the tag after broadcast is created (Kit snapshots recipients at creation)
   try {
+    console.log(`[Kit] Removing welcome tag from subscriber ${subscriber.id}...`);
     await untagSubscriber(welcomeTagId, subscriber.id);
+    console.log(`[Kit] Welcome tag removed successfully`);
   } catch (untagError) {
     console.warn(`[Kit] Failed to remove welcome tag: ${untagError.message}`);
   }
 
+  console.log(`[Kit] === sendOneOffEmail COMPLETE for ${email} ===`);
   return broadcast;
 }
 
