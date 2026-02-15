@@ -22,10 +22,10 @@ const {
 } = require('./lib/kit-client.js');
 const { buildWelcomeEmail } = require('./lib/email-templates.js');
 
+const KIT_FORM_ID = process.env.KIT_FORM_ID || '9086634';
+
 /**
  * Create or update a subscriber with zip_code field via Kit v4 Subscribers API.
- * Uses the direct subscribers endpoint (API-key auth) instead of the forms
- * endpoint (which requires OAuth).
  */
 async function createSubscriber({ email, zipCode }) {
   return kitRequest('POST', '/subscribers', {
@@ -33,6 +33,16 @@ async function createSubscriber({ email, zipCode }) {
     fields: {
       zip_code: zipCode,
     },
+  });
+}
+
+/**
+ * Add subscriber to Kit form so they appear in the form's subscriber list
+ * and trigger any form-level automations.
+ */
+async function addSubscriberToForm({ email }) {
+  return kitRequest('POST', `/forms/${KIT_FORM_ID}/subscribers`, {
+    email_address: email,
   });
 }
 
@@ -132,6 +142,15 @@ exports.handler = async (event) => {
     console.log(`[Subscribe] Step 2: Creating/updating subscriber ${email}...`);
     const subscribeResult = await createSubscriber({ email, zipCode: zip_code });
     console.log(`[Subscribe] Subscribe result:`, JSON.stringify(subscribeResult)?.substring(0, 500));
+
+    // 2b. Add subscriber to Kit form
+    try {
+      console.log(`[Subscribe] Step 2b: Adding ${email} to Kit form ${KIT_FORM_ID}...`);
+      const formResult = await addSubscriberToForm({ email });
+      console.log(`[Subscribe] Form add result:`, JSON.stringify(formResult)?.substring(0, 500));
+    } catch (formError) {
+      console.warn(`[Subscribe] Adding to form failed for ${email}:`, formError.message);
+    }
 
     // 3. Handle state tagging (and clean up old tags for returning subscribers)
     if (state) {

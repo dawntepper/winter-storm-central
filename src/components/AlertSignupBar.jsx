@@ -3,7 +3,6 @@ import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 
 const DISMISSED_KEY = 'stormtracking_signup_dismissed';
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
-const KIT_FORM_ID = '9086634';
 
 export default function AlertSignupBar() {
   const [visible, setVisible] = useState(false);
