@@ -18,7 +18,6 @@ const {
 } = require('./lib/kit-client.js');
 const { buildWelcomeEmail } = require('./lib/email-templates.js');
 
-const KIT_V3_BASE = 'https://api.convertkit.com/v3';
 const KIT_V4_BASE = 'https://api.kit.com/v4';
 const KIT_FORM_ID = '9086634';
 
@@ -32,19 +31,20 @@ function getApiKey() {
 }
 
 /**
- * Subscribe via Kit v3 Forms API (most reliable for form signups)
+ * Subscribe via Kit v4 Forms API
  */
 async function kitFormSubscribe({ email, zipCode, apiKey }) {
-  const url = `${KIT_V3_BASE}/forms/${KIT_FORM_ID}/subscribe`;
+  const url = `${KIT_V4_BASE}/forms/${KIT_FORM_ID}/subscribers`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
+      'X-Kit-Api-Key': apiKey,
       'Content-Type': 'application/json',
+      Accept: 'application/json',
     },
     body: JSON.stringify({
-      api_key: apiKey,
-      email,
+      email_address: email,
       fields: {
         zip_code: zipCode,
       },
@@ -52,7 +52,7 @@ async function kitFormSubscribe({ email, zipCode, apiKey }) {
   });
 
   const responseText = await response.text();
-  console.log(`[Subscribe] Kit v3 response ${response.status}:`, responseText);
+  console.log(`[Subscribe] Kit v4 form response ${response.status}:`, responseText);
 
   if (!response.ok) {
     throw new Error(`Kit API error ${response.status}: ${responseText}`);
