@@ -824,6 +824,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      setShowAlerts(next.size > 0);
       return next;
     });
   };
@@ -1021,20 +1022,21 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <div className="mt-2 flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
             <button
               onClick={() => {
-                const newState = !showAlerts;
-                setShowAlerts(newState);
-                if (newState) setActiveCategories(new Set(CATEGORY_ORDER));
-                trackAlertsToggle(newState, alerts.length);
+                const allOn = activeCategories.size === CATEGORY_ORDER.length;
+                const newCategories = allOn ? new Set() : new Set(CATEGORY_ORDER);
+                setActiveCategories(newCategories);
+                setShowAlerts(newCategories.size > 0);
+                trackAlertsToggle(!allOn, alerts.length);
               }}
               className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                showAlerts
+                activeCategories.size > 0
                   ? 'bg-red-500/20 text-red-400 border-red-500/40'
                   : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
               }`}
             >
-              {showAlerts ? '✓ Alerts' : 'Alerts'}
+              {activeCategories.size > 0 ? '✓ Alerts' : 'Alerts'}
             </button>
-            {showAlerts && CATEGORY_ORDER.map(id => {
+            {CATEGORY_ORDER.map(id => {
               const cat = ALERT_CATEGORIES[id];
               const count = categoryCounts[id] || 0;
               if (count === 0) return null;
@@ -1094,7 +1096,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
             {/* Alert dot markers */}
-            {showAlerts && alerts.filter(alert => activeCategories.has(alert.category)).map((alert) => (
+            {alerts.filter(alert => activeCategories.has(alert.category)).map((alert) => (
               <AlertDotMarker
                 key={alert.id}
                 alert={alert}
