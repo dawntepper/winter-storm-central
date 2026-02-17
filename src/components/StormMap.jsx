@@ -991,23 +991,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             >
               Reset View
             </button>
-            {/* Alerts toggle */}
-            {alerts.length > 0 && (
-              <button
-                onClick={() => {
-                  const newState = !showAlerts;
-                  setShowAlerts(newState);
-                  trackAlertsToggle(newState, alerts.length);
-                }}
-                className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                  showAlerts
-                    ? 'bg-red-500/20 text-red-400 border-red-500/40'
-                    : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-                }`}
-              >
-                {showAlerts ? '✓ Alerts On' : 'Show Alerts'}
-              </button>
-            )}
             {/* Radar toggle */}
             <button
               onClick={() => {
@@ -1033,20 +1016,25 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </div>
         )}
 
-        {/* Category filter chips */}
-        {showAlerts && alerts.length > 0 && (
+        {/* Alerts toggle + category filter chips */}
+        {alerts.length > 0 && (
           <div className="mt-2 flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
             <button
-              onClick={toggleAllCategories}
+              onClick={() => {
+                const newState = !showAlerts;
+                setShowAlerts(newState);
+                if (newState) setActiveCategories(new Set(CATEGORY_ORDER));
+                trackAlertsToggle(newState, alerts.length);
+              }}
               className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                activeCategories.size === CATEGORY_ORDER.length
-                  ? 'bg-slate-500/20 text-slate-300 border-slate-400/40'
+                showAlerts
+                  ? 'bg-red-500/20 text-red-400 border-red-500/40'
                   : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
               }`}
             >
-              All
+              {showAlerts ? '✓ Alerts' : 'Alerts'}
             </button>
-            {CATEGORY_ORDER.map(id => {
+            {showAlerts && CATEGORY_ORDER.map(id => {
               const cat = ALERT_CATEGORIES[id];
               const count = categoryCounts[id] || 0;
               if (count === 0) return null;

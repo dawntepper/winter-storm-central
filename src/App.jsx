@@ -218,7 +218,7 @@ function StormEventBanner() {
           : 'bg-gradient-to-r from-sky-900/80 to-indigo-900/80 border-sky-500/30 hover:border-sky-400/50'
       }`}
     >
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-3">
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{icon}</span>
@@ -517,7 +517,7 @@ export default function App() {
       {/* Active Storm Event Banner */}
       <StormEventBanner />
 
-      <main className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={alertsIsStale} lastSuccessfulUpdate={alertsLastUpdated} error={alertsError && alertsData ? alertsError : null} />
 

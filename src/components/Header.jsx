@@ -77,7 +77,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
   return (
     <header className="bg-slate-900 border-b border-slate-700 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+      <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
         {/* Logo & Title */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div className="min-w-0 relative">
