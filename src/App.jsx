@@ -709,7 +709,7 @@ export default function App() {
         </div>
 
         {/* ========== DESKTOP LAYOUT ========== */}
-        <section className="hidden lg:grid lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-4 lg:gap-6">
+        <section className="hidden lg:grid lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6 overflow-hidden">
           {/* Left Column: Search + Map */}
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location - Above map on desktop */}

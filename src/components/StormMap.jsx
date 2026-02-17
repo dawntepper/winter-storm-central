@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
+import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -790,6 +791,7 @@ function PreviewMarker({ location }) {
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
+  const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [hoveredAlert, setHoveredAlert] = useState(null);
   const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
   const [hoverCardPosition, setHoverCardPosition] = useState(null);
@@ -806,6 +808,31 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const hideAlertTimeoutRef = useRef(null);
   const pinnedAlertRef = useRef(false);
   const cities = Object.values(weatherData);
+
+  // Count alerts per category
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    for (const id of CATEGORY_ORDER) counts[id] = 0;
+    for (const alert of alerts) {
+      if (counts[alert.category] !== undefined) counts[alert.category]++;
+    }
+    return counts;
+  }, [alerts]);
+
+  const toggleCategory = (id) => {
+    setActiveCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllCategories = () => {
+    setActiveCategories(prev =>
+      prev.size === CATEGORY_ORDER.length ? new Set() : new Set(CATEGORY_ORDER)
+    );
+  };
 
   // Handle alert marker hover
   const handleAlertHover = (alert, event) => {
@@ -1005,6 +1032,47 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             <span className="text-red-400 text-[10px]">{geoError}</span>
           </div>
         )}
+
+        {/* Category filter chips */}
+        {showAlerts && alerts.length > 0 && (
+          <div className="mt-2 flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
+            <button
+              onClick={toggleAllCategories}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                activeCategories.size === CATEGORY_ORDER.length
+                  ? 'bg-slate-500/20 text-slate-300 border-slate-400/40'
+                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+              }`}
+            >
+              All
+            </button>
+            {CATEGORY_ORDER.map(id => {
+              const cat = ALERT_CATEGORIES[id];
+              const count = categoryCounts[id] || 0;
+              if (count === 0) return null;
+              const active = activeCategories.has(id);
+              const color = alertCategoryColors[id] || alertCategoryColors.default;
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleCategory(id)}
+                  className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                    active
+                      ? ''
+                      : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+                  }`}
+                  style={active ? {
+                    backgroundColor: `${color}20`,
+                    color: color,
+                    borderColor: `${color}66`,
+                  } : undefined}
+                >
+                  {cat.icon} {count}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
@@ -1038,7 +1106,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
             {/* Alert dot markers */}
-            {showAlerts && alerts.map((alert) => (
+            {showAlerts && alerts.filter(alert => activeCategories.has(alert.category)).map((alert) => (
               <AlertDotMarker
                 key={alert.id}
                 alert={alert}
