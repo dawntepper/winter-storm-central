@@ -748,10 +748,10 @@ function StateBorderHighlight({ stateCode }) {
       data={geoData}
       interactive={false}
       style={{
-        color: '#3b82f6',
+        color: '#ffffff',
         weight: 3,
         opacity: 0.9,
-        fillColor: '#3b82f6',
+        fillColor: '#ffffff',
         fillOpacity: 0.06,
       }}
     />
