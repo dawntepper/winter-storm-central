@@ -83,9 +83,18 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
             {/* Rank */}
             <span className="text-[10px] text-slate-600 w-3 text-right font-mono">{i + 1}</span>
 
-            {/* State abbr */}
-            <span className="text-xs font-bold text-slate-300 w-7 group-hover:text-white transition-colors">
-              {st.abbr}
+            {/* State abbr + category icons */}
+            <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-1">
+              <span className="w-7">{st.abbr}</span>
+              {Object.entries(st.categories)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([catId]) => {
+                  const cat = ALERT_CATEGORIES[catId];
+                  return cat ? (
+                    <span key={catId} className="text-[8px] leading-none">{cat.icon}</span>
+                  ) : null;
+                })}
             </span>
 
             {/* Bar */}
@@ -98,18 +107,6 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
                   opacity: 0.7,
                 }}
               />
-              {/* Category dots inside bar */}
-              <div className="absolute inset-y-0 left-1 flex items-center gap-0.5">
-                {Object.entries(st.categories)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 3)
-                  .map(([catId]) => {
-                    const cat = ALERT_CATEGORIES[catId];
-                    return cat ? (
-                      <span key={catId} className="text-[8px] leading-none">{cat.icon}</span>
-                    ) : null;
-                  })}
-              </div>
             </div>
 
             {/* Count */}
@@ -120,9 +117,6 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
         ))}
       </div>
 
-      <p className="text-[10px] text-slate-600 mt-2 text-center">
-        Click a state to zoom on map
-      </p>
     </div>
   );
 }

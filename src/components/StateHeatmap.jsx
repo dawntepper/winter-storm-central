@@ -111,10 +111,10 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
         {tooltipInfo ? (
           <div className="px-2 py-1.5 rounded bg-slate-900/80 border border-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-200">
+              <span className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                 {tooltipInfo.name}
-                {tooltipInfo.count > 0 && (
-                  <span className="text-slate-500 font-normal ml-1">— click to view on map</span>
+                {tooltipInfo.categories.length > 0 && (
+                  <span className="text-[10px]">{tooltipInfo.categories.join(' ')}</span>
                 )}
               </span>
               <span className="text-xs text-slate-400">
@@ -123,15 +123,10 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
                   : 'No alerts'}
               </span>
             </div>
-            {tooltipInfo.categories.length > 0 && (
-              <div className="text-[10px] text-slate-400 mt-0.5">
-                {tooltipInfo.categories.join('  ')}
-              </div>
-            )}
           </div>
         ) : (
           <div className="px-2 py-1.5 text-[10px] text-slate-600 text-center">
-            Hover a state for details — click to view on map
+            Hover a state for details
           </div>
         )}
       </div>
