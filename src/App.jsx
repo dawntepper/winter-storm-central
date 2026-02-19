@@ -537,6 +537,19 @@ export default function App() {
             <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 
+          {/* Quick nav for visualizations (mobile) */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mb-2">
+            <a href="#top-states" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors">
+              Top States
+            </a>
+            <a href="#alert-heatmap" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors">
+              Alert Heatmap
+            </a>
+            <a href="#extreme-weather" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-colors">
+              All Alerts
+            </a>
+          </div>
+
           {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
           {userLocations.length > 0 && (
             <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
@@ -699,19 +712,6 @@ export default function App() {
               Explore Radar Maps →
             </Link>
           </section>
-
-          {/* Quick nav for visualizations (mobile) */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mb-2">
-            <a href="#top-states" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors">
-              Top States
-            </a>
-            <a href="#alert-heatmap" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors">
-              Alert Heatmap
-            </a>
-            <a href="#extreme-weather" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-colors">
-              All Alerts
-            </a>
-          </div>
 
           {/* Visualizations */}
           <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />

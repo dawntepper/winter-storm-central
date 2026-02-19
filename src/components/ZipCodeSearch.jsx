@@ -723,8 +723,6 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-expand on desktop
-      if (!mobile) setIsExpanded(true);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
