@@ -12,6 +12,7 @@ import ExtremeWeatherSection from './components/ExtremeWeatherSection';
 import AlertTimeline from './components/AlertTimeline';
 import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
+import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import {
   startSessionTracking,
@@ -531,6 +532,9 @@ export default function App() {
 
       {/* Active Storm Event Banner */}
       <StormEventBanner />
+
+      {/* Sticky mini-map for mobile — appears when main map scrolls out of view */}
+      <StickyMiniMap mapCenterOn={mapCenterOn} selectedStateCode={selectedStateCode} />
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stale Data Warning */}
