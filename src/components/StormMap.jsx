@@ -788,7 +788,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
@@ -951,6 +951,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const handleResetView = () => {
     setResetTrigger(prev => prev + 1);
     trackMapReset();
+    onResetView?.();
   };
 
   const handleMyLocation = () => {

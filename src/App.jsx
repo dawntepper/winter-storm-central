@@ -9,6 +9,9 @@ import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
 import ExtremeWeatherSection from './components/ExtremeWeatherSection';
+import AlertTimeline from './components/AlertTimeline';
+import StateHeatmap from './components/StateHeatmap';
+import MostImpactedStates from './components/MostImpactedStates';
 import AlertSignupBar from './components/AlertSignupBar';
 import {
   startSessionTracking,
@@ -260,6 +263,7 @@ export default function App() {
   const [selectedAlertId, setSelectedAlertId] = useState(null); // Alert ID for selected/clicked state (green marker)
   const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
   const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
+  const [alertFilter, setAlertFilter] = useState(null); // null = national, "PA" = state filter
 
   // Handle ?location= URL parameter
   const handleLocationParam = useCallback((locationData) => {
@@ -488,6 +492,11 @@ export default function App() {
     }
   };
 
+  const handleMapResetView = () => {
+    setSelectedStateCode(null);
+    setSelectedAlertId(null);
+  };
+
   return (
     <div className="min-h-screen">
       <Header
@@ -674,6 +683,7 @@ export default function App() {
               highlightedAlertId={highlightedAlertId}
               selectedAlertId={selectedAlertId}
               selectedStateCode={selectedStateCode}
+              onResetView={handleMapResetView}
             />
           </div>
 
@@ -690,7 +700,24 @@ export default function App() {
             </Link>
           </section>
 
+          {/* Quick nav for visualizations (mobile) */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mb-2">
+            <a href="#top-states" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors">
+              Top States
+            </a>
+            <a href="#alert-heatmap" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors">
+              Alert Heatmap
+            </a>
+            <a href="#extreme-weather" className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-colors">
+              All Alerts
+            </a>
+          </div>
+
+          {/* Visualizations */}
+          <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
+          <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
           {/* 4. EXTREME WEATHER on mobile */}
+          <div id="extreme-weather">
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
             loading={alertsLoading}
@@ -706,6 +733,7 @@ export default function App() {
             onStateZoom={handleStateZoom}
             selectedStateCode={selectedStateCode}
           />
+          </div>
         </div>
 
         {/* ========== DESKTOP LAYOUT ========== */}
@@ -731,6 +759,7 @@ export default function App() {
                 highlightedAlertId={highlightedAlertId}
                 selectedAlertId={selectedAlertId}
                 selectedStateCode={selectedStateCode}
+                onResetView={handleMapResetView}
               />
             </div>
 
@@ -885,6 +914,9 @@ export default function App() {
               </div>
             )}
 
+            {/* Visualizations: Most Impacted → Timeline → Risk Index */}
+            <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
+            <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             {/* EXTREME WEATHER - KEY FEATURE */}
             <ExtremeWeatherSection
               categories={getAlertsByCategory()}

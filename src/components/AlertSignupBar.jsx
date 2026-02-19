@@ -138,14 +138,16 @@ export default function AlertSignupBar() {
           style={{
             position: 'absolute',
             top: '8px',
-            right: '8px',
-            background: 'none',
-            border: 'none',
+            right: '20px',
+            background: 'rgba(51, 65, 85, 0.6)',
+            border: '1px solid #475569',
+            borderRadius: '4px',
             cursor: 'pointer',
             color: '#94a3b8',
-            fontSize: '20px',
+            fontSize: '18px',
             lineHeight: 1,
-            padding: '4px 8px',
+            padding: '2px 7px',
+            zIndex: 1,
           }}
         >
           &times;
