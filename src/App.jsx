@@ -489,6 +489,12 @@ export default function App() {
       setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 5, id: Date.now() });
       setSelectedStateCode(stateCode);  // Highlight state in alert cards
       setSelectedAlertId(null);  // Clear any selected alert
+
+      // On mobile, scroll map into view
+      const mapEl = document.getElementById('storm-map-mobile');
+      if (mapEl && window.innerWidth < 1024) {
+        mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   };
 
