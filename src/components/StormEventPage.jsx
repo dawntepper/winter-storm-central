@@ -1009,7 +1009,7 @@ export default function StormEventPage() {
   const handleStateZoom = (stateCode) => {
     const coords = STATE_CENTROIDS[stateCode];
     if (coords) {
-      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 7, id: Date.now() });
+      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 6, id: Date.now() });
       setSelectedStateCode(stateCode);  // Mark this state as selected (border highlight)
       setSelectedAlertId(null);  // Clear any selected alert
 
