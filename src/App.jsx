@@ -486,7 +486,7 @@ export default function App() {
   const handleStateZoom = (stateCode) => {
     const coords = STATE_CENTROIDS[stateCode];
     if (coords) {
-      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 6, id: Date.now() });
+      setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 5, id: Date.now() });
       setSelectedStateCode(stateCode);  // Highlight state in alert cards
       setSelectedAlertId(null);  // Clear any selected alert
     }

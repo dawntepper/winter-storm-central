@@ -126,7 +126,7 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
           </div>
         ) : (
           <div className="px-2 py-1.5 text-[10px] text-slate-600 text-center">
-            Hover a state for details
+            Hover a state for details · Click to view on map
           </div>
         )}
       </div>
