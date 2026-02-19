@@ -39,7 +39,7 @@ export default function StickyMiniMap({ selectedStateCode, mainMapId = 'storm-ma
   };
 
   return (
-    <div className="fixed bottom-4 left-3 right-3 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/95 border border-slate-700 backdrop-blur-sm shadow-lg shadow-black/40">
+    <div className="fixed bottom-4 left-3 right-3 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-600/95 border border-slate-500 backdrop-blur-sm shadow-lg shadow-black/40">
       {/* Back to map */}
       <button
         onClick={scrollToMap}
