@@ -965,33 +965,21 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-6 py-4 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all"
+          className="w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all"
         >
-          <div className="flex flex-col items-start gap-0.5">
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
-                Check Location
-              </label>
-              {/* Show count badge when collapsed */}
-              {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
-                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
-                  {Object.values(savedLocations).filter(l => l.onMap).length} on map
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1">
-              Get extreme weather alerts and daily forecasts
-              <span className="relative group inline-block">
-                <span className="cursor-help text-slate-400 hover:text-slate-300">ⓘ</span>
-                <span className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 p-2 text-[10px] text-slate-200 bg-slate-900 border border-slate-600 rounded-lg shadow-xl z-[9999] whitespace-normal">
-                  Currently available for the United States and US Territories only. More global locations coming soon!
-                </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm" role="img" aria-label="location">📍</span>
+            <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
+              Check Location
+            </label>
+            {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
+                {Object.values(savedLocations).filter(l => l.onMap).length} on map
               </span>
-            </span>
+            )}
           </div>
-          {/* Chevron */}
           <svg
-            className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -681,7 +681,11 @@ export default function App() {
           )}
 
           {/* 3. Storm Coverage Map on mobile - Sticky so it stays visible while scrolling */}
-          <div id="storm-map-mobile" className="sticky top-0 z-10 -mx-3 sm:-mx-4 [&_.leaflet-container]:!h-[40vh]">
+          <div
+            id="storm-map-mobile"
+            className="sticky z-10 -mx-3 sm:-mx-4 [&_.leaflet-container]:!h-[40vh] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
+          >
             <StormMap
               weatherData={{}}
               stormPhase="active"

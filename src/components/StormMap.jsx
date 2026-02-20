@@ -205,12 +205,19 @@ function MapController({ showRadar }) {
   const map = useMap();
 
   useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     // Disable scroll wheel zoom to prevent accidental zoom when scrolling page
     map.scrollWheelZoom.disable();
 
-    // Ensure dragging is enabled
-    map.dragging.enable();
-    map.touchZoom.enable();
+    if (isTouchDevice) {
+      // On touch: disable one-finger drag so page scrolls normally
+      map.dragging.disable();
+      // Keep two-finger pinch zoom enabled
+      map.touchZoom.enable();
+    } else {
+      map.dragging.enable();
+    }
     map.doubleClickZoom.enable();
 
     // Smooth zoom
@@ -221,7 +228,7 @@ function MapController({ showRadar }) {
     // Re-enable map interactions after any click (fixes stuck state after marker click)
     const handleClick = () => {
       setTimeout(() => {
-        map.dragging.enable();
+        if (!isTouchDevice) map.dragging.enable();
         map.touchZoom.enable();
       }, 100);
     };
@@ -230,10 +237,60 @@ function MapController({ showRadar }) {
     map.on('popupclose', handleClick);
     map.on('tooltipclose', handleClick);
 
+    // Two-finger gesture detection for hint overlay
+    // Only show hint when user tries to drag (single-finger move), not on taps
+    const container = map.getContainer();
+    let touchTimeout;
+    let startTouch = null;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        map.dragging.enable();
+        container.classList.remove('show-gesture-hint');
+      } else if (e.touches.length === 1) {
+        startTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 1 && startTouch) {
+        const dx = Math.abs(e.touches[0].clientX - startTouch.x);
+        const dy = Math.abs(e.touches[0].clientY - startTouch.y);
+        // Only show hint if user moved finger enough to indicate a drag attempt
+        if (dx > 10 || dy > 10) {
+          container.classList.add('show-gesture-hint');
+          clearTimeout(touchTimeout);
+          touchTimeout = setTimeout(() => {
+            container.classList.remove('show-gesture-hint');
+          }, 1500);
+          startTouch = null; // Only show once per gesture
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      startTouch = null;
+      if (isTouchDevice) {
+        setTimeout(() => map.dragging.disable(), 300);
+      }
+    };
+
+    if (isTouchDevice) {
+      container.addEventListener('touchstart', handleTouchStart, { passive: true });
+      container.addEventListener('touchmove', handleTouchMove, { passive: true });
+      container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
     return () => {
       map.off('click', handleClick);
       map.off('popupclose', handleClick);
       map.off('tooltipclose', handleClick);
+      clearTimeout(touchTimeout);
+      if (isTouchDevice) {
+        container.removeEventListener('touchstart', handleTouchStart);
+        container.removeEventListener('touchmove', handleTouchMove);
+        container.removeEventListener('touchend', handleTouchEnd);
+      }
     };
   }, [map]);
 
