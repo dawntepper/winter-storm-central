@@ -26,3 +26,11 @@ dist-ssr
 # Local Netlify folder
 .netlify
 .env.local
+
+# iOS (Capacitor)
+ios/App/App/public
+ios/App/Pods
+ios/DerivedData
+*.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+*.xcodeproj/project.xcworkspace/xcuserdata
