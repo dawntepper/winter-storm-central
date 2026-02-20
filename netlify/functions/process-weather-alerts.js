@@ -4,18 +4,18 @@
  * Runs every 30 minutes to:
  * 1. Fetch active NWS alerts
  * 2. Filter out already-sent alerts
- * 3. Match new alerts to Kit subscribers by state/zip
- * 4. Send targeted Kit broadcasts
+ * 3. Query Kit for subscribers by state tag
+ * 4. Send emails via Resend API
  * 5. Record sent alerts in Supabase
  *
  * Schedule: Every 30 minutes (configured in netlify.toml)
  *
  * Environment variables required:
- *   KIT_API_KEY            - Kit (ConvertKit) API v4 key
+ *   RESEND_API_KEY         - Resend API key for email delivery
+ *   KIT_API_KEY            - Kit (ConvertKit) API v4 key (subscriber management)
  *   SUPABASE_URL           - Supabase project URL
  *   SUPABASE_SERVICE_ROLE_KEY - Supabase service role key (bypasses RLS)
  *   KIT_STATE_TAG_PREFIX   - Prefix for state tags in Kit (default: "location-")
- *   KIT_ZIP_FIELD_KEY      - Custom field key for zip codes (default: "zip_code")
  */
 
 // Shared NWS alert parsing (single source of truth with client-side)
@@ -39,8 +39,10 @@ const {
 const {
   listTags,
   createTag,
-  createAndSendBroadcast,
+  listSubscribersForTag,
 } = require('./lib/kit-client.js');
+
+const { sendBatchEmails } = require('./lib/resend-client.js');
 
 const {
   getAffectedStates,
@@ -173,38 +175,68 @@ async function ensureStateTags(states) {
 }
 
 /**
- * Send a broadcast for alerts in a specific state
+ * Get all subscribers for a Kit tag (handles pagination)
  */
-async function sendStateBroadcast(state, alerts, tagId) {
+async function getTagSubscribers(tagId) {
+  const subscribers = [];
+  let cursor = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await listSubscribersForTag(tagId, { cursor, perPage: 500 });
+    const subs = response.subscribers || [];
+    subscribers.push(...subs);
+
+    if (response.pagination?.has_next_page && response.pagination?.end_cursor) {
+      cursor = response.pagination.end_cursor;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return subscribers;
+}
+
+/**
+ * Send alert emails for a specific state via Resend.
+ * Queries Kit for subscribers tagged with the state, then sends via Resend batch.
+ */
+async function sendStateAlerts(state, alerts, tagId) {
   const stateName = STATE_NAMES[state] || state;
 
+  // 1. Get subscribers for this state from Kit
+  const subscribers = await getTagSubscribers(tagId);
+  const validEmails = subscribers
+    .map((s) => s.email_address)
+    .filter(Boolean);
+
+  if (validEmails.length === 0) {
+    console.log(`[Resend] No subscribers for ${stateName}, skipping`);
+    return { subscriberCount: 0, messageIds: [] };
+  }
+
+  console.log(`[Resend] ${validEmails.length} subscribers for ${stateName}`);
+
+  // 2. Build email content
   const subject = buildAlertSubject({ stateName, alerts });
-  const content = buildAlertEmail({ stateName, stateAbbr: state, alerts });
-  const previewText = buildPreviewText({ stateName, alerts });
+  const html = buildAlertEmail({ stateName, stateAbbr: state, alerts });
 
-  // Target subscribers with the state tag using subscriber_filter
-  const subscriberFilter = [
-    {
-      all: [{ type: 'tag', ids: [tagId] }],
-    },
-  ];
-
-  console.log(`[Kit] Creating broadcast for ${stateName}: "${subject}"`);
-  console.log(`[Kit]   Targeting tag ID: ${tagId}`);
-  console.log(`[Kit]   Alert count: ${alerts.length}`);
-
-  const result = await createAndSendBroadcast({
+  // 3. Send via Resend batch
+  const emails = validEmails.map((email) => ({
+    to: email,
     subject,
-    content,
-    description: `Auto weather alert for ${stateName} - ${alerts.length} alert(s)`,
-    previewText,
-    subscriberFilter,
-  });
+    html,
+  }));
 
-  const broadcastId = result?.broadcast?.id || null;
-  console.log(`[Kit] Broadcast created: ${broadcastId}`);
+  console.log(`[Resend] Sending ${emails.length} emails for ${stateName}: "${subject}"`);
+  const result = await sendBatchEmails(emails);
 
-  return broadcastId;
+  if (result.errors.length > 0) {
+    console.warn(`[Resend] Batch errors for ${stateName}:`, result.errors);
+  }
+
+  console.log(`[Resend] Sent ${result.sent} emails for ${stateName}`);
+  return { subscriberCount: result.sent, messageIds: result.messageIds };
 }
 
 /**
@@ -252,7 +284,7 @@ async function processAlerts() {
     // Step 4: Ensure state tags exist in Kit
     const stateTagMap = await ensureStateTags(affectedStates);
 
-    // Step 5: Send broadcasts for each state
+    // Step 5: Send emails for each state via Resend
     for (const [state, stateAlerts] of Object.entries(alertsByState)) {
       const tagId = stateTagMap[state];
       if (!tagId) {
@@ -261,7 +293,7 @@ async function processAlerts() {
       }
 
       try {
-        const broadcastId = await sendStateBroadcast(state, stateAlerts, tagId);
+        const { subscriberCount, messageIds } = await sendStateAlerts(state, stateAlerts, tagId);
 
         // Record each alert as sent
         for (const alert of stateAlerts) {
@@ -273,33 +305,35 @@ async function processAlerts() {
               affectedStates: getAffectedStates(alert),
               areaDescription: alert.areaDesc,
               headline: alert.headline,
-              kitBroadcastIds: broadcastId ? [broadcastId] : [],
-              subscriberCount: 0, // Kit doesn't return this on create
+              kitBroadcastIds: messageIds.slice(0, 5), // Store a few Resend message IDs for reference
+              subscriberCount,
               statesNotified: [state],
               alertOnset: alert.onset,
               alertExpires: alert.expires,
-              status: 'sent',
+              status: subscriberCount > 0 ? 'sent' : 'skipped',
             });
 
-            // Log the broadcast send
+            // Log the send
             await logBroadcastSend({
               sentAlertId: sentRecord.id,
               nwsAlertId: alert.id,
-              kitBroadcastId: broadcastId,
+              kitBroadcastId: messageIds[0] || null, // First Resend message ID
               targetState: state,
-              status: 'sent',
+              status: subscriberCount > 0 ? 'sent' : 'skipped',
             });
           } catch (recordError) {
             console.error(`[Process] Error recording alert ${alert.id}:`, recordError.message);
           }
         }
 
-        results.broadcastsSent++;
+        if (subscriberCount > 0) {
+          results.broadcastsSent++;
+        }
         results.statesNotified.push(state);
-        console.log(`[Process] Successfully sent broadcast for ${state}`);
-      } catch (broadcastError) {
-        console.error(`[Process] Error sending broadcast for ${state}:`, broadcastError.message);
-        results.errors.push(`${state}: ${broadcastError.message}`);
+        console.log(`[Process] Successfully sent ${subscriberCount} emails for ${state}`);
+      } catch (sendError) {
+        console.error(`[Process] Error sending emails for ${state}:`, sendError.message);
+        results.errors.push(`${state}: ${sendError.message}`);
 
         // Record failed alerts
         for (const alert of stateAlerts) {
@@ -317,7 +351,7 @@ async function processAlerts() {
               alertOnset: alert.onset,
               alertExpires: alert.expires,
               status: 'failed',
-              errorMessage: broadcastError.message,
+              errorMessage: sendError.message,
             });
           } catch (recordError) {
             console.error(`[Process] Error recording failed alert:`, recordError.message);
@@ -354,7 +388,7 @@ exports.handler = async (event) => {
   };
 
   // Check for required environment variables
-  const requiredVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const requiredVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY'];
   const missing = requiredVars.filter((v) => !process.env[v]);
   if (!process.env.CONVERTKIT_API_KEY && !process.env.KIT_API_KEY) {
     missing.push('CONVERTKIT_API_KEY or KIT_API_KEY');

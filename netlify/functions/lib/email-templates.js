@@ -1,8 +1,8 @@
 /**
- * Email Template Builder for Weather Alert Broadcasts
+ * Email Template Builder for Weather Alert Emails
  *
- * Generates HTML email content for Kit broadcasts.
- * Kit handles unsubscribe links automatically.
+ * Generates HTML email content for Resend-delivered alert emails.
+ * Includes unsubscribe links in footer since Resend doesn't auto-add them.
  */
 
 const SITE_URL = 'https://stormtracking.io';
@@ -278,6 +278,13 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
                   </td>
                 </tr>
                 <tr>
+                  <td style="font-size:12px;color:#9ca3af;line-height:1.5;padding-bottom:8px;">
+                    <a href="${SITE_URL}/unsubscribe" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+                    &nbsp;&middot;&nbsp;
+                    <a href="${SITE_URL}" style="color:#9ca3af;text-decoration:underline;">Update alert preferences</a>
+                  </td>
+                </tr>
+                <tr>
                   <td style="font-size:11px;color:#d1d5db;">
                     &copy; ${new Date().getFullYear()} StormTracking.io
                   </td>
@@ -447,6 +454,11 @@ function buildWelcomeEmail() {
                 <tr>
                   <td style="font-size:11px;color:#d1d5db;">
                     &copy; ${new Date().getFullYear()} StormTracking.io
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size:12px;color:#9ca3af;padding-top:8px;">
+                    <a href="${SITE_URL}/unsubscribe" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
                   </td>
                 </tr>
               </table>

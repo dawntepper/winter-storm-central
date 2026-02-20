@@ -18,8 +18,9 @@ const {
   createTag,
   tagSubscriber: kitTagSubscriber,
   untagSubscriber,
-  triggerTagAutomation,
 } = require('./lib/kit-client.js');
+const { sendEmail } = require('./lib/resend-client.js');
+const { buildWelcomeEmail, SITE_URL } = require('./lib/email-templates.js');
 
 const KIT_FORM_ID = process.env.KIT_FORM_ID || '9086634';
 
@@ -183,18 +184,21 @@ exports.handler = async (event) => {
       }
     }
 
-    // 4. Trigger welcome email automation — only for new subscribers
+    // 4. Send welcome email via Resend — only for new subscribers
     console.log(`[Subscribe] Step 4: Welcome email decision — isExistingSubscriber: ${isExistingSubscriber}`);
-    if (!isExistingSubscriber && subscriberId) {
+    if (!isExistingSubscriber) {
       try {
-        console.log(`[Subscribe] Triggering welcome email automation for ${email}...`);
-        await triggerTagAutomation({
-          subscriberId,
-          tagName: '_welcome-email',
+        console.log(`[Subscribe] Sending welcome email via Resend to ${email}...`);
+        const welcomeHtml = buildWelcomeEmail();
+        await sendEmail({
+          to: email,
+          subject: '\u2705 You\'re signed up for weather alerts',
+          html: welcomeHtml,
         });
-        console.log(`[Subscribe] Welcome tag applied — Kit automation will send the email`);
+        console.log(`[Subscribe] Welcome email sent via Resend to ${email}`);
       } catch (welcomeError) {
-        console.error(`[Subscribe] !!! Welcome tag FAILED for ${email}:`, welcomeError.message);
+        // Don't fail the signup if welcome email fails
+        console.error(`[Subscribe] !!! Welcome email FAILED for ${email}:`, welcomeError.message);
       }
     } else {
       console.log(`[Subscribe] Skipping welcome email — returning subscriber ${email}`);
