@@ -211,6 +211,8 @@ function StormForm({ event, onSave, onCancel, saving }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [importStatus, setImportStatus] = useState(null); // { type: 'success'|'error', message }
+  const fileInputRef = useRef(null);
 
   const defaultFormData = {
     title: '',
@@ -347,6 +349,78 @@ function StormForm({ event, onSave, onCancel, saving }) {
     handleChange('slug', slug);
   };
 
+  const handleImportJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so the same file can be re-imported
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = JSON.parse(evt.target.result);
+
+        // Validate required fields
+        const missing = [];
+        if (!json.title) missing.push('title');
+        if (!json.type) missing.push('type');
+        if (!json.startDate) missing.push('startDate');
+        if (!json.endDate) missing.push('endDate');
+        if (missing.length > 0) {
+          setImportStatus({ type: 'error', message: `Missing required fields: ${missing.join(', ')}` });
+          setTimeout(() => setImportStatus(null), 5000);
+          return;
+        }
+
+        // Resolve typeLabel from type value
+        const typeOption = STORM_TYPES.find(t => t.value === json.type);
+
+        // Map JSON → formData, supporting both flat and nested schemas
+        const imported = {
+          ...defaultFormData,
+          title: json.title || '',
+          slug: json.slug || '',
+          type: json.type || 'winter_storm',
+          typeLabel: typeOption?.label || json.typeLabel || json.type,
+          status: json.status || 'draft',
+          startDate: json.startDate || '',
+          endDate: json.endDate || '',
+          description: json.description || '',
+          impacts: Array.isArray(json.impacts) ? json.impacts : (Array.isArray(json.expectedImpacts) ? json.expectedImpacts : ['']),
+          affectedStates: Array.isArray(json.affectedStates) ? json.affectedStates : [],
+          alertCategories: Array.isArray(json.alertCategories) ? json.alertCategories : ['winter'],
+          mapCenter: {
+            lat: json.mapCenter?.lat ?? json.mapCenter?.latitude ?? 39.0,
+            lon: json.mapCenter?.lon ?? json.mapCenter?.longitude ?? -98.0,
+          },
+          mapZoom: json.mapZoom ?? json.mapCenter?.zoom ?? 5,
+          seoTitle: json.seoTitle ?? json.seo?.title ?? '',
+          seoDescription: json.seoDescription ?? json.seo?.description ?? '',
+          ogImageUrl: json.ogImageUrl ?? json.seo?.ogImageUrl ?? '',
+          keywords: Array.isArray(json.keywords)
+            ? json.keywords
+            : (typeof json.seo?.keywords === 'string'
+              ? json.seo.keywords.split(',').map(k => k.trim()).filter(Boolean)
+              : (Array.isArray(json.seo?.keywords) ? json.seo.keywords : [''])),
+          peakAlertCount: json.peakAlertCount ?? null,
+          totalAlertsIssued: json.totalAlertsIssued ?? null,
+        };
+
+        // Ensure array fields have at least one entry for the form UI
+        if (imported.impacts.length === 0) imported.impacts = [''];
+        if (imported.keywords.length === 0) imported.keywords = [''];
+
+        setFormData(imported);
+        setImportStatus({ type: 'success', message: 'Storm data imported — review and submit' });
+        setTimeout(() => setImportStatus(null), 4000);
+      } catch (err) {
+        setImportStatus({ type: 'error', message: `Invalid JSON file: ${err.message}` });
+        setTimeout(() => setImportStatus(null), 5000);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     // Clean up empty array items
@@ -362,6 +436,32 @@ function StormForm({ event, onSave, onCancel, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Import JSON */}
+      <div className="flex items-center gap-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportJSON}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-600"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Import JSON
+        </button>
+        {importStatus && (
+          <span className={`text-xs ${importStatus.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+            {importStatus.message}
+          </span>
+        )}
+      </div>
+
       {/* Title & Slug */}
       <div className="grid md:grid-cols-2 gap-4">
         <div>
