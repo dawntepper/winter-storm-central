@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 
 const DISMISSED_KEY = 'stormtracking_signup_dismissed';
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
 
 export default function AlertSignupBar() {
+  // Don't show email signup on native — PushNotificationCard handles it
+  if (Capacitor.isNativePlatform()) return null;
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [zipCode, setZipCode] = useState('');

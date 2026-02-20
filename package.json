@@ -12,6 +12,7 @@
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
     "@capacitor/ios": "^8.1.0",
+    "@capacitor/push-notifications": "^8.0.1",
     "@supabase/supabase-js": "^2.45.0",
     "leaflet": "^1.9.4",
     "react": "^19.2.0",

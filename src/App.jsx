@@ -14,6 +14,7 @@ import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
 import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
+import PushNotificationCard from './components/PushNotificationCard';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -989,8 +990,9 @@ export default function App() {
         </footer>
       </main>
 
-      {/* Sticky email signup bar */}
+      {/* Sticky signup bar — email on web, push notifications on native */}
       <AlertSignupBar />
+      <PushNotificationCard />
     </div>
   );
 }
