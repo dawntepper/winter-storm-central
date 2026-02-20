@@ -702,10 +702,26 @@ export default function App() {
             />
           </div>
 
-          {/* Visualizations */}
-          <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
-          <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
-          {/* 4. EXTREME WEATHER on mobile */}
+          {/* Section: Alert Overview */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="h-px flex-1 bg-slate-700" />
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Alert Overview</span>
+              <div className="h-px flex-1 bg-slate-700" />
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
+              <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
+            </div>
+          </div>
+
+          {/* Section: Active Alerts */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="h-px flex-1 bg-slate-700" />
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Active Alerts</span>
+              <div className="h-px flex-1 bg-slate-700" />
+            </div>
           <div id="extreme-weather">
           <ExtremeWeatherSection
             categories={getAlertsByCategory()}
@@ -722,6 +738,7 @@ export default function App() {
             onStateZoom={handleStateZoom}
             selectedStateCode={selectedStateCode}
           />
+          </div>
           </div>
         </div>
 

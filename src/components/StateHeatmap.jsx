@@ -97,14 +97,15 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
   }
 
   return (
-    <div id="alert-heatmap" className="bg-slate-800/50 rounded-xl border border-slate-700 border-l-4 border-l-sky-500 p-4">
+    <div id="alert-heatmap" className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-300">Alert Heatmap</h3>
-        <span className="text-xs text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">
+      <div className="px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-sky-400">Alert Heatmap</h3>
+        <span className="text-xs text-slate-400 bg-slate-700/50 px-1.5 py-0.5 rounded">
           {totalAlerts} active
         </span>
       </div>
+      <div className="p-4">
 
       {/* Tooltip — fixed height to prevent layout shift */}
       <div className="h-10 mb-1">
@@ -223,6 +224,7 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
             <span className="text-[9px] text-slate-600">mixed</span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

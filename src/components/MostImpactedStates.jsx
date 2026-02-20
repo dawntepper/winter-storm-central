@@ -70,8 +70,11 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
   }
 
   return (
-    <div id="top-states" className="bg-slate-800/50 rounded-xl border border-slate-700 border-l-4 border-l-amber-500 p-4">
-      <h3 className="text-sm font-semibold text-slate-300 mb-3">Most Impacted States</h3>
+    <div id="top-states" className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+      <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20">
+        <h3 className="text-sm font-semibold text-amber-400">Most Impacted States</h3>
+      </div>
+      <div className="p-4">
 
       <div className="space-y-2">
         {states.map((st, i) => (
@@ -116,7 +119,7 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
           </button>
         ))}
       </div>
-
+      </div>
     </div>
   );
 }

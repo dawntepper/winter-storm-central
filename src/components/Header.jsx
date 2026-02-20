@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick } from '../utils/analytics';
 import { US_STATES } from '../data/stateConfig';
 
@@ -75,6 +76,37 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
     onRefresh();
   };
 
+  const isNative = Capacitor.isNativePlatform();
+
+  // Streamlined native header
+  if (isNative) {
+    return (
+      <header className="bg-slate-900 border-b border-slate-700 px-4 py-2.5" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="text-lg">📡</span>
+            StormTracking
+          </h1>
+          <div className="flex items-center gap-3">
+            {lastRefresh && (
+              <span className="text-[10px] text-slate-500">
+                {lastRefresh.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-lg text-white transition-colors border border-slate-700 cursor-pointer"
+            >
+              <span className={`text-sm ${loading ? 'animate-spin' : ''}`}>&#8635;</span>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Full web header
   return (
     <header className="bg-slate-900 border-b border-slate-700 px-3 sm:px-4 lg:px-6 py-3 sm:py-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
       <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
