@@ -155,12 +155,6 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
           <h3 className="text-sm font-semibold text-white flex-1 truncate">
             {locationLine}
           </h3>
-          <Link
-            to="/radar"
-            className="text-[10px] font-medium px-2 py-0.5 rounded border transition-colors flex-shrink-0 text-emerald-400 bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/25"
-          >
-            Radar
-          </Link>
         </div>
 
         {/* Row 2: Warning name (category-colored) */}
@@ -180,21 +174,24 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
           </span>
         </div>
 
-        {/* Row 4: Progress bar */}
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${timeInfo.progress * 100}%`, backgroundColor: color }}
-          />
+        {/* Row 4: Progress bar + Show Details (far right) */}
+        <div className="flex items-center gap-3">
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden flex-1">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${timeInfo.progress * 100}%`, backgroundColor: color }}
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!expanded) onAlertTap?.(alert);
+              setExpanded(!expanded);
+            }}
+            className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer flex-shrink-0"
+          >
+            {expanded ? 'Hide Details ▲' : 'Show Details ▼'}
+          </button>
         </div>
-
-        {/* Expand toggle */}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer"
-        >
-          {expanded ? 'Hide Details ▲' : 'Show Details ▼'}
-        </button>
 
         {/* Expanded details */}
         {expanded && (

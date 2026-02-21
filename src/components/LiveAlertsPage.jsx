@@ -66,6 +66,7 @@ export default function LiveAlertsPage() {
   const { alerts: alertsData, loading, error, refresh } = useExtremeWeather(true);
   const [activeFilter, setActiveFilter] = useState(null);
   const [tick, setTick] = useState(0);
+  const [mapCenterOn, setMapCenterOn] = useState(null);
 
   // SEO meta tags
   useEffect(() => {
@@ -104,6 +105,12 @@ export default function LiveAlertsPage() {
       ? Object.values(alertsData.byCategory).flat()
       : [];
   }, [alertsData]);
+
+  const handleAlertTap = (alert) => {
+    if (alert.lat && alert.lon) {
+      setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+    }
+  };
 
   const handleFilterClick = (catId) => {
     setActiveFilter((prev) => (prev === catId ? null : catId));
@@ -177,7 +184,7 @@ export default function LiveAlertsPage() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-        <div className="lg:grid lg:grid-cols-[2fr_3fr] gap-6 items-start">
+        <div className="lg:grid lg:grid-cols-[3fr_minmax(0,420px)] gap-6 items-start">
 
           {/* LEFT COLUMN: Sticky map (desktop) / stacked above cards (mobile) */}
           <section className="mb-6 lg:mb-0 lg:sticky lg:top-4">
@@ -186,6 +193,7 @@ export default function LiveAlertsPage() {
               stormPhase="active"
               alerts={mapAlerts}
               isHero
+              centerOn={mapCenterOn}
             />
           </section>
 
@@ -265,7 +273,7 @@ export default function LiveAlertsPage() {
             {/* Alert cards */}
             <div className="space-y-3">
               {ranked.map((alert) => (
-                <LiveAlertCard key={alert.id} alert={alert} mode="full" tick={tick} />
+                <LiveAlertCard key={alert.id} alert={alert} mode="full" tick={tick} onAlertTap={handleAlertTap} />
               ))}
             </div>
           </div>
