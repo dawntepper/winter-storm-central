@@ -161,8 +161,8 @@ function ActiveStormsHighlight() {
 // Radar layer type options
 const LAYER_TYPES = [
   { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow radar' },
-  { id: 'satellite', label: 'Satellite IR', description: 'Infrared cloud imagery' },
-  { id: 'forecast', label: 'Forecast', description: '30-min radar prediction' }
+  { id: 'satellite', label: 'Satellite', description: 'GOES GeoColor imagery' },
+  { id: 'infrared', label: 'Infrared', description: 'Cloud top temperatures' }
 ];
 
 export default function RadarPage() {
@@ -308,7 +308,7 @@ export default function RadarPage() {
           </div>
 
           {/* Color Scheme - only for precipitation and forecast */}
-          {radarType !== 'satellite' && (
+          {radarType === 'precipitation' && (
             <div className="sm:w-56">
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Color Scheme</label>
               <select

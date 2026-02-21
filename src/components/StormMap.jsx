@@ -428,14 +428,22 @@ export const RADAR_COLOR_SCHEMES = {
   8: 'Black & White'
 };
 
-// Radar layer component using RainViewer API
-// Supports precipitation radar, satellite infrared, and radar forecast
+// Get a GIBS-compatible timestamp (rounded down to nearest 10 min, offset 30 min for availability)
+function getGibsTimestamp() {
+  const now = new Date(Date.now() - 30 * 60 * 1000); // 30 min ago for data availability
+  now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
+  return now.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+// Radar/satellite layer component
+// - precipitation: RainViewer (past radar with color scheme support)
+// - satellite: NASA GIBS GOES-East GeoColor (true color day, IR night)
+// - infrared: NASA GIBS GOES-East Clean Infrared (cloud tops)
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
   const map = useMap();
   const layerRef = useRef(null);
 
   useEffect(() => {
-    // Clean up existing layer
     if (layerRef.current) {
       map.removeLayer(layerRef.current);
       layerRef.current = null;
@@ -443,60 +451,95 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
 
     if (!show) return;
 
-    // Fetch latest radar timestamp from RainViewer
-    const fetchRadar = async () => {
-      try {
-        const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json();
-        const host = data.host || 'https://tilecache.rainviewer.com';
-
-        let tilePath = null;
-
-        if (layerType === 'satellite') {
-          // Satellite infrared
-          const latest = data.satellite?.infrared?.slice(-1)[0];
-          if (latest) {
-            tilePath = `${host}${latest.path}/256/{z}/{x}/{y}/0/0_0.png`;
-          }
-        } else if (layerType === 'forecast') {
-          // Radar nowcast/forecast (use first forecast frame, or latest past if none)
-          const forecast = data.radar?.nowcast?.[0] || data.radar?.past?.slice(-1)[0];
-          if (forecast) {
-            tilePath = `${host}${forecast.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
-          }
-        } else {
-          // Default: precipitation radar (latest past frame)
-          const latest = data.radar?.past?.slice(-1)[0];
-          if (latest) {
-            tilePath = `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
-          }
-        }
-
-        if (tilePath && show) {
-          // Remove existing layer before adding new one
-          if (layerRef.current) {
-            map.removeLayer(layerRef.current);
-          }
-
-          const layer = L.tileLayer(tilePath, {
-            opacity: 0.7,
-            zIndex: 400,
-            tileSize: 256,
-            attribution: '<a href="https://rainviewer.com">RainViewer</a>'
-          });
-
-          layer.addTo(map);
-          layerRef.current = layer;
-        }
-      } catch (err) {
-        console.error('Radar fetch error:', err);
-      }
+    const addLayer = (url, options = {}) => {
+      if (layerRef.current) map.removeLayer(layerRef.current);
+      const layer = L.tileLayer(url, {
+        opacity: 0.7,
+        zIndex: 400,
+        tileSize: 256,
+        ...options,
+      });
+      layer.addTo(map);
+      layerRef.current = layer;
     };
 
-    fetchRadar();
+    if (layerType === 'satellite') {
+      // NASA GIBS GOES-East GeoColor — true color (day) / blended IR (night)
+      const time = getGibsTimestamp();
+      addLayer(
+        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${time}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`,
+        {
+          subdomains: 'abc',
+          maxNativeZoom: 7,
+          maxZoom: 18,
+          attribution: 'NASA GIBS / NOAA GOES',
+        }
+      );
+    } else if (layerType === 'infrared') {
+      // NASA GIBS GOES-East Clean Infrared — cloud top temperatures
+      const time = getGibsTimestamp();
+      addLayer(
+        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+        {
+          subdomains: 'abc',
+          maxNativeZoom: 6,
+          maxZoom: 18,
+          attribution: 'NASA GIBS / NOAA GOES',
+        }
+      );
+    } else {
+      // Precipitation: RainViewer (latest past radar frame)
+      const fetchRadar = async () => {
+        try {
+          const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+          const data = await response.json();
+          const host = data.host || 'https://tilecache.rainviewer.com';
+          const latest = data.radar?.past?.slice(-1)[0];
+          if (latest && show) {
+            addLayer(
+              `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
+              { attribution: '<a href="https://rainviewer.com">RainViewer</a>' }
+            );
+          }
+        } catch (err) {
+          console.error('Radar fetch error:', err);
+        }
+      };
+      fetchRadar();
+    }
 
-    // Refresh radar every 5 minutes
-    const interval = setInterval(fetchRadar, 5 * 60 * 1000);
+    // Refresh every 5 minutes
+    const interval = setInterval(() => {
+      if (layerType === 'satellite' || layerType === 'infrared') {
+        const time = getGibsTimestamp();
+        const url = layerType === 'satellite'
+          ? `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${time}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`
+          : `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+        addLayer(url, {
+          subdomains: 'abc',
+          maxNativeZoom: layerType === 'satellite' ? 7 : 6,
+          maxZoom: 18,
+          attribution: 'NASA GIBS / NOAA GOES',
+        });
+      } else {
+        (async () => {
+          try {
+            const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+            const data = await response.json();
+            const host = data.host || 'https://tilecache.rainviewer.com';
+            const latest = data.radar?.past?.slice(-1)[0];
+            if (latest) {
+              addLayer(
+                `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
+                { attribution: '<a href="https://rainviewer.com">RainViewer</a>' }
+              );
+            }
+          } catch (err) {
+            console.error('Radar refresh error:', err);
+          }
+        })();
+      }
+    }, 5 * 60 * 1000);
 
     return () => {
       clearInterval(interval);
