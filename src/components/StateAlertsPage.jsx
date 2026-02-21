@@ -541,6 +541,7 @@ export default function StateAlertsPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
             <Link to="/radar" onClick={() => trackRadarLinkClick('state_header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
             <select
               defaultValue=""
@@ -601,9 +602,12 @@ export default function StateAlertsPage() {
         {/* Two-column layout: Map (left) + Alerts sidebar (right) on desktop */}
         <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
 
-          {/* LEFT COLUMN: Map */}
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
+          {/* LEFT COLUMN: Map — sticky on mobile so it stays visible while scrolling alerts */}
+          <section
+            className="sticky z-10 -mx-4 sm:-mx-6 lg:mx-0 lg:static lg:z-auto [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
+          >
+            <h2 className="text-lg font-semibold text-white mb-3 px-4 sm:px-6 lg:px-0">
               Live Weather Radar — {stateData.name}
             </h2>
             <StormMap
@@ -615,7 +619,7 @@ export default function StateAlertsPage() {
               centerOn={{
                 lat: stateData.center[0],
                 lon: stateData.center[1],
-                zoom: stateData.zoom,
+                zoom: stateData.zoom - 1,
                 id: `state-${stateAbbr}`
               }}
               selectedStateCode={stateAbbr}

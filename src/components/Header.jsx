@@ -164,6 +164,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
+              <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
               <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
               <span className="relative inline-flex items-center">
                 <select

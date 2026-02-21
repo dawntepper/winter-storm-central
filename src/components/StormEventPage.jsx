@@ -1069,6 +1069,7 @@ export default function StormEventPage() {
 
           {/* Nav Links & Share */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
             <Link to="/radar" onClick={() => trackRadarLinkClick('storm_header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
             <select
               defaultValue=""

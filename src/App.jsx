@@ -12,6 +12,7 @@ import ExtremeWeatherSection from './components/ExtremeWeatherSection';
 import AlertTimeline from './components/AlertTimeline';
 import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
+import LiveAlertsWidget from './components/LiveAlertsWidget';
 import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import PushNotificationCard from './components/PushNotificationCard';
@@ -310,7 +311,7 @@ export default function App() {
     if (alert.lat && alert.lon) {
       setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
       setSelectedAlertId(alert.id); // Mark this alert as selected (green marker)
-      setSelectedStateCode(null); // Clear any selected state
+      setSelectedStateCode(alert.state || null); // Highlight the alert's state border
 
       // Add to viewed locations if not already there
       setViewedLocations(prev => {
@@ -710,6 +711,7 @@ export default function App() {
               <div className="h-px flex-1 bg-slate-700" />
             </div>
             <div className="grid grid-cols-1 gap-3">
+              <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
               <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
               <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             </div>
@@ -743,51 +745,52 @@ export default function App() {
         </div>
 
         {/* ========== DESKTOP LAYOUT ========== */}
-        <section className="hidden lg:grid lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6 overflow-hidden">
-          {/* Left Column: Search + Map */}
+        <section className="hidden lg:grid lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6">
+          {/* Left Column: Map */}
+          <div>
+            {/* Storm Map - Sticky so it stays visible while scrolling right column */}
+            <div className="lg:sticky lg:top-4 space-y-4 lg:space-y-5">
+              <div>
+                <StormMap
+                  weatherData={{}}
+                  stormPhase="active"
+                  userLocations={userLocations}
+                  alerts={mapAlerts}
+                  isHero
+                  centerOn={mapCenterOn}
+                  previewLocation={previewCity}
+                  highlightedAlertId={highlightedAlertId}
+                  selectedAlertId={selectedAlertId}
+                  selectedStateCode={selectedStateCode}
+                  onResetView={handleMapResetView}
+                />
+              </div>
+
+              {/* Live Weather Radar section */}
+              <section className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+                <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
+                <p className="text-sm text-slate-400 leading-relaxed mb-2">
+                  Track severe weather in real-time with our interactive weather radar map.
+                  Switch between precipitation radar, satellite infrared, and forecast views.
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                  Choose from 9 color schemes on the full Radar Maps page. Perfect for tracking
+                  winter storms, hurricanes, thunderstorms, and other extreme weather events.
+                </p>
+                <Link to="/radar" onClick={() => trackRadarLinkClick('homepage_desktop')} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+                  Explore Radar Maps →
+                </Link>
+              </section>
+            </div>
+          </div>
+
+          {/* Right Column: Search + Your Locations + Alerts */}
           <div className="flex flex-col gap-4 lg:gap-5">
-            {/* Check Your Location - Above map on desktop */}
+            {/* Check Your Location */}
             <div id="location-search">
               <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
             </div>
 
-            {/* Storm Map - Below search on desktop */}
-            <div className="lg:min-h-[500px]">
-              <StormMap
-                weatherData={{}}
-                stormPhase="active"
-                userLocations={userLocations}
-                alerts={mapAlerts}
-                isHero
-                isSidebar
-                centerOn={mapCenterOn}
-                previewLocation={previewCity}
-                highlightedAlertId={highlightedAlertId}
-                selectedAlertId={selectedAlertId}
-                selectedStateCode={selectedStateCode}
-                onResetView={handleMapResetView}
-              />
-            </div>
-
-            {/* Live Weather Radar section */}
-            <section className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-              <h2 className="text-base font-semibold text-slate-200 mb-2">Live Weather Radar Map</h2>
-              <p className="text-sm text-slate-400 leading-relaxed mb-2">
-                Track severe weather in real-time with our interactive weather radar map.
-                Switch between precipitation radar, satellite infrared, and forecast views.
-              </p>
-              <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                Choose from 9 color schemes on the full Radar Maps page. Perfect for tracking
-                winter storms, hurricanes, thunderstorms, and other extreme weather events.
-              </p>
-              <Link to="/radar" onClick={() => trackRadarLinkClick('homepage_desktop')} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
-                Explore Radar Maps →
-              </Link>
-            </section>
-          </div>
-
-          {/* Right Column: Your Locations + Extreme Weather */}
-          <div className="flex flex-col gap-4 lg:gap-5">
             {/* Your Locations (if any) - COLLAPSIBLE */}
             {userLocations.length > 0 && (
               <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
@@ -920,7 +923,8 @@ export default function App() {
               </div>
             )}
 
-            {/* Visualizations: Most Impacted → Timeline → Risk Index */}
+            {/* Visualizations: Live Alerts → Most Impacted → Timeline → Risk Index */}
+            <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
             <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             {/* EXTREME WEATHER - KEY FEATURE */}
