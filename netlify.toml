@@ -24,6 +24,12 @@
   to = "/.netlify/functions/og-image"
   status = 200
 
+# Friendly unsubscribe URL
+[[redirects]]
+  from = "/unsubscribe"
+  to = "/.netlify/functions/unsubscribe-alerts"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

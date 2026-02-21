@@ -7,6 +7,20 @@
 
 const SITE_URL = 'https://stormtracking.io';
 
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'Washington DC', FL: 'Florida',
+  GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana',
+  IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine',
+  MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota',
+  OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island',
+  SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah',
+  VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin',
+  WY: 'Wyoming',
+};
+
 // Severity → color mapping
 const SEVERITY_COLORS = {
   Extreme: '#dc2626',   // red-600
@@ -51,14 +65,12 @@ function formatDate(isoString) {
  * Prefers ?location= parameter for seamless map integration
  */
 function getMapLink(alert) {
+  if (alert.state) {
+    const stateName = STATE_NAMES[alert.state] || alert.state;
+    return `${SITE_URL}/alerts/${stateName.toLowerCase().replace(/\s+/g, '-')}`;
+  }
   if (alert.subscriberZip) {
     return `${SITE_URL}?location=${alert.subscriberZip}`;
-  }
-  if (alert.lat && alert.lon) {
-    return `${SITE_URL}?location=${alert.lat},${alert.lon}`;
-  }
-  if (alert.state) {
-    return `${SITE_URL}/alerts/${alert.state.toLowerCase()}`;
   }
   return `${SITE_URL}/alerts`;
 }
@@ -279,7 +291,7 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
                 </tr>
                 <tr>
                   <td style="font-size:12px;color:#9ca3af;line-height:1.5;padding-bottom:8px;">
-                    <a href="${SITE_URL}/unsubscribe" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+                    <a href="${SITE_URL}/api/unsubscribe-alerts" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
                     &nbsp;&middot;&nbsp;
                     <a href="${SITE_URL}" style="color:#9ca3af;text-decoration:underline;">Update alert preferences</a>
                   </td>
@@ -458,7 +470,7 @@ function buildWelcomeEmail() {
                 </tr>
                 <tr>
                   <td style="font-size:12px;color:#9ca3af;padding-top:8px;">
-                    <a href="${SITE_URL}/unsubscribe" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+                    <a href="${SITE_URL}/api/unsubscribe-alerts" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
                   </td>
                 </tr>
               </table>
