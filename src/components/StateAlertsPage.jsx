@@ -390,8 +390,8 @@ function NearbyStateAlertsViz({ stateAbbr, alertCountsByState, allAlerts }) {
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-      <div className="px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20">
-        <h3 className="text-sm font-semibold text-sky-400">States Near {stateName}</h3>
+      <div className="px-4 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20">
+        <h3 className="text-sm font-semibold text-emerald-400">States Near {stateName}</h3>
       </div>
       <div className="p-4 space-y-1.5">
         {stateRows.map(st => (
@@ -661,17 +661,15 @@ export default function StateAlertsPage() {
                 />
               )}
             </section>
+
+            {/* Nearby State Alerts Visualization */}
+            <NearbyStateAlertsViz
+              stateAbbr={stateAbbr}
+              alertCountsByState={alertCountsByState}
+              allAlerts={alertsData?.allAlerts}
+            />
           </div>
         </div>
-
-        {/* Full-width sections below the two-column grid */}
-
-        {/* Nearby State Alerts Visualization */}
-        <NearbyStateAlertsViz
-          stateAbbr={stateAbbr}
-          alertCountsByState={alertCountsByState}
-          allAlerts={alertsData?.allAlerts}
-        />
 
         {/* SEO FAQ */}
         <section>
