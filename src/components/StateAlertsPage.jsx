@@ -181,6 +181,16 @@ function AlertDetailModal({ alert, onClose }) {
 // ALERT LIST BY CATEGORY
 // =============================================
 
+const CATEGORY_COLORS = {
+  winter:   { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },
+  severe:   { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },
+  heat:     { bg: '#7c2d12', border: '#ef4444', text: 'antiquewhite' },
+  flood:    { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' },
+  fire:     { bg: '#78350f', border: '#d97706', text: 'antiquewhite' },
+  tropical: { bg: '#1e3a8a', border: '#6366f1', text: 'antiquewhite' },
+  default:  { bg: '#334155', border: '#64748b', text: 'antiquewhite' },
+};
+
 function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
   const [expandedCategories, setExpandedCategories] = useState({});
 
@@ -196,7 +206,7 @@ function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
   }, [alerts]);
 
   const toggleCategory = (catId) => {
-    setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+    setExpandedCategories(prev => ({ ...prev, [catId]: prev[catId] === true ? false : true }));
   };
 
   return (
@@ -206,23 +216,25 @@ function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
         if (!categoryAlerts || categoryAlerts.length === 0) return null;
 
         const category = ALERT_CATEGORIES[categoryId];
-        const isExpanded = expandedCategories[categoryId] !== false; // default expanded
+        const colors = CATEGORY_COLORS[categoryId] || CATEGORY_COLORS.default;
+        const isExpanded = expandedCategories[categoryId] === true; // default collapsed
 
         return (
-          <div key={categoryId} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <div key={categoryId} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
             <button
               onClick={() => toggleCategory(categoryId)}
-              className="w-full flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-750 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 cursor-pointer hover:brightness-110 transition-all"
+              style={{ backgroundColor: colors.bg }}
             >
               <div className="flex items-center gap-2">
-                <span>{category.icon}</span>
-                <span className="font-semibold text-white text-sm">{category.name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">
+                <span className="text-lg">{category.icon}</span>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.text }}>{category.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
                   {categoryAlerts.length}
                 </span>
               </div>
               <svg
-                className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -230,7 +242,7 @@ function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
             </button>
 
             {isExpanded && (
-              <div className="border-t border-slate-700">
+              <div className="bg-slate-800 max-h-[300px] overflow-y-auto">
                 {categoryAlerts.map((alert, idx) => (
                   <button
                     key={alert.id || idx}
@@ -336,38 +348,86 @@ function ActiveStormsForState({ stateAbbr }) {
 // NEARBY STATES
 // =============================================
 
-function NearbyStatesSection({ stateAbbr, alertCountsByState }) {
+function NearbyStateAlertsViz({ stateAbbr, alertCountsByState, allAlerts }) {
+  const navigate = useNavigate();
   const nearby = NEARBY_STATES[stateAbbr] || [];
   if (nearby.length === 0) return null;
 
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-white mb-3">Nearby State Alerts</h2>
-      <div className="flex flex-wrap gap-2">
-        {nearby.map(abbr => {
-          const name = STATE_NAMES[abbr];
-          const slug = ABBR_TO_SLUG[abbr];
-          const count = alertCountsByState[abbr] || 0;
-          if (!name || !slug) return null;
+  const stateName = STATE_NAMES[stateAbbr] || stateAbbr;
 
-          return (
-            <Link
-              key={abbr}
-              to={`/alerts/${slug}`}
-              onClick={() => trackStateNearbyClick({ fromState: stateAbbr, toState: abbr })}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-            >
-              <span className="text-sm text-white font-medium">{name}</span>
-              {count > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">
-                  {count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+  // Build sorted list with category info
+  const stateRows = nearby
+    .map(abbr => {
+      const name = STATE_NAMES[abbr];
+      const slug = ABBR_TO_SLUG[abbr];
+      const count = alertCountsByState[abbr] || 0;
+      if (!name || !slug) return null;
+
+      // Find dominant category for this state
+      const stateAlerts = (allAlerts || []).filter(a => a.state === abbr);
+      const catCounts = {};
+      for (const a of stateAlerts) {
+        const cat = a.category || 'severe';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      }
+      const topCategories = Object.entries(catCounts).sort(([, a], [, b]) => b - a);
+      const topCatId = topCategories[0]?.[0];
+      const topCat = topCatId ? ALERT_CATEGORIES[topCatId] : null;
+      const barColor = topCat?.color || '#64748b';
+
+      // Top 3 category icons
+      const catIcons = topCategories.slice(0, 3).map(([catId]) => {
+        const cat = ALERT_CATEGORIES[catId];
+        return cat ? cat.icon : null;
+      }).filter(Boolean);
+
+      return { abbr, name, slug, count, barColor, catIcons };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.count - a.count);
+
+  const maxCount = Math.max(...stateRows.map(s => s.count), 1);
+
+  return (
+    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+      <div className="px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20">
+        <h3 className="text-sm font-semibold text-sky-400">States Near {stateName}</h3>
       </div>
-    </section>
+      <div className="p-4 space-y-1.5">
+        {stateRows.map(st => (
+          <button
+            key={st.abbr}
+            onClick={() => {
+              trackStateNearbyClick({ fromState: stateAbbr, toState: st.abbr });
+              navigate(`/alerts/${st.slug}`);
+            }}
+            className="group w-full flex items-center gap-2 hover:bg-slate-700/30 rounded px-1 -mx-1 py-0.5 transition-colors cursor-pointer text-left"
+          >
+            <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-1">
+              <span className="w-7">{st.abbr}</span>
+              {st.catIcons.map((icon, i) => (
+                <span key={i} className="text-[8px] leading-none">{icon}</span>
+              ))}
+            </span>
+            <div className="flex-1 h-4 bg-slate-700/40 rounded-sm overflow-hidden relative">
+              {st.count > 0 && (
+                <div
+                  className="absolute inset-y-0 left-0 rounded-sm transition-all"
+                  style={{
+                    width: `${(st.count / maxCount) * 100}%`,
+                    backgroundColor: st.barColor,
+                    opacity: 0.7,
+                  }}
+                />
+              )}
+            </div>
+            <span className="text-xs text-slate-400 w-7 text-right tabular-nums">
+              {st.count}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -538,66 +598,80 @@ export default function StateAlertsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* Map */}
-        <section>
-          <h2 className="text-lg font-semibold text-white mb-3">
-            Live Weather Radar — {stateData.name}
-          </h2>
-          <StormMap
-            weatherData={{}}
-            stormPhase="active"
-            userLocations={[]}
-            alerts={stateAlerts}
-            isHero
-            centerOn={{
-              lat: stateData.center[0],
-              lon: stateData.center[1],
-              zoom: stateData.zoom,
-              id: `state-${stateAbbr}`
-            }}
-            selectedStateCode={stateAbbr}
-            radarLayerType="precipitation"
-            radarColorScheme={4}
-          />
-        </section>
+        {/* Two-column layout: Map (left) + Alerts sidebar (right) on desktop */}
+        <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
 
-        {/* Active Storm Events */}
-        <ActiveStormsForState stateAbbr={stateAbbr} />
-
-        {/* Alerts */}
-        <section id="state-alerts">
-          <h2 className="text-lg font-semibold text-white mb-3">
-            Active Weather Alerts in {stateData.name}
-            {!alertsLoading && (
-              <span className="text-sm font-normal text-slate-400 ml-2">({stateAlerts.length})</span>
-            )}
-          </h2>
-
-          {alertsLoading ? (
-            <div className="text-center py-12">
-              <div className="w-8 h-8 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-slate-400 text-sm">Loading alerts...</p>
-            </div>
-          ) : stateAlerts.length === 0 ? (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-5 py-8 text-center">
-              <p className="text-lg font-medium text-emerald-400 mb-1">
-                No active weather alerts for {stateData.name}
-              </p>
-              <p className="text-sm text-slate-400">
-                Check back for updates on severe weather conditions. Alerts are updated in real-time from the NWS.
-              </p>
-            </div>
-          ) : (
-            <AlertsByCategory
+          {/* LEFT COLUMN: Map */}
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-3">
+              Live Weather Radar — {stateData.name}
+            </h2>
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={[]}
               alerts={stateAlerts}
-              stateCode={stateAbbr}
-              onViewDetail={setSelectedAlert}
+              isHero
+              centerOn={{
+                lat: stateData.center[0],
+                lon: stateData.center[1],
+                zoom: stateData.zoom,
+                id: `state-${stateAbbr}`
+              }}
+              selectedStateCode={stateAbbr}
+              radarLayerType="precipitation"
+              radarColorScheme={4}
             />
-          )}
-        </section>
+          </section>
 
-        {/* Nearby States */}
-        <NearbyStatesSection stateAbbr={stateAbbr} alertCountsByState={alertCountsByState} />
+          {/* RIGHT COLUMN: Storms + Alerts (sticky sidebar on desktop) */}
+          <div className="space-y-4 mt-6 lg:mt-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+
+            {/* Active Storm Events */}
+            <ActiveStormsForState stateAbbr={stateAbbr} />
+
+            {/* Alerts */}
+            <section id="state-alerts">
+              <h2 className="text-lg font-semibold text-white mb-3">
+                Active Weather Alerts in {stateData.name}
+                {!alertsLoading && (
+                  <span className="text-sm font-normal text-slate-400 ml-2">({stateAlerts.length})</span>
+                )}
+              </h2>
+
+              {alertsLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-8 h-8 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm">Loading alerts...</p>
+                </div>
+              ) : stateAlerts.length === 0 ? (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-5 py-8 text-center">
+                  <p className="text-lg font-medium text-emerald-400 mb-1">
+                    No active weather alerts for {stateData.name}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Check back for updates on severe weather conditions. Alerts are updated in real-time from the NWS.
+                  </p>
+                </div>
+              ) : (
+                <AlertsByCategory
+                  alerts={stateAlerts}
+                  stateCode={stateAbbr}
+                  onViewDetail={setSelectedAlert}
+                />
+              )}
+            </section>
+          </div>
+        </div>
+
+        {/* Full-width sections below the two-column grid */}
+
+        {/* Nearby State Alerts Visualization */}
+        <NearbyStateAlertsViz
+          stateAbbr={stateAbbr}
+          alertCountsByState={alertCountsByState}
+          allAlerts={alertsData?.allAlerts}
+        />
 
         {/* SEO FAQ */}
         <section>

@@ -200,28 +200,15 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-between mt-2.5 px-1">
-        <div className="flex items-center gap-1">
-          <span className="text-[9px] text-slate-600">fewer</span>
-          <div className="flex gap-px">
-            {[0, 0.25, 0.5, 0.75, 1].map((r) => (
-              <div
-                key={r}
-                className="w-3 h-2 rounded-sm"
-                style={{ backgroundColor: getIntensityColor(r * 10, 10) }}
-              />
-            ))}
-          </div>
-          <span className="text-[9px] text-slate-600">more</span>
-        </div>
+      <div className="flex items-center justify-end mt-2.5 px-1">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="w-3 h-2 rounded-sm" style={{ border: '1.5px solid #3b82f6' }} />
-            <span className="text-[9px] text-slate-600">1 type</span>
+            <span className="text-[9px] text-slate-600">alert</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-2 rounded-sm" style={{ border: '1.5px dashed #3b82f6' }} />
-            <span className="text-[9px] text-slate-600">mixed</span>
+            <span className="text-[9px] text-slate-600">alert+</span>
           </div>
         </div>
       </div>
