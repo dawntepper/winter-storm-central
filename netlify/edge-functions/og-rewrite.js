@@ -25,6 +25,9 @@ const SLUG_TO_STATE_NAME = {
   'south-carolina': 'South Carolina', 'south-dakota': 'South Dakota', 'tennessee': 'Tennessee',
   'texas': 'Texas', 'utah': 'Utah', 'vermont': 'Vermont', 'virginia': 'Virginia',
   'washington': 'Washington', 'west-virginia': 'West Virginia', 'wisconsin': 'Wisconsin', 'wyoming': 'Wyoming',
+  // Territories
+  'district-of-columbia': 'District of Columbia', 'puerto-rico': 'Puerto Rico',
+  'us-virgin-islands': 'U.S. Virgin Islands', 'guam': 'Guam', 'american-samoa': 'American Samoa',
 };
 
 function isCrawler(userAgent) {

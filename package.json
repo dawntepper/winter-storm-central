@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-state-pages.js && node scripts/generate-sitemap.js",
+    "build:app": "vite build",
+    "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

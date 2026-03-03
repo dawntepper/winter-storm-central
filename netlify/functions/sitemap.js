@@ -17,6 +17,8 @@ const STATE_SLUGS = [
   'oklahoma', 'oregon', 'pennsylvania', 'rhode-island', 'south-carolina',
   'south-dakota', 'tennessee', 'texas', 'utah', 'vermont',
   'virginia', 'washington', 'west-virginia', 'wisconsin', 'wyoming',
+  // Territories (NWS issues alerts for these too)
+  'district-of-columbia', 'puerto-rico', 'us-virgin-islands', 'guam', 'american-samoa',
 ];
 
 function generateSitemap(storms) {
