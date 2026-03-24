@@ -532,8 +532,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Active Storm Event Banner */}
-      <StormEventBanner />
+      {/* Active Storm Event Banner — disabled (no longer using storm event database) */}
 
       {/* Floating nav bar for mobile — appears when main map scrolls out of view */}
       <StickyMiniMap selectedStateCode={selectedStateCode} />

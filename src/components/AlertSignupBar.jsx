@@ -4,6 +4,7 @@ import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 
 const DISMISSED_KEY = 'stormtracking_signup_dismissed';
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default function AlertSignupBar() {
   // Don't show email signup on native — PushNotificationCard handles it
@@ -16,17 +17,18 @@ export default function AlertSignupBar() {
   const [isReturning, setIsReturning] = useState(false);
 
   useEffect(() => {
-    // Don't show if dismissed this session
-    if (sessionStorage.getItem(DISMISSED_KEY)) return;
-
-    // Check if this is a returning subscriber
+    // Don't show if already a subscriber
     try {
       const saved = JSON.parse(localStorage.getItem(SUBSCRIBER_KEY));
-      if (saved?.email) {
-        setEmail(saved.email);
-        setZipCode(saved.zip || '');
-        setIsReturning(true);
-      }
+      if (saved?.email) return;
+    } catch {
+      // ignore bad data
+    }
+
+    // Don't show if dismissed within the last 30 days
+    try {
+      const dismissedAt = localStorage.getItem(DISMISSED_KEY);
+      if (dismissedAt && Date.now() - Number(dismissedAt) < THIRTY_DAYS_MS) return;
     } catch {
       // ignore bad data
     }
@@ -38,7 +40,7 @@ export default function AlertSignupBar() {
 
   const handleDismiss = () => {
     setVisible(false);
-    sessionStorage.setItem(DISMISSED_KEY, '1');
+    localStorage.setItem(DISMISSED_KEY, String(Date.now()));
   };
 
   const handleSubmit = async (e) => {
