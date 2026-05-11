@@ -35,23 +35,36 @@ function isCrawler(userAgent) {
   return CRAWLER_AGENTS.some((bot) => ua.includes(bot));
 }
 
-async function fetchStormData(slug) {
-  const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL');
-  const supabaseKey = Deno.env.get('VITE_SUPABASE_ANON_KEY');
-  if (!supabaseUrl || !supabaseKey) return null;
+// Module-scoped cache of the storm catalog so repeat crawler hits don't
+// each refetch storm-data.json from the same origin.
+let stormCatalogPromise = null;
 
+function loadStormCatalog(origin) {
+  if (!stormCatalogPromise) {
+    stormCatalogPromise = fetch(`${origin}/storm-data.json`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .catch(() => ({}));
+  }
+  return stormCatalogPromise;
+}
+
+async function fetchStormData(slug, origin) {
   try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,seo_title,seo_description,affected_states,og_image_url,start_date&limit=1`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-      }
-    );
-    const data = await res.json();
-    return data?.[0] || null;
+    const catalog = await loadStormCatalog(origin);
+    const raw = catalog[slug];
+    if (!raw) return null;
+
+    return {
+      title: raw.title,
+      slug: raw.slug,
+      type: raw.type,
+      status: raw.status,
+      seo_title: raw.seo?.title || '',
+      seo_description: raw.seo?.description || '',
+      og_image_url: raw.seo?.og_image_url || '',
+      affected_states: Array.isArray(raw.affected_states) ? raw.affected_states : [],
+      start_date: raw.start_date,
+    };
   } catch {
     return null;
   }
@@ -105,7 +118,7 @@ export default async function handler(request, context) {
 
   if (stormMatch) {
     const slug = stormMatch[1];
-    const storm = await fetchStormData(slug);
+    const storm = await fetchStormData(slug, url.origin);
 
     if (!storm) {
       // Can't find storm data, serve unmodified

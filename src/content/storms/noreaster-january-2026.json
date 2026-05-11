@@ -1,0 +1,28 @@
+{
+  "title": "Nor'easter - January 2026",
+  "slug": "noreaster-january-2026",
+  "type": "winter_storm",
+  "type_label": "Winter Storm",
+  "status": "completed",
+  "start_date": "2026-01-28",
+  "end_date": "2026-01-30",
+  "description": "Major nor'easter that impacted the Northeast United States with heavy snow, strong winds, and coastal flooding in late January 2026.",
+  "impacts": [
+    "Heavy snow accumulations of 8-16 inches in eastern New England",
+    "Blizzard conditions along the coast",
+    "Strong winds gusting to 50+ mph",
+    "Coastal flooding during high tide cycles",
+    "Significant travel disruptions across the region"
+  ],
+  "affected_states": ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA"],
+  "alert_categories": ["winter", "flood"],
+  "map_center": { "latitude": 42.0, "longitude": -72.0, "zoom": 6 },
+  "seo": {
+    "title": "Nor'easter January 2026 Live Tracker | Real-Time Alerts & Radar",
+    "description": "Track the January 2026 nor'easter in real-time. Live weather alerts, radar, and snow forecasts for New England and Mid-Atlantic states.",
+    "og_image_url": "",
+    "keywords": "noreaster, northeast storm, nor'easter january 2026, winter storm northeast, new england snow storm"
+  },
+  "peak_alert_count": null,
+  "total_alerts_issued": null
+}

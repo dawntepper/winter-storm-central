@@ -1,0 +1,27 @@
+{
+  "title": "Winter Storm Fern",
+  "slug": "winter-storm-fern",
+  "type": "winter_storm",
+  "type_label": "Winter Storm",
+  "status": "completed",
+  "start_date": "2026-01-23",
+  "end_date": "2026-01-26",
+  "description": "Winter Storm Fern brought heavy snow and significant ice accumulations across the Southern Plains and Mid-South, causing widespread power outages and travel disruptions.",
+  "impacts": [
+    "Heavy snow of 6-12 inches across Texas, Oklahoma, and Arkansas",
+    "Significant ice accumulations up to 0.5 inches",
+    "Widespread power outages affecting millions",
+    "Dangerous travel conditions for several days"
+  ],
+  "affected_states": ["TX", "OK", "AR", "LA", "MS", "AL", "GA", "SC", "NC", "TN", "KY"],
+  "alert_categories": ["winter"],
+  "map_center": { "latitude": 34.0, "longitude": -92.0, "zoom": 5 },
+  "seo": {
+    "title": "Winter Storm Fern Live Tracker | Real-Time Alerts & Updates",
+    "description": "Track Winter Storm Fern in real-time. Live weather alerts, radar, and snow/ice totals across the Southern US.",
+    "og_image_url": "",
+    "keywords": "winter storm fern, fern tracker, southern winter storm, texas ice storm 2026"
+  },
+  "peak_alert_count": null,
+  "total_alerts_issued": null
+}

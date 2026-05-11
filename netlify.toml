@@ -12,12 +12,6 @@
 [functions."process-weather-alerts"]
   schedule = "*/30 * * * *"
 
-# Dynamic sitemap from Netlify Function
-[[redirects]]
-  from = "/sitemap.xml"
-  to = "/.netlify/functions/sitemap"
-  status = 200
-
 # OG image generation (must be before /api/* catch-all)
 [[redirects]]
   from = "/api/og-image/*"

@@ -29,6 +29,9 @@ import {
   trackBrowseByStateClick
 } from './utils/analytics';
 
+const SEARCH_LOCATIONS_KEY = 'winterStorm_userLocations';
+const ALERT_LOCATIONS_KEY = 'winterStorm_alertLocations';
+
 // Weather condition to icon mapping
 const getWeatherIcon = (condition) => {
   if (!condition) return '⛅';
@@ -257,7 +260,17 @@ function StormEventBanner() {
 export default function App() {
 
   const [searchLocations, setSearchLocations] = useState([]); // From ZipCodeSearch
-  const [alertLocations, setAlertLocations] = useState([]); // From alert "Add to Map"
+  const [alertLocations, setAlertLocations] = useState(() => {
+    // Hydrate alert-pin locations from localStorage so they survive a refresh.
+    // ZipCodeSearch handles its own persistence; this is the parallel path for
+    // pins added via "Add to Map" on a Live Alert card.
+    try {
+      const stored = localStorage.getItem(ALERT_LOCATIONS_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [mapCenterOn, setMapCenterOn] = useState(null);
   const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
@@ -276,6 +289,15 @@ export default function App() {
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
+
+  // Persist alert-pin locations whenever they change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(ALERT_LOCATIONS_KEY, JSON.stringify(alertLocations));
+    } catch (e) {
+      console.error('Error saving alert locations:', e);
+    }
+  }, [alertLocations]);
 
   // Start session tracking on mount
   useEffect(() => {
@@ -403,16 +425,15 @@ export default function App() {
     setSearchLocations(prev => prev.filter(loc => loc.id !== locationId));
 
     // Also update localStorage to keep ZipCodeSearch in sync
-    const LOCATIONS_KEY = 'winterStorm_userLocations';
     try {
-      const stored = localStorage.getItem(LOCATIONS_KEY);
+      const stored = localStorage.getItem(SEARCH_LOCATIONS_KEY);
       if (stored) {
         const savedLocations = JSON.parse(stored);
         // Find and remove the location by matching the id
         const locationKey = locationId.replace('user-', '');
         if (savedLocations[locationKey]) {
           delete savedLocations[locationKey];
-          localStorage.setItem(LOCATIONS_KEY, JSON.stringify(savedLocations));
+          localStorage.setItem(SEARCH_LOCATIONS_KEY, JSON.stringify(savedLocations));
         }
       }
     } catch (e) {
@@ -532,7 +553,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Active Storm Event Banner — disabled (no longer using storm event database) */}
+      {/* Active Storm Event Banner — reads from src/content/storms/ JSON files */}
+      <StormEventBanner />
 
       {/* Floating nav bar for mobile — appears when main map scrolls out of view */}
       <StickyMiniMap selectedStateCode={selectedStateCode} />
@@ -619,6 +641,8 @@ export default function App() {
                             </span>
                           ) : loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                          ) : loc.alertInfo?.headline ? (
+                            <span className="block line-clamp-2">{loc.alertInfo.headline}</span>
                           ) : (
                             <span>Loading weather data...</span>
                           )}
@@ -666,6 +690,8 @@ export default function App() {
                             </span>
                           ) : loc.conditions?.temperature ? (
                             <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+                          ) : loc.alertInfo?.headline ? (
+                            <span className="block line-clamp-2">{loc.alertInfo.headline}</span>
                           ) : (
                             <span>Loading weather data...</span>
                           )}

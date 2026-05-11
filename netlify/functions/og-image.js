@@ -75,33 +75,41 @@ async function getLatestRadarTimestamp() {
   }
 }
 
+// Module-scoped cache of the storm catalog. Netlify Functions reuse the process
+// for warm invocations, so we only fetch /storm-data.json once per cold start.
+let stormCatalogPromise = null;
+
+function loadStormCatalog() {
+  if (!stormCatalogPromise) {
+    const origin = process.env.URL || process.env.DEPLOY_URL || 'https://stormtracking.io';
+    stormCatalogPromise = fetch(`${origin}/storm-data.json`)
+      .then(res => (res.ok ? res.json() : {}))
+      .catch(() => ({}));
+  }
+  return stormCatalogPromise;
+}
+
 async function fetchStormData(slug) {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
-
   try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/storm_events?slug=eq.${slug}&select=title,slug,type,status,affected_states,map_center,map_zoom,seo_title,seo_description,og_image_url&limit=1`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-      }
-    );
-    const data = await res.json();
-    if (!data || !data[0]) return null;
+    const catalog = await loadStormCatalog();
+    const raw = catalog[slug];
+    if (!raw) return null;
 
-    const storm = data[0];
-    // Parse JSON fields if they're strings
-    if (typeof storm.map_center === 'string') {
-      try { storm.map_center = JSON.parse(storm.map_center); } catch { storm.map_center = null; }
-    }
-    if (typeof storm.affected_states === 'string') {
-      try { storm.affected_states = JSON.parse(storm.affected_states); } catch { storm.affected_states = []; }
-    }
-    return storm;
+    // Flatten the JSON shape into the field names the rest of this function uses.
+    return {
+      title: raw.title,
+      slug: raw.slug,
+      type: raw.type,
+      status: raw.status,
+      affected_states: Array.isArray(raw.affected_states) ? raw.affected_states : [],
+      map_center: raw.map_center
+        ? { lat: raw.map_center.latitude, lon: raw.map_center.longitude }
+        : null,
+      map_zoom: raw.map_center?.zoom ?? raw.map_zoom ?? 5,
+      seo_title: raw.seo?.title || '',
+      seo_description: raw.seo?.description || '',
+      og_image_url: raw.seo?.og_image_url || ''
+    };
   } catch {
     return null;
   }

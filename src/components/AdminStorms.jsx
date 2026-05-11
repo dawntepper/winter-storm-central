@@ -8,12 +8,53 @@ import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import {
-  getAllStormEvents,
-  createStormEvent,
-  updateStormEvent,
-  deleteStormEvent
-} from '../services/stormEventsService';
+import { getAllStormEvents } from '../services/stormEventsService';
+
+/**
+ * Convert the admin form's internal camelCase state into the snake_case
+ * JSON shape that lives in src/content/storms/[slug].json.
+ */
+function formDataToJSON(formData) {
+  return {
+    title: formData.title,
+    slug: formData.slug,
+    type: formData.type,
+    type_label: formData.typeLabel,
+    status: formData.status,
+    start_date: formData.startDate,
+    end_date: formData.endDate,
+    description: formData.description,
+    impacts: (formData.impacts || []).filter(i => i && i.trim()),
+    affected_states: formData.affectedStates || [],
+    alert_categories: formData.alertCategories || [],
+    map_center: {
+      latitude: formData.mapCenter?.lat ?? 39.0,
+      longitude: formData.mapCenter?.lon ?? -98.0,
+      zoom: formData.mapZoom ?? 5
+    },
+    seo: {
+      title: formData.seoTitle || '',
+      description: formData.seoDescription || '',
+      og_image_url: formData.ogImageUrl || '',
+      keywords: (formData.keywords || []).filter(k => k && k.trim()).join(', ')
+    },
+    peak_alert_count: formData.peakAlertCount ?? null,
+    total_alerts_issued: formData.totalAlertsIssued ?? null
+  };
+}
+
+function downloadStormJSON(formData) {
+  const json = formDataToJSON(formData);
+  const blob = new Blob([JSON.stringify(json, null, 2) + '\n'], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${formData.slug || 'storm'}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
@@ -207,7 +248,7 @@ function PasswordGate({ onAuthenticate }) {
 const LOCALSTORAGE_KEY = 'storm_admin_draft';
 
 // Storm form component
-function StormForm({ event, onSave, onCancel, saving }) {
+function StormForm({ event, onSave, onCancel }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -830,14 +871,26 @@ function StormForm({ event, onSave, onCancel, saving }) {
           </div>
         )}
 
+        {/* How to publish */}
+        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-3 text-xs text-sky-100 leading-relaxed">
+          <strong className="text-sky-300">How to publish:</strong> Click{' '}
+          <span className="font-medium">{event ? 'Update Storm' : 'Create Storm'}</span> to
+          download the JSON file. Save it to{' '}
+          <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">src/content/storms/</code>{' '}
+          in the repo, commit, and push. Netlify will rebuild and the storm page will be
+          live at <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">/storm/{formData.slug || '[slug]'}</code>.
+        </div>
+
         {/* Main action buttons */}
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={saving}
-            className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 text-white font-medium rounded-lg transition-colors cursor-pointer"
+            className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
-            {saving ? 'Saving...' : (event ? 'Update Storm' : 'Create Storm')}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {event ? 'Update Storm (download JSON)' : 'Create Storm (download JSON)'}
           </button>
           <button
             type="button"
@@ -852,75 +905,42 @@ function StormForm({ event, onSave, onCancel, saving }) {
   );
 }
 
-// Storm list item
-function StormListItem({ event, onEdit, onDelete, onStatusChange, onTogglePublish }) {
+// Storm list item — static mode: shows storms from src/content/storms/.
+// Status/delete are managed by editing or removing the JSON file in the repo.
+function StormListItem({ event, onEdit }) {
   const statusOption = STATUS_OPTIONS.find(s => s.value === event.status);
-  const isDraft = event.status === 'draft';
 
   return (
-    <div className={`bg-slate-800 rounded-lg border p-4 ${isDraft ? 'border-purple-500/50' : 'border-slate-700'}`}>
+    <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-white truncate">{event.title}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusOption?.color}`}>
-              {statusOption?.label}
+              {statusOption?.label || event.status}
             </span>
-            {isDraft && (
-              <span className="text-xs text-purple-400">(not visible on site)</span>
-            )}
           </div>
           <p className="text-sm text-slate-400 mb-2">/{event.slug}</p>
           <p className="text-sm text-slate-300 line-clamp-2">{event.description}</p>
           <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
             <span>{event.startDate} → {event.endDate}</span>
             <span>{event.affectedStates?.length || 0} states</span>
+            <span className="text-slate-600">src/content/storms/{event.slug}.json</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          {/* Quick Publish/Unpublish Toggle */}
+        <div className="flex flex-col gap-2 flex-shrink-0">
           <button
-            onClick={() => onTogglePublish(event)}
-            className={`px-3 py-1.5 text-xs font-medium rounded cursor-pointer transition-colors ${
-              isDraft
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                : 'bg-purple-600/30 hover:bg-purple-600/50 text-purple-300'
-            }`}
+            onClick={() => onEdit(event)}
+            className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded cursor-pointer"
           >
-            {isDraft ? '▶ Publish' : '⏸ Unpublish'}
+            Edit & re-export
           </button>
-
-          {/* Status dropdown for fine control */}
-          <select
-            value={event.status}
-            onChange={(e) => onStatusChange(event.id, e.target.value)}
-            className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-white cursor-pointer"
+          <Link
+            to={`/storm/${event.slug}`}
+            className="px-3 py-1.5 text-xs text-center bg-slate-700 hover:bg-slate-600 text-white rounded"
           >
-            {STATUS_OPTIONS.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-
-          <div className="flex gap-1">
-            <button
-              onClick={() => onEdit(event)}
-              className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded cursor-pointer"
-            >
-              Edit
-            </button>
-            <Link
-              to={`/storm/${event.slug}`}
-              className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded"
-            >
-              View
-            </Link>
-            <button
-              onClick={() => onDelete(event.id)}
-              className="px-2 py-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded cursor-pointer"
-            >
-              Del
-            </button>
-          </div>
+            View
+          </Link>
         </div>
       </div>
     </div>
@@ -992,7 +1012,7 @@ export default function AdminStorms() {
   const [error, setError] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [downloadedSlug, setDownloadedSlug] = useState(null);
 
   useEffect(() => {
     if (authenticated) {
@@ -1011,72 +1031,21 @@ export default function AdminStorms() {
     setLoading(false);
   };
 
-  const handleSave = async (formData) => {
-    setSaving(true);
+  const handleSave = (formData) => {
     setError(null);
-
     try {
-      if (editingEvent) {
-        const { error } = await updateStormEvent(editingEvent.id, formData);
-        if (error) throw error;
-      } else {
-        const { error } = await createStormEvent(formData);
-        if (error) throw error;
-      }
-
-      await loadEvents();
+      downloadStormJSON(formData);
+      setDownloadedSlug(formData.slug);
       setShowForm(false);
       setEditingEvent(null);
     } catch (err) {
-      setError(err.message || 'Failed to save event');
-    } finally {
-      setSaving(false);
+      setError(err.message || 'Failed to generate JSON file');
     }
   };
 
   const handleEdit = (event) => {
     setEditingEvent(event);
     setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this storm event?')) return;
-
-    const { error } = await deleteStormEvent(id);
-    if (error) {
-      setError(error.message || 'Failed to delete event');
-    } else {
-      await loadEvents();
-    }
-  };
-
-  const handleStatusChange = async (id, newStatus) => {
-    const { error } = await updateStormEvent(id, { status: newStatus });
-    if (error) {
-      setError(error.message || 'Failed to update status');
-    } else {
-      await loadEvents();
-    }
-  };
-
-  const handleTogglePublish = async (event) => {
-    if (event.status === 'draft') {
-      // Publishing: set to forecasted (user can change to active via dropdown)
-      const { error } = await updateStormEvent(event.id, { status: 'forecasted' });
-      if (error) {
-        setError(error.message || 'Failed to publish');
-      } else {
-        await loadEvents();
-      }
-    } else {
-      // Unpublishing: set to draft
-      const { error } = await updateStormEvent(event.id, { status: 'draft' });
-      if (error) {
-        setError(error.message || 'Failed to unpublish');
-      } else {
-        await loadEvents();
-      }
-    }
   };
 
   const handleLogout = () => {
@@ -1116,6 +1085,20 @@ export default function AdminStorms() {
           </div>
         )}
 
+        {downloadedSlug && (
+          <div className="mb-4 p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-lg text-emerald-200 text-sm flex items-start justify-between gap-3">
+            <div>
+              <strong className="text-emerald-300">Downloaded {downloadedSlug}.json.</strong>{' '}
+              Move it to <code className="px-1 py-0.5 bg-slate-900/60 rounded">src/content/storms/</code>,
+              commit, and push. Netlify will rebuild and publish to{' '}
+              <code className="px-1 py-0.5 bg-slate-900/60 rounded">/storm/{downloadedSlug}</code>.
+            </div>
+            <button onClick={() => setDownloadedSlug(null)} className="text-emerald-300 hover:text-white cursor-pointer flex-shrink-0">
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Site Settings - always visible */}
         <SiteSettingsPanel />
 
@@ -1128,7 +1111,6 @@ export default function AdminStorms() {
               event={editingEvent}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingEvent(null); }}
-              saving={saving}
             />
           </div>
         ) : (
@@ -1142,6 +1124,12 @@ export default function AdminStorms() {
                 + New Storm
               </button>
             </div>
+
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              Storms are stored as JSON files in <code className="px-1 py-0.5 bg-slate-800 rounded text-slate-400">src/content/storms/</code>.
+              To <strong>delete</strong> a storm or <strong>change its status</strong>, edit (or remove) the JSON file in the repo and commit.
+              Use <em>Edit & re-export</em> below to download an updated version after changes.
+            </p>
 
             {loading ? (
               <div className="text-center py-12">
@@ -1165,9 +1153,6 @@ export default function AdminStorms() {
                     key={event.id}
                     event={event}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onStatusChange={handleStatusChange}
-                    onTogglePublish={handleTogglePublish}
                   />
                 ))}
               </div>
