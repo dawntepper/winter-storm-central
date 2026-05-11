@@ -16,6 +16,7 @@ import LiveAlertsWidget from './components/LiveAlertsWidget';
 import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import PushNotificationCard from './components/PushNotificationCard';
+import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -299,6 +300,22 @@ export default function App() {
     }
   }, [alertLocations]);
 
+  // On mount, re-fetch conditions for any hydrated alert pins so a refreshed
+  // page doesn't show stale H/L from hours/days ago.
+  useEffect(() => {
+    const initial = alertLocations;
+    initial.forEach(loc => {
+      if (loc.lat == null || loc.lon == null) return;
+      fetchCurrentConditions(loc.lat, loc.lon).then(conditions => {
+        if (!conditions) return;
+        setAlertLocations(prev =>
+          prev.map(l => (l.id === loc.id ? { ...l, conditions } : l))
+        );
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Start session tracking on mount
   useEffect(() => {
     startSessionTracking();
@@ -361,8 +378,9 @@ export default function App() {
   const handleAddAlertToMap = (alert) => {
     if (!alert.lat || !alert.lon) return;
 
-    // Create a user location object from the alert
-    // Note: conditions are null - we don't have weather data from alerts
+    // Create a user location object from the alert.
+    // `conditions` starts null and gets filled in by the async NWS fetch below
+    // so the card renders the same H/L · forecast format as Check Location pins.
     const newLocation = {
       id: `alert-${alert.id}`,
       name: alert.location,
@@ -372,7 +390,7 @@ export default function App() {
       hazardType: alert.category === 'winter' ? 'snow' :
                   alert.category === 'heat' ? 'none' :
                   alert.category === 'flood' ? 'none' : 'none',
-      conditions: null, // No weather data from alerts - only alert info
+      conditions: null,
       alertInfo: {
         event: alert.event,
         headline: alert.headline,
@@ -381,13 +399,26 @@ export default function App() {
     };
 
     // Add to alert locations (separate state)
+    let wasAdded = false;
     setAlertLocations(prev => {
       const exists = prev.some(loc => loc.name === alert.location);
       if (!exists) {
+        wasAdded = true;
         return [...prev, newLocation];
       }
       return prev;
     });
+
+    // Fetch forecast in the background. When it lands, patch the pin's
+    // conditions so the card switches from the headline to H/L · forecast.
+    if (wasAdded) {
+      fetchCurrentConditions(alert.lat, alert.lon).then(conditions => {
+        if (!conditions) return;
+        setAlertLocations(prev =>
+          prev.map(loc => (loc.id === newLocation.id ? { ...loc, conditions } : loc))
+        );
+      });
+    }
 
     // Center map on the added location
     setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
