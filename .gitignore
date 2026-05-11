@@ -34,3 +34,4 @@ ios/DerivedData
 *.xcworkspace/xcuserdata
 *.xcodeproj/xcuserdata
 *.xcodeproj/project.xcworkspace/xcuserdata
+.vercel
