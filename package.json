@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-blog-pages.js && node scripts/generate-sitemap.js",
+    "build": "vite build && node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
     "build:app": "vite build",
-    "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-blog-pages.js && node scripts/generate-sitemap.js",
+    "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:dedup": "node scripts/test-dedup.js"
@@ -18,15 +18,11 @@
     "@capacitor/push-notifications": "^8.0.1",
     "@netlify/blobs": "^10.7.5",
     "@supabase/supabase-js": "^2.45.0",
-    "@tailwindcss/typography": "^0.5.19",
-    "gray-matter": "^4.0.3",
     "leaflet": "^1.9.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
-    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
-    "remark-gfm": "^4.0.1",
     "resend": "^6.9.2",
     "sharp": "^0.34.5"
   },
