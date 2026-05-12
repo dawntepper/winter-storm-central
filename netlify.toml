@@ -8,8 +8,11 @@
   node_bundler = "esbuild"
   external_node_modules = ["sharp"]
 
-# Scheduled function: process weather alerts every 30 minutes
-[functions."process-weather-alerts"]
+# Scheduled function: process weather alerts every 30 minutes.
+# Suffix is -background so the function gets the 15-min background timeout
+# instead of the 30s synchronous limit — Kit's per-state rate-limited paging
+# can easily exceed 30s when several states have new alerts.
+[functions."process-weather-alerts-background"]
   schedule = "*/30 * * * *"
 
 # OG image generation (must be before /api/* catch-all)
