@@ -6,6 +6,7 @@ import { US_STATES } from '../data/stateConfig';
 import { rankAlerts } from '../utils/alertRanking';
 import LiveAlertCard from './LiveAlertCard';
 import StormMap from './StormMap';
+import ContactLink from './ContactLink';
 import { trackRadarLinkClick, trackBrowseByStateClick } from '../utils/analytics';
 
 // =============================================
@@ -294,7 +295,7 @@ export default function LiveAlertsPage() {
             <span className="text-slate-600">|</span>
             <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
             <span className="text-slate-600">|</span>
-            <a href="#" aria-label="Email StormTracking support" onClick={(e) => { e.preventDefault(); const link = document.createElement('a'); link.href = 'mailto:' + ['stormtracking', 'mkzlabs.com'].join('@'); link.click(); }} className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</a>
+            <ContactLink className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</ContactLink>
           </div>
         </div>
       </footer>

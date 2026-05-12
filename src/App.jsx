@@ -13,6 +13,7 @@ import AlertTimeline from './components/AlertTimeline';
 import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
 import LiveAlertsWidget from './components/LiveAlertsWidget';
+import ContactLink from './components/ContactLink';
 import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import PushNotificationCard from './components/PushNotificationCard';
@@ -1036,7 +1037,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-4 text-sm">
             <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
             <span className="text-slate-600">|</span>
-            <a href="#" aria-label="Email StormTracking support" onClick={(e) => { e.preventDefault(); const link = document.createElement('a'); link.href = 'mailto:' + ['stormtracking', 'mkzlabs.com'].join('@'); link.click(); }} className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</a>
+            <ContactLink className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</ContactLink>
           </div>
 
           {/* SEO Content */}

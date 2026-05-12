@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick } from '../utils/analytics';
 import { US_STATES } from '../data/stateConfig';
+import ContactLink from './ContactLink';
 
 const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
 
@@ -201,7 +202,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             )}
             <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
             <p className="text-xs text-slate-500">
-              Contact: <a href="#" aria-label="Email StormTracking support" onClick={(e) => { e.preventDefault(); const link = document.createElement('a'); link.href = 'mailto:' + ['stormtracking', 'mkzlabs.com'].join('@'); link.click(); trackSupportClick('email'); }} className="text-sky-400 hover:text-sky-300 cursor-pointer">StormTracking Support</a>
+              Contact: <ContactLink className="text-sky-400 hover:text-sky-300 cursor-pointer">StormTracking Support</ContactLink>
             </p>
           </div>
 
