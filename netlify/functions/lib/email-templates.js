@@ -292,8 +292,10 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
                 <tr>
                   <td style="font-size:12px;color:#9ca3af;line-height:1.5;padding-bottom:8px;">
                     <a href="${SITE_URL}/api/unsubscribe-alerts" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+                    <!-- Hidden until preferences page is set up:
                     &nbsp;&middot;&nbsp;
                     <a href="${SITE_URL}" style="color:#9ca3af;text-decoration:underline;">Update alert preferences</a>
+                    -->
                   </td>
                 </tr>
                 <tr>
