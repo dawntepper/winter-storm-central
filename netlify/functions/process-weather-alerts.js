@@ -3,19 +3,20 @@
  *
  * Runs every 30 minutes to:
  * 1. Fetch active NWS alerts
- * 2. Filter out already-sent alerts
+ * 2. Filter out already-sent alerts (dedup via Netlify Blobs)
  * 3. Query Kit for subscribers by state tag
  * 4. Send emails via Resend API
- * 5. Record sent alerts in Supabase
+ * 5. Record sent alerts in Netlify Blobs for future dedup
  *
  * Schedule: Every 30 minutes (configured in netlify.toml)
  *
  * Environment variables required:
  *   RESEND_API_KEY         - Resend API key for email delivery
  *   KIT_API_KEY            - Kit (ConvertKit) API v4 key (subscriber management)
- *   SUPABASE_URL           - Supabase project URL
- *   SUPABASE_SERVICE_ROLE_KEY - Supabase service role key (bypasses RLS)
  *   KIT_STATE_TAG_PREFIX   - Prefix for state tags in Kit (default: "location-")
+ *
+ * Dedup storage (Netlify Blobs) auto-detects context inside a Netlify
+ * Function — no additional env vars required.
  */
 
 // Shared NWS alert parsing (single source of truth with client-side)
@@ -34,7 +35,7 @@ const {
   recordSentAlert,
   logBroadcastSend,
   cleanupOldRecords,
-} = require('./lib/supabase-admin.js');
+} = require('./lib/dedup-store.js');
 
 const {
   listTags,
@@ -387,8 +388,9 @@ exports.handler = async (event) => {
     'Cache-Control': 'no-cache',
   };
 
-  // Check for required environment variables
-  const requiredVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY'];
+  // Check for required environment variables. Dedup state lives in Netlify
+  // Blobs now, which needs no env vars when running inside a Netlify Function.
+  const requiredVars = ['RESEND_API_KEY'];
   const missing = requiredVars.filter((v) => !process.env[v]);
   if (!process.env.CONVERTKIT_API_KEY && !process.env.KIT_API_KEY) {
     missing.push('CONVERTKIT_API_KEY or KIT_API_KEY');
