@@ -24,11 +24,18 @@ const SENT_ALERTS_STORE = 'sent-alerts';
 const BROADCAST_LOG_STORE = 'broadcast-log';
 
 function makeStore(name) {
-  const siteID = process.env.NETLIFY_SITE_ID;
+  // Netlify Functions v1 (legacy `exports.handler`) don't auto-inject the
+  // Blobs context the way v2 functions do, so we fall back to explicit
+  // credentials. Netlify already exposes SITE_ID automatically; only the
+  // token has to be set manually (NETLIFY_BLOBS_TOKEN = a Personal Access
+  // Token from app.netlify.com/user/applications).
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
   const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN;
   if (siteID && token) {
     return getStore({ name, siteID, token });
   }
+  // Last resort: let the SDK auto-detect. Works for v2 functions and inside
+  // `netlify dev`. Throws MissingBlobsEnvironmentError if neither path works.
   return getStore(name);
 }
 
