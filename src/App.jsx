@@ -1033,8 +1033,10 @@ export default function App() {
         {/* Footer */}
         <footer className="text-center py-6 border-t border-slate-800 space-y-6">
           {/* Footer Links */}
-          <div className="flex items-center justify-center gap-4 text-sm">
+          <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
             <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
+            <span className="text-slate-600">|</span>
+            <Link to="/blog" className="text-slate-400 hover:text-sky-400 transition-colors">Blog</Link>
             <span className="text-slate-600">|</span>
             <a href="https://x.com/dawntepper_" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-sky-400 transition-colors">Contact</a>
           </div>
