@@ -1036,7 +1036,7 @@ export default function App() {
           <div className="flex items-center justify-center gap-4 text-sm">
             <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
             <span className="text-slate-600">|</span>
-            <a href="#" aria-label="Email StormTracking support" onClick={(e) => { e.preventDefault(); window.location.href = ['mailto:', 'stormtracking', '@', 'mkzlabs.com'].join(''); }} className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</a>
+            <a href="#" aria-label="Email StormTracking support" onClick={(e) => { e.preventDefault(); const link = document.createElement('a'); link.href = 'mailto:' + ['stormtracking', 'mkzlabs.com'].join('@'); link.click(); }} className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</a>
           </div>
 
           {/* SEO Content */}
