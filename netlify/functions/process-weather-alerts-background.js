@@ -50,7 +50,12 @@ const { sendBatchEmails } = require('./lib/resend-client.js');
 const {
   getAffectedStates,
   groupAlertsByState,
+  countyTagFor,
 } = require('./lib/alert-matcher.js');
+
+const { getCountyNamesForUGCs } = require('./lib/nws-zones.js');
+
+const HAS_COUNTY_INFO_TAG = 'has-county-info';
 
 const {
   buildAlertEmail,
@@ -92,6 +97,8 @@ function parseAlertForEmail(rawAlert) {
     onset: props.onset,
     expires: props.expires,
     areaDesc: props.areaDesc,
+    // Preserved for county-tag matching downstream
+    ugc: props.geocode?.UGC || [],
   };
 }
 
@@ -144,37 +151,41 @@ const STATE_NAMES = {
 // ============================================
 
 /**
- * Ensure state-based tags exist in Kit
- * Creates missing tags and returns a map of state -> tagId
+ * Snapshot every tag in Kit into a Map<lowercasedName, tagId>. We do this once
+ * per cron run so per-state/per-county tag lookups stay in-memory after the
+ * single listTags() call. Also ensures the state tags for the affected states
+ * exist (creating them if missing) and returns:
+ *   {
+ *     tagsByName: Map<string, id>,   // every existing tag, lowercased
+ *     stateTagIds: { FL: id, ... }   // state tag id per affected state
+ *   }
  */
-async function ensureStateTags(states) {
+async function loadAndEnsureTags(affectedStates) {
   const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
   const response = await listTags();
   const existingTags = response.tags || [];
 
-  const tagMap = {};
-
-  // Index existing tags
+  const tagsByName = new Map();
   for (const tag of existingTags) {
-    if (tag.name.startsWith(prefix)) {
-      const state = tag.name.substring(prefix.length).toUpperCase();
-      tagMap[state] = tag.id;
-    }
+    tagsByName.set(tag.name.toLowerCase(), tag.id);
   }
 
-  // Create missing tags for affected states
-  for (const state of states) {
-    if (!tagMap[state]) {
-      const tagName = `${prefix}${state}`;
-      console.log(`[Kit] Creating tag: ${tagName}`);
+  const stateTagIds = {};
+  for (const state of affectedStates) {
+    const tagName = `${prefix}${state}`;
+    const lc = tagName.toLowerCase();
+    if (tagsByName.has(lc)) {
+      stateTagIds[state] = tagsByName.get(lc);
+    } else {
+      console.log(`[Kit] Creating state tag: ${tagName}`);
       const result = await createTag(tagName);
       if (result?.tag?.id) {
-        tagMap[state] = result.tag.id;
+        stateTagIds[state] = result.tag.id;
+        tagsByName.set(lc, result.tag.id);
       }
     }
   }
-
-  return tagMap;
+  return { tagsByName, stateTagIds };
 }
 
 /**
@@ -201,45 +212,122 @@ async function getTagSubscribers(tagId) {
 }
 
 /**
- * Send alert emails for a specific state via Resend.
- * Queries Kit for subscribers tagged with the state, then sends via Resend batch.
+ * Resolve each alert's UGCs into the set of county tags + canonical county
+ * names that apply for the given state. Returns Map<countyTag, {alerts, name}>.
  */
-async function sendStateAlerts(state, alerts, tagId) {
+async function bucketAlertsByCounty(state, alerts) {
+  const buckets = new Map(); // countyTag -> { alerts: [], countyName: 'Lee' }
+
+  // Gather all county UGCs for this state across all alerts, then look up
+  // their names in one batch via the cached NWS zones map.
+  const allStateUGCs = new Set();
+  for (const alert of alerts) {
+    for (const ugc of alert.ugc || []) {
+      if (ugc.startsWith(`${state}C`)) allStateUGCs.add(ugc);
+    }
+  }
+  if (allStateUGCs.size === 0) return buckets;
+
+  const nameByUGC = await getCountyNamesForUGCs([...allStateUGCs]);
+
+  for (const alert of alerts) {
+    for (const ugc of alert.ugc || []) {
+      if (!ugc.startsWith(`${state}C`)) continue;
+      const countyName = nameByUGC.get(ugc);
+      if (!countyName) continue;
+      const tag = countyTagFor(state, countyName);
+      if (!tag) continue;
+      let bucket = buckets.get(tag);
+      if (!bucket) {
+        bucket = { alerts: [], countyName };
+        buckets.set(tag, bucket);
+      }
+      if (!bucket.alerts.includes(alert)) bucket.alerts.push(alert);
+    }
+  }
+  return buckets;
+}
+
+/**
+ * Send alert emails for a single state. Splits into per-county batches when
+ * we have county-tagged subscribers, then sends the full state alert set to
+ * the legacy fallback (location-XX subscribers without has-county-info).
+ *
+ * Returns { subscriberCount, messageIds, errors }.
+ */
+async function sendStateAlerts(state, alerts, stateTagId, tagsByName) {
   const stateName = STATE_NAMES[state] || state;
+  const result = { subscriberCount: 0, messageIds: [], errors: [] };
+  const sentTo = new Set(); // dedupe across county + state-fallback paths
 
-  // 1. Get subscribers for this state from Kit
-  const subscribers = await getTagSubscribers(tagId);
-  const validEmails = subscribers
-    .map((s) => s.email_address)
-    .filter(Boolean);
+  // === COUNTY-PRECISE PATH ===
+  const countyBuckets = await bucketAlertsByCounty(state, alerts);
+  console.log(`[Process] ${stateName}: ${countyBuckets.size} county buckets from ${alerts.length} alerts`);
 
-  if (validEmails.length === 0) {
-    console.log(`[Resend] No subscribers for ${stateName}, skipping`);
-    return { subscriberCount: 0, messageIds: [] };
+  for (const [countyTag, { alerts: countyAlerts, countyName }] of countyBuckets) {
+    const tagId = tagsByName.get(countyTag.toLowerCase());
+    if (!tagId) {
+      console.log(`[Resend] ${countyTag}: tag doesn't exist yet (no subscribers in this county)`);
+      continue;
+    }
+
+    const subs = await getTagSubscribers(tagId);
+    const emails = subs
+      .map(s => s.email_address)
+      .filter(e => e && !sentTo.has(e));
+
+    if (emails.length === 0) {
+      console.log(`[Resend] ${countyTag}: 0 subscribers, skipping`);
+      continue;
+    }
+
+    const subject = buildAlertSubject({ stateName, alerts: countyAlerts, countyName });
+    const html = buildAlertEmail({ stateName, stateAbbr: state, alerts: countyAlerts });
+    const batch = emails.map(email => ({ to: email, subject, html }));
+
+    console.log(`[Resend] Sending ${batch.length} ${countyTag} emails: "${subject}"`);
+    const r = await sendBatchEmails(batch);
+    result.subscriberCount += r.sent;
+    result.messageIds.push(...r.messageIds);
+    if (r.errors.length) result.errors.push(...r.errors);
+    emails.forEach(e => sentTo.add(e));
   }
 
-  console.log(`[Resend] ${validEmails.length} subscribers for ${stateName}`);
+  // === STATE-LEVEL LEGACY FALLBACK ===
+  // location-XX subscribers MINUS has-county-info subscribers get the full
+  // state alert set, preserving the previous behavior for subscribers who
+  // signed up before we captured county info.
+  const stateSubs = await getTagSubscribers(stateTagId);
+  let countyInfoEmails = new Set();
+  const countyInfoTagId = tagsByName.get(HAS_COUNTY_INFO_TAG);
+  if (countyInfoTagId) {
+    const ciSubs = await getTagSubscribers(countyInfoTagId);
+    countyInfoEmails = new Set(ciSubs.map(s => s.email_address).filter(Boolean));
+  }
+  const legacyEmails = stateSubs
+    .map(s => s.email_address)
+    .filter(e => e && !countyInfoEmails.has(e) && !sentTo.has(e));
 
-  // 2. Build email content
-  const subject = buildAlertSubject({ stateName, alerts });
-  const html = buildAlertEmail({ stateName, stateAbbr: state, alerts });
+  if (legacyEmails.length > 0) {
+    const subject = buildAlertSubject({ stateName, alerts });
+    const html = buildAlertEmail({ stateName, stateAbbr: state, alerts });
+    const batch = legacyEmails.map(email => ({ to: email, subject, html }));
 
-  // 3. Send via Resend batch
-  const emails = validEmails.map((email) => ({
-    to: email,
-    subject,
-    html,
-  }));
-
-  console.log(`[Resend] Sending ${emails.length} emails for ${stateName}: "${subject}"`);
-  const result = await sendBatchEmails(emails);
+    console.log(`[Resend] Sending ${batch.length} state-fallback emails for ${stateName}: "${subject}"`);
+    const r = await sendBatchEmails(batch);
+    result.subscriberCount += r.sent;
+    result.messageIds.push(...r.messageIds);
+    if (r.errors.length) result.errors.push(...r.errors);
+    legacyEmails.forEach(e => sentTo.add(e));
+  } else {
+    console.log(`[Resend] No legacy state-fallback subscribers for ${stateName}`);
+  }
 
   if (result.errors.length > 0) {
     console.warn(`[Resend] Batch errors for ${stateName}:`, result.errors);
   }
-
-  console.log(`[Resend] Sent ${result.sent} emails for ${stateName}`);
-  return { subscriberCount: result.sent, messageIds: result.messageIds };
+  console.log(`[Resend] Sent ${result.subscriberCount} total emails for ${stateName}`);
+  return result;
 }
 
 /**
@@ -303,19 +391,19 @@ async function processAlerts() {
 
     console.log(`[Process] Affected states: ${affectedStates.join(', ')}`);
 
-    // Step 4: Ensure state tags exist in Kit
-    const stateTagMap = await ensureStateTags(affectedStates);
+    // Step 4: Load all Kit tags once and ensure state tags exist
+    const { tagsByName, stateTagIds } = await loadAndEnsureTags(affectedStates);
 
     // Step 5: Send emails for each state via Resend
     for (const [state, stateAlerts] of Object.entries(alertsByState)) {
-      const tagId = stateTagMap[state];
-      if (!tagId) {
-        console.warn(`[Process] No tag found for state ${state}, skipping`);
+      const stateTagId = stateTagIds[state];
+      if (!stateTagId) {
+        console.warn(`[Process] No state tag for ${state}, skipping`);
         continue;
       }
 
       try {
-        const { subscriberCount, messageIds } = await sendStateAlerts(state, stateAlerts, tagId);
+        const { subscriberCount, messageIds } = await sendStateAlerts(state, stateAlerts, stateTagId, tagsByName);
 
         // Record each alert as sent
         for (const alert of stateAlerts) {

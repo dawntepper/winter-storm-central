@@ -9,7 +9,8 @@
  * Body: { email: string, zip_code: string }
  */
 
-const { getStateFromZip } = require('./lib/alert-matcher.js');
+const { getStateFromZip, countyTagFor } = require('./lib/alert-matcher.js');
+const { getLocationFromZip } = require('./lib/zip-to-location.js');
 const {
   kitRequest,
   findSubscriberByEmail,
@@ -21,6 +22,8 @@ const {
 } = require('./lib/kit-client.js');
 const { sendEmail } = require('./lib/resend-client.js');
 const { buildWelcomeEmail, SITE_URL } = require('./lib/email-templates.js');
+
+const HAS_COUNTY_INFO_TAG = 'has-county-info';
 
 const KIT_FORM_ID = process.env.KIT_FORM_ID || '9086634';
 
@@ -49,14 +52,15 @@ async function addSubscriberToForm({ email }) {
 async function ensureStateTag({ state }) {
   const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
   const tagName = `${prefix}${state}`;
+  return ensureTagByName(tagName);
+}
 
+async function ensureTagByName(tagName) {
   const data = await listTags();
   const existingTag = (data.tags || []).find(
     (t) => t.name.toLowerCase() === tagName.toLowerCase()
   );
-
   if (existingTag) return existingTag.id;
-
   const created = await createTag(tagName);
   return created?.tag?.id || null;
 }
@@ -119,9 +123,26 @@ exports.handler = async (event) => {
   try {
     console.log(`[Subscribe] === START subscribe flow for ${email}, zip: ${zip_code} ===`);
 
-    const state = getStateFromZip(zip_code);
-    console.log(`[Subscribe] Resolved zip ${zip_code} -> state: ${state || 'UNKNOWN'}`);
+    const fallbackState = getStateFromZip(zip_code);
+    console.log(`[Subscribe] Zip-prefix fallback state for ${zip_code}: ${fallbackState || 'UNKNOWN'}`);
     const prefix = process.env.KIT_STATE_TAG_PREFIX || 'location-';
+
+    // Best-effort precise lookup via Zippopotam.us → FCC. If either side fails
+    // we fall back to the zip-prefix state lookup and tag location-XX only.
+    let location = null;
+    try {
+      location = await getLocationFromZip(zip_code);
+      if (location) {
+        console.log(`[Subscribe] Precise lookup: state=${location.state}, county=${location.county}, fips=${location.fips}`);
+      } else {
+        console.log(`[Subscribe] Precise lookup returned null — falling back to zip-prefix state`);
+      }
+    } catch (locError) {
+      console.warn(`[Subscribe] Precise lookup threw:`, locError.message);
+    }
+    const state = location?.state || fallbackState;
+    const countyName = location?.county || null;
+    const countyTagName = countyName ? countyTagFor(state, countyName) : null;
 
     // 1. Check if subscriber already exists BEFORE creating
     let isExistingSubscriber = false;
@@ -153,20 +174,25 @@ exports.handler = async (event) => {
       console.warn(`[Subscribe] Adding to form failed for ${email}:`, formError.message);
     }
 
-    // 3. Handle state tagging (and clean up old tags for returning subscribers)
+    // 3. Apply location tags (state always; county + has-county-info when
+    //    the precise lookup succeeded). For returning subscribers we first
+    //    clean up old location-* and county-* tags so a re-subscribe with a
+    //    different zip moves cleanly to the new (state, county).
     if (state) {
       try {
         if (isExistingSubscriber) {
           const existing = await findSubscriberByEmail(email);
           if (existing?.id) {
-            // Remove old location tags if this is a re-subscribe with a new zip
             const currentTags = await getSubscriberTags(existing.id);
-            const newTagName = `${prefix}${state}`.toLowerCase();
+            const newStateTag = `${prefix}${state}`.toLowerCase();
+            const newCountyTag = countyTagName ? countyTagName.toLowerCase() : null;
             for (const tag of currentTags) {
-              if (
-                tag.name.toLowerCase().startsWith(prefix.toLowerCase()) &&
-                tag.name.toLowerCase() !== newTagName
-              ) {
+              const tn = tag.name.toLowerCase();
+              const isOldStateTag =
+                tn.startsWith(prefix.toLowerCase()) && tn !== newStateTag;
+              const isOldCountyTag =
+                tn.startsWith('county-') && tn !== newCountyTag;
+              if (isOldStateTag || isOldCountyTag) {
                 await untagSubscriber(tag.id, existing.id);
                 console.log(`[Subscribe] Removed old tag ${tag.name} from ${email}`);
               }
@@ -174,10 +200,27 @@ exports.handler = async (event) => {
           }
         }
 
-        const tagId = await ensureStateTag({ state });
-        if (tagId) {
-          await tagSubscriberByEmail({ tagId, email });
+        const stateTagId = await ensureStateTag({ state });
+        if (stateTagId) {
+          await tagSubscriberByEmail({ tagId: stateTagId, email });
           console.log(`[Subscribe] Tagged ${email} with state ${state}`);
+        }
+
+        if (countyTagName) {
+          try {
+            const countyTagId = await ensureTagByName(countyTagName);
+            if (countyTagId) {
+              await tagSubscriberByEmail({ tagId: countyTagId, email });
+              console.log(`[Subscribe] Tagged ${email} with ${countyTagName}`);
+            }
+            const sentinelId = await ensureTagByName(HAS_COUNTY_INFO_TAG);
+            if (sentinelId) {
+              await tagSubscriberByEmail({ tagId: sentinelId, email });
+              console.log(`[Subscribe] Tagged ${email} with ${HAS_COUNTY_INFO_TAG}`);
+            }
+          } catch (countyTagError) {
+            console.warn(`[Subscribe] County tagging failed for ${email}:`, countyTagError.message);
+          }
         }
       } catch (tagError) {
         console.warn(`[Subscribe] State tagging failed for ${email}:`, tagError.message);

@@ -316,11 +316,17 @@ function buildAlertEmail({ stateName, stateAbbr, alerts }) {
 /**
  * Generate the email subject line for a weather alert broadcast
  */
-function buildAlertSubject({ stateName, alerts }) {
+function buildAlertSubject({ stateName, stateAbbr, alerts, countyName }) {
   const emoji = '\uD83D\uDEA8'; // 🚨
+  const scope = countyName
+    ? `${countyName} County${stateAbbr ? `, ${stateAbbr}` : ''}`
+    : stateName;
+
   if (alerts.length === 1) {
     const alert = alerts[0];
-    const location = alert.location || stateName;
+    // County-scoped sends override the alert's own location string so the
+    // subject reads "Lee County, FL" instead of e.g. "Fort Myers, FL".
+    const location = countyName ? scope : (alert.location || stateName);
     return `${emoji} ${alert.severity === 'Extreme' ? 'URGENT: ' : ''}${alert.event} for ${location}`;
   }
 
@@ -329,10 +335,10 @@ function buildAlertSubject({ stateName, alerts }) {
   const uniqueTypes = [...new Set(alerts.map((a) => a.event))];
 
   if (uniqueTypes.length <= 2) {
-    return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} for ${stateName}`;
+    return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} for ${scope}`;
   }
 
-  return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${stateName}`;
+  return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${scope}`;
 }
 
 /**

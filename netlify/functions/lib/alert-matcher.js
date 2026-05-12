@@ -273,11 +273,64 @@ function matchAlertsToSubscribers(alerts, subscribersByState) {
   return matches;
 }
 
+/**
+ * Convert a county name into the slug used inside Kit tags. Lowercase,
+ * non-alphanumeric → hyphen, collapse repeats, trim trailing hyphens.
+ * Examples: "Lee" → "lee", "Miami-Dade" → "miami-dade", "St. Johns" → "st-johns".
+ */
+function slugifyCountyName(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Build the Kit tag for a (state, county) pair, matching the format used at
+ * signup time in subscribe-alerts.js.
+ */
+function countyTagFor(state, countyName) {
+  if (!state || !countyName) return null;
+  const slug = slugifyCountyName(countyName);
+  if (!slug) return null;
+  return `county-${state}-${slug}`;
+}
+
+/**
+ * Given a parsed NWS alert and a UGC → name resolver, return the set of
+ * county tags affected by the alert. Skips "*Z*" zone UGCs (forecast/marine/
+ * fire zones) — Phase 1 only matches county UGCs.
+ */
+async function getCountyTagsForAlert(alert, getCountyNamesForUGCs) {
+  const ugcs = alert?.properties?.geocode?.UGC
+    || alert?.geocode?.UGC
+    || alert?.ugc
+    || [];
+  if (!ugcs.length) return [];
+
+  const countyOnlyUGCs = ugcs.filter(u => /^[A-Z]{2}C\d{3}$/.test(u));
+  if (!countyOnlyUGCs.length) return [];
+
+  const nameByUGC = await getCountyNamesForUGCs(countyOnlyUGCs);
+  const tags = new Set();
+  for (const ugc of countyOnlyUGCs) {
+    const state = ugc.slice(0, 2);
+    const countyName = nameByUGC.get(ugc);
+    if (!countyName) continue;
+    const tag = countyTagFor(state, countyName);
+    if (tag) tags.add(tag);
+  }
+  return [...tags];
+}
+
 module.exports = {
   getStateFromZip,
   getAffectedStates,
   groupAlertsByState,
   groupSubscribersByState,
   matchAlertsToSubscribers,
+  slugifyCountyName,
+  countyTagFor,
+  getCountyTagsForAlert,
   ZIP_PREFIX_TO_STATE,
 };
