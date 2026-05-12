@@ -18,7 +18,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/storm/:slug" element={<StormEventPage />} />
         <Route path="/alerts" element={<LiveAlertsPage />} />
         <Route path="/alerts/:state" element={<StateAlertsPage />} />
-        <Route path="/admin/storms" element={<AdminStorms />} />
+        <Route path="/admin" element={<AdminStorms />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
