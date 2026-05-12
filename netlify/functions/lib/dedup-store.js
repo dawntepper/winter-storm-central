@@ -22,6 +22,9 @@ const { getStore } = require('@netlify/blobs');
 
 const SENT_ALERTS_STORE = 'sent-alerts';
 const BROADCAST_LOG_STORE = 'broadcast-log';
+const LOCK_STORE = 'alert-processing-lock';
+const LOCK_KEY = 'lock';
+const DEFAULT_LOCK_TTL_MS = 10 * 60 * 1000; // 10 min, generous margin over typical 3-4 min runs
 
 function makeStore(name) {
   // Netlify Functions v1 (legacy `exports.handler`) don't auto-inject the
@@ -208,10 +211,44 @@ async function cleanupOldRecords(daysOld = 30) {
   }
 }
 
+/**
+ * Try to acquire the processing lock. Returns { acquired: true } if this
+ * caller now holds the lock, or { acquired: false, heldBy: {...} } if
+ * another invocation is mid-run. Caller MUST call releaseProcessingLock()
+ * in a finally block when done.
+ *
+ * Note: this is best-effort, not atomic. There's a tiny race window between
+ * the get() and setJSON() calls where two concurrent runs could both see
+ * "no lock" and both acquire. For our cadence (cron every 30 min, occasional
+ * manual triggers) this is acceptable — the previous failure mode was THREE
+ * simultaneous runs from accidental triggers, which this prevents.
+ */
+async function acquireProcessingLock(ttlMs = DEFAULT_LOCK_TTL_MS) {
+  const store = makeStore(LOCK_STORE);
+  const existing = await store.get(LOCK_KEY, { type: 'json' });
+  if (existing && Date.now() - existing.startedAt < ttlMs) {
+    return { acquired: false, heldBy: existing };
+  }
+  await store.setJSON(LOCK_KEY, { startedAt: Date.now() });
+  return { acquired: true };
+}
+
+async function releaseProcessingLock() {
+  try {
+    const store = makeStore(LOCK_STORE);
+    await store.delete(LOCK_KEY);
+  } catch (err) {
+    // If we can't release, the lock will expire via TTL — log but don't throw.
+    console.warn('releaseProcessingLock failed:', err.message);
+  }
+}
+
 module.exports = {
   isAlertSent,
   getAlreadySentAlertIds,
   recordSentAlert,
   logBroadcastSend,
   cleanupOldRecords,
+  acquireProcessingLock,
+  releaseProcessingLock,
 };

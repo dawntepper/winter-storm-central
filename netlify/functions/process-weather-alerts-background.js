@@ -35,6 +35,8 @@ const {
   recordSentAlert,
   logBroadcastSend,
   cleanupOldRecords,
+  acquireProcessingLock,
+  releaseProcessingLock,
 } = require('./lib/dedup-store.js');
 
 const {
@@ -253,6 +255,25 @@ async function processAlerts() {
     errors: [],
   };
 
+  // Acquire the processing lock so concurrent invocations short-circuit
+  // instead of all racing on the same alert set. Cron + manual triggers
+  // overlapping previously caused 4 simultaneous runs.
+  let lockHeld = false;
+  try {
+    const lockResult = await acquireProcessingLock();
+    if (!lockResult.acquired) {
+      const heldAgeSec = Math.round((Date.now() - lockResult.heldBy.startedAt) / 1000);
+      console.log(`[Process] Another invocation is processing (lock ${heldAgeSec}s old), exiting`);
+      return { ...results, skipped: 'lock-held', lockAgeSec: heldAgeSec };
+    }
+    lockHeld = true;
+    console.log('[Process] Lock acquired');
+  } catch (lockErr) {
+    // If the lock store itself is broken, proceed anyway — better to risk a
+    // duplicate run than to silently stop sending alerts.
+    console.warn('[Process] Lock acquire failed, proceeding without lock:', lockErr.message);
+  }
+
   try {
     // Step 1: Fetch active NWS alerts
     const allAlerts = await fetchNWSAlerts();
@@ -369,6 +390,11 @@ async function processAlerts() {
   } catch (error) {
     console.error('[Process] Fatal error:', error);
     results.errors.push(error.message);
+  } finally {
+    if (lockHeld) {
+      await releaseProcessingLock();
+      console.log('[Process] Lock released');
+    }
   }
 
   const duration = Date.now() - startTime;
