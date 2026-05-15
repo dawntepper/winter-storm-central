@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "miami-fl",
+  "slug": "miami-fl",
+  "city": "Miami",
+  "state": "Florida",
+  "state_abbr": "FL",
+  "state_slug": "florida",
+  "county": "Miami-Dade",
+  "county_fips": "12086",
+  "nws_zone": "FLZ173",
+  "nws_office": "MFL",
+  "lat": 25.7617,
+  "lon": -80.1918,
+  "population": 442241,
+  "metro_area": "Miami-Fort Lauderdale-West Palm Beach",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "flooding", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning", "flooding"],
+    "fall": ["hurricane", "tropical-storm"],
+    "winter": ["cold-front"]
+  },
+  "nearby_cities": ["fort-lauderdale-fl", "hialeah-fl", "miami-beach-fl", "homestead-fl", "coral-gables-fl"],
+  "alternate_names": ["Miami, FL", "Miami Florida", "Greater Miami"],
+  "description_short": "Miami is the most populous city in South Florida and one of the most hurricane-vulnerable major cities in the United States.",
+  "description_long": "Located on the southeastern tip of Florida, Miami faces significant exposure to Atlantic hurricane activity from June through November. The city's flat terrain, coastal location, and dense urban development make storm preparation essential. Miami-Dade County is served by NWS Miami (office code MFL) and falls within forecast zone FLZ173 (Coastal Miami-Dade)."
+}

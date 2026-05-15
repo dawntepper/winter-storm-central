@@ -436,7 +436,7 @@ function NearbyStateAlertsViz({ stateAbbr, alertCountsByState, allAlerts }) {
 // =============================================
 
 export default function StateAlertsPage() {
-  const { state: stateSlug } = useParams();
+  const { slug: stateSlug } = useParams();
   const navigate = useNavigate();
   const stateAbbr = SLUG_TO_ABBR[stateSlug];
   const stateData = stateAbbr ? US_STATES[stateSlug] : null;

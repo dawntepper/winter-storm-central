@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
+    "build": "vite build && node scripts/generate-state-pages.js && node scripts/generate-city-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
     "build:app": "vite build",
-    "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
+    "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-city-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:dedup": "node scripts/test-dedup.js"

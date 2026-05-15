@@ -498,7 +498,11 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
           if (latest && show) {
             addLayer(
               `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
-              { attribution: '<a href="https://rainviewer.com">RainViewer</a>' }
+              {
+                attribution: '<a href="https://rainviewer.com">RainViewer</a>',
+                maxNativeZoom: 7,
+                maxZoom: 18,
+              }
             );
           }
         } catch (err) {
@@ -531,7 +535,11 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
             if (latest) {
               addLayer(
                 `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
-                { attribution: '<a href="https://rainviewer.com">RainViewer</a>' }
+                {
+                  attribution: '<a href="https://rainviewer.com">RainViewer</a>',
+                  maxNativeZoom: 7,
+                  maxZoom: 18,
+                }
               );
             }
           } catch (err) {

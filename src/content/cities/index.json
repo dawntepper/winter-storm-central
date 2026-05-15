@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "cities": [
+    {
+      "slug": "miami-fl",
+      "city": "Miami",
+      "state": "Florida",
+      "state_slug": "florida",
+      "state_abbr": "FL"
+    }
+  ]
+}

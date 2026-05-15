@@ -3,8 +3,8 @@
  * SEO-optimized page for "weather radar" searches
  */
 
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
@@ -158,15 +158,18 @@ function ActiveStormsHighlight() {
   );
 }
 
-// Radar layer type options
+// Radar layer type options.
+// Satellite (GOES-East_ABI_GeoColor via NASA GIBS) is hidden — the upstream
+// endpoint currently 404s for all timestamps; re-add once the GIBS layer is
+// renamed/restored.
 const LAYER_TYPES = [
   { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow radar' },
-  { id: 'satellite', label: 'Satellite', description: 'GOES GeoColor imagery' },
   { id: 'infrared', label: 'Infrared', description: 'Cloud top temperatures' }
 ];
 
 export default function RadarPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Get alerts for the map
   const {
@@ -182,6 +185,17 @@ export default function RadarPage() {
   const [radarType, setRadarType] = useState('precipitation');
   const [colorScheme, setColorScheme] = useState(4);
   const [showInfo, setShowInfo] = useState(false);
+
+  // Optional deep-link: /radar?lat=25.76&lon=-80.19[&zoom=9] centers the map on
+  // a specific location (used by city alert pages "Live radar centered on X").
+  const centerOn = useMemo(() => {
+    const lat = parseFloat(searchParams.get('lat'));
+    const lon = parseFloat(searchParams.get('lon'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const zoomParam = parseFloat(searchParams.get('zoom'));
+    const zoom = Number.isFinite(zoomParam) ? zoomParam : 8;
+    return { id: `radar-${lat}-${lon}`, lat, lon, zoom };
+  }, [searchParams]);
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -334,6 +348,7 @@ export default function RadarPage() {
             isHero
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
+            centerOn={centerOn}
           />
         </section>
 
