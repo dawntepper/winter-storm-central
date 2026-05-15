@@ -10,6 +10,7 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import StormMap from './StormMap';
+import { CitySearchBar, CityDirectory } from './CitiesInState';
 import {
   US_STATES, SLUG_TO_ABBR, STATE_NAMES, NEARBY_STATES, ABBR_TO_SLUG, getStateUrl
 } from '../data/stateConfig';
@@ -631,6 +632,9 @@ export default function StateAlertsPage() {
           {/* RIGHT COLUMN: Storms + Alerts (sticky sidebar on desktop) */}
           <div className="space-y-4 mt-6 lg:mt-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
 
+            {/* City search */}
+            <CitySearchBar stateAbbr={stateAbbr} stateName={stateData.name} />
+
             {/* Active Storm Events */}
             <ActiveStormsForState stateAbbr={stateAbbr} />
 
@@ -674,6 +678,9 @@ export default function StateAlertsPage() {
             />
           </div>
         </div>
+
+        {/* City directory */}
+        <CityDirectory stateAbbr={stateAbbr} stateName={stateData.name} />
 
         {/* SEO FAQ */}
         <section>
