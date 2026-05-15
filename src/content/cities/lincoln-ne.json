@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "lincoln-ne",
+  "slug": "lincoln-ne",
+  "city": "Lincoln",
+  "state": "Nebraska",
+  "state_abbr": "NE",
+  "state_slug": "nebraska",
+  "county": "Lancaster",
+  "county_fips": "31109",
+  "nws_zone": "NEZ066",
+  "nws_office": "OAX",
+  "lat": 40.8136,
+  "lon": -96.7026,
+  "population": 291082,
+  "metro_area": "Lincoln",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "winter-storm", "blizzard"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["tornado", "severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm"],
+    "winter": ["winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["omaha-ne", "des-moines-ia", "kansas-city-mo"],
+  "alternate_names": ["Lincoln, NE", "Lincoln Nebraska"],
+  "description_short": "Lincoln is Nebraska's capital and the second-largest Plains city, with tornado activity in summer and harsh winters.",
+  "description_long": "Located in southeastern Nebraska, Lincoln faces severe tornado, hail, and thunderstorm risk during the warm months, plus blizzards and extreme cold in winter. Lancaster County is served by NWS Omaha/Valley (office code OAX) within forecast zone NEZ066 (Lancaster)."
+}

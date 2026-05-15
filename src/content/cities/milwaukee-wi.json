@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "milwaukee-wi",
+  "slug": "milwaukee-wi",
+  "city": "Milwaukee",
+  "state": "Wisconsin",
+  "state_abbr": "WI",
+  "state_slug": "wisconsin",
+  "county": "Milwaukee",
+  "county_fips": "55079",
+  "nws_zone": "WIZ066",
+  "nws_office": "MKX",
+  "lat": 43.0389,
+  "lon": -87.9065,
+  "population": 569330,
+  "metro_area": "Milwaukee-Waukesha",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["winter-storm", "lake-effect-snow", "severe-thunderstorm", "tornado", "extreme-cold"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm"],
+    "winter": ["winter-storm", "lake-effect-snow", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["chicago-il", "minneapolis-mn", "grand-rapids-mi"],
+  "alternate_names": ["Milwaukee, WI", "Milwaukee Wisconsin"],
+  "description_short": "Milwaukee sits on Lake Michigan's western shore with severe summer storms and heavy winter snowfall enhanced by the lake.",
+  "description_long": "Located on Lake Michigan in southeastern Wisconsin, Milwaukee faces severe summer thunderstorms and occasional tornadoes, plus heavy winter storms with lake-influenced snowfall and dangerous wind chills. Milwaukee County is served by NWS Milwaukee/Sullivan (office code MKX) within forecast zone WIZ066 (Milwaukee)."
+}

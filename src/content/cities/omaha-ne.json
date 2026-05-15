@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "omaha-ne",
+  "slug": "omaha-ne",
+  "city": "Omaha",
+  "state": "Nebraska",
+  "state_abbr": "NE",
+  "state_slug": "nebraska",
+  "county": "Douglas",
+  "county_fips": "31055",
+  "nws_zone": "NEZ052",
+  "nws_office": "OAX",
+  "lat": 41.2565,
+  "lon": -95.9345,
+  "population": 487300,
+  "metro_area": "Omaha-Council Bluffs",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "winter-storm", "blizzard"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["tornado", "severe-thunderstorm", "derecho", "lightning"],
+    "fall": ["severe-thunderstorm"],
+    "winter": ["winter-storm", "blizzard", "extreme-cold", "ice-storm"]
+  },
+  "nearby_cities": ["lincoln-ne", "des-moines-ia", "kansas-city-mo"],
+  "alternate_names": ["Omaha, NE", "Omaha Nebraska"],
+  "description_short": "Omaha sits along the Missouri River in eastern Nebraska with severe summer storms and harsh Plains winters.",
+  "description_long": "Located on the Missouri River at the eastern edge of the Great Plains, Omaha faces frequent tornadoes, large hail, and derechos during the warm months, plus blizzards and extreme cold in winter. Douglas County is served by NWS Omaha/Valley (office code OAX) within forecast zone NEZ052 (Douglas)."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "wichita-ks",
+  "slug": "wichita-ks",
+  "city": "Wichita",
+  "state": "Kansas",
+  "state_abbr": "KS",
+  "state_slug": "kansas",
+  "county": "Sedgwick",
+  "county_fips": "20173",
+  "nws_zone": "KSZ083",
+  "nws_office": "ICT",
+  "lat": 37.6872,
+  "lon": -97.3301,
+  "population": 397532,
+  "metro_area": "Wichita",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "high-wind", "winter-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "high-wind"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["winter-storm", "ice-storm", "blizzard", "cold-front"]
+  },
+  "nearby_cities": ["oklahoma-city-ok", "tulsa-ok", "kansas-city-mo"],
+  "alternate_names": ["Wichita, KS", "Wichita Kansas"],
+  "description_short": "Wichita is Kansas's largest city and sits squarely in Tornado Alley, with one of the highest annual tornado counts in the country.",
+  "description_long": "Located in south-central Kansas on the Arkansas River, Wichita faces severe tornado and large-hail risk during the spring storm season, plus blizzards and ice storms in winter. Sedgwick County is served by NWS Wichita (office code ICT) within forecast zone KSZ083 (Sedgwick)."
+}

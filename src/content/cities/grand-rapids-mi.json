@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "grand-rapids-mi",
+  "slug": "grand-rapids-mi",
+  "city": "Grand Rapids",
+  "state": "Michigan",
+  "state_abbr": "MI",
+  "state_slug": "michigan",
+  "county": "Kent",
+  "county_fips": "26081",
+  "nws_zone": "MIZ057",
+  "nws_office": "GRR",
+  "lat": 42.9634,
+  "lon": -85.6681,
+  "population": 198917,
+  "metro_area": "Grand Rapids-Kentwood",
+  "timezone": "America/Detroit",
+  "primary_weather_concerns": ["lake-effect-snow", "winter-storm", "severe-thunderstorm", "tornado"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "winter-storm"],
+    "winter": ["lake-effect-snow", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["detroit-mi", "milwaukee-wi", "chicago-il"],
+  "alternate_names": ["Grand Rapids, MI", "Grand Rapids Michigan"],
+  "description_short": "Grand Rapids sits in western Michigan downwind of Lake Michigan with heavy lake-effect snow in winter.",
+  "description_long": "Located in western Michigan, Grand Rapids receives substantial lake-effect snow during the cold season as winds cross Lake Michigan. Severe summer thunderstorms and occasional tornadoes also affect the region. Kent County is served by NWS Grand Rapids (office code GRR) within forecast zone MIZ057 (Kent)."
+}

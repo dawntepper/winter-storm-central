@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "kansas-city-mo",
+  "slug": "kansas-city-mo",
+  "city": "Kansas City",
+  "state": "Missouri",
+  "state_abbr": "MO",
+  "state_slug": "missouri",
+  "county": "Jackson",
+  "county_fips": "29095",
+  "nws_zone": "MOZ037",
+  "nws_office": "EAX",
+  "lat": 39.0997,
+  "lon": -94.5786,
+  "population": 508090,
+  "metro_area": "Kansas City",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "winter-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["severe-thunderstorm", "tornado"],
+    "winter": ["winter-storm", "ice-storm", "blizzard", "cold-front"]
+  },
+  "nearby_cities": ["st-louis-mo", "wichita-ks", "omaha-ne"],
+  "alternate_names": ["Kansas City, MO", "Kansas City Missouri", "KC", "KCMO"],
+  "description_short": "Kansas City straddles the Missouri-Kansas border and sees both severe spring tornadoes and crippling winter storms.",
+  "description_long": "Located where the Missouri and Kansas rivers meet, Kansas City faces severe thunderstorms, tornadoes, and large hail during the spring and summer, plus blizzards and ice storms in winter. Jackson County is served by NWS Kansas City/Pleasant Hill (office code EAX) within forecast zone MOZ037 (Jackson)."
+}

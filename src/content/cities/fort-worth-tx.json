@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "fort-worth-tx",
+  "slug": "fort-worth-tx",
+  "city": "Fort Worth",
+  "state": "Texas",
+  "state_abbr": "TX",
+  "state_slug": "texas",
+  "county": "Tarrant",
+  "county_fips": "48439",
+  "nws_zone": "TXZ118",
+  "nws_office": "FWD",
+  "lat": 32.7555,
+  "lon": -97.3308,
+  "population": 956709,
+  "metro_area": "Dallas-Fort Worth-Arlington",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "extreme-heat", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["extreme-heat", "severe-thunderstorm", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["dallas-tx", "oklahoma-city-ok"],
+  "alternate_names": ["Fort Worth, TX", "Fort Worth Texas", "DFW"],
+  "description_short": "Fort Worth sits at the western anchor of the DFW metroplex and shares the tornado and severe-weather exposure of north Texas.",
+  "description_long": "Located in Tarrant County in north-central Texas, Fort Worth faces tornado and large-hail risk during the spring and fall storm seasons, plus extreme summer heat and occasional winter ice storms. Tarrant County is served by NWS Fort Worth (office code FWD) within forecast zone TXZ118 (Tarrant)."
+}

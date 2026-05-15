@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "boston-ma",
+  "slug": "boston-ma",
+  "city": "Boston",
+  "state": "Massachusetts",
+  "state_abbr": "MA",
+  "state_slug": "massachusetts",
+  "county": "Suffolk",
+  "county_fips": "25025",
+  "nws_zone": "MAZ015",
+  "nws_office": "BOX",
+  "lat": 42.3601,
+  "lon": -71.0589,
+  "population": 650706,
+  "metro_area": "Boston-Cambridge-Newton",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["nor-easter", "winter-storm", "blizzard", "hurricane", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["nor-easter", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "hurricane", "tropical-storm"],
+    "fall": ["nor-easter", "hurricane"],
+    "winter": ["nor-easter", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["providence-ri", "hartford-ct", "portland-me"],
+  "alternate_names": ["Boston, MA", "Boston Massachusetts", "Beantown"],
+  "description_short": "Boston is New England's largest city, exposed to powerful nor'easters in winter and occasional Atlantic hurricanes in summer and fall.",
+  "description_long": "Located on Massachusetts Bay along the Atlantic coast, Boston faces severe nor'easters, blizzards, and coastal flooding during winter, plus tropical systems during the Atlantic hurricane season. Suffolk County is served by NWS Boston/Norton (office code BOX) within forecast zone MAZ015 (Suffolk)."
+}

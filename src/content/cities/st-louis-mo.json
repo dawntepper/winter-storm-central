@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "st-louis-mo",
+  "slug": "st-louis-mo",
+  "city": "St. Louis",
+  "state": "Missouri",
+  "state_abbr": "MO",
+  "state_slug": "missouri",
+  "county": "St. Louis (city)",
+  "county_fips": "29510",
+  "nws_zone": "MOZ064",
+  "nws_office": "LSX",
+  "lat": 38.6270,
+  "lon": -90.1994,
+  "population": 286578,
+  "metro_area": "St. Louis",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "winter-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["severe-thunderstorm", "tornado"],
+    "winter": ["winter-storm", "ice-storm", "cold-front"]
+  },
+  "nearby_cities": ["kansas-city-mo", "springfield-mo", "memphis-tn"],
+  "alternate_names": ["St. Louis, MO", "Saint Louis", "St. Louis Missouri", "STL"],
+  "description_short": "St. Louis sits at the confluence of the Mississippi and Missouri rivers and faces severe spring tornadoes, summer heat, and disruptive winter storms.",
+  "description_long": "Located on the Mississippi River in eastern Missouri, St. Louis is an independent city not part of any county. The region faces severe tornado and thunderstorm risk during spring and fall, river flooding, and significant winter snow and ice events. St. Louis is served by NWS St. Louis (office code LSX) within forecast zone MOZ064 (St. Louis City and St. Louis County)."
+}

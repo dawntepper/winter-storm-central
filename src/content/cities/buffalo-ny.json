@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "buffalo-ny",
+  "slug": "buffalo-ny",
+  "city": "Buffalo",
+  "state": "New York",
+  "state_abbr": "NY",
+  "state_slug": "new-york",
+  "county": "Erie",
+  "county_fips": "36029",
+  "nws_zone": "NYZ010",
+  "nws_office": "BUF",
+  "lat": 42.8864,
+  "lon": -78.8784,
+  "population": 278349,
+  "metro_area": "Buffalo-Cheektowaga-Niagara Falls",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["lake-effect-snow", "winter-storm", "blizzard", "extreme-cold"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["winter-storm", "severe-thunderstorm"],
+    "winter": ["lake-effect-snow", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["rochester-ny", "syracuse-ny", "cleveland-oh"],
+  "alternate_names": ["Buffalo, NY", "Buffalo New York"],
+  "description_short": "Buffalo sits at the eastern end of Lake Erie and is famous for catastrophic lake-effect snowstorms that can drop several feet in a single event.",
+  "description_long": "Located at the eastern end of Lake Erie, Buffalo receives some of the heaviest lake-effect snow in the United States — single-storm totals routinely exceed several feet. Severe summer storms and occasional tornadoes also affect the region. Erie County is served by NWS Buffalo (office code BUF) within forecast zone NYZ010 (Erie)."
+}

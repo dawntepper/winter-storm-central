@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "dallas-tx",
+  "slug": "dallas-tx",
+  "city": "Dallas",
+  "state": "Texas",
+  "state_abbr": "TX",
+  "state_slug": "texas",
+  "county": "Dallas",
+  "county_fips": "48113",
+  "nws_zone": "TXZ119",
+  "nws_office": "FWD",
+  "lat": 32.7767,
+  "lon": -96.7970,
+  "population": 1304379,
+  "metro_area": "Dallas-Fort Worth-Arlington",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "extreme-heat", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["extreme-heat", "severe-thunderstorm", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["fort-worth-tx", "oklahoma-city-ok", "houston-tx"],
+  "alternate_names": ["Dallas, TX", "Dallas Texas", "DFW"],
+  "description_short": "Dallas anchors the fourth-largest metro in the United States and lies on the southern edge of Tornado Alley with frequent severe weather.",
+  "description_long": "Located in north-central Texas, Dallas faces severe tornado and large-hail risk during the spring and fall storm seasons, extreme summer heat, and occasional crippling ice storms in winter. Dallas County is served by NWS Fort Worth (office code FWD) within forecast zone TXZ119 (Dallas)."
+}

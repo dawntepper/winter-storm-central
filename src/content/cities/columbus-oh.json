@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "columbus-oh",
+  "slug": "columbus-oh",
+  "city": "Columbus",
+  "state": "Ohio",
+  "state_abbr": "OH",
+  "state_slug": "ohio",
+  "county": "Franklin",
+  "county_fips": "39049",
+  "nws_zone": "OHZ055",
+  "nws_office": "ILN",
+  "lat": 39.9612,
+  "lon": -82.9988,
+  "population": 905748,
+  "metro_area": "Columbus",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "winter-storm", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "tornado"],
+    "winter": ["winter-storm", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["cincinnati-oh", "cleveland-oh", "indianapolis-in"],
+  "alternate_names": ["Columbus, OH", "Columbus Ohio"],
+  "description_short": "Columbus is Ohio's capital and most populous city, exposed to spring tornadoes and significant winter storms.",
+  "description_long": "Located in central Ohio, Columbus faces severe tornado and thunderstorm risk during the spring and fall, plus disruptive winter snow and ice events. Franklin County is served by NWS Wilmington OH (office code ILN) within forecast zone OHZ055 (Franklin)."
+}

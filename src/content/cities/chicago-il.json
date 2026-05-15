@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "chicago-il",
+  "slug": "chicago-il",
+  "city": "Chicago",
+  "state": "Illinois",
+  "state_abbr": "IL",
+  "state_slug": "illinois",
+  "county": "Cook",
+  "county_fips": "17031",
+  "nws_zone": "ILZ104",
+  "nws_office": "LOT",
+  "lat": 41.8781,
+  "lon": -87.6298,
+  "population": 2693976,
+  "metro_area": "Chicago-Naperville-Elgin",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["winter-storm", "lake-effect-snow", "severe-thunderstorm", "tornado", "extreme-cold"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["severe-thunderstorm", "winter-storm"],
+    "winter": ["winter-storm", "blizzard", "lake-effect-snow", "extreme-cold"]
+  },
+  "nearby_cities": ["milwaukee-wi", "indianapolis-in", "detroit-mi"],
+  "alternate_names": ["Chicago, IL", "Chicago Illinois", "Chicagoland"],
+  "description_short": "Chicago is the third-largest US city, exposed to severe summer storms, occasional tornadoes, and brutal winter blizzards off Lake Michigan.",
+  "description_long": "Located on the southwestern shore of Lake Michigan, Chicago faces severe summer thunderstorms and occasional tornadoes, plus heavy winter storms, lake-effect snow, and dangerous wind chills. Cook County is served by NWS Chicago (office code LOT) within forecast zone ILZ104 (Cook)."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "pittsburgh-pa",
+  "slug": "pittsburgh-pa",
+  "city": "Pittsburgh",
+  "state": "Pennsylvania",
+  "state_abbr": "PA",
+  "state_slug": "pennsylvania",
+  "county": "Allegheny",
+  "county_fips": "42003",
+  "nws_zone": "PAZ021",
+  "nws_office": "PBZ",
+  "lat": 40.4406,
+  "lon": -79.9959,
+  "population": 302971,
+  "metro_area": "Pittsburgh",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["winter-storm", "severe-thunderstorm", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "winter-storm"],
+    "winter": ["winter-storm", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["cleveland-oh", "philadelphia-pa", "columbus-oh"],
+  "alternate_names": ["Pittsburgh, PA", "Pittsburgh Pennsylvania", "Steel City"],
+  "description_short": "Pittsburgh sits at the confluence of three rivers in western Pennsylvania, with significant winter storm and river-flooding risk.",
+  "description_long": "Located where the Allegheny and Monongahela rivers form the Ohio in western Pennsylvania, Pittsburgh faces severe winter storms, ice events, and river flooding. Severe summer thunderstorms also affect the region. Allegheny County is served by NWS Pittsburgh (office code PBZ) within forecast zone PAZ021 (Allegheny)."
+}

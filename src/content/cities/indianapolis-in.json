@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "indianapolis-in",
+  "slug": "indianapolis-in",
+  "city": "Indianapolis",
+  "state": "Indiana",
+  "state_abbr": "IN",
+  "state_slug": "indiana",
+  "county": "Marion",
+  "county_fips": "18097",
+  "nws_zone": "INZ047",
+  "nws_office": "IND",
+  "lat": 39.7684,
+  "lon": -86.1581,
+  "population": 879293,
+  "metro_area": "Indianapolis-Carmel-Anderson",
+  "timezone": "America/Indiana/Indianapolis",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "winter-storm", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "tornado"],
+    "winter": ["winter-storm", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["cincinnati-oh", "chicago-il", "columbus-oh"],
+  "alternate_names": ["Indianapolis, IN", "Indianapolis Indiana", "Indy"],
+  "description_short": "Indianapolis sits in central Indiana where the Midwest meets the Ohio Valley, with tornado risk in warm months and winter storms in cold months.",
+  "description_long": "Located in central Indiana, Indianapolis faces severe tornado and thunderstorm risk during the spring and fall, plus disruptive winter snow and ice storms. Marion County is served by NWS Indianapolis (office code IND) within forecast zone INZ047 (Marion)."
+}

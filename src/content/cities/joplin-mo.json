@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "joplin-mo",
+  "slug": "joplin-mo",
+  "city": "Joplin",
+  "state": "Missouri",
+  "state_abbr": "MO",
+  "state_slug": "missouri",
+  "county": "Jasper",
+  "county_fips": "29097",
+  "nws_zone": "MOZ088",
+  "nws_office": "SGF",
+  "lat": 37.0842,
+  "lon": -94.5133,
+  "population": 51762,
+  "metro_area": "Joplin",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm"]
+  },
+  "nearby_cities": ["springfield-mo", "tulsa-ok", "little-rock-ar"],
+  "alternate_names": ["Joplin, MO", "Joplin Missouri"],
+  "description_short": "Joplin sits in the southwestern Missouri Ozarks and is best known for the catastrophic EF5 tornado of May 22, 2011.",
+  "description_long": "Located near the Kansas-Oklahoma border in southwestern Missouri, Joplin faces severe tornado and thunderstorm risk during the spring storm season. The 2011 EF5 tornado remains one of the deadliest US tornadoes since modern records began. Jasper County is served by NWS Springfield (office code SGF) within forecast zone MOZ088 (Jasper)."
+}

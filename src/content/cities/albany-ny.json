@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "albany-ny",
+  "slug": "albany-ny",
+  "city": "Albany",
+  "state": "New York",
+  "state_abbr": "NY",
+  "state_slug": "new-york",
+  "county": "Albany",
+  "county_fips": "36001",
+  "nws_zone": "NYZ052",
+  "nws_office": "ALY",
+  "lat": 42.6526,
+  "lon": -73.7562,
+  "population": 99224,
+  "metro_area": "Albany-Schenectady-Troy",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["winter-storm", "nor-easter", "ice-storm", "severe-thunderstorm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding", "nor-easter"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["nor-easter", "winter-storm"],
+    "winter": ["winter-storm", "nor-easter", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["hartford-ct", "syracuse-ny", "burlington-vt"],
+  "alternate_names": ["Albany, NY", "Albany New York", "Capital District"],
+  "description_short": "Albany is New York's capital, sitting in the upper Hudson Valley with significant winter storm and nor'easter exposure.",
+  "description_long": "Located in the upper Hudson Valley, Albany faces nor'easters, winter storms, and ice events during the cold season, plus severe summer thunderstorms. Albany County is served by NWS Albany (office code ALY) within forecast zone NYZ052 (Western Albany)."
+}

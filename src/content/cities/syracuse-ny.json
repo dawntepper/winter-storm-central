@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "syracuse-ny",
+  "slug": "syracuse-ny",
+  "city": "Syracuse",
+  "state": "New York",
+  "state_abbr": "NY",
+  "state_slug": "new-york",
+  "county": "Onondaga",
+  "county_fips": "36067",
+  "nws_zone": "NYZ018",
+  "nws_office": "BGM",
+  "lat": 43.0481,
+  "lon": -76.1474,
+  "population": 148620,
+  "metro_area": "Syracuse",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["lake-effect-snow", "winter-storm", "blizzard", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["winter-storm", "lake-effect-snow"],
+    "winter": ["lake-effect-snow", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["rochester-ny", "buffalo-ny", "albany-ny"],
+  "alternate_names": ["Syracuse, NY", "Syracuse New York"],
+  "description_short": "Syracuse is consistently one of the snowiest large cities in the United States due to lake-effect snow from Lake Ontario.",
+  "description_long": "Located in central New York between the Finger Lakes and Lake Ontario, Syracuse averages over 120 inches of snow per year — among the highest of any US city its size — driven by lake-effect snowstorms off Lake Ontario. Onondaga County is served by NWS Binghamton (office code BGM) within forecast zone NYZ018 (Onondaga)."
+}

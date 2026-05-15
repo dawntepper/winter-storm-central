@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "des-moines-ia",
+  "slug": "des-moines-ia",
+  "city": "Des Moines",
+  "state": "Iowa",
+  "state_abbr": "IA",
+  "state_slug": "iowa",
+  "county": "Polk",
+  "county_fips": "19153",
+  "nws_zone": "IAZ060",
+  "nws_office": "DMX",
+  "lat": 41.5868,
+  "lon": -93.6250,
+  "population": 214237,
+  "metro_area": "Des Moines-West Des Moines",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "winter-storm", "extreme-cold", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["tornado", "severe-thunderstorm", "derecho", "lightning"],
+    "fall": ["severe-thunderstorm"],
+    "winter": ["winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["omaha-ne", "minneapolis-mn", "kansas-city-mo"],
+  "alternate_names": ["Des Moines, IA", "Des Moines Iowa"],
+  "description_short": "Des Moines is Iowa's capital, sitting at the northern end of Tornado Alley with severe summer storms and harsh winters.",
+  "description_long": "Located in central Iowa where Tornado Alley meets the upper Midwest, Des Moines faces severe tornado, hail, and derecho risk during the warm months, plus blizzards and extreme cold in winter. Polk County is served by NWS Des Moines (office code DMX) within forecast zone IAZ060 (Polk)."
+}

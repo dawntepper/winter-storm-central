@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "philadelphia-pa",
+  "slug": "philadelphia-pa",
+  "city": "Philadelphia",
+  "state": "Pennsylvania",
+  "state_abbr": "PA",
+  "state_slug": "pennsylvania",
+  "county": "Philadelphia",
+  "county_fips": "42101",
+  "nws_zone": "PAZ071",
+  "nws_office": "PHI",
+  "lat": 39.9526,
+  "lon": -75.1652,
+  "population": 1584064,
+  "metro_area": "Philadelphia-Camden-Wilmington",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["nor-easter", "winter-storm", "severe-thunderstorm", "hurricane", "flooding"],
+  "seasonal_risks": {
+    "spring": ["nor-easter", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "hurricane", "tropical-storm", "extreme-heat"],
+    "fall": ["nor-easter", "hurricane", "tropical-storm"],
+    "winter": ["nor-easter", "winter-storm", "ice-storm"]
+  },
+  "nearby_cities": ["new-york-ny", "pittsburgh-pa", "hartford-ct"],
+  "alternate_names": ["Philadelphia, PA", "Philly", "Philadelphia Pennsylvania"],
+  "description_short": "Philadelphia anchors the Delaware Valley with nor'easters and winter storms in cold months and severe thunderstorms in summer.",
+  "description_long": "Located on the Delaware River in southeastern Pennsylvania, Philadelphia faces nor'easters, winter storms, and ice events in the cold season, plus severe thunderstorms and occasional tropical systems during summer and fall. Philadelphia County is served by NWS Mount Holly (office code PHI) within forecast zone PAZ071 (Philadelphia)."
+}

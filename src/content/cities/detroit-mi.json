@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "detroit-mi",
+  "slug": "detroit-mi",
+  "city": "Detroit",
+  "state": "Michigan",
+  "state_abbr": "MI",
+  "state_slug": "michigan",
+  "county": "Wayne",
+  "county_fips": "26163",
+  "nws_zone": "MIZ076",
+  "nws_office": "DTX",
+  "lat": 42.3314,
+  "lon": -83.0458,
+  "population": 632464,
+  "metro_area": "Detroit-Warren-Dearborn",
+  "timezone": "America/Detroit",
+  "primary_weather_concerns": ["winter-storm", "severe-thunderstorm", "tornado", "extreme-cold", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm"],
+    "winter": ["winter-storm", "lake-effect-snow", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["cleveland-oh", "grand-rapids-mi", "chicago-il"],
+  "alternate_names": ["Detroit, MI", "Detroit Michigan", "Motor City"],
+  "description_short": "Detroit sits along the Detroit River between Lake Erie and Lake Huron with severe summer storms and significant winter snowfall.",
+  "description_long": "Located in southeastern Michigan, Detroit faces severe thunderstorms and occasional tornadoes during the warm months, plus winter storms and ice events influenced by the Great Lakes. Wayne County is served by NWS Detroit/Pontiac (office code DTX) within forecast zone MIZ076 (Wayne)."
+}

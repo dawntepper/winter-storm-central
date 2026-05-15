@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "cincinnati-oh",
+  "slug": "cincinnati-oh",
+  "city": "Cincinnati",
+  "state": "Ohio",
+  "state_abbr": "OH",
+  "state_slug": "ohio",
+  "county": "Hamilton",
+  "county_fips": "39061",
+  "nws_zone": "OHZ077",
+  "nws_office": "ILN",
+  "lat": 39.1031,
+  "lon": -84.5120,
+  "population": 309317,
+  "metro_area": "Cincinnati",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "winter-storm", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "tornado"],
+    "winter": ["winter-storm", "ice-storm", "extreme-cold"]
+  },
+  "nearby_cities": ["columbus-oh", "indianapolis-in", "cleveland-oh"],
+  "alternate_names": ["Cincinnati, OH", "Cincinnati Ohio", "Cincy"],
+  "description_short": "Cincinnati sits on the Ohio River in southwestern Ohio with tornado and flood risk in warm months and significant winter storms.",
+  "description_long": "Located on the Ohio River where Ohio, Kentucky, and Indiana meet, Cincinnati faces severe tornado and thunderstorm risk during the spring and fall, river flooding from heavy rain, and disruptive winter snow and ice events. Hamilton County is served by NWS Wilmington OH (office code ILN) within forecast zone OHZ077 (Hamilton)."
+}

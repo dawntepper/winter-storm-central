@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "providence-ri",
+  "slug": "providence-ri",
+  "city": "Providence",
+  "state": "Rhode Island",
+  "state_abbr": "RI",
+  "state_slug": "rhode-island",
+  "county": "Providence",
+  "county_fips": "44007",
+  "nws_zone": "RIZ002",
+  "nws_office": "BOX",
+  "lat": 41.8240,
+  "lon": -71.4128,
+  "population": 190934,
+  "metro_area": "Providence-Warwick",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["nor-easter", "winter-storm", "hurricane", "severe-thunderstorm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["nor-easter", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "hurricane", "tropical-storm"],
+    "fall": ["nor-easter", "hurricane"],
+    "winter": ["nor-easter", "winter-storm", "blizzard"]
+  },
+  "nearby_cities": ["boston-ma", "hartford-ct", "new-york-ny"],
+  "alternate_names": ["Providence, RI", "Providence Rhode Island"],
+  "description_short": "Providence sits at the head of Narragansett Bay with nor'easter, winter storm, and hurricane exposure.",
+  "description_long": "Located at the head of Narragansett Bay in northern Rhode Island, Providence faces nor'easters, winter storms, and Atlantic hurricanes — most famously the 1938 Hurricane that devastated New England. Providence County is served by NWS Boston/Norton (office code BOX) within forecast zone RIZ002 (Northern Providence)."
+}

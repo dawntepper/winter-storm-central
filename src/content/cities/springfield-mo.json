@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "springfield-mo",
+  "slug": "springfield-mo",
+  "city": "Springfield",
+  "state": "Missouri",
+  "state_abbr": "MO",
+  "state_slug": "missouri",
+  "county": "Greene",
+  "county_fips": "29077",
+  "nws_zone": "MOZ090",
+  "nws_office": "SGF",
+  "lat": 37.2153,
+  "lon": -93.2982,
+  "population": 169176,
+  "metro_area": "Springfield",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "ice-storm", "winter-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["joplin-mo", "kansas-city-mo", "little-rock-ar"],
+  "alternate_names": ["Springfield, MO", "Springfield Missouri"],
+  "description_short": "Springfield sits in the southwestern Missouri Ozarks where Tornado Alley meets Dixie Alley, with year-round severe weather risk.",
+  "description_long": "Located in the Ozark Plateau of southwestern Missouri, Springfield faces severe tornado and thunderstorm activity during the spring and fall, plus damaging ice and winter storms. Greene County is served by NWS Springfield (office code SGF) within forecast zone MOZ090 (Greene)."
+}

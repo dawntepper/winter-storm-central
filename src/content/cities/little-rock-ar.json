@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "little-rock-ar",
+  "slug": "little-rock-ar",
+  "city": "Little Rock",
+  "state": "Arkansas",
+  "state_abbr": "AR",
+  "state_slug": "arkansas",
+  "county": "Pulaski",
+  "county_fips": "05119",
+  "nws_zone": "ARZ044",
+  "nws_office": "LZK",
+  "lat": 34.7465,
+  "lon": -92.2896,
+  "population": 202591,
+  "metro_area": "Little Rock-North Little Rock-Conway",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "flooding", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning", "extreme-heat"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "tornado"]
+  },
+  "nearby_cities": ["memphis-tn", "joplin-mo", "nashville-tn"],
+  "alternate_names": ["Little Rock, AR", "Little Rock Arkansas"],
+  "description_short": "Little Rock is Arkansas's capital and largest city, sitting in a tornado-prone region with year-round severe weather risk.",
+  "description_long": "Located on the Arkansas River in central Arkansas, Little Rock faces severe tornado and thunderstorm risk during the spring and a secondary winter peak typical of \"Dixie Alley.\" Ice storms cause major disruption in winter. Pulaski County is served by NWS Little Rock (office code LZK) within forecast zone ARZ044 (Pulaski)."
+}

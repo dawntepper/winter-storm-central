@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "new-york-ny",
+  "slug": "new-york-ny",
+  "city": "New York",
+  "state": "New York",
+  "state_abbr": "NY",
+  "state_slug": "new-york",
+  "county": "New York",
+  "county_fips": "36061",
+  "nws_zone": "NYZ072",
+  "nws_office": "OKX",
+  "lat": 40.7128,
+  "lon": -74.0060,
+  "population": 8335897,
+  "metro_area": "New York-Newark-Jersey City",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["nor-easter", "winter-storm", "hurricane", "severe-thunderstorm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["nor-easter", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "hurricane", "tropical-storm", "extreme-heat"],
+    "fall": ["nor-easter", "hurricane", "tropical-storm"],
+    "winter": ["nor-easter", "winter-storm", "blizzard"]
+  },
+  "nearby_cities": ["philadelphia-pa", "hartford-ct", "boston-ma"],
+  "alternate_names": ["New York, NY", "NYC", "New York City", "Manhattan"],
+  "description_short": "New York City is the largest US city, exposed to nor'easters and winter storms plus occasional severe Atlantic hurricanes like Sandy in 2012.",
+  "description_long": "Located at the mouth of the Hudson River on the Atlantic coast, New York City faces severe nor'easters and blizzards during winter, plus tropical systems and storm surge during the Atlantic hurricane season. New York County (Manhattan) is served by NWS New York/Upton (office code OKX) within forecast zone NYZ072 (New York/Manhattan)."
+}

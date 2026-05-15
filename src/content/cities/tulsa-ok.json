@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "tulsa-ok",
+  "slug": "tulsa-ok",
+  "city": "Tulsa",
+  "state": "Oklahoma",
+  "state_abbr": "OK",
+  "state_slug": "oklahoma",
+  "county": "Tulsa",
+  "county_fips": "40143",
+  "nws_zone": "OKZ060",
+  "nws_office": "TSA",
+  "lat": 36.1540,
+  "lon": -95.9928,
+  "population": 411401,
+  "metro_area": "Tulsa",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm"]
+  },
+  "nearby_cities": ["oklahoma-city-ok", "joplin-mo", "wichita-ks"],
+  "alternate_names": ["Tulsa, OK", "Tulsa Oklahoma"],
+  "description_short": "Tulsa sits in northeastern Oklahoma along the Arkansas River and is one of the most tornado-prone metropolitan areas in the United States.",
+  "description_long": "Located in northeastern Oklahoma, Tulsa faces severe tornado and thunderstorm risk during the spring and fall storm seasons, plus damaging ice storms in winter. Tulsa County is served by NWS Tulsa (office code TSA) within forecast zone OKZ060 (Tulsa)."
+}

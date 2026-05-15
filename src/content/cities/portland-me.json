@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "portland-me",
+  "slug": "portland-me",
+  "city": "Portland",
+  "state": "Maine",
+  "state_abbr": "ME",
+  "state_slug": "maine",
+  "county": "Cumberland",
+  "county_fips": "23005",
+  "nws_zone": "MEZ024",
+  "nws_office": "GYX",
+  "lat": 43.6591,
+  "lon": -70.2568,
+  "population": 68408,
+  "metro_area": "Portland-South Portland",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["nor-easter", "winter-storm", "blizzard", "extreme-cold", "hurricane"],
+  "seasonal_risks": {
+    "spring": ["nor-easter", "severe-thunderstorm", "flooding"],
+    "summer": ["severe-thunderstorm", "tropical-storm"],
+    "fall": ["nor-easter", "hurricane"],
+    "winter": ["nor-easter", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["boston-ma", "burlington-vt"],
+  "alternate_names": ["Portland, ME", "Portland Maine"],
+  "description_short": "Portland is Maine's largest city and one of the northernmost major cities on the Atlantic coast, with severe winter storm exposure.",
+  "description_long": "Located on Casco Bay along the Gulf of Maine, Portland faces powerful nor'easters, heavy snow, and extreme cold during winter, plus occasional remnants of Atlantic hurricanes. Cumberland County is served by NWS Gray (office code GYX) within forecast zone MEZ024 (Coastal Cumberland)."
+}

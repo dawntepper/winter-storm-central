@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "cleveland-oh",
+  "slug": "cleveland-oh",
+  "city": "Cleveland",
+  "state": "Ohio",
+  "state_abbr": "OH",
+  "state_slug": "ohio",
+  "county": "Cuyahoga",
+  "county_fips": "39035",
+  "nws_zone": "OHZ011",
+  "nws_office": "CLE",
+  "lat": 41.4993,
+  "lon": -81.6944,
+  "population": 372624,
+  "metro_area": "Cleveland-Elyria",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["lake-effect-snow", "winter-storm", "severe-thunderstorm", "tornado", "extreme-cold"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["severe-thunderstorm", "winter-storm"],
+    "winter": ["lake-effect-snow", "winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["columbus-oh", "buffalo-ny", "detroit-mi"],
+  "alternate_names": ["Cleveland, OH", "Cleveland Ohio", "The Land"],
+  "description_short": "Cleveland sits on Lake Erie's southern shore and is one of the snowiest major cities in the United States due to lake-effect snow.",
+  "description_long": "Located on the south shore of Lake Erie in northeastern Ohio, Cleveland faces heavy lake-effect snow during the cold months when prevailing winds cross open water. Severe summer thunderstorms and occasional tornadoes affect the region in warm months. Cuyahoga County is served by NWS Cleveland (office code CLE) within forecast zone OHZ011 (Cuyahoga)."
+}

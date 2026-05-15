@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "minneapolis-mn",
+  "slug": "minneapolis-mn",
+  "city": "Minneapolis",
+  "state": "Minnesota",
+  "state_abbr": "MN",
+  "state_slug": "minnesota",
+  "county": "Hennepin",
+  "county_fips": "27053",
+  "nws_zone": "MNZ060",
+  "nws_office": "MPX",
+  "lat": 44.9778,
+  "lon": -93.2650,
+  "population": 425403,
+  "metro_area": "Minneapolis-St. Paul-Bloomington",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["winter-storm", "blizzard", "extreme-cold", "severe-thunderstorm", "tornado"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding", "winter-storm"],
+    "summer": ["severe-thunderstorm", "tornado", "lightning"],
+    "fall": ["severe-thunderstorm", "winter-storm"],
+    "winter": ["winter-storm", "blizzard", "extreme-cold"]
+  },
+  "nearby_cities": ["milwaukee-wi", "des-moines-ia", "chicago-il"],
+  "alternate_names": ["Minneapolis, MN", "Minneapolis Minnesota", "Twin Cities", "MSP"],
+  "description_short": "Minneapolis anchors the Twin Cities metro and faces some of the harshest winter conditions of any major US city, plus tornado risk in summer.",
+  "description_long": "Located on the upper Mississippi River in eastern Minnesota, Minneapolis sees brutal winter storms, blizzards, and extreme cold from November through March, plus severe thunderstorms and tornadoes during summer. Hennepin County is served by NWS Minneapolis/Twin Cities (office code MPX) within forecast zone MNZ060 (Hennepin)."
+}

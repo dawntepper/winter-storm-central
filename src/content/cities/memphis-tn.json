@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "memphis-tn",
+  "slug": "memphis-tn",
+  "city": "Memphis",
+  "state": "Tennessee",
+  "state_abbr": "TN",
+  "state_slug": "tennessee",
+  "county": "Shelby",
+  "county_fips": "47157",
+  "nws_zone": "TNZ088",
+  "nws_office": "MEG",
+  "lat": 35.1495,
+  "lon": -90.0490,
+  "population": 628127,
+  "metro_area": "Memphis",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "ice-storm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "tornado"]
+  },
+  "nearby_cities": ["nashville-tn", "little-rock-ar", "st-louis-mo"],
+  "alternate_names": ["Memphis, TN", "Memphis Tennessee"],
+  "description_short": "Memphis sits on the Mississippi River at the southern edge of the Mid-South tornado region with risk year-round, including damaging winter ice storms.",
+  "description_long": "Located in southwestern Tennessee on the Mississippi River, Memphis faces severe tornado and thunderstorm risk during the spring and fall storm seasons, plus a secondary winter tornado peak — a hallmark of \"Dixie Alley.\" Ice storms cause major disruption when they occur. Shelby County is served by NWS Memphis (office code MEG) within forecast zone TNZ088 (Shelby)."
+}

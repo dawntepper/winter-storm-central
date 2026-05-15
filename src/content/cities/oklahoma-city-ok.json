@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "oklahoma-city-ok",
+  "slug": "oklahoma-city-ok",
+  "city": "Oklahoma City",
+  "state": "Oklahoma",
+  "state_abbr": "OK",
+  "state_slug": "oklahoma",
+  "county": "Oklahoma",
+  "county_fips": "40109",
+  "nws_zone": "OKZ025",
+  "nws_office": "OUN",
+  "lat": 35.4676,
+  "lon": -97.5164,
+  "population": 712919,
+  "metro_area": "Oklahoma City",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "hail", "high-wind", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "high-wind", "flooding"],
+    "summer": ["severe-thunderstorm", "extreme-heat", "lightning"],
+    "fall": ["tornado", "severe-thunderstorm"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["tulsa-ok", "wichita-ks", "dallas-tx"],
+  "alternate_names": ["Oklahoma City, OK", "OKC", "Oklahoma City Oklahoma"],
+  "description_short": "Oklahoma City sits at the heart of Tornado Alley and faces one of the highest tornado risks of any major US city.",
+  "description_long": "Located in central Oklahoma, Oklahoma City and surrounding Oklahoma County are repeatedly impacted by powerful tornadoes during the spring storm season, plus large hail and damaging winds. Winters bring occasional crippling ice storms. The city is served by NWS Norman (office code OUN) within forecast zone OKZ025 (Oklahoma)."
+}

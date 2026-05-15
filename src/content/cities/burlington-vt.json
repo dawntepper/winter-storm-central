@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "burlington-vt",
+  "slug": "burlington-vt",
+  "city": "Burlington",
+  "state": "Vermont",
+  "state_abbr": "VT",
+  "state_slug": "vermont",
+  "county": "Chittenden",
+  "county_fips": "50007",
+  "nws_zone": "VTZ005",
+  "nws_office": "BTV",
+  "lat": 44.4759,
+  "lon": -73.2121,
+  "population": 44743,
+  "metro_area": "Burlington-South Burlington",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["winter-storm", "blizzard", "extreme-cold", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding", "winter-storm"],
+    "summer": ["severe-thunderstorm", "lightning"],
+    "fall": ["nor-easter", "winter-storm"],
+    "winter": ["winter-storm", "blizzard", "extreme-cold", "ice-storm"]
+  },
+  "nearby_cities": ["albany-ny", "portland-me", "syracuse-ny"],
+  "alternate_names": ["Burlington, VT", "Burlington Vermont"],
+  "description_short": "Burlington sits on Lake Champlain in northern Vermont with some of the coldest winter conditions in the Northeast.",
+  "description_long": "Located on Lake Champlain near the Canadian border, Burlington faces extreme winter cold, heavy snow, and significant winter storms. Severe thunderstorms and flooding affect the region during warm months. Chittenden County is served by NWS Burlington (office code BTV) within forecast zone VTZ005 (Western Chittenden)."
+}
