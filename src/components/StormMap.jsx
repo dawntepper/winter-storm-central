@@ -1,8 +1,10 @@
 import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
+import { getCitySlugForLocation } from '../utils/cityLookup';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -1336,7 +1338,19 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <div className="flex items-center gap-2">
                 <span className="text-lg">{getWeatherIcon(hoveredUserLocation.conditions?.shortForecast)}</span>
                 <div>
-                  <h4 className="font-semibold text-slate-800 text-sm">{hoveredUserLocation.name}</h4>
+                  {(() => {
+                    const slug = getCitySlugForLocation(hoveredUserLocation.name);
+                    return slug ? (
+                      <Link
+                        to={`/alerts/${slug}`}
+                        className="font-semibold text-sky-600 hover:text-sky-700 hover:underline text-sm"
+                      >
+                        {hoveredUserLocation.name} &rarr;
+                      </Link>
+                    ) : (
+                      <h4 className="font-semibold text-slate-800 text-sm">{hoveredUserLocation.name}</h4>
+                    );
+                  })()}
                   {hoveredUserLocation.alertInfo ? (
                     <p className="text-xs text-red-600 font-medium">⚠️ {hoveredUserLocation.alertInfo.event}</p>
                   ) : (
