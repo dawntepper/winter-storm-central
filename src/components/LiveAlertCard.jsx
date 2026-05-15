@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ALERT_CATEGORIES } from '../../shared/nws-alert-parser';
 import { getAlertTimeInfo } from '../utils/alertRanking';
-import { STATE_NAMES } from '../data/stateConfig';
+import { STATE_NAMES, ABBR_TO_SLUG } from '../data/stateConfig';
+import { findCitySlugInText } from '../utils/cityLookup';
 
 /**
  * LiveAlertCard — Reusable alert card with compact and full modes.
@@ -25,6 +26,8 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
 
   const stateName = alert.state ? (STATE_NAMES[alert.state] || alert.state) : '';
   const locationLine = [stateName, alert.location].filter(Boolean).join(', ');
+  const stateSlug = alert.state ? ABBR_TO_SLUG[alert.state] : null;
+  const citySlug = alert.state ? findCitySlugInText(alert.location || '', alert.state) : null;
 
   // ───── Compact mode (dashboard widget) ─────
   if (mode === 'compact') {
@@ -109,7 +112,7 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
                 {alert.fullDescription}
               </p>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               {onAddToMap && (
                 <button
                   onClick={handleAddToMap}
@@ -118,13 +121,24 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
                   + Add to Map
                 </button>
               )}
-              <Link
-                to="/alerts"
-                className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                View All →
-              </Link>
+              {citySlug && (
+                <Link
+                  to={`/alerts/${citySlug}`}
+                  className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View city page &rarr;
+                </Link>
+              )}
+              {stateSlug && (
+                <Link
+                  to={`/alerts/${stateSlug}`}
+                  className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  All {stateName} alerts &rarr;
+                </Link>
+              )}
             </div>
           </div>
         </div>
