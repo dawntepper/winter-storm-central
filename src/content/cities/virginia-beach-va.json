@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "virginia-beach-va",
+  "slug": "virginia-beach-va",
+  "city": "Virginia Beach",
+  "state": "Virginia",
+  "state_abbr": "VA",
+  "state_slug": "virginia",
+  "county": "Virginia Beach",
+  "county_fips": "51810",
+  "nws_zone": "VAZ098",
+  "nws_office": "AKQ",
+  "lat": 36.8529,
+  "lon": -75.9780,
+  "population": 459470,
+  "metro_area": "Virginia Beach-Norfolk-Newport News",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "nor-easter", "flooding", "storm-surge"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "nor-easter", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning"],
+    "fall": ["hurricane", "tropical-storm", "nor-easter"],
+    "winter": ["winter-storm", "nor-easter", "ice-storm", "cold-front"]
+  },
+  "nearby_cities": ["wilmington-nc"],
+  "alternate_names": ["Virginia Beach, VA", "Virginia Beach Virginia", "Hampton Roads"],
+  "description_short": "Virginia Beach is the largest city in Virginia and sits where the Chesapeake Bay meets the Atlantic, exposed to hurricanes in summer and nor'easters in winter.",
+  "description_long": "Located at the southern entrance of the Chesapeake Bay, Virginia Beach is an independent city in the Hampton Roads region. The coastline faces direct Atlantic hurricane exposure during summer and fall, plus powerful nor'easters and occasional snow during winter. The city is served by NWS Wakefield (office code AKQ) within forecast zone VAZ098 (Virginia Beach)."
+}

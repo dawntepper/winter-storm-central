@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "mobile-al",
+  "slug": "mobile-al",
+  "city": "Mobile",
+  "state": "Alabama",
+  "state_abbr": "AL",
+  "state_slug": "alabama",
+  "county": "Mobile",
+  "county_fips": "01097",
+  "nws_zone": "ALZ263",
+  "nws_office": "MOB",
+  "lat": 30.6954,
+  "lon": -88.0399,
+  "population": 184952,
+  "metro_area": "Mobile",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "tornado", "severe-thunderstorm", "flooding"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning", "extreme-heat"],
+    "fall": ["hurricane", "tropical-storm", "tornado"],
+    "winter": ["severe-thunderstorm", "tornado", "cold-front"]
+  },
+  "nearby_cities": ["pensacola-fl", "new-orleans-la"],
+  "alternate_names": ["Mobile, AL", "Mobile Alabama", "Mobile Bay"],
+  "description_short": "Mobile is Alabama's only saltwater port and sits at the head of Mobile Bay, exposed to Gulf hurricanes and one of the highest tornado-frequency areas in the country.",
+  "description_long": "Located on the Gulf Coast at the mouth of Mobile Bay, Mobile faces severe hurricane and storm-surge risk from June through November. The region also lies in a secondary peak of tornado activity — locally called \"Dixie Alley\" — with tornadoes possible year-round, including in winter. Mobile County is served by NWS Mobile (office code MOB) within forecast zone ALZ263 (Mobile Central)."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "jacksonville-fl",
+  "slug": "jacksonville-fl",
+  "city": "Jacksonville",
+  "state": "Florida",
+  "state_abbr": "FL",
+  "state_slug": "florida",
+  "county": "Duval",
+  "county_fips": "12031",
+  "nws_zone": "FLZ125",
+  "nws_office": "JAX",
+  "lat": 30.3322,
+  "lon": -81.6557,
+  "population": 949611,
+  "metro_area": "Jacksonville",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "flooding", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning", "flooding"],
+    "fall": ["hurricane", "tropical-storm", "flooding"],
+    "winter": ["cold-front", "freeze"]
+  },
+  "nearby_cities": ["orlando-fl", "savannah-ga", "tampa-fl"],
+  "alternate_names": ["Jacksonville, FL", "Jacksonville Florida", "Jax"],
+  "description_short": "Jacksonville is Florida's most populous city and the largest city by area in the contiguous United States, with significant coastal hurricane and flooding exposure.",
+  "description_long": "Located on the St. Johns River near Florida's northeastern coast, Jacksonville faces Atlantic hurricane and tropical storm risk from June through November, plus river flooding from heavy rain events. Duval County is consolidated with the city government and is served by NWS Jacksonville (office code JAX) within forecast zone FLZ125 (Coastal Duval)."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "houston-tx",
+  "slug": "houston-tx",
+  "city": "Houston",
+  "state": "Texas",
+  "state_abbr": "TX",
+  "state_slug": "texas",
+  "county": "Harris",
+  "county_fips": "48201",
+  "nws_zone": "TXZ213",
+  "nws_office": "HGX",
+  "lat": 29.7604,
+  "lon": -95.3698,
+  "population": 2302878,
+  "metro_area": "Houston-The Woodlands-Sugar Land",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "flooding", "severe-thunderstorm", "tornado", "extreme-heat"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding", "hail"],
+    "summer": ["hurricane", "tropical-storm", "extreme-heat", "lightning"],
+    "fall": ["hurricane", "tropical-storm", "flooding"],
+    "winter": ["cold-front", "ice-storm", "severe-thunderstorm"]
+  },
+  "nearby_cities": ["new-orleans-la", "mobile-al"],
+  "alternate_names": ["Houston, TX", "Houston Texas", "Greater Houston"],
+  "description_short": "Houston is the fourth-largest city in the United States and one of the most flood-prone major metros, exposed to Gulf hurricanes and severe spring storms.",
+  "description_long": "Located on the Gulf Coast plain of southeast Texas, Houston faces hurricane and tropical storm risk from the Gulf of Mexico, severe spring thunderstorms with tornadoes and hail, and chronic flooding from heavy rain events. Extreme summer heat and humidity are routine. Harris County is served by NWS Houston/Galveston (office code HGX) within forecast zone TXZ213 (Inland Harris)."
+}

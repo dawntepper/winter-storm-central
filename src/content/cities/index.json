@@ -1,12 +1,18 @@
 {
   "schema_version": "1.0",
   "cities": [
-    {
-      "slug": "miami-fl",
-      "city": "Miami",
-      "state": "Florida",
-      "state_slug": "florida",
-      "state_abbr": "FL"
-    }
+    { "slug": "charleston-sc",     "city": "Charleston",     "state": "South Carolina", "state_slug": "south-carolina", "state_abbr": "SC" },
+    { "slug": "fort-myers-fl",     "city": "Fort Myers",     "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "houston-tx",        "city": "Houston",        "state": "Texas",          "state_slug": "texas",          "state_abbr": "TX" },
+    { "slug": "jacksonville-fl",   "city": "Jacksonville",   "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "miami-fl",          "city": "Miami",          "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "mobile-al",         "city": "Mobile",         "state": "Alabama",        "state_slug": "alabama",        "state_abbr": "AL" },
+    { "slug": "new-orleans-la",    "city": "New Orleans",    "state": "Louisiana",      "state_slug": "louisiana",      "state_abbr": "LA" },
+    { "slug": "orlando-fl",        "city": "Orlando",        "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "pensacola-fl",      "city": "Pensacola",      "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "savannah-ga",       "city": "Savannah",       "state": "Georgia",        "state_slug": "georgia",        "state_abbr": "GA" },
+    { "slug": "tampa-fl",          "city": "Tampa",          "state": "Florida",        "state_slug": "florida",        "state_abbr": "FL" },
+    { "slug": "virginia-beach-va", "city": "Virginia Beach", "state": "Virginia",       "state_slug": "virginia",       "state_abbr": "VA" },
+    { "slug": "wilmington-nc",     "city": "Wilmington",     "state": "North Carolina", "state_slug": "north-carolina", "state_abbr": "NC" }
   ]
 }

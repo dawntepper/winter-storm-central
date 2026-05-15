@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "tampa-fl",
+  "slug": "tampa-fl",
+  "city": "Tampa",
+  "state": "Florida",
+  "state_abbr": "FL",
+  "state_slug": "florida",
+  "county": "Hillsborough",
+  "county_fips": "12057",
+  "nws_zone": "FLZ151",
+  "nws_office": "TBW",
+  "lat": 27.9506,
+  "lon": -82.4572,
+  "population": 398173,
+  "metro_area": "Tampa-St. Petersburg-Clearwater",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "flooding", "severe-thunderstorm", "lightning"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning", "flooding"],
+    "fall": ["hurricane", "tropical-storm"],
+    "winter": ["cold-front"]
+  },
+  "nearby_cities": ["orlando-fl", "fort-myers-fl", "jacksonville-fl"],
+  "alternate_names": ["Tampa, FL", "Tampa Florida", "Tampa Bay"],
+  "description_short": "Tampa is the largest city on Florida's west coast and one of the most hurricane-exposed metro areas in the Gulf of Mexico.",
+  "description_long": "Located on Tampa Bay along Florida's Gulf Coast, Tampa faces severe exposure to Atlantic hurricane activity from June through November, with the bay's shape amplifying storm surge risk. Summer afternoon thunderstorms make Tampa Bay the lightning capital of the United States. Hillsborough County is served by NWS Tampa Bay Area (office code TBW) and falls within forecast zone FLZ151 (Coastal Hillsborough)."
+}

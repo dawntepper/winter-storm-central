@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "orlando-fl",
+  "slug": "orlando-fl",
+  "city": "Orlando",
+  "state": "Florida",
+  "state_abbr": "FL",
+  "state_slug": "florida",
+  "county": "Orange",
+  "county_fips": "12095",
+  "nws_zone": "FLZ045",
+  "nws_office": "MLB",
+  "lat": 28.5384,
+  "lon": -81.3789,
+  "population": 316081,
+  "metro_area": "Orlando-Kissimmee-Sanford",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "severe-thunderstorm", "lightning", "tornado", "flooding"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning", "flooding", "hurricane", "tropical-storm"],
+    "fall": ["hurricane", "tropical-storm"],
+    "winter": ["cold-front", "freeze"]
+  },
+  "nearby_cities": ["tampa-fl", "jacksonville-fl", "fort-myers-fl"],
+  "alternate_names": ["Orlando, FL", "Orlando Florida", "Central Florida"],
+  "description_short": "Orlando sits in the center of the Florida peninsula and faces severe weather from every direction — hurricanes from either coast, plus year-round thunderstorm and tornado activity.",
+  "description_long": "Located in central Florida, Orlando is well inland but exposed to hurricane impacts that cross from either the Gulf or Atlantic coasts. The region is part of Florida's tornado alley and sees frequent severe thunderstorms, especially during summer afternoons. Orange County is served by NWS Melbourne (office code MLB) within forecast zone FLZ045 (Orange)."
+}

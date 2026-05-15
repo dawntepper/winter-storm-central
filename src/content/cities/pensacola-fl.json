@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "pensacola-fl",
+  "slug": "pensacola-fl",
+  "city": "Pensacola",
+  "state": "Florida",
+  "state_abbr": "FL",
+  "state_slug": "florida",
+  "county": "Escambia",
+  "county_fips": "12033",
+  "nws_zone": "FLZ202",
+  "nws_office": "MOB",
+  "lat": 30.4213,
+  "lon": -87.2169,
+  "population": 54312,
+  "metro_area": "Pensacola-Ferry Pass-Brent",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "storm-surge", "severe-thunderstorm", "tornado"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning"],
+    "fall": ["hurricane", "tropical-storm", "tornado"],
+    "winter": ["severe-thunderstorm", "tornado", "cold-front"]
+  },
+  "nearby_cities": ["mobile-al", "new-orleans-la"],
+  "alternate_names": ["Pensacola, FL", "Pensacola Florida", "Florida Panhandle"],
+  "description_short": "Pensacola anchors Florida's western panhandle and is one of the most frequently hurricane-impacted cities on the Gulf Coast.",
+  "description_long": "Located on Pensacola Bay where the Florida panhandle meets Alabama, Pensacola faces severe hurricane and storm-surge exposure throughout the Atlantic season. The region also sees year-round tornado activity and severe thunderstorms. Escambia County is served by NWS Mobile (office code MOB) within forecast zone FLZ202 (Coastal Escambia)."
+}

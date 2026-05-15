@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "charleston-sc",
+  "slug": "charleston-sc",
+  "city": "Charleston",
+  "state": "South Carolina",
+  "state_abbr": "SC",
+  "state_slug": "south-carolina",
+  "county": "Charleston",
+  "county_fips": "45019",
+  "nws_zone": "SCZ150",
+  "nws_office": "CHS",
+  "lat": 32.7765,
+  "lon": -79.9311,
+  "population": 153672,
+  "metro_area": "Charleston-North Charleston",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["hurricane", "tropical-storm", "storm-surge", "flooding", "severe-thunderstorm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "flooding"],
+    "summer": ["hurricane", "tropical-storm", "lightning"],
+    "fall": ["hurricane", "tropical-storm", "storm-surge"],
+    "winter": ["cold-front", "ice-storm", "freeze"]
+  },
+  "nearby_cities": ["savannah-ga", "wilmington-nc"],
+  "alternate_names": ["Charleston, SC", "Charleston South Carolina", "Lowcountry"],
+  "description_short": "Charleston is a historic peninsula city on the South Carolina coast, exposed to Atlantic hurricanes and chronic tidal flooding.",
+  "description_long": "Located where the Ashley and Cooper rivers meet the Atlantic, Charleston sits at sea level and faces severe hurricane and storm-surge risk from June through November, plus increasing tidal flooding (\"sunny day flooding\") on the highest astronomical tides. Charleston County is served by NWS Charleston (office code CHS) within forecast zone SCZ150 (Coastal Charleston)."
+}
