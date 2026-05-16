@@ -1,10 +1,11 @@
 import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { getCitySlugForLocation } from '../utils/cityLookup';
+import { ABBR_TO_SLUG } from '../data/stateConfig';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -868,6 +869,68 @@ function StateBorderHighlight({ stateCode }) {
   );
 }
 
+// City marker for state alert pages — small sky-blue dot + clickable label that links to /alerts/{slug}.
+// Visually distinct from red category-colored alert dots so users can see which markers lead to a city page.
+function StateCityMarker({ city }) {
+  const navigate = useNavigate();
+  const goToCity = (e) => {
+    if (e?.originalEvent) {
+      e.originalEvent.preventDefault?.();
+      e.originalEvent.stopPropagation?.();
+    }
+    navigate(`/alerts/${city.slug}`);
+  };
+
+  const labelIcon = useMemo(() => L.divIcon({
+    className: 'state-city-label-wrapper',
+    html: `<div class="state-city-label" style="
+      display: inline-block;
+      background: rgba(14, 165, 233, 0.92);
+      color: white;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      transform: translateX(-50%);
+      cursor: pointer;
+    ">${city.city}</div>`,
+    iconSize: null,
+    iconAnchor: [0, -10]
+  }), [city.city]);
+
+  return (
+    <>
+      <CircleMarker
+        center={[city.lat, city.lon]}
+        radius={5}
+        pathOptions={{
+          fillColor: '#0ea5e9',
+          fillOpacity: 0.95,
+          color: '#ffffff',
+          weight: 2
+        }}
+        eventHandlers={{ click: goToCity }}
+      >
+        <Tooltip direction="top" offset={[0, -8]} opacity={0.95} className="enhanced-tooltip">
+          <div className="px-1">
+            <div className="text-xs font-semibold text-slate-800">{city.city}</div>
+            <div className="text-[10px] text-sky-600">Click marker to open page</div>
+          </div>
+        </Tooltip>
+      </CircleMarker>
+      <Marker
+        position={[city.lat, city.lon]}
+        icon={labelIcon}
+        eventHandlers={{ click: goToCity }}
+      />
+    </>
+  );
+}
+
 // Preview marker - just a green label, no circle (shown before user clicks Add)
 function PreviewMarker({ location }) {
   if (!location) return null;
@@ -898,7 +961,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
@@ -1231,6 +1294,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               />
             ))}
 
+            {/* State page city markers — clickable links to /alerts/{slug} */}
+            {cityMarkers.map((city) => (
+              <StateCityMarker key={city.slug} city={city} />
+            ))}
+
             {/* Preview marker for extreme weather alerts - only show if not already a user location */}
             {previewLocation && !userLocations.some(loc =>
               loc.lat === previewLocation.lat && loc.lon === previewLocation.lon
@@ -1271,7 +1339,27 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                    hoveredAlert.category === 'tropical' ? '🌀' : '⚠️'}
                 </span>
                 <div>
-                  <h4 className="font-semibold text-slate-800 text-sm">{hoveredAlert.location}</h4>
+                  <h4 className="font-semibold text-slate-800 text-sm">
+                    {(() => {
+                      const m = (hoveredAlert.location || '').match(/^(.*?),\s*([A-Z]{2})$/);
+                      if (!m) return hoveredAlert.location;
+                      const abbr = m[2];
+                      const slug = ABBR_TO_SLUG[abbr];
+                      if (!slug) return hoveredAlert.location;
+                      return (
+                        <>
+                          {m[1]}{', '}
+                          <Link
+                            to={`/alerts/${slug}`}
+                            className="text-sky-600 hover:text-sky-700 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {abbr}
+                          </Link>
+                        </>
+                      );
+                    })()}
+                  </h4>
                   <p className="text-xs text-red-600 font-medium">{hoveredAlert.event}</p>
                 </div>
               </div>

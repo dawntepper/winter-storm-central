@@ -29,6 +29,14 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
   const stateSlug = alert.state ? ABBR_TO_SLUG[alert.state] : null;
   const citySlug = alert.state ? findCitySlugInText(alert.location || '', alert.state) : null;
 
+  // Split "Parmer, TX" → ["Parmer", "TX"] so each segment can be linked independently.
+  const locMatch = (alert.location || '').match(/^(.*?),\s*([A-Z]{2})$/);
+  const locCityPart = locMatch ? locMatch[1] : (alert.location || '');
+  const locStateAbbr = locMatch ? locMatch[2] : null;
+
+  const stopProp = (e) => e.stopPropagation();
+  const inlineLinkClass = 'text-sky-400 hover:text-sky-300 hover:underline transition-colors';
+
   // ───── Compact mode (dashboard widget) ─────
   if (mode === 'compact') {
     const handleCompactClick = () => {
@@ -55,10 +63,20 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
       }
     }, [expanded]);
 
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCompactClick();
+      }
+    };
+
     return (
       <div>
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={handleCompactClick}
+          onKeyDown={handleKeyDown}
           className="group flex items-center gap-2 px-3 py-2 hover:bg-slate-700/30 transition-colors rounded w-full text-left cursor-pointer"
         >
           {/* Rank badge */}
@@ -75,7 +93,35 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
           {/* State, City (top) / Warning name (below) */}
           <div className="flex-1 min-w-0">
             <span className="text-xs font-semibold text-slate-200 group-hover:text-white transition-colors truncate block">
-              {locationLine}
+              {stateSlug && stateName ? (
+                <Link to={`/alerts/${stateSlug}`} onClick={stopProp} className={inlineLinkClass}>
+                  {stateName}
+                </Link>
+              ) : (
+                stateName
+              )}
+              {locCityPart && (
+                <>
+                  {stateName ? ', ' : ''}
+                  {citySlug ? (
+                    <Link to={`/alerts/${citySlug}`} onClick={stopProp} className={inlineLinkClass}>
+                      {locCityPart}
+                    </Link>
+                  ) : (
+                    locCityPart
+                  )}
+                </>
+              )}
+              {locStateAbbr && <>{', '}{locStateAbbr}</>}
+              <svg
+                aria-label={expanded ? 'Collapse' : 'Expand'}
+                className={`inline-block w-3 h-3 ml-1.5 -mt-0.5 text-slate-500 group-hover:text-slate-300 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
             </span>
             <span className="text-[10px] text-slate-500 truncate block">{alert.event}</span>
           </div>
@@ -99,7 +145,7 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
               style={{ width: `${timeInfo.progress * 100}%`, backgroundColor: color }}
             />
           </div>
-        </button>
+        </div>
 
         {/* Animated expanded details */}
         <div

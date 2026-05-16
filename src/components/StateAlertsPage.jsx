@@ -10,7 +10,7 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import StormMap from './StormMap';
-import { CitySearchBar, CityDirectory } from './CitiesInState';
+import { CitySearchBar, CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import {
   US_STATES, SLUG_TO_ABBR, STATE_NAMES, NEARBY_STATES, ABBR_TO_SLUG, getStateUrl
 } from '../data/stateConfig';
@@ -459,6 +459,12 @@ export default function StateAlertsPage() {
     return alertsData.allAlerts.filter(a => a.state === stateAbbr);
   }, [alertsData, stateAbbr]);
 
+  // Cities in this state with dedicated pages — rendered as clickable map markers
+  const stateCityMarkers = useMemo(
+    () => (stateAbbr ? citiesWithCoordsForState(stateAbbr) : []),
+    [stateAbbr]
+  );
+
   // Compute alert counts by state (for nearby states badges)
   const alertCountsByState = useMemo(() => {
     if (!alertsData?.allAlerts) return {};
@@ -616,6 +622,7 @@ export default function StateAlertsPage() {
               stormPhase="active"
               userLocations={[]}
               alerts={stateAlerts}
+              cityMarkers={stateCityMarkers}
               isHero
               centerOn={{
                 lat: stateData.center[0],
