@@ -1,0 +1,34 @@
+{
+  "title": "Plains & Midwest Severe Weather Outbreak — May 2026",
+  "slug": "plains-midwest-severe-outbreak-may-2026",
+  "type": "severe_weather",
+  "status": "active",
+  "startDate": "2026-05-16",
+  "endDate": "2026-05-18",
+  "description": "A multi-day severe weather outbreak is sweeping the central Plains and Upper Midwest, with supercells already producing damage across Kansas and Missouri Saturday and an Enhanced Risk in effect from central Nebraska to southwest Minnesota Sunday. Very large hail, damaging winds, and strong tornadoes are all on the table. Track real-time conditions, storm reports, and alerts.",
+  "impacts": [
+    "Supercell thunderstorms with hail up to 2-3 inches in diameter from Nebraska into western Iowa",
+    "Strong tornadoes possible Sunday afternoon and evening across the Enhanced Risk area",
+    "Damaging wind gusts of 60-80 mph as storms cluster and grow upscale Sunday night into southeast SD, northwest IA, and southwest MN",
+    "Excessive rainfall and flash flooding risk across northern Missouri, Iowa, and the Kansas/Nebraska border",
+    "Severe weather threat continues Monday across the Upper Midwest with damaging wind the primary hazard"
+  ],
+  "affectedStates": ["NE", "IA", "MN", "SD", "KS", "MO", "OK", "TX", "CO", "IL", "WI"],
+  "alertCategories": ["severe", "flood"],
+  "mapCenter": {
+    "lat": 41.5,
+    "lon": -97.5
+  },
+  "mapZoom": 5,
+  "seoTitle": "Plains & Midwest Severe Weather Tracker | May 16-18 2026",
+  "seoDescription": "Track the live May 2026 severe weather outbreak — supercells, tornadoes, and very large hail from Nebraska to Minnesota. Real-time alerts, radar, and storm reports.",
+  "ogImageUrl": "",
+  "keywords": [
+    "plains severe weather",
+    "midwest tornado outbreak",
+    "nebraska tornadoes",
+    "iowa severe weather",
+    "may 2026 severe weather",
+    "enhanced risk tornadoes"
+  ]
+}
