@@ -1,12 +1,12 @@
 {
-  "title": "Plains & Midwest Severe Weather Outbreak — May 16-21, 2026",
+  "title": "Plains & Midwest Severe Weather Outbreak — May 16-20, 2026",
   "slug": "plains-midwest-severe-outbreak-may-2026",
   "type": "severe_weather",
   "type_label": "Severe Weather",
   "status": "active",
   "start_date": "2026-05-16",
-  "end_date": "2026-05-21",
-  "description": "*** MAY 18 UPDATE: SPC has upgraded the threat to MODERATE RISK across central Kansas and southeast Nebraska, with strong tornado potential (EF2+) and very large hail expected during the late afternoon and evening across Kansas, Nebraska, Iowa, and northwest Missouri. | \n\n\nA multi-day severe weather outbreak is sweeping the central Plains and Upper Midwest, with supercells already producing damage across Kansas and Missouri Saturday and an Enhanced Risk in effect from central Nebraska to southwest Minnesota Sunday. Very large hail, damaging winds, and strong tornadoes are all on the table. Track real-time conditions, storm reports, and alerts.",
+  "end_date": "2026-05-20",
+  "description": "A three-day severe weather outbreak swept the central Plains and Upper Midwest from May 16-18, 2026, producing at least 17 confirmed tornadoes across Illinois, Nebraska, Kansas, and Iowa. The SPC issued Enhanced Risk on May 17 and upgraded to Moderate Risk on May 18, with strong tornado potential (EF2+) and very large hail across Kansas, Nebraska, Iowa, and northwest Missouri. Track post-event storm reports, damage assessments, and continued weather impacts.",
   "impacts": [
     "Supercell thunderstorms with hail up to 2-3 inches in diameter from Nebraska into western Iowa",
     "Strong tornadoes possible Sunday afternoon and evening across the Enhanced Risk area",
