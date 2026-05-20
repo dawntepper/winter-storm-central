@@ -1,0 +1,222 @@
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  AFFILIATE_PRODUCTS,
+  AFFILIATE_CATEGORIES,
+  getProductsByCategory,
+} from '../data/affiliateProducts';
+import ProductCard from '../components/ProductCard';
+import AlertSignupBar from '../components/AlertSignupBar';
+import ContactLink from '../components/ContactLink';
+
+const PAGE_TITLE = 'Extreme Weather Prep Guide | StormTracking';
+const PAGE_DESCRIPTION = 'Recommended gear for hurricane season, severe weather, and extended outages. Honest reviews from a weather site that focuses on multi-hazard preparedness. We may earn from qualifying purchases.';
+const CANONICAL_URL = 'https://stormtracking.io/prep';
+
+function setPrepMetaTags() {
+  document.title = PAGE_TITLE;
+  const setOrCreate = (selector, attr, value) => {
+    let el = document.querySelector(selector);
+    if (!el) {
+      const [tag, prop] = selector.match(/^(\w+)\[([^=]+)=/)?.slice(1) || [];
+      if (!tag || !prop) return;
+      el = document.createElement(tag);
+      const propValue = selector.match(/=["']?([^"'\]]+)/)?.[1];
+      if (propValue) el.setAttribute(prop, propValue);
+      document.head.appendChild(el);
+    }
+    el.setAttribute(attr, value);
+  };
+
+  setOrCreate('meta[name="description"]', 'content', PAGE_DESCRIPTION);
+  setOrCreate('link[rel="canonical"]', 'href', CANONICAL_URL);
+  setOrCreate('meta[property="og:title"]', 'content', PAGE_TITLE);
+  setOrCreate('meta[property="og:description"]', 'content', PAGE_DESCRIPTION);
+  setOrCreate('meta[property="og:url"]', 'content', CANONICAL_URL);
+  setOrCreate('meta[name="twitter:title"]', 'content', PAGE_TITLE);
+  setOrCreate('meta[name="twitter:description"]', 'content', PAGE_DESCRIPTION);
+}
+
+function resetPrepMetaTags() {
+  document.title = 'StormTracking - Real-Time Extreme Weather Alerts';
+}
+
+const SCHEMA_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Extreme Weather Prep Guide',
+  description: 'Recommended gear for hurricane season, severe weather, and extended outages',
+  url: CANONICAL_URL,
+  datePublished: '2026-05-27',
+  publisher: {
+    '@type': 'Organization',
+    name: 'StormTracking',
+    url: 'https://stormtracking.io',
+  },
+};
+
+export default function PrepPage() {
+  useEffect(() => {
+    setPrepMetaTags();
+    return () => resetPrepMetaTags();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-900">
+      {/* Schema.org structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({ ...SCHEMA_JSON_LD, dateModified: new Date().toISOString().slice(0, 10) }) }}
+      />
+
+      {/* Header */}
+      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="hidden sm:inline text-sm">Home</span>
+          </Link>
+          <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
+            <span className="text-xl" aria-hidden="true">📡</span>
+            <span className="text-lg sm:text-xl font-bold">StormTracking</span>
+          </Link>
+          <div className="w-12" aria-hidden="true" />
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="bg-slate-900 px-4 sm:px-6 py-10 sm:py-14 border-b border-slate-800">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-[11px] sm:text-xs font-semibold tracking-widest text-sky-400 uppercase mb-3">
+            STORMTRACKING.IO / PREP
+          </p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+            Extreme weather prep, recommended
+          </h1>
+          <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
+            Gear that keeps you informed, powered, and safe when the storm
+            knocks out power, water, or both. We only recommend what we'd buy
+            ourselves.
+          </p>
+        </div>
+      </section>
+
+      {/* Affiliate disclosure callout */}
+      <div className="bg-sky-500/5 border-b border-sky-500/20 px-4 sm:px-6 py-4">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-sm text-sky-100/80 leading-relaxed">
+            <span className="font-semibold text-sky-200">Affiliate disclosure:</span>{' '}
+            We may earn a commission from purchases through these links — at no
+            extra cost to you. It helps keep StormTracking running. We never
+            link to products we wouldn't actually use.
+          </p>
+        </div>
+      </div>
+
+      {/* Sticky anchor nav */}
+      <nav
+        aria-label="Prep categories"
+        className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 sm:px-6 py-3"
+      >
+        <ul className="max-w-5xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide">
+          {AFFILIATE_CATEGORIES.map(cat => (
+            <li key={cat.id} className="flex-shrink-0">
+              <a
+                href={`#${cat.anchor}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-full border border-slate-700 transition-colors whitespace-nowrap"
+              >
+                <span aria-hidden="true">{cat.icon}</span>
+                {cat.navLabel}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Category sections */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12 sm:space-y-16">
+        {AFFILIATE_CATEGORIES.map(cat => {
+          const products = getProductsByCategory(cat.id);
+          const isPet = cat.isPetSection;
+          const sectionBg = isPet ? 'bg-rose-50' : 'bg-slate-100';
+          const sectionBorder = isPet ? 'border-rose-200' : 'border-slate-200';
+          const titleColor = isPet ? 'text-rose-900' : 'text-slate-900';
+          const descColor = isPet ? 'text-rose-800/80' : 'text-slate-600';
+
+          return (
+            <section
+              key={cat.id}
+              id={cat.anchor}
+              aria-labelledby={`${cat.anchor}-heading`}
+              className={`scroll-mt-20 rounded-2xl border ${sectionBorder} ${sectionBg} p-6 sm:p-8`}
+            >
+              <header className="mb-6 sm:mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl" aria-hidden="true">{cat.icon}</span>
+                  <h2 id={`${cat.anchor}-heading`} className={`text-xl sm:text-2xl font-bold ${titleColor}`}>
+                    {cat.title}
+                  </h2>
+                </div>
+                <p className={`text-sm sm:text-base ${descColor} leading-relaxed max-w-2xl`}>
+                  {cat.description}
+                </p>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                {products.map(product => (
+                  <ProductCard
+                    key={product.productId}
+                    product={product}
+                    placement="prep-page"
+                    accent={isPet ? 'pet' : 'default'}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </main>
+
+      {/* Newsletter pitch — the AlertSignupBar slide-up handles the actual form */}
+      <section className="bg-slate-800 border-y border-slate-700 px-4 sm:px-6 py-12">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
+            Get the StormTracking newsletter
+          </h2>
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-2">
+            Weekly during hurricane season. Free, no spam, no urgency manufactured.
+          </p>
+          <p className="text-xs text-slate-500">
+            A signup form will slide up in a moment. Or reach out via{' '}
+            <ContactLink className="text-sky-400 hover:text-sky-300">StormTracking Support</ContactLink>.
+          </p>
+        </div>
+      </section>
+
+      {/* FTC disclosure footer */}
+      <footer className="bg-slate-900 px-4 sm:px-6 py-10 border-t border-slate-800">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wide">
+            Affiliate disclosure
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            As an Amazon Associate, StormTracking earns from qualifying
+            purchases. The commission we earn helps fund hosting, storm data
+            feeds, and content development. Affiliate relationships never
+            influence our product recommendations — we only list things we'd
+            actually buy ourselves. If we wouldn't recommend it to a friend,
+            it doesn't go on this page.
+          </p>
+          <p className="text-xs text-slate-500 mt-4">
+            Showing {AFFILIATE_PRODUCTS.length} products across {AFFILIATE_CATEGORIES.length} categories.
+            Last updated {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
+          </p>
+        </div>
+      </footer>
+
+      <AlertSignupBar />
+    </div>
+  );
+}

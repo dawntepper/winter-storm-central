@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
+import EssentialsCard from './EssentialsCard';
 import { getStormEventBySlug } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { STATE_CENTROIDS } from '../data/stateCentroids';
@@ -1427,6 +1428,18 @@ export default function StormEventPage() {
             </div>
           </div>
           </>
+        )}
+
+        {/* Storm prep essentials — only surfaces for hurricane / severe_weather
+            storm types, and even then is gated by AFFILIATE_LINKS_ENABLED so
+            the card returns null until Dawn flips the feature flag. */}
+        {(event.type === 'hurricane' || event.type === 'severe_weather') && (
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 mt-10">
+            <EssentialsCard
+              variant={event.type === 'hurricane' ? 'storm-hurricane' : 'storm-severe'}
+              placement={event.type === 'hurricane' ? 'storm-hurricane' : 'storm-severe'}
+            />
+          </section>
         )}
       </main>
 

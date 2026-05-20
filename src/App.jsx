@@ -16,6 +16,7 @@ import LiveAlertsWidget from './components/LiveAlertsWidget';
 import ContactLink from './components/ContactLink';
 import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
+import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import {
@@ -1036,6 +1037,13 @@ export default function App() {
               );
             })}
           </div>
+        </section>
+
+        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED feature flag.
+            Renders null until Dawn flips the env var on (Commit 2 ships the page
+            but keeps the affiliate CTAs hidden until placeholder URLs are real). */}
+        <section className="mt-8 max-w-2xl mx-auto">
+          <EssentialsCard variant="homepage" placement="homepage" />
         </section>
 
         {/* Footer */}

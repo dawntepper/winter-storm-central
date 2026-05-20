@@ -90,6 +90,7 @@ function buildSitemap(storms, cities) {
 ${urlEntry(BASE_URL, { lastmod: now, changefreq: 'daily', priority: '1.0' })}
 ${urlEntry(`${BASE_URL}/radar`, { lastmod: now, changefreq: 'daily', priority: '0.9' })}
 ${urlEntry(`${BASE_URL}/alerts`, { lastmod: now, changefreq: 'hourly', priority: '0.8' })}
+${urlEntry(`${BASE_URL}/prep`, { lastmod: now, changefreq: 'weekly', priority: '0.9' })}
 ${stateUrls}
 ${cityUrls}
 ${stormUrls}
