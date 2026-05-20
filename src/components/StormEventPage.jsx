@@ -20,7 +20,9 @@ import {
   trackStormPageEntry,
   trackStormRadarClick,
   trackRadarLinkClick,
-  trackBrowseByStateClick
+  trackBrowseByStateClick,
+  setNavSource,
+  NAV_SOURCES
 } from '../utils/analytics';
 
 // Category header colors
@@ -1070,13 +1072,14 @@ export default function StormEventPage() {
           {/* Nav Links & Share */}
           <div className="flex items-center gap-2 sm:gap-3">
             <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-            <Link to="/radar" onClick={() => trackRadarLinkClick('storm_header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
+            <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
             <select
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) {
                   const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'storm_header' });
+                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.STORM_PAGE_STATE_DROPDOWN });
+                  setNavSource(NAV_SOURCES.STORM_PAGE_STATE_DROPDOWN);
                   navigate(`/alerts/${e.target.value}`);
                   e.target.value = '';
                 }
@@ -1194,7 +1197,7 @@ export default function StormEventPage() {
             </div>
             <Link
               to="/radar"
-              onClick={() => trackStormRadarClick({ stormSlug: event.slug, source: 'storm_page_cta' })}
+              onClick={() => { trackStormRadarClick({ stormSlug: event.slug, source: NAV_SOURCES.STORM_PAGE_RADAR_LINK }); setNavSource(NAV_SOURCES.STORM_PAGE_RADAR_LINK); }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
             >
               <span>📡</span> View Full Radar Map

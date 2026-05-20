@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick } from '../utils/analytics';
+import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
 import { US_STATES } from '../data/stateConfig';
 import ContactLink from './ContactLink';
 
@@ -166,14 +166,15 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
               <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-              <Link to="/radar" onClick={() => trackRadarLinkClick('header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
+              <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
               <span className="relative inline-flex items-center">
                 <select
                   defaultValue=""
                   onChange={(e) => {
                     if (e.target.value) {
                       const abbr = US_STATES[e.target.value]?.abbr;
-                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'header_dropdown' });
+                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN });
+                      setNavSource(NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN);
                       navigate(`/alerts/${e.target.value}`);
                       e.target.value = '';
                     }

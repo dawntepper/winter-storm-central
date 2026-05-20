@@ -262,15 +262,18 @@ export function stopSessionTracking() {
 // ============================================
 
 /**
- * Track storm page view with storm details
+ * Track storm page view with storm details.
+ * Pass `source` explicitly when called from a known handler, or omit to let
+ * the helper resolve it from the stashed nav source / referrer.
  */
-export function trackStormPageView({ stormName, stormSlug, stormType, stormStatus, affectedStates }) {
+export function trackStormPageView({ stormName, stormSlug, stormType, stormStatus, affectedStates, source }) {
   track('Storm Page View', {
     stormName,
     stormSlug,
     stormType,
     stormStatus,
-    affectedStates // comma-separated string
+    affectedStates, // comma-separated string
+    source: resolveSource(source)
   });
 }
 
@@ -397,10 +400,18 @@ export function trackRadarStormEventClick({ stormSlug, stormName }) {
 // ============================================
 
 /**
- * Track state alerts page view
+ * Track state alerts page view.
+ * Pass `source` explicitly when called from a known handler, or omit to let
+ * the helper resolve it from the stashed nav source (set by button clicks
+ * before navigation) or the referrer.
  */
-export function trackStateAlertsPageView({ stateCode, stateName, alertCount }) {
-  track('State Alerts Page View', { stateCode, stateName, alertCount });
+export function trackStateAlertsPageView({ stateCode, stateName, alertCount, source }) {
+  track('State Alerts Page View', {
+    stateCode,
+    stateName,
+    alertCount,
+    source: resolveSource(source)
+  });
 }
 
 /**
@@ -467,6 +478,229 @@ export function trackLocationSearchFailed(searchTerm, error) {
   track('Location Search Failed', {
     search_term: searchTerm,
     error: error
+  });
+}
+
+// ============================================
+// NAVIGATION SOURCE TRACKING
+// ============================================
+//
+// Architecture: every navigation event (state page, storm page, radar page)
+// records a `source` prop describing HOW the user got there. This is how we
+// answer "do users find state pages via the homepage map, the dropdown, or
+// the alert popup?" in Plausible.
+//
+// Pattern:
+//   1. Button click handlers call setNavSource(NAV_SOURCES.X) immediately
+//      before navigate(). The source is stashed in sessionStorage.
+//   2. The destination page's mount effect calls trackXPageView(...) which
+//      reads + clears the stashed source. If no flag is set (typed URL,
+//      browser back/forward, bookmark, external referral), the helper falls
+//      back to detectSourceFromReferrer() so every visit has a source.
+//   3. resolveSource(explicit) used internally: explicit > stashed > referrer.
+//
+// One event per visit, no duplication. The flag is single-use — read clears
+// it, so a stale flag from a previous navigation can't poison the next page.
+//
+// To add a new source value:
+//   1. Add it to NAV_SOURCES below with a descriptive constant name
+//   2. Call setNavSource(NAV_SOURCES.YOUR_NEW_SOURCE) in your button handler
+//   3. No change needed in the destination page — it already reads the flag
+//
+// Never hardcode source strings at call sites. Always use NAV_SOURCES.X —
+// hardcoded strings create dashboard noise (typos, casing drift) and break
+// the audit chain.
+
+export const NAV_SOURCES = {
+  // Homepage origins
+  HOMEPAGE_BANNER: 'homepage_banner',                  // Active storm banner above map
+  HOMEPAGE_ALERT_POPUP: 'homepage_alert_popup',        // State link inside map alert hover popup
+  HOMEPAGE_STATE_DROPDOWN: 'homepage_state_dropdown',  // Header "State Weather/Radar" select on /
+  HOMEPAGE_RADAR_WIDGET: 'homepage_radar_widget',      // "Explore Radar Maps" CTA on homepage
+  HOMEPAGE_QUICK_LINK: 'homepage_quick_link',
+
+  // Inline state dropdowns on non-homepage pages
+  STATE_PAGE_STATE_DROPDOWN: 'state_page_state_dropdown',
+  RADAR_PAGE_STATE_DROPDOWN: 'radar_page_state_dropdown',
+  STORM_PAGE_STATE_DROPDOWN: 'storm_page_state_dropdown',
+
+  // State-page outbound nav
+  STATE_PAGE_RADAR_LINK: 'state_page_radar_link',
+  STATE_PAGE_STORM_LINK: 'state_page_storm_link',
+
+  // Storm-page outbound nav
+  STORM_PAGE_LINK: 'storm_page_link',
+  STORM_PAGE_RADAR_LINK: 'storm_page_radar_link',
+
+  // Radar-page outbound nav
+  RADAR_PAGE_LINK: 'radar_page_link',
+
+  // Generic
+  HEADER_NAVIGATION: 'header_navigation',
+  FOOTER_LINK: 'footer_link',
+  INTERNAL_LINK: 'internal_link',
+  ESSENTIALS_CARD: 'essentials_card',
+  STATE_DIRECTORY_PAGE: 'state_directory_page',
+  DIRECT_URL: 'direct_url',
+  SEARCH_ENGINE: 'search_engine',
+  SOCIAL_REFERRAL: 'social_referral',
+};
+
+// How a location save was triggered. STATE_PAGE_SAVE_BUTTON is intentionally
+// omitted — state pages have no save button today. Add the constant when the
+// feature is built.
+export const SAVE_TRIGGERS = {
+  CHECK_LOCATION_BUTTON: 'check_location_button',
+  YOUR_LOCATIONS_WIDGET: 'your_locations_widget',
+  MAP_LOCATION_PIN_CLICK: 'map_location_pin_click',
+  AUTO_GEOLOCATE: 'auto_geolocate',
+};
+
+// Homepage map-region click sources. Neither StateHeatmap nor MostImpactedStates
+// navigates to /alerts/{state} today — clicks just zoom the homepage map. The
+// event captures interest signal: which states do users click on?
+export const MAP_REGION_SOURCES = {
+  HEATMAP: 'heatmap',
+  MOST_IMPACTED_LIST: 'most_impacted_list',
+};
+
+const NAV_SOURCE_KEY = 'st_nav_source';
+
+/**
+ * Stash a navigation source for the next destination-page mount to consume.
+ * Call from button click handlers immediately before navigate(...).
+ */
+export function setNavSource(source) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(NAV_SOURCE_KEY, source);
+  } catch {
+    // Silent — analytics never breaks the app
+  }
+}
+
+/**
+ * Read + clear the stashed nav source. Returns null if none set.
+ * Called internally by resolveSource(); callers usually don't need this.
+ */
+export function readNavSource() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value = sessionStorage.getItem(NAV_SOURCE_KEY);
+    if (value) sessionStorage.removeItem(NAV_SOURCE_KEY);
+    return value || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fallback for direct loads / bookmarks / external referrals: derive a
+ * navigation source from document.referrer. Categorizes into internal,
+ * search engine, social, or direct.
+ */
+export function detectSourceFromReferrer() {
+  if (typeof document === 'undefined') return NAV_SOURCES.DIRECT_URL;
+  const referrer = document.referrer;
+  if (!referrer) return NAV_SOURCES.DIRECT_URL;
+
+  let referrerHost;
+  try {
+    referrerHost = new URL(referrer).hostname;
+  } catch {
+    return NAV_SOURCES.DIRECT_URL;
+  }
+
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+  if (referrerHost === currentHost) return NAV_SOURCES.INTERNAL_LINK;
+
+  const searchEngines = ['google.', 'bing.', 'duckduckgo.', 'yahoo.', 'chatgpt.', 'copilot.', 'perplexity.'];
+  if (searchEngines.some(se => referrerHost.includes(se))) return NAV_SOURCES.SEARCH_ENGINE;
+
+  const socials = ['instagram.', 'facebook.', 'twitter.', 'x.com', 't.co', 'threads.', 'linkedin.', 'reddit.'];
+  if (socials.some(s => referrerHost.includes(s))) return NAV_SOURCES.SOCIAL_REFERRAL;
+
+  return NAV_SOURCES.INTERNAL_LINK;
+}
+
+/** Resolve a source: explicit > stashed > referrer-derived. Always non-empty. */
+function resolveSource(explicit) {
+  return explicit || readNavSource() || detectSourceFromReferrer();
+}
+
+function normalizeSlug(value) {
+  return (value || '').toLowerCase().replace(/\s+/g, '-');
+}
+
+// ============================================
+// TYPED NAVIGATION HELPERS
+// ============================================
+
+/**
+ * Fire 'Radar Page View' on /radar mount. NEW event (separate from the
+ * existing 'Radar Link Click' which fires on the click intent).
+ * stateContext defaults to 'national'; supports a future state-scoped radar.
+ */
+export function trackRadarPageView(source, stateContext = 'national') {
+  track('Radar Page View', {
+    source: resolveSource(source),
+    state_context: normalizeSlug(stateContext)
+  });
+}
+
+/**
+ * Fire 'Map Region Click' for non-navigating state interactions on the
+ * homepage (StateHeatmap, MostImpactedStates). Captures interest, not action.
+ * regionSource should be one of MAP_REGION_SOURCES.
+ */
+export function trackMapRegionClick(stateAbbr, regionSource) {
+  track('Map Region Click', {
+    state: stateAbbr,
+    source: regionSource
+  });
+}
+
+/**
+ * Fire 'Affiliate Click' when user clicks an Amazon CTA on the /prep page.
+ * Wired up in Commit 2.
+ */
+export function trackAffiliateClick(productId, category, tier, placement) {
+  track('Affiliate Click', {
+    product: productId,
+    category,
+    tier,
+    placement
+  });
+}
+
+/**
+ * Fire 'Essentials Card Click' when user clicks a product inside an
+ * EssentialsCard on homepage / state pages / storm pages. Wired up in
+ * Commits 2/3.
+ */
+export function trackEssentialsCardClick(productId, placement) {
+  track('Essentials Card Click', {
+    product: productId,
+    placement,
+    destination: 'prep-page'
+  });
+}
+
+/**
+ * Rich location-change event. Fires 'Location Count Changed' with full
+ * trigger context. Call from explicit UI handlers (Check Location CTA,
+ * Your Locations widget toggle, etc.). The existing trackLocationCountChanged
+ * effect still fires alongside for the basic count signal.
+ *
+ * action: 'add' | 'remove'
+ * trigger: SAVE_TRIGGERS.X
+ */
+export function trackLocationChange(action, trigger, locationState, isFirstLocation) {
+  track('Location Count Changed', {
+    action,
+    trigger,
+    location_state: normalizeSlug(locationState),
+    is_first_location: isFirstLocation
   });
 }
 
@@ -607,5 +841,17 @@ export default {
   trackStateAlertsPageView,
   trackStateAlertDetailView,
   trackStateNearbyClick,
-  trackBrowseByStateClick
+  trackBrowseByStateClick,
+  // Navigation source tracking
+  NAV_SOURCES,
+  SAVE_TRIGGERS,
+  MAP_REGION_SOURCES,
+  setNavSource,
+  readNavSource,
+  detectSourceFromReferrer,
+  trackRadarPageView,
+  trackMapRegionClick,
+  trackAffiliateClick,
+  trackEssentialsCardClick,
+  trackLocationChange
 };

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { STATE_NAMES } from '../data/stateConfig';
 import { ALERT_CATEGORIES } from '../../shared/nws-alert-parser';
+import { trackMapRegionClick, MAP_REGION_SOURCES } from '../utils/analytics';
 
 const TOP_N = 5;
 
@@ -80,7 +81,10 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
         {states.map((st, i) => (
           <button
             key={st.abbr}
-            onClick={() => onStateZoom?.(st.abbr)}
+            onClick={() => {
+              trackMapRegionClick(st.abbr, MAP_REGION_SOURCES.MOST_IMPACTED_LIST);
+              onStateZoom?.(st.abbr);
+            }}
             className="group w-full flex items-center gap-2 hover:bg-slate-700/30 rounded px-1 -mx-1 py-0.5 transition-colors cursor-pointer text-left"
           >
             {/* Rank */}

@@ -9,7 +9,7 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
 import { US_STATES } from '../data/stateConfig';
-import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick } from '../utils/analytics';
+import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -133,7 +133,7 @@ function ActiveStormsHighlight() {
             <Link
               key={storm.id || storm.slug}
               to={`/storm/${storm.slug}`}
-              onClick={() => trackRadarStormEventClick({ stormSlug: storm.slug, stormName: storm.title })}
+              onClick={() => { trackRadarStormEventClick({ stormSlug: storm.slug, stormName: storm.title }); setNavSource(NAV_SOURCES.RADAR_PAGE_LINK); }}
               className="flex items-center gap-4 px-4 py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg transition-all"
             >
               <span className="text-2xl">{icon}</span>
@@ -203,6 +203,13 @@ export default function RadarPage() {
     return () => resetMetaTags();
   }, []);
 
+  // Fire 'Radar Page View' once per mount. Source resolves from the
+  // sessionStorage nav flag (set by the originating click) or falls back
+  // to detectSourceFromReferrer() for direct URL loads / bookmarks.
+  useEffect(() => {
+    trackRadarPageView();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -226,7 +233,8 @@ export default function RadarPage() {
               onChange={(e) => {
                 if (e.target.value) {
                   const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'radar_header' });
+                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN });
+                  setNavSource(NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN);
                   navigate(`/alerts/${e.target.value}`);
                   e.target.value = '';
                 }

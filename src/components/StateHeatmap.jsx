@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { STATE_NAMES } from '../data/stateConfig';
 import { ALERT_CATEGORIES } from '../../shared/nws-alert-parser';
+import { trackMapRegionClick, MAP_REGION_SOURCES } from '../utils/analytics';
 
 // Compact US grid layout — approximate geographic positions
 // Each entry: [row, col, abbr]
@@ -176,7 +177,10 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
               }}
               onMouseEnter={() => setHoveredState(abbr)}
               onMouseLeave={() => setHoveredState(null)}
-              onClick={() => onStateZoom?.(abbr)}
+              onClick={() => {
+                trackMapRegionClick(abbr, MAP_REGION_SOURCES.HEATMAP);
+                onStateZoom?.(abbr);
+              }}
             >
               <span
                 className="text-[8px] font-bold leading-none"

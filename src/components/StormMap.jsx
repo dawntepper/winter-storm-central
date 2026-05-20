@@ -12,7 +12,9 @@ import {
   trackMapReset,
   trackMapAlertClicked,
   trackAlertDetailView,
-  trackGeolocationUsed
+  trackGeolocationUsed,
+  setNavSource,
+  NAV_SOURCES
 } from '../utils/analytics';
 
 /**
@@ -1352,7 +1354,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                           <Link
                             to={`/alerts/${slug}`}
                             className="text-sky-600 hover:text-sky-700 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
+                            }}
                           >
                             {abbr}
                           </Link>

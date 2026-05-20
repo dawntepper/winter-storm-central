@@ -28,7 +28,11 @@ import {
   trackLocationRemoved,
   trackStormBannerClick,
   trackRadarLinkClick,
-  trackBrowseByStateClick
+  trackBrowseByStateClick,
+  trackLocationChange,
+  setNavSource,
+  NAV_SOURCES,
+  SAVE_TRIGGERS
 } from './utils/analytics';
 
 const SEARCH_LOCATIONS_KEY = 'winterStorm_userLocations';
@@ -218,11 +222,14 @@ function StormEventBanner() {
   return (
     <Link
       to={`/storm/${primaryEvent.slug}`}
-      onClick={() => trackStormBannerClick({
-        stormSlug: primaryEvent.slug,
-        stormName: primaryEvent.title,
-        source: 'homepage_banner'
-      })}
+      onClick={() => {
+        trackStormBannerClick({
+          stormSlug: primaryEvent.slug,
+          stormName: primaryEvent.title,
+          source: NAV_SOURCES.HOMEPAGE_BANNER
+        });
+        setNavSource(NAV_SOURCES.HOMEPAGE_BANNER);
+      }}
       className={`block border transition-all ${
         primaryEvent.status === 'active'
           ? 'bg-gradient-to-r from-emerald-900/80 to-teal-900/80 border-emerald-500/30 hover:border-emerald-400/50'
@@ -834,7 +841,7 @@ export default function App() {
                   Choose from 9 color schemes on the full Radar Maps page. Perfect for tracking
                   winter storms, hurricanes, thunderstorms, and other extreme weather events.
                 </p>
-                <Link to="/radar" onClick={() => trackRadarLinkClick('homepage_desktop')} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
+                <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HOMEPAGE_RADAR_WIDGET); setNavSource(NAV_SOURCES.HOMEPAGE_RADAR_WIDGET); }} className="text-sm text-sky-400 hover:text-sky-300 font-medium">
                   Explore Radar Maps →
                 </Link>
               </section>

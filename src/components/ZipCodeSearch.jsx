@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { trackLocationSaved, trackLocationSearch, trackLocationSearchFailed } from '../utils/analytics';
+import { trackLocationSaved, trackLocationSearch, trackLocationSearchFailed, trackLocationChange, SAVE_TRIGGERS } from '../utils/analytics';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -902,12 +902,16 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
 
     if (!locationData) return;
 
-    // Track location added to map
-    if (checked && window.plausible) {
-      // Extract state from location name (e.g., "City, ST" -> "ST")
+    // Track location toggled on the map. Fires 'Location Count Changed' with
+    // full trigger context via the analytics utility (replaces a previous
+    // direct window.plausible call for 'Location Added').
+    if (checked) {
       const state = locationData.name?.split(',').pop()?.trim() || 'Unknown';
-      const totalLocations = Object.values(savedLocations).filter(l => l.onMap).length + 1;
-      window.plausible('Location Added', { props: { state, count: totalLocations } });
+      const existingOnMap = Object.values(savedLocations).filter(l => l.onMap).length;
+      trackLocationChange('add', SAVE_TRIGGERS.YOUR_LOCATIONS_WIDGET, state, existingOnMap === 0);
+    } else {
+      const state = locationData.name?.split(',').pop()?.trim() || 'Unknown';
+      trackLocationChange('remove', SAVE_TRIGGERS.YOUR_LOCATIONS_WIDGET, state, false);
     }
 
     const newLocations = {

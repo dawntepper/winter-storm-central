@@ -19,7 +19,9 @@ import {
   trackStateAlertDetailView,
   trackStateNearbyClick,
   trackBrowseByStateClick,
-  trackRadarLinkClick
+  trackRadarLinkClick,
+  setNavSource,
+  NAV_SOURCES
 } from '../utils/analytics';
 
 // =============================================
@@ -485,7 +487,12 @@ export default function StateAlertsPage() {
     return () => resetMetaTags();
   }, [stateSlug, stateData]);
 
-  // Track page view
+  // Track page view once per state navigation. Source resolves from the
+  // sessionStorage flag stashed by the originating button click, or falls
+  // back to detectSourceFromReferrer() for direct URL loads.
+  // (alertCount is captured at the time of the first non-loading render —
+  // we intentionally don't keep stateAlerts.length in deps to avoid re-firing
+  // on every NWS update.)
   useEffect(() => {
     if (stateData && !alertsLoading) {
       trackStateAlertsPageView({
@@ -494,7 +501,8 @@ export default function StateAlertsPage() {
         alertCount: stateAlerts.length
       });
     }
-  }, [stateAbbr, stateData, alertsLoading, stateAlerts.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateAbbr, stateData, alertsLoading]);
 
   // 404 — invalid state slug
   if (!stateAbbr || !stateData) {
@@ -549,13 +557,14 @@ export default function StateAlertsPage() {
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-            <Link to="/radar" onClick={() => trackRadarLinkClick('state_header')} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
+            <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.STATE_PAGE_RADAR_LINK); setNavSource(NAV_SOURCES.STATE_PAGE_RADAR_LINK); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
             <select
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) {
                   const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: 'state_header' });
+                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN });
+                  setNavSource(NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN);
                   navigate(`/alerts/${e.target.value}`);
                   e.target.value = '';
                 }
