@@ -907,8 +907,9 @@ function StormForm({ event, onSave, onCancel }) {
 
 // Storm list item — static mode: shows storms from src/content/storms/.
 // Status/delete are managed by editing or removing the JSON file in the repo.
-function StormListItem({ event, onEdit }) {
+function StormListItem({ event, onEdit, onRemove }) {
   const statusOption = STATUS_OPTIONS.find(s => s.value === event.status);
+  const canRemoveBanner = event.status === 'active' || event.status === 'forecasted';
 
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
@@ -941,6 +942,15 @@ function StormListItem({ event, onEdit }) {
           >
             View
           </Link>
+          {canRemoveBanner && (
+            <button
+              onClick={() => onRemove(event)}
+              title="Mark this storm as completed and remove its banner from the site"
+              className="px-3 py-1.5 text-xs bg-red-900/40 hover:bg-red-800/50 text-red-300 rounded cursor-pointer"
+            >
+              Remove
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1048,6 +1058,23 @@ export default function AdminStorms() {
     setShowForm(true);
   };
 
+  const handleRemove = (event) => {
+    const confirmed = window.confirm(
+      `Remove banner for "${event.title}"?\n\n` +
+      `This downloads an updated ${event.slug}.json with status set to "completed". ` +
+      `Move it to src/content/storms/, commit, and push — Netlify will rebuild and the banner ` +
+      `will disappear from the landing page and affected state pages.`
+    );
+    if (!confirmed) return;
+    setError(null);
+    try {
+      downloadStormJSON({ ...event, status: 'completed' });
+      setDownloadedSlug(event.slug);
+    } catch (err) {
+      setError(err.message || 'Failed to generate JSON file');
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem('admin_authenticated');
     setAuthenticated(false);
@@ -1153,6 +1180,7 @@ export default function AdminStorms() {
                     key={event.id}
                     event={event}
                     onEdit={handleEdit}
+                    onRemove={handleRemove}
                   />
                 ))}
               </div>
