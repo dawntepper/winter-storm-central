@@ -11,6 +11,28 @@ import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
+import EssentialsCard from './EssentialsCard';
+
+// Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
+// states get the tornado variant. TX gets its own variant. All other states
+// have no embedded prep card (component returns null when variant missing OR
+// when AFFILIATE_LINKS_ENABLED is false).
+const STATE_ESSENTIALS_VARIANTS = {
+  FL: 'state-fl',
+  TX: 'state-tx',
+  LA: 'state-fl',
+  GA: 'state-fl',
+  SC: 'state-fl',
+  NC: 'state-fl',
+  AL: 'state-fl',
+  MS: 'state-fl',
+  KS: 'state-tornado',
+  OK: 'state-tornado',
+  NE: 'state-tornado',
+  IA: 'state-tornado',
+  MO: 'state-tornado',
+  AR: 'state-tornado',
+};
 import {
   US_STATES, SLUG_TO_ABBR, STATE_NAMES, NEARBY_STATES, ABBR_TO_SLUG, getStateUrl
 } from '../data/stateConfig';
@@ -694,6 +716,18 @@ export default function StateAlertsPage() {
 
         {/* City directory */}
         <CityDirectory stateAbbr={stateAbbr} stateName={stateData.name} />
+
+        {/* Storm prep essentials — only shown for hurricane-prone or tornado-belt
+            states, and gated by AFFILIATE_LINKS_ENABLED so the component renders
+            null until the feature flag is flipped on. */}
+        {STATE_ESSENTIALS_VARIANTS[stateAbbr] && (
+          <section className="max-w-2xl mx-auto w-full">
+            <EssentialsCard
+              variant={STATE_ESSENTIALS_VARIANTS[stateAbbr]}
+              placement={`state-${stateSlug}`}
+            />
+          </section>
+        )}
 
         {/* SEO FAQ */}
         <section>
