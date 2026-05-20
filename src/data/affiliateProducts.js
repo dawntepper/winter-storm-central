@@ -246,6 +246,7 @@ export const AFFILIATE_PRODUCTS = [
  * @property {string} navLabel       Short label for the sticky anchor nav
  * @property {string} title          Section heading
  * @property {string} description    Section body copy (StormTracking voice)
+ * @property {string} [personalNote]  Optional italicized first-person note appended after description
  * @property {boolean} [isPetSection] Triggers warm coral background treatment
  */
 
@@ -291,6 +292,7 @@ export const AFFILIATE_CATEGORIES = [
     navLabel: 'Florida & coastal',
     title: 'Florida & coastal residents',
     description: 'For households facing hurricane-force winds or multi-day outages. Worth the investment if you live in a Cat 3+ landfall zone.',
+    personalNote: "I live in Fort Myers. These are items I actually own (or wish I did). Local knowledge from someone who's lived through this.",
   },
   {
     id: 'communication',

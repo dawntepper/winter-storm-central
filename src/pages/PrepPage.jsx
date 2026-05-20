@@ -6,8 +6,101 @@ import {
   getProductsByCategory,
 } from '../data/affiliateProducts';
 import ProductCard from '../components/ProductCard';
-import AlertSignupBar from '../components/AlertSignupBar';
 import ContactLink from '../components/ContactLink';
+import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
+
+const SUBSCRIBER_KEY = 'stormtracking_subscriber';
+
+// Inline newsletter form for the /prep page. Uses the same /api/subscribe-alerts
+// endpoint, same analytics events, and same SUBSCRIBER_KEY as the site-wide
+// AlertSignupBar slide-up — so signing up here also dismisses the slide-up bar
+// on other pages.
+function InlineNewsletterForm() {
+  const [email, setEmail] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    const cleanEmail = email.trim();
+    const cleanZip = zipCode.trim();
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setErrorMsg('Please enter a valid email address');
+      return;
+    }
+    if (!cleanZip || !/^\d{5}$/.test(cleanZip)) {
+      setErrorMsg('Please enter a valid 5-digit zip code');
+      return;
+    }
+    setStatus('submitting');
+    try {
+      const response = await fetch('/api/subscribe-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, zip_code: cleanZip }),
+      });
+      if (!response.ok) {
+        let msg = `Server error (${response.status})`;
+        try {
+          const data = await response.json();
+          msg = data.error || msg;
+        } catch { /* non-JSON */ }
+        throw new Error(msg);
+      }
+      localStorage.setItem(SUBSCRIBER_KEY, JSON.stringify({ email: cleanEmail, zip: cleanZip }));
+      setStatus('success');
+      trackAlertSignup({ type: 'new', zipCode: cleanZip });
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err.message || 'Something went wrong. Please try again.');
+      trackAlertSignupError(err.message || 'Unknown error');
+    }
+  };
+
+  if (status === 'success') {
+    return (
+      <p className="text-emerald-300 font-medium text-sm sm:text-base">
+        You're signed up. We'll only email when there's a reason to.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 max-w-xl mx-auto" aria-label="Newsletter signup">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email address"
+        required
+        aria-label="Email address"
+        className="flex-1 min-w-0 px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500"
+      />
+      <input
+        type="text"
+        value={zipCode}
+        onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+        placeholder="Zip code"
+        required
+        maxLength={5}
+        aria-label="Zip code"
+        className="w-full sm:w-28 px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500"
+      />
+      <button
+        type="submit"
+        disabled={status === 'submitting'}
+        className="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+      >
+        {status === 'submitting' ? 'Signing up...' : 'Sign me up'}
+      </button>
+      {errorMsg && (
+        <p className="basis-full text-red-400 text-xs mt-1">{errorMsg}</p>
+      )}
+    </form>
+  );
+}
 
 const PAGE_TITLE = 'Extreme Weather Prep Guide | StormTracking';
 const PAGE_DESCRIPTION = 'Recommended gear for hurricane season, severe weather, and extended outages. Honest reviews from a weather site that focuses on multi-hazard preparedness. We may earn from qualifying purchases.';
@@ -115,9 +208,10 @@ export default function PrepPage() {
             Extreme weather prep, recommended
           </h1>
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-            Gear that keeps you informed, powered, and safe when the storm
-            knocks out power, water, or both. We only recommend what we'd buy
-            ourselves.
+            Hurricane season opens in 12 days. Severe weather happens year-round.
+            Tornadoes don't text first. Here's the gear we'd put in our own
+            house — most of which actually IS in our own house. From Fort Myers,
+            with a dog named Mackie supervising.
           </p>
         </div>
       </section>
@@ -180,15 +274,56 @@ export default function PrepPage() {
               className={`scroll-mt-20 rounded-2xl border ${sectionBorder} ${sectionBg} p-6 sm:p-8`}
             >
               <header className="mb-6 sm:mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl" aria-hidden="true">{cat.icon}</span>
-                  <h2 id={`${cat.anchor}-heading`} className={`text-xl sm:text-2xl font-bold ${titleColor}`}>
-                    {cat.title}
-                  </h2>
-                </div>
-                <p className={`text-sm sm:text-base ${descColor} leading-relaxed max-w-2xl`}>
-                  {cat.description}
-                </p>
+                {isPet ? (
+                  // Pet section header includes a Mackie photo slot integrated
+                  // with the coral background. Image lives at public/mackie.jpg;
+                  // if missing, the coral placeholder behind shows through.
+                  <div className="flex flex-col sm:flex-row items-start gap-5">
+                    <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-rose-100">
+                      <div className="absolute inset-0 flex items-center justify-center text-center px-2">
+                        <span className="text-rose-700 text-xs font-medium leading-tight">
+                          <span className="text-3xl block mb-1" aria-hidden="true">🐕</span>
+                          Mackie
+                        </span>
+                      </div>
+                      <img
+                        src="/mackie.jpg"
+                        alt="Mackie, our resident prep supervisor"
+                        loading="lazy"
+                        className="relative w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl" aria-hidden="true">{cat.icon}</span>
+                        <h2 id={`${cat.anchor}-heading`} className={`text-xl sm:text-2xl font-bold ${titleColor}`}>
+                          {cat.title}
+                        </h2>
+                      </div>
+                      <p className={`text-sm sm:text-base ${descColor} leading-relaxed max-w-2xl`}>
+                        {cat.description}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl" aria-hidden="true">{cat.icon}</span>
+                      <h2 id={`${cat.anchor}-heading`} className={`text-xl sm:text-2xl font-bold ${titleColor}`}>
+                        {cat.title}
+                      </h2>
+                    </div>
+                    <p className={`text-sm sm:text-base ${descColor} leading-relaxed max-w-2xl`}>
+                      {cat.description}
+                    </p>
+                  </>
+                )}
+                {cat.personalNote && (
+                  <p className={`mt-3 italic text-sm ${descColor} leading-relaxed max-w-2xl`}>
+                    {cat.personalNote}
+                  </p>
+                )}
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
@@ -206,17 +341,20 @@ export default function PrepPage() {
         })}
       </main>
 
-      {/* Newsletter pitch — the AlertSignupBar slide-up handles the actual form */}
+      {/* Newsletter — inline form using the same /api/subscribe-alerts endpoint
+          as the site-wide slide-up. The slide-up is intentionally NOT mounted
+          on /prep (would be double signup noise next to the inline form). */}
       <section className="bg-slate-800 border-y border-slate-700 px-4 sm:px-6 py-12">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
             Get the StormTracking newsletter
           </h2>
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-2">
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-6">
             Weekly during hurricane season. Free, no spam, no urgency manufactured.
           </p>
-          <p className="text-xs text-slate-500">
-            A signup form will slide up in a moment. Or reach out via{' '}
+          <InlineNewsletterForm />
+          <p className="text-xs text-slate-500 mt-4">
+            Questions? Reach out via{' '}
             <ContactLink className="text-sky-400 hover:text-sky-300">StormTracking Support</ContactLink>.
           </p>
         </div>
@@ -242,8 +380,6 @@ export default function PrepPage() {
           </p>
         </div>
       </footer>
-
-      <AlertSignupBar />
     </div>
   );
 }
