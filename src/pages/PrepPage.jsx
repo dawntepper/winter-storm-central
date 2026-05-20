@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AFFILIATE_PRODUCTS,
@@ -56,9 +56,28 @@ const SCHEMA_JSON_LD = {
 };
 
 export default function PrepPage() {
+  // Detect when the sticky anchor nav has actually stuck to the viewport top
+  // (vs. still scrolling with the page) so we can shift its background to a
+  // sky-blue tint as a "you're now navigating" affordance. Uses a 1px sentinel
+  // element placed just above the nav; when the sentinel scrolls out of view,
+  // the nav has become sticky.
+  const navSentinelRef = useRef(null);
+  const [isNavStuck, setIsNavStuck] = useState(false);
+
   useEffect(() => {
     setPrepMetaTags();
     return () => resetPrepMetaTags();
+  }, []);
+
+  useEffect(() => {
+    const sentinel = navSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsNavStuck(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -115,10 +134,18 @@ export default function PrepPage() {
         </div>
       </div>
 
+      {/* Sentinel — when this 1px element scrolls out of view, the nav below
+          has become sticky. The observer above flips isNavStuck accordingly. */}
+      <div ref={navSentinelRef} aria-hidden="true" className="h-px" />
+
       {/* Sticky anchor nav */}
       <nav
         aria-label="Prep categories"
-        className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 sm:px-6 py-3"
+        className={`sticky top-0 z-30 backdrop-blur border-b px-4 sm:px-6 py-3 transition-colors duration-200 ${
+          isNavStuck
+            ? 'bg-sky-900/95 border-sky-700/50'
+            : 'bg-slate-900/95 border-slate-800'
+        }`}
       >
         <ul className="max-w-5xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide">
           {AFFILIATE_CATEGORIES.map(cat => (
