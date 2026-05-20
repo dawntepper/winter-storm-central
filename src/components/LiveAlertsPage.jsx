@@ -142,12 +142,12 @@ export default function LiveAlertsPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              <span className="hidden sm:inline text-sm">Back</span>
+              <span className="hidden sm:inline text-sm">Home</span>
             </Link>
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
               <span className="text-xl">📡</span>
-              <Link to="/" className="text-lg sm:text-xl font-bold text-white">StormTracking</Link>
-            </div>
+              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
+            </Link>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
