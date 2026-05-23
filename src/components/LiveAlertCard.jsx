@@ -24,8 +24,25 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
   const rankStr = String(alert.rank).padStart(2, '0');
   const timeInfo = getAlertTimeInfo(alert);
 
+  // Tornado Warnings get a subtle pulsing halo to mark them as the highest-
+  // life-threat alert class. Watches do NOT pulse — same category, different
+  // urgency tier — and get an amber WATCH badge instead so users can scan
+  // watch-vs-warning without parsing the event string.
+  const isTornadoWarning =
+    alert.category === 'tornado' && (alert.event || '').includes('Warning');
+  const isTornadoWatch =
+    alert.category === 'tornado' && (alert.event || '').includes('Watch');
+
+  // Toggle the expanded panel + center the map on first open. Used by both
+  // the Show Details button and the clickable event-name in full mode so the
+  // event title doubles as a click target (small "Show Details" text is hard
+  // to find for users who don't know to look for it).
+  const toggleDetails = () => {
+    if (!expanded) onAlertTap?.(alert);
+    setExpanded(!expanded);
+  };
+
   const stateName = alert.state ? (STATE_NAMES[alert.state] || alert.state) : '';
-  const locationLine = [stateName, alert.location].filter(Boolean).join(', ');
   const stateSlug = alert.state ? ABBR_TO_SLUG[alert.state] : null;
   const citySlug = alert.state ? findCitySlugInText(alert.location || '', alert.state) : null;
 
@@ -77,7 +94,7 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
           tabIndex={0}
           onClick={handleCompactClick}
           onKeyDown={handleKeyDown}
-          className="group flex items-center gap-2 px-3 py-2 hover:bg-slate-700/30 transition-colors rounded w-full text-left cursor-pointer"
+          className={`group flex items-center gap-2 px-3 py-2 hover:bg-slate-700/30 transition-colors rounded w-full text-left cursor-pointer${isTornadoWarning ? ' tornado-warning-pulse' : ''}`}
         >
           {/* Rank badge */}
           <span
@@ -123,7 +140,14 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
               </svg>
             </span>
-            <span className="text-[10px] text-slate-500 truncate block">{alert.event}</span>
+            <span className="text-[10px] text-slate-500 truncate block">
+              {isTornadoWatch && (
+                <span className="text-[8px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/40 px-1 py-px rounded mr-1 align-middle">
+                  WATCH
+                </span>
+              )}
+              {alert.event}
+            </span>
           </div>
 
           {/* NEW badge */}
@@ -195,7 +219,7 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
   // ───── Full mode (/alerts page) ─────
   return (
     <div
-      className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden border-l-4"
+      className={`bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden border-l-4${isTornadoWarning ? ' tornado-warning-pulse' : ''}`}
       style={{ borderLeftColor: color }}
     >
       <div className="p-4 space-y-3">
@@ -213,13 +237,54 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
             </span>
           )}
           <h3 className="text-sm font-semibold text-white flex-1 truncate">
-            {locationLine}
+            {stateSlug && stateName ? (
+              <Link to={`/alerts/${stateSlug}`} onClick={stopProp} className={inlineLinkClass}>
+                {stateName}
+              </Link>
+            ) : (
+              stateName
+            )}
+            {locCityPart && (
+              <>
+                {stateName ? ', ' : ''}
+                {citySlug ? (
+                  <Link to={`/alerts/${citySlug}`} onClick={stopProp} className={inlineLinkClass}>
+                    {locCityPart}
+                  </Link>
+                ) : (
+                  locCityPart
+                )}
+              </>
+            )}
+            {locStateAbbr && <>{', '}{locStateAbbr}</>}
           </h3>
         </div>
 
-        {/* Row 2: Warning name (category-colored) */}
-        <p className="text-xs font-bold uppercase tracking-wide" style={{ color }}>
-          {alert.event}
+        {/* Row 2: Warning name (clickable — same action as Show Details) + optional WATCH badge */}
+        <p className="flex items-center gap-1.5">
+          {isTornadoWatch && (
+            <span className="text-[9px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/40 px-1.5 py-0.5 rounded tracking-wider">
+              WATCH
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={toggleDetails}
+            aria-expanded={expanded}
+            className="text-xs font-bold uppercase tracking-wide cursor-pointer text-left transition-colors"
+            style={{ color }}
+          >
+            {alert.event}
+            <svg
+              aria-hidden="true"
+              className={`inline-block w-3 h-3 ml-1 -mt-0.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </p>
 
         {/* Row 3: Status + Duration */}
@@ -243,10 +308,9 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
             />
           </div>
           <button
-            onClick={() => {
-              if (!expanded) onAlertTap?.(alert);
-              setExpanded(!expanded);
-            }}
+            type="button"
+            onClick={toggleDetails}
+            aria-expanded={expanded}
             className="text-[10px] text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer flex-shrink-0"
           >
             {expanded ? 'Hide Details ▲' : 'Show Details ▼'}

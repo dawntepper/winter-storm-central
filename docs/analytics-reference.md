@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-05-20.
+Last reviewed: 2026-05-23.
 
 ---
 
@@ -125,6 +125,57 @@ Location Removed
 Location Viewed on Map
   location_name
 ```
+
+### Alert events
+
+```
+Alert Detail View
+  alert_type   e.g. "Tornado Warning", "Winter Storm Watch"
+  severity     NWS severity ("Extreme" | "Severe" | "Moderate" | "Minor" | "unknown")
+  location     e.g. "Moore, OK"
+  category     a category id (see ALERT_CATEGORY_VALUES below)
+
+Alert Tapped
+  category     a category id (see ALERT_CATEGORY_VALUES below)
+  event        the NWS event string ("Tornado Warning", etc.)
+
+Alert Added to Map
+  category     a category id (see ALERT_CATEGORY_VALUES below)
+
+Map Alert Clicked
+  alert_type   the NWS event string
+  location     e.g. "Moore, OK"
+  category     a category id (see ALERT_CATEGORY_VALUES below)
+
+Map Alert Hovered
+  category     a category id (see ALERT_CATEGORY_VALUES below)
+
+Category Expanded
+  category_name   the category DISPLAY NAME (e.g. "Tornado", "Winter Weather")
+  alert_count     number of alerts visible when expanded
+
+Category Collapsed
+  category_name   the category DISPLAY NAME (e.g. "Tornado", "Winter Weather")
+  time_open_seconds   how long the category was open before collapse
+```
+
+**Important:** `category` (on Alert Tapped / Added to Map / Map events / Detail View) is the **category id** (lowercase slug, e.g. `tornado`). `category_name` (on Category Expanded / Collapsed) is the **display name** (e.g. `Tornado`). They are not interchangeable in Plausible filters.
+
+### ALERT_CATEGORY_VALUES
+
+The complete set of values the `category` prop can take, in display/safety-priority order (matches `CATEGORY_ORDER` in `shared/nws-alert-parser.js`):
+
+| ID | Display name | NWS events covered |
+|---|---|---|
+| `tornado` | Tornado | Tornado Warning, Tornado Watch |
+| `tropical` | Tropical | Hurricane, Tropical Storm, Storm Surge |
+| `severe` | Severe Storms | Severe Thunderstorm, High Wind, Wind Advisory |
+| `winter` | Winter Weather | Blizzard, Ice Storm, Winter Storm, Heavy Snow, Wind Chill, Freeze, etc. |
+| `flood` | Flooding | Flash Flood, Flood, Coastal Flood |
+| `heat` | Extreme Heat | Excessive Heat, Heat Advisory |
+| `fire` | Fire Weather | Red Flag, Fire Weather, Fire Warning |
+
+History note: prior to the 2026-05 tornado category split, tornado events were classified as `severe`. Historical Plausible data filtered on `category=tornado` will be empty before that date — past tornado activity is bucketed under `severe`.
 
 ### Affiliate events (gated)
 

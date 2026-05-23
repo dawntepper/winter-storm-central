@@ -797,47 +797,87 @@ function UserLocationMarker({ location, stormPhase, isMobile = false, onHover, o
   );
 }
 
-// Alert category colors for dots
+// Alert category colors for dots (and pill backgrounds in the legend below)
 const alertCategoryColors = {
-  winter: '#3b82f6',   // blue
-  severe: '#ef4444',   // red
-  heat: '#f97316',     // orange
-  flood: '#06b6d4',    // cyan - matches flooding card
-  fire: '#92400e',     // brown
+  tornado: '#dc2626',  // deep red — most life-threatening, distinct from severe
   tropical: '#1e3a8a', // dark blue
+  severe: '#ef4444',   // red
+  winter: '#3b82f6',   // blue
+  flood: '#06b6d4',    // cyan - matches flooding card
+  heat: '#f97316',     // orange
+  fire: '#92400e',     // brown
   default: '#ef4444'   // red fallback
 };
 
 // Simple alert dot marker with highlight and selected support
-function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false }) {
+function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false, shouldPulse = false }) {
   const position = [alert.lat, alert.lon];
   const baseColor = alertCategoryColors[alert.category] || alertCategoryColors.default;
   // Green when selected, otherwise use category color
   const color = selected ? '#10b981' : baseColor;
 
+  // Tornado Watch dots render as a hollow ring (red border, transparent center)
+  // — meaning: "tornadoes possible" (potential), distinct from Severe Warning's
+  // "severe storm happening" (current) which uses a filled red dot.
+  const isTornadoWatch =
+    alert.category === 'tornado' && (alert.event || '').includes('Watch');
+
+  // Active Tornado Warnings get a custom divIcon: red filled circle with a 🌪
+  // emoji overlay, plus a pulse animation for the top-20 most-severe (see
+  // TORNADO_WARNING_PULSE_CAP in StormMap). The emoji is reserved for Warnings
+  // only — it carries the "take shelter now" signal and would be diluted if
+  // applied to Watches. Selected state falls through to the green CircleMarker
+  // treatment below for consistency with how selection works for other alerts.
+  const isTornadoWarning =
+    alert.category === 'tornado' && (alert.event || '').includes('Warning');
+  if (isTornadoWarning && !selected) {
+    const pulseClass = shouldPulse ? ' tornado-warning-marker-pulse' : '';
+    const icon = L.divIcon({
+      html: `<div class="tornado-warning-marker${pulseClass}" role="img" aria-label="Tornado Warning"><span aria-hidden="true">🌪️</span></div>`,
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    return (
+      <Marker
+        position={position}
+        icon={icon}
+        eventHandlers={{
+          mouseover: (e) => onHover(alert, e),
+          mouseout: onLeave,
+          click: (e) => onClick(alert, e)
+        }}
+      />
+    );
+  }
+
   return (
     <>
-      {/* Pulsing outer ring - larger and more prominent when highlighted or selected */}
+      {/* Pulsing outer ring - larger and more prominent when highlighted or selected.
+          Watch dots get a dimmer halo so they read as quieter than Warnings. */}
       <CircleMarker
         center={position}
         radius={selected ? 20 : (highlighted ? 18 : 12)}
         pathOptions={{
           fillColor: color,
-          fillOpacity: selected ? 0.5 : (highlighted ? 0.5 : 0.3),
+          fillOpacity: selected
+            ? 0.5
+            : (highlighted ? 0.5 : (isTornadoWatch ? 0.12 : 0.3)),
           color: 'transparent',
           weight: 0
         }}
         className={selected ? 'pulse-marker-selected' : (highlighted ? 'pulse-marker-highlighted' : 'pulse-marker')}
       />
-      {/* Main dot marker - slightly larger when highlighted or selected */}
+      {/* Main dot marker - filled for everything except Tornado Watch, which
+          renders as a hollow ring. Selected state always overrides to filled green. */}
       <CircleMarker
         center={position}
         radius={selected ? 10 : (highlighted ? 9 : 7)}
         pathOptions={{
-          fillColor: color,
-          fillOpacity: 0.9,
-          color: '#ffffff',
-          weight: selected ? 3 : (highlighted ? 3 : 2)
+          fillColor: isTornadoWatch && !selected ? 'transparent' : color,
+          fillOpacity: isTornadoWatch && !selected ? 0 : 0.9,
+          color: isTornadoWatch && !selected ? color : '#ffffff',
+          weight: isTornadoWatch && !selected ? 3 : (selected ? 3 : (highlighted ? 3 : 2))
         }}
         eventHandlers={{
           mouseover: (e) => onHover(alert, e),
@@ -992,6 +1032,20 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       if (counts[alert.category] !== undefined) counts[alert.category]++;
     }
     return counts;
+  }, [alerts]);
+
+  // Top-N active Tornado Warnings get the pulsing marker treatment. Capped so
+  // paint cost stays bounded during major outbreaks (real-world peak is ~30
+  // simultaneous CONUS-wide; 20 covers ~99% of scenarios with graceful
+  // degrade for the rest — past 20 still gets red+🌪, just no animation).
+  const TORNADO_WARNING_PULSE_CAP = 20;
+  const tornadoWarningPulseIds = useMemo(() => {
+    const SEVERITY_RANK = { Extreme: 3, Severe: 2, Moderate: 1, Minor: 0 };
+    const warnings = alerts
+      .filter(a => a.category === 'tornado' && (a.event || '').includes('Warning'))
+      .sort((a, b) => (SEVERITY_RANK[b.severity] || 0) - (SEVERITY_RANK[a.severity] || 0))
+      .slice(0, TORNADO_WARNING_PULSE_CAP);
+    return new Set(warnings.map(a => a.id));
   }, [alerts]);
 
   const toggleCategory = (id) => {
@@ -1281,6 +1335,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 onClick={handleAlertClick}
                 highlighted={highlightedAlertId === alert.id}
                 selected={selectedAlertId === alert.id}
+                shouldPulse={tornadoWarningPulseIds.has(alert.id)}
               />
             ))}
 
@@ -1333,12 +1388,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">
-                  {hoveredAlert.category === 'winter' ? '❄️' :
+                  {hoveredAlert.category === 'tornado' ? '🌪️' :
+                   hoveredAlert.category === 'tropical' ? '🌀' :
                    hoveredAlert.category === 'severe' ? '⛈️' :
-                   hoveredAlert.category === 'heat' ? '🌡️' :
+                   hoveredAlert.category === 'winter' ? '❄️' :
                    hoveredAlert.category === 'flood' ? '🌊' :
-                   hoveredAlert.category === 'fire' ? '🔥' :
-                   hoveredAlert.category === 'tropical' ? '🌀' : '⚠️'}
+                   hoveredAlert.category === 'heat' ? '🌡️' :
+                   hoveredAlert.category === 'fire' ? '🔥' : '⚠️'}
                 </span>
                 <div>
                   <h4 className="font-semibold text-slate-800 text-sm">

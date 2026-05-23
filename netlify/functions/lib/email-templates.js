@@ -32,12 +32,17 @@ const SEVERITY_COLORS = {
 
 // Alert category → emoji + color
 const CATEGORY_STYLES = {
-  winter: { emoji: '\u2744\uFE0F', color: '#3b82f6', label: 'Winter Weather' },
-  severe: { emoji: '\u26C8\uFE0F', color: '#ef4444', label: 'Severe Storm' },
-  heat: { emoji: '\uD83C\uDF21\uFE0F', color: '#f97316', label: 'Extreme Heat' },
-  flood: { emoji: '\uD83C\uDF0A', color: '#a855f7', label: 'Flooding' },
-  fire: { emoji: '\uD83D\uDD25', color: '#92400e', label: 'Fire Weather' },
+  tornado: { emoji: '\uD83C\uDF2A\uFE0F', color: '#dc2626', label: 'Tornado' },
   tropical: { emoji: '\uD83C\uDF00', color: '#1e3a8a', label: 'Tropical' },
+  severe: { emoji: '\u26C8\uFE0F', color: '#ef4444', label: 'Severe Storm' },
+  winter: { emoji: '\u2744\uFE0F', color: '#3b82f6', label: 'Winter Weather' },
+  flood: { emoji: '\uD83C\uDF0A', color: '#a855f7', label: 'Flooding' },
+  heat: { emoji: '\uD83C\uDF21\uFE0F', color: '#f97316', label: 'Extreme Heat' },
+  fire: { emoji: '\uD83D\uDD25', color: '#92400e', label: 'Fire Weather' },
+  // Neutral fallback for unknown categories \u2014 DO NOT swap this back to `winter`.
+  // Previously category fell back to winter, which silently mis-rendered any
+  // unknown category with a snowflake icon.
+  default: { emoji: '\u26A0\uFE0F', color: '#64748b', label: 'Weather Alert' },
 };
 
 /**
@@ -89,7 +94,7 @@ function getSubscriberMapLink(subscriberZip) {
  * Build HTML for a single alert card within an email
  */
 function buildAlertCard(alert) {
-  const category = CATEGORY_STYLES[alert.category] || CATEGORY_STYLES.winter;
+  const category = CATEGORY_STYLES[alert.category] || CATEGORY_STYLES.default;
   const severityColor = SEVERITY_COLORS[alert.severity] || SEVERITY_COLORS.Unknown;
   const mapLink = getMapLink(alert);
 

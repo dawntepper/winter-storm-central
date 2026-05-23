@@ -238,6 +238,7 @@ function AlertCard({ alert, onTap, onAddToMap, onShowDetail, onHoverAlert, onLea
 
 // Category-specific header colors (solid backgrounds, antiquewhite text, colored borders)
 const categoryHeaderColors = {
+  'tornado': { bg: '#5c1414', border: '#dc2626', text: 'antiquewhite' }, // deep red border
   'winter': { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },  // blue border
   'severe': { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },  // orange border
   'flooding': { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' }, // cyan border
@@ -383,9 +384,13 @@ function CategoryGroup({ category, alerts, allAlerts, onAlertTap, onAddToMap, on
   const shouldGroupByState = totalCount > STATE_GROUP_THRESHOLD;
   const stateGroups = shouldGroupByState ? groupAlertsByState(alertsForGrouping) : null;
 
-  // Get category-specific colors based on category id/name
+  // Get category-specific colors based on category id/name.
+  // Tornado check runs before severe so the tornado id wins even though
+  // "severe" appears nowhere in it — explicit ordering future-proofs against
+  // any tornado-themed name that might contain "storm".
   const getCategoryColors = () => {
     const id = category.id?.toLowerCase() || category.name?.toLowerCase() || '';
+    if (id.includes('tornado')) return categoryHeaderColors.tornado;
     if (id.includes('winter') || id.includes('snow') || id.includes('ice')) return categoryHeaderColors.winter;
     if (id.includes('severe') || id.includes('storm') || id.includes('thunder')) return categoryHeaderColors.severe;
     if (id.includes('flood') || id.includes('coastal') || id.includes('marine')) return categoryHeaderColors.flooding;

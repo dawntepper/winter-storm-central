@@ -51,8 +51,33 @@ export const INCLUDED_EVENTS = [
   'Wind Advisory',
 ];
 
-// Category definitions with display metadata
+// Category definitions with display metadata.
+// Insertion order matters: getCategoryForEvent() returns the first match,
+// so tornado must precede severe (a "Tornado Warning" event string contains
+// neither "Severe" nor "High Wind", but keeping tornado first guards against
+// future event names that might match both).
 export const ALERT_CATEGORIES = {
+  tornado: {
+    id: 'tornado',
+    name: 'Tornado',
+    icon: '🌪️',
+    color: '#dc2626',
+    events: ['Tornado'],
+  },
+  tropical: {
+    id: 'tropical',
+    name: 'Tropical',
+    icon: '🌀',
+    color: '#1e3a8a',
+    events: ['Hurricane', 'Tropical Storm', 'Storm Surge'],
+  },
+  severe: {
+    id: 'severe',
+    name: 'Severe Storms',
+    icon: '⛈️',
+    color: '#ef4444',
+    events: ['Severe Thunderstorm', 'High Wind', 'Wind Advisory'],
+  },
   winter: {
     id: 'winter',
     name: 'Winter Weather',
@@ -64,12 +89,12 @@ export const ALERT_CATEGORIES = {
       'Freeze', 'Frost', 'Cold Weather',
     ],
   },
-  severe: {
-    id: 'severe',
-    name: 'Severe Storms',
-    icon: '⛈️',
-    color: '#ef4444',
-    events: ['Tornado', 'Severe Thunderstorm', 'High Wind', 'Wind Advisory'],
+  flood: {
+    id: 'flood',
+    name: 'Flooding',
+    icon: '🌊',
+    color: '#a855f7',
+    events: ['Flash Flood', 'Flood', 'Coastal Flood'],
   },
   heat: {
     id: 'heat',
@@ -78,13 +103,6 @@ export const ALERT_CATEGORIES = {
     color: '#f97316',
     events: ['Excessive Heat', 'Heat Advisory'],
   },
-  flood: {
-    id: 'flood',
-    name: 'Flooding',
-    icon: '🌊',
-    color: '#a855f7',
-    events: ['Flash Flood', 'Flood', 'Coastal Flood'],
-  },
   fire: {
     id: 'fire',
     name: 'Fire Weather',
@@ -92,17 +110,10 @@ export const ALERT_CATEGORIES = {
     color: '#92400e',
     events: ['Red Flag', 'Fire Weather', 'Fire Warning'],
   },
-  tropical: {
-    id: 'tropical',
-    name: 'Tropical',
-    icon: '🌀',
-    color: '#1e3a8a',
-    events: ['Hurricane', 'Tropical Storm', 'Storm Surge'],
-  },
 };
 
-// Category order for display
-export const CATEGORY_ORDER = ['winter', 'severe', 'heat', 'flood', 'fire', 'tropical'];
+// Category order for display — safety-priority sort.
+export const CATEGORY_ORDER = ['tornado', 'tropical', 'severe', 'winter', 'flood', 'heat', 'fire'];
 
 // Marine zone prefixes — ocean/coastal areas, not land
 export const MARINE_ZONE_PREFIXES = [

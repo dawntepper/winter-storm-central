@@ -173,7 +173,8 @@ function EventAlertCard({ alert, onClick }) {
     >
       <div className="flex items-start gap-3">
         <span className="text-lg">
-          {alert.category === 'winter' ? '❄️' :
+          {alert.category === 'tornado' ? '🌪️' :
+           alert.category === 'winter' ? '❄️' :
            alert.category === 'flood' ? '🌊' :
            alert.category === 'severe' ? '⛈️' : '⚠️'}
         </span>

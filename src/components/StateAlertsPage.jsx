@@ -207,12 +207,13 @@ function AlertDetailModal({ alert, onClose }) {
 // =============================================
 
 const CATEGORY_COLORS = {
-  winter:   { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },
-  severe:   { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },
-  heat:     { bg: '#7c2d12', border: '#ef4444', text: 'antiquewhite' },
-  flood:    { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' },
-  fire:     { bg: '#78350f', border: '#d97706', text: 'antiquewhite' },
+  tornado:  { bg: '#5c1414', border: '#dc2626', text: 'antiquewhite' },
   tropical: { bg: '#1e3a8a', border: '#6366f1', text: 'antiquewhite' },
+  severe:   { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },
+  winter:   { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },
+  flood:    { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' },
+  heat:     { bg: '#7c2d12', border: '#ef4444', text: 'antiquewhite' },
+  fire:     { bg: '#78350f', border: '#d97706', text: 'antiquewhite' },
   default:  { bg: '#334155', border: '#64748b', text: 'antiquewhite' },
 };
 

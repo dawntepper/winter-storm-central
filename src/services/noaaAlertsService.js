@@ -20,8 +20,24 @@ import {
   extractGeometryCoordinates,
   filterAlertFeatures,
 } from '../../shared/nws-alert-parser';
+// TEMPORARY: tornado pulse smoke-test fixture. Vite tree-shakes this import
+// out of prod because the only call site is gated on import.meta.env.DEV.
+// Delete this import + the isTornadoTestActive helper + the injection branch
+// inside fetchExtremeWeather + src/test/tornadoFixture.js after smoke-test.
+import { makeTornadoFixtures } from '../test/tornadoFixture.js';
 
 export { ALERT_CATEGORIES, CATEGORY_ORDER };
+
+// TEMPORARY: returns true when running in dev AND the URL has ?test-tornado.
+// Used to short-circuit the cache and inject fixture tornado alerts so the
+// pulse animation + tornado map pill + dots can be verified end-to-end.
+function isTornadoTestActive() {
+  return (
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('test-tornado')
+  );
+}
 
 const CACHE_KEY = 'stormtracker_noaa_alerts_v3'; // v3: fixed categorized alerts count
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -208,8 +224,13 @@ function selectBalancedAlerts(alerts, perCategory = 5, maxTotal = 20) {
  * Main function: Fetch and process NOAA alerts
  */
 export async function fetchExtremeWeather(forceRefresh = false) {
-  // Check cache first (unless forcing refresh)
-  if (!forceRefresh) {
+  // TEMPORARY: bypass cache entirely when the tornado smoke-test is active,
+  // so the fixture is regenerated each call (fresh timestamps) and a stale
+  // cache from a previous session can't poison the page.
+  const tornadoTest = isTornadoTestActive();
+
+  // Check cache first (unless forcing refresh or smoke-testing)
+  if (!forceRefresh && !tornadoTest) {
     const cached = getCachedAlerts();
     if (cached) {
       console.log('Using cached NOAA alerts, age:', Math.round(cached.age / 1000 / 60), 'min');
@@ -235,26 +256,33 @@ export async function fetchExtremeWeather(forceRefresh = false) {
       .map(parseAlert)
       .filter(Boolean); // Remove nulls
 
+    // TEMPORARY: prepend tornado fixtures so they appear in allAlerts AND
+    // byCategory.tornado AND the selected/map flow. Remove after smoke-test.
+    const allAlerts = tornadoTest ? [...makeTornadoFixtures(), ...parsed] : parsed;
+
     // Group by category
     const byCategory = {};
     for (const categoryId of CATEGORY_ORDER) {
-      byCategory[categoryId] = parsed.filter(a => a.category === categoryId);
+      byCategory[categoryId] = allAlerts.filter(a => a.category === categoryId);
     }
 
     // Select balanced set for display
-    const selected = selectBalancedAlerts(parsed);
+    const selected = selectBalancedAlerts(allAlerts);
 
     const result = {
-      allAlerts: parsed,
+      allAlerts,
       byCategory,
       selected,
-      totalCount: parsed.length,
+      totalCount: allAlerts.length,
       lastUpdated: new Date().toISOString(),
       fromCache: false
     };
 
-    // Cache the result
-    cacheAlerts(result);
+    // Cache the result (skip when smoke-testing so removing the URL param
+    // returns to clean real-NWS data on the next load).
+    if (!tornadoTest) {
+      cacheAlerts(result);
+    }
 
     return result;
 
