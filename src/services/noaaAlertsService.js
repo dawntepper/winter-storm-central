@@ -20,17 +20,17 @@ import {
   extractGeometryCoordinates,
   filterAlertFeatures,
 } from '../../shared/nws-alert-parser';
-// TEMPORARY: tornado pulse smoke-test fixture. Vite tree-shakes this import
-// out of prod because the only call site is gated on import.meta.env.DEV.
-// Delete this import + the isTornadoTestActive helper + the injection branch
-// inside fetchExtremeWeather + src/test/tornadoFixture.js after smoke-test.
+// Dev-only fixture for verifying tornado UI without waiting for a real
+// Warning to fire (see src/test/tornadoFixture.js for full rationale).
+// Vite tree-shakes this import from prod bundles — the only call site is
+// gated on import.meta.env.DEV.
 import { makeTornadoFixtures } from '../test/tornadoFixture.js';
 
 export { ALERT_CATEGORIES, CATEGORY_ORDER };
 
-// TEMPORARY: returns true when running in dev AND the URL has ?test-tornado.
-// Used to short-circuit the cache and inject fixture tornado alerts so the
-// pulse animation + tornado map pill + dots can be verified end-to-end.
+// True when the dev server is running AND the URL has ?test-tornado. Used
+// to bypass the cache and inject fixture tornado alerts end-to-end (cards,
+// map dots/pills, hover popups, state pages, homepage widget all see them).
 function isTornadoTestActive() {
   return (
     import.meta.env.DEV &&
@@ -224,9 +224,10 @@ function selectBalancedAlerts(alerts, perCategory = 5, maxTotal = 20) {
  * Main function: Fetch and process NOAA alerts
  */
 export async function fetchExtremeWeather(forceRefresh = false) {
-  // TEMPORARY: bypass cache entirely when the tornado smoke-test is active,
-  // so the fixture is regenerated each call (fresh timestamps) and a stale
-  // cache from a previous session can't poison the page.
+  // Bypass cache entirely when the tornado dev-fixture is active, so the
+  // fixture is regenerated each call (fresh timestamps) and a stale cache
+  // from a previous session can't poison the page when ?test-tornado=1
+  // is set/unset.
   const tornadoTest = isTornadoTestActive();
 
   // Check cache first (unless forcing refresh or smoke-testing)
@@ -256,8 +257,8 @@ export async function fetchExtremeWeather(forceRefresh = false) {
       .map(parseAlert)
       .filter(Boolean); // Remove nulls
 
-    // TEMPORARY: prepend tornado fixtures so they appear in allAlerts AND
-    // byCategory.tornado AND the selected/map flow. Remove after smoke-test.
+    // Prepend tornado fixtures (dev-only) so they appear in allAlerts AND
+    // byCategory.tornado AND the selected/map flow, end-to-end.
     const allAlerts = tornadoTest ? [...makeTornadoFixtures(), ...parsed] : parsed;
 
     // Group by category
@@ -278,8 +279,8 @@ export async function fetchExtremeWeather(forceRefresh = false) {
       fromCache: false
     };
 
-    // Cache the result (skip when smoke-testing so removing the URL param
-    // returns to clean real-NWS data on the next load).
+    // Cache the real result (skip when the dev fixture is active so removing
+    // the URL param returns to clean real-NWS data on the next load).
     if (!tornadoTest) {
       cacheAlerts(result);
     }

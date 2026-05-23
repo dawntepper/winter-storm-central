@@ -1,12 +1,25 @@
 // ============================================================
-// TEMPORARY SMOKE-TEST FIXTURE — remove after pulse animation
-// has been verified. See LiveAlertsPage.jsx for the injection
-// site (gated on `import.meta.env.DEV && ?test-tornado=1`).
+// Tornado fixture — dev-only verification tool for the tornado
+// alert UI (Warning emoji + pulse, Watch hollow ring, WATCH
+// badge, deep-red category color, etc.). Activated via the
+// ?test-tornado=1 URL param in `npm run dev`; tree-shaken from
+// prod bundles because the only call site is gated on
+// import.meta.env.DEV (see noaaAlertsService.js).
 //
-// To use: run `npm run dev` and visit /alerts?test-tornado=1
-//   - The "ACTIVE WARNING" fixture should pulse (deep red halo).
-//   - The "ACTIVE WATCH" fixture should NOT pulse (same color,
-//     no halo) — proves the Warning-vs-Watch gating works.
+// Tornado Warnings are rare events (~1,500/yr CONUS, often
+// clustered/nocturnal), so live-data QA is unreliable. This
+// fixture lets us verify the most life-critical UI on the site
+// without waiting for nature.
+//
+// To use: run `npm run dev` → visit /alerts?test-tornado=1
+//   - Warning fixture (Moore, OK): pulses, emoji map marker.
+//   - Watch fixture (Wichita, KS): no pulse, hollow ring marker,
+//     amber WATCH badge in the card.
+//
+// If you add new tornado UI: extend this fixture if needed, but
+// keep the shape (id, event, category, state, lat/lon, onset,
+// expires, severity, urgency) aligned with parsed NWS alerts so
+// downstream code doesn't branch on real-vs-fixture origin.
 // ============================================================
 
 const HOUR = 60 * 60 * 1000;
