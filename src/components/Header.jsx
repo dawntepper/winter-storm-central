@@ -165,8 +165,8 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-              <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-              <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
+              <Link to="/alerts" className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
+              <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
               <span className="relative inline-flex items-center">
                 <select
                   defaultValue=""
@@ -179,7 +179,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                       e.target.value = '';
                     }
                   }}
-                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2.5 pr-2 py-1 rounded focus:outline-none text-xs sm:text-sm font-medium border border-sky-500/30 transition-colors"
                 >
                   <option value="" disabled>State Weather/Radar ▾</option>
                   {Object.entries(US_STATES).map(([slug, s]) => (

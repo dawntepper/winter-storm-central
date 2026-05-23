@@ -702,7 +702,7 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
-  const [searchMode, setSearchMode] = useState('city'); // 'city' or 'zip'
+  const [searchMode, setSearchMode] = useState('zip'); // 'city' or 'zip' — zip is the default so users can find their location fastest; URL initial location handlers below override based on the incoming type ('zip' / 'search')
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentLocationData, setCurrentLocationData] = useState(null);
