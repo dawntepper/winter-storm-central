@@ -420,17 +420,21 @@ export const RADAR_LAYER_TYPES = {
   forecast: 'forecast'
 };
 
-// Color scheme options for precipitation radar - exported for use by RadarPage controls
+// Color scheme options for precipitation radar (RainViewer tile API).
+// Keys MUST match RainViewer's documented scheme numbering — they're
+// interpolated directly into the tile URL. See rainviewer.com/api.html.
+// Default value (4 = The Weather Channel) is preserved from before the
+// label fix, so users see the same visual treatment.
 export const RADAR_COLOR_SCHEMES = {
-  0: 'Original',
-  1: 'Universal Blue',
-  2: 'TITAN',
-  3: 'The Weather Channel',
-  4: 'Meteored',
-  5: 'NEXRAD Level III',
-  6: 'Rainbow',
-  7: 'Dark Sky',
-  8: 'Black & White'
+  0: 'Black & White',
+  1: 'Original',
+  2: 'Universal Blue',
+  3: 'TITAN',
+  4: 'The Weather Channel',
+  5: 'Meteored',
+  6: 'NEXRAD Level III',
+  7: 'Rainbow',
+  8: 'Dark Sky',
 };
 
 // Get a GIBS-compatible timestamp (rounded down to nearest 10 min, offset 30 min for availability)
