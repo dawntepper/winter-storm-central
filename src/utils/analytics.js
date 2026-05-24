@@ -704,6 +704,23 @@ export function trackLocationChange(action, trigger, locationState, isFirstLocat
   });
 }
 
+/**
+ * Fire 'IndexNow Submission' when URLs are pushed to Bing IndexNow from
+ * either the /admin/seo bulk buttons or (Session 2) the build-time hook in
+ * scripts/generate-sitemap.js. Tracks how often submissions happen and
+ * whether they succeed.
+ *
+ * source: 'admin_state_pages' | 'admin_storm_pages' | 'admin_core_pages' |
+ *         'admin_custom' | 'build_sitemap' (Session 2)
+ */
+export function trackIndexNowSubmission(source, urlsCount, success) {
+  track('IndexNow Submission', {
+    source,
+    urls_count: urlsCount,
+    success
+  });
+}
+
 // ============================================
 // TEST FUNCTION
 // ============================================
@@ -853,5 +870,6 @@ export default {
   trackMapRegionClick,
   trackAffiliateClick,
   trackEssentialsCardClick,
-  trackLocationChange
+  trackLocationChange,
+  trackIndexNowSubmission
 };

@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-05-23.
+Last reviewed: 2026-05-24.
 
 ---
 
@@ -176,6 +176,21 @@ The complete set of values the `category` prop can take, in display/safety-prior
 | `fire` | Fire Weather | Red Flag, Fire Weather, Fire Warning |
 
 History note: prior to the 2026-05 tornado category split, tornado events were classified as `severe`. Historical Plausible data filtered on `category=tornado` will be empty before that date — past tornado activity is bucketed under `severe`.
+
+### SEO / indexing events
+
+```
+IndexNow Submission
+  source       'admin_state_pages' | 'admin_storm_pages' | 'admin_core_pages' |
+               'admin_custom' | 'build_sitemap' (Session 2 — build-time hook)
+  urls_count   number of URLs in the submission
+  success      boolean — whether the IndexNow API returned 200/202
+```
+
+Fires from `/admin/seo` bulk-submit buttons and (Session 2) the build-time
+hook in `scripts/generate-sitemap.js`. Use it to track how often submissions
+happen and what the success rate looks like — failures usually mean the
+verification file isn't accessible or the IndexNow API is rate-limiting.
 
 ### Affiliate events (gated)
 

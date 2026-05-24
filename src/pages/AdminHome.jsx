@@ -13,6 +13,12 @@ const SECTIONS = [
     title: 'Weather Summary',
     icon: '📰',
     description: 'Generate social-media-ready summaries of active NWS alerts via Claude Haiku.'
+  },
+  {
+    href: '/admin/seo',
+    title: 'SEO & Indexing',
+    icon: '🔎',
+    description: 'Submit URLs to Bing IndexNow for accelerated indexing. Bulk + custom submission.'
   }
 ];
 

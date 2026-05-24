@@ -8,6 +8,7 @@ import RadarPage from './components/RadarPage.jsx'
 import AdminStorms from './components/AdminStorms.jsx'
 import AdminHome from './pages/AdminHome.jsx'
 import AdminWeatherSummary from './pages/AdminWeatherSummary.jsx'
+import AdminSeo from './pages/AdminSeo.jsx'
 import PrepPage from './pages/PrepPage.jsx'
 import LiveAlertsPage from './components/LiveAlertsPage.jsx'
 import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin" element={<AdminHome />} />
         <Route path="/admin/storms" element={<AdminStorms />} />
         <Route path="/admin/weather-summary" element={<AdminWeatherSummary />} />
+        <Route path="/admin/seo" element={<AdminSeo />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
