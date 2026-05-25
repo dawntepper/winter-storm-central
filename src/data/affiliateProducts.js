@@ -144,10 +144,10 @@ export const AFFILIATE_PRODUCTS = [
   // --- Pet prep ---
   {
     productId: 'pet-carrier',
-    productName: 'Pet Carrier (TSA-approved)',
+    productName: 'Henkelion Pet Carrier (TSA-approved)',
     category: 'pet-prep',
     tier: 'B',
-    price: 'Around $49.99+',
+    price: 'Around $23+',
     priceDescriptor: 'EVACUATION',
     description: "Even if you don't fly. Shelters that accept pets often require carriers.",
     amazonUrl: 'Pet Carrier (TSA-approved)',
