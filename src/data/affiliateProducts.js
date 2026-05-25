@@ -150,7 +150,7 @@ export const AFFILIATE_PRODUCTS = [
     price: 'Around $23+',
     priceDescriptor: 'EVACUATION',
     description: "Even if you don't fly. Shelters that accept pets often require carriers.",
-    amazonUrl: 'Pet Carrier (TSA-approved)',
+    amazonUrl: 'https://amzn.to/42U2hTu',
   },
   {
     productId: 'pet-first-aid-kit',
