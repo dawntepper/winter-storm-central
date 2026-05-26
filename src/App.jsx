@@ -1011,11 +1011,13 @@ export default function App() {
           </div>
         </section>
 
-        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED feature flag.
-            Renders null until Dawn flips the env var on (Commit 2 ships the page
-            but keeps the affiliate CTAs hidden until placeholder URLs are real). */}
-        <section className="mt-8 max-w-2xl mx-auto">
-          <EssentialsCard variant="homepage" placement="homepage" />
+        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED.
+            Wide layout: spans full content width below the desktop two-column
+            section; products render as a horizontal 3-tile grid (stacks on
+            mobile). State and storm pages still use the default compact
+            layout via their own EssentialsCard call sites. */}
+        <section className="mt-8">
+          <EssentialsCard variant="homepage" placement="homepage" layout="wide" />
         </section>
 
         {/* Browse by State */}
