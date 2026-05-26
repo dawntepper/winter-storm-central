@@ -8,12 +8,21 @@
   node_bundler = "esbuild"
   external_node_modules = ["sharp"]
 
-# Scheduled function: process weather alerts every 30 minutes.
-# Suffix is -background so the function gets the 15-min background timeout
-# instead of the 30s synchronous limit — Kit's per-state rate-limited paging
-# can easily exceed 30s when several states have new alerts.
+# Standard email pipeline — every 30 min. Sends digest-cadence emails for
+# all NWS alert types EXCEPT urgent ones (Tornado Warning / Flash Flood
+# Warning). Suffix -background gets the 15-min background timeout instead
+# of the 30s synchronous limit; Kit's per-state rate-limited paging can
+# easily exceed 30s when several states have new alerts.
 [functions."process-weather-alerts-background"]
   schedule = "*/30 * * * *"
+
+# Urgent email pipeline — every 5 min. Sends short-fuse emails for
+# action-required warnings (Tornado Warning, Flash Flood Warning). Shares
+# the same NWS fetch, dedup store, and email template as the standard
+# pipeline (see netlify/functions/lib/alert-pipeline.js). Most invocations
+# are no-ops; only fires when urgent alerts are active in CONUS.
+[functions."process-urgent-alerts-background"]
+  schedule = "*/5 * * * *"
 
 # OG image generation (must be before /api/* catch-all)
 [[redirects]]

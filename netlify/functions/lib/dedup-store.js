@@ -223,20 +223,20 @@ async function cleanupOldRecords(daysOld = 30) {
  * manual triggers) this is acceptable — the previous failure mode was THREE
  * simultaneous runs from accidental triggers, which this prevents.
  */
-async function acquireProcessingLock(ttlMs = DEFAULT_LOCK_TTL_MS) {
+async function acquireProcessingLock({ lockKey = LOCK_KEY, ttlMs = DEFAULT_LOCK_TTL_MS } = {}) {
   const store = makeStore(LOCK_STORE);
-  const existing = await store.get(LOCK_KEY, { type: 'json' });
+  const existing = await store.get(lockKey, { type: 'json' });
   if (existing && Date.now() - existing.startedAt < ttlMs) {
     return { acquired: false, heldBy: existing };
   }
-  await store.setJSON(LOCK_KEY, { startedAt: Date.now() });
+  await store.setJSON(lockKey, { startedAt: Date.now() });
   return { acquired: true };
 }
 
-async function releaseProcessingLock() {
+async function releaseProcessingLock({ lockKey = LOCK_KEY } = {}) {
   try {
     const store = makeStore(LOCK_STORE);
-    await store.delete(LOCK_KEY);
+    await store.delete(lockKey);
   } catch (err) {
     // If we can't release, the lock will expire via TTL — log but don't throw.
     console.warn('releaseProcessingLock failed:', err.message);

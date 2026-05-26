@@ -5,7 +5,19 @@
  * Includes unsubscribe links in footer since Resend doesn't auto-add them.
  */
 
+const { URGENT_EVENT_TYPES } = require('../../../shared/nws-alert-parser.js');
+
 const SITE_URL = 'https://stormtracking.io';
+
+// Alerts that warrant the "URGENT:" subject prefix. Two paths:
+//   - NWS-declared severity === 'Extreme' (rare, e.g. Tornado Emergency / PDS)
+//   - Event in URGENT_EVENT_TYPES (Tornado Warning, Flash Flood Warning) —
+//     short-fuse warnings that come from the dedicated urgent pipeline
+// Single check used by both single-alert and multi-alert subject paths so
+// the rule stays in lockstep.
+function isUrgentAlert(alert) {
+  return alert?.severity === 'Extreme' || URGENT_EVENT_TYPES.has(alert?.event);
+}
 
 const STATE_NAMES = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
@@ -334,18 +346,18 @@ function buildAlertSubject({ stateName, stateAbbr, alerts, countyName }) {
     // County-scoped sends override the alert's own location string so the
     // subject reads "Lee County, FL" instead of e.g. "Fort Myers, FL".
     const location = countyName ? scope : (alert.location || stateName);
-    return `${emoji} ${alert.severity === 'Extreme' ? 'URGENT: ' : ''}${alert.event} for ${location}`;
+    return `${emoji} ${isUrgentAlert(alert) ? 'URGENT: ' : ''}${alert.event} for ${location}`;
   }
 
   // Multiple alerts — summarize
-  const hasExtreme = alerts.some((a) => a.severity === 'Extreme');
+  const hasUrgent = alerts.some(isUrgentAlert);
   const uniqueTypes = [...new Set(alerts.map((a) => a.event))];
 
   if (uniqueTypes.length <= 2) {
-    return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} for ${scope}`;
+    return `${emoji} ${hasUrgent ? 'URGENT: ' : ''}${uniqueTypes.join(' & ')} for ${scope}`;
   }
 
-  return `${emoji} ${hasExtreme ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${scope}`;
+  return `${emoji} ${hasUrgent ? 'URGENT: ' : ''}${alerts.length} Weather Alerts for ${scope}`;
 }
 
 /**

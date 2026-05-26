@@ -15,6 +15,17 @@ export const NWS_HEADERS = {
   'Accept': 'application/geo+json',
 };
 
+// Short-fuse, action-required NWS event types. Used by:
+//   - Client polling (faster refresh cadence when one is active in CONUS)
+//   - Server email pipelines (routes these to the 5-min urgent pipeline
+//     instead of the 30-min digest pipeline)
+// Watches are intentionally excluded — only Warnings, where the user has
+// minutes to act.
+export const URGENT_EVENT_TYPES = new Set([
+  'Tornado Warning',
+  'Flash Flood Warning',
+]);
+
 // Event types to include — Warnings, Watches, and significant Advisories
 export const INCLUDED_EVENTS = [
   // Tornado/Severe

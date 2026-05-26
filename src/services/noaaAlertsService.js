@@ -14,6 +14,7 @@ import {
   CATEGORY_ORDER,
   MARINE_ZONE_PREFIXES,
   INCLUDED_EVENTS,
+  URGENT_EVENT_TYPES,
   getCategoryForEvent,
   extractLocationName,
   extractStateCode,
@@ -52,19 +53,15 @@ export const REFRESH_INTERVAL_FAST = 2 * 60 * 1000;    //  2 minutes
 const CACHE_TTL_NORMAL = REFRESH_INTERVAL_NORMAL;
 const CACHE_TTL_FAST = REFRESH_INTERVAL_FAST;
 
-// Urgent NWS event types that put the system into fast-refresh mode.
-// Watches do NOT count — only Warnings (short-fuse, action-required).
-const URGENT_EVENTS = new Set(['Tornado Warning', 'Flash Flood Warning']);
-
 /**
  * Returns true when the alert payload contains any urgent (action-required)
- * Warning that warrants 2-minute refresh cadence. Exported so the hook can
- * compute the next interval from its in-memory alerts state without
- * re-implementing the rule.
+ * Warning that warrants 2-minute refresh cadence. Single source of truth for
+ * the urgent set is URGENT_EVENT_TYPES in shared/nws-alert-parser.js — same
+ * Set drives the server-side urgent email pipeline.
  */
 export function hasUrgentAlert(allAlerts) {
   if (!Array.isArray(allAlerts)) return false;
-  return allAlerts.some((a) => URGENT_EVENTS.has(a?.event));
+  return allAlerts.some((a) => URGENT_EVENT_TYPES.has(a?.event));
 }
 
 /**
