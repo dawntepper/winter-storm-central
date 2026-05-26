@@ -316,6 +316,11 @@ export const ESSENTIALS_CARD_VARIANTS = {
     title: '🌀 Before the storm',
     productIds: ['midland-wr120b', 'ecoflow-delta-3-plus', 'pet-first-aid-kit'],
   },
+  radar: {
+    title: '🌀 Watching it move in?',
+    intro: "Whatever you're tracking, these are the items worth having before it hits.",
+    productIds: ['midland-wr120b', 'ecoflow-delta-3-plus', 'headlamp-flashlight'],
+  },
   'state-fl': {
     title: '🌴 Florida hurricane essentials',
     productIds: ['generac-3500w', 'heavy-duty-tarp', 'portable-ac', 'pet-carrier'],

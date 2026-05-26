@@ -722,7 +722,7 @@ export default function StateAlertsPage() {
             states, and gated by AFFILIATE_LINKS_ENABLED so the component renders
             null until the feature flag is flipped on. */}
         {STATE_ESSENTIALS_VARIANTS[stateAbbr] && (
-          <section className="max-w-2xl mx-auto w-full">
+          <section>
             <EssentialsCard
               variant={STATE_ESSENTIALS_VARIANTS[stateAbbr]}
               placement={`state-${stateSlug}`}

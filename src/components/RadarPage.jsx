@@ -8,6 +8,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
+import EssentialsCard from './EssentialsCard';
 import { US_STATES } from '../data/stateConfig';
 import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
@@ -448,6 +449,14 @@ export default function RadarPage() {
           >
             View All Weather Alerts →
           </Link>
+        </section>
+
+        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED. Sits
+            between the primary radar utility content and the disclaimer
+            footer so weather-engaged viewers see prep recommendations at
+            a natural pause point. */}
+        <section>
+          <EssentialsCard variant="radar" placement="radar" />
         </section>
       </main>
 

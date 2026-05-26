@@ -1011,13 +1011,11 @@ export default function App() {
           </div>
         </section>
 
-        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED.
-            Wide layout: spans full content width below the desktop two-column
-            section; products render as a horizontal 3-tile grid (stacks on
-            mobile). State and storm pages still use the default compact
-            layout via their own EssentialsCard call sites. */}
+        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED. Spans the
+            full <main> content width between the desktop two-column section
+            and the State Weather/Radar grid. */}
         <section className="mt-8">
-          <EssentialsCard variant="homepage" placement="homepage" layout="wide" />
+          <EssentialsCard variant="homepage" placement="homepage" />
         </section>
 
         {/* Browse by State */}
