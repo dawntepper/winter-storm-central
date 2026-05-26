@@ -1011,6 +1011,13 @@ export default function App() {
           </div>
         </section>
 
+        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED feature flag.
+            Renders null until Dawn flips the env var on (Commit 2 ships the page
+            but keeps the affiliate CTAs hidden until placeholder URLs are real). */}
+        <section className="mt-8 max-w-2xl mx-auto">
+          <EssentialsCard variant="homepage" placement="homepage" />
+        </section>
+
         {/* Browse by State */}
         <section id="browse-states" className="mt-8 pt-6 border-t border-slate-800">
           <h2 className="text-lg font-semibold text-white mb-1">State Weather/Radar</h2>
@@ -1037,13 +1044,6 @@ export default function App() {
               );
             })}
           </div>
-        </section>
-
-        {/* Storm prep essentials — gated by AFFILIATE_LINKS_ENABLED feature flag.
-            Renders null until Dawn flips the env var on (Commit 2 ships the page
-            but keeps the affiliate CTAs hidden until placeholder URLs are real). */}
-        <section className="mt-8 max-w-2xl mx-auto">
-          <EssentialsCard variant="homepage" placement="homepage" />
         </section>
 
         {/* Footer */}
