@@ -201,7 +201,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
                 <p>Updated {lastRefresh.toLocaleTimeString()}</p>
               </div>
             )}
-            <p className="text-xs text-slate-500">Auto-refresh every 30 min</p>
+            <p className="text-xs text-slate-500">Live monitoring · NWS data</p>
             <p className="text-xs text-slate-500">
               Contact: <ContactLink className="text-sky-400 hover:text-sky-300 cursor-pointer">StormTracking Support</ContactLink>
             </p>

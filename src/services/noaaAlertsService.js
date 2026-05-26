@@ -40,7 +40,32 @@ function isTornadoTestActive() {
 }
 
 const CACHE_KEY = 'stormtracker_noaa_alerts_v3'; // v3: fixed categorized alerts count
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+// Adaptive refresh: short fuse when an urgent warning is active in the
+// payload, slower cadence otherwise. Cache TTL matches the polling interval
+// at each cadence — without that, a faster poll would just hit a stale cache
+// and do nothing. The hook (useExtremeWeather) picks its interval from the
+// REFRESH_INTERVAL_* constants; the service picks its cache TTL by inspecting
+// the cached payload's content.
+export const REFRESH_INTERVAL_NORMAL = 10 * 60 * 1000; // 10 minutes
+export const REFRESH_INTERVAL_FAST = 2 * 60 * 1000;    //  2 minutes
+const CACHE_TTL_NORMAL = REFRESH_INTERVAL_NORMAL;
+const CACHE_TTL_FAST = REFRESH_INTERVAL_FAST;
+
+// Urgent NWS event types that put the system into fast-refresh mode.
+// Watches do NOT count — only Warnings (short-fuse, action-required).
+const URGENT_EVENTS = new Set(['Tornado Warning', 'Flash Flood Warning']);
+
+/**
+ * Returns true when the alert payload contains any urgent (action-required)
+ * Warning that warrants 2-minute refresh cadence. Exported so the hook can
+ * compute the next interval from its in-memory alerts state without
+ * re-implementing the rule.
+ */
+export function hasUrgentAlert(allAlerts) {
+  if (!Array.isArray(allAlerts)) return false;
+  return allAlerts.some((a) => URGENT_EVENTS.has(a?.event));
+}
 
 /**
  * Add small random offset to prevent exact overlaps on the map
@@ -158,7 +183,10 @@ async function fetchAlertsFromAPI() {
 }
 
 /**
- * Get cached alerts if still valid
+ * Get cached alerts if still valid. TTL is dynamic: 2 min when the cached
+ * payload contains an urgent warning (Tornado / Flash Flood), 10 min
+ * otherwise. This pairs with the hook's adaptive polling so fast cycles
+ * don't get swallowed by a stale long-lived cache.
  */
 function getCachedAlerts() {
   try {
@@ -167,8 +195,9 @@ function getCachedAlerts() {
 
     const { data, timestamp } = JSON.parse(cached);
     const age = Date.now() - timestamp;
+    const ttl = hasUrgentAlert(data?.allAlerts) ? CACHE_TTL_FAST : CACHE_TTL_NORMAL;
 
-    if (age < CACHE_TTL) {
+    if (age < ttl) {
       return { data, age, fromCache: true };
     }
   } catch (e) {
