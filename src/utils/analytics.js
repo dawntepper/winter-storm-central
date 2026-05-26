@@ -661,15 +661,19 @@ export function trackMapRegionClick(stateAbbr, regionSource) {
 }
 
 /**
- * Fire 'Affiliate Click' when user clicks an Amazon CTA on the /prep page.
- * Wired up in Commit 2.
+ * Fire 'Affiliate Click' when user clicks an affiliate CTA. The `merchant`
+ * parameter defaults to 'amazon' because that's currently the only merchant,
+ * but it future-proofs the prop schema for when we expand (e.g. Walmart,
+ * REI). Once non-Amazon products exist, add a `merchant` field to entries
+ * in src/data/affiliateProducts.js and pass it explicitly from the caller.
  */
-export function trackAffiliateClick(productId, category, tier, placement) {
+export function trackAffiliateClick(productId, category, tier, placement, merchant = 'amazon') {
   track('Affiliate Click', {
     product: productId,
     category,
     tier,
-    placement
+    placement,
+    merchant
   });
 }
 

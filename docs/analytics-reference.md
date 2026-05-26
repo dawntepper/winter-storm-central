@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-05-24.
+Last reviewed: 2026-05-26.
 
 ---
 
@@ -200,6 +200,8 @@ Affiliate Click
   category    category id (e.g. "stay-informed")
   tier        "S" | "A" | "B" | "C"
   placement   typically "prep-page"
+  merchant    "amazon" (default — function-level fallback). Future values
+              when we expand beyond Amazon: "walmart", "rei", etc.
 
 Essentials Card Click
   product     productId (or "view-full-guide" for the bottom link)
