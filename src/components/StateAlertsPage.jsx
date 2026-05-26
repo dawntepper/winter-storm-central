@@ -7,8 +7,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
+import { useMinuteTick } from '../hooks/useMinuteTick';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
+import { formatExpirationBadge } from '../utils/expirationBadge';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
@@ -219,6 +221,10 @@ const CATEGORY_COLORS = {
 
 function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
   const [expandedCategories, setExpandedCategories] = useState({});
+  // Ticks every minute so relative-time exp badges ("in 25 min") stay
+  // accurate as the clock advances. Cheap — single setInterval at the
+  // component level, doesn't refetch any data.
+  const nowMs = useMinuteTick();
 
   // Group alerts by category
   const grouped = useMemo(() => {
@@ -294,11 +300,19 @@ function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
                         }`}>
                           {alert.severity}
                         </span>
-                        {alert.expires && (
-                          <span className="text-[10px] text-slate-500">
-                            Exp: {new Date(alert.expires).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
+                        {alert.expires && (() => {
+                          const { label, urgency } = formatExpirationBadge(alert.expires, nowMs);
+                          if (!label) return null;
+                          const tone =
+                            urgency === 'urgent' ? 'text-red-400 font-semibold' :
+                            urgency === 'expired' ? 'text-slate-600' :
+                            'text-slate-500';
+                          return (
+                            <span className={`text-[10px] ${tone}`}>
+                              Exp: {label}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </button>
