@@ -186,11 +186,33 @@ Forecast Page View
                    (geolocation picks don't update the URL, so initial
                    page-view source can only be one of these three;
                    later picker interactions don't refire this event)
+
+Forecast Location Changed
+  source           "city" | "zip" | "geolocation"
+                   The picker mode the user used after initial mount.
+                   Pair with Forecast Page View to see which modes are
+                   actually used vs. just available.
+
+Forecast Link Click
+  source             "city-page" | "state-page-widget"
+                     Where the click came from.
+  destination_state  state slug being navigated to
+  destination_type   "city" | "zip" | "state-default"
+                     What kind of forecast destination was clicked.
 ```
 
-Fires once per /forecast/[state-slug] mount. Captures which states get
-traffic and which picker mode the user landed with. Use it to size
-investment in expanding the city catalog vs. doubling down on ZIP entry UX.
+`Forecast Page View` fires once per /forecast/[state-slug] mount. Captures
+which states get traffic and which picker mode the user landed with.
+
+`Forecast Location Changed` fires when the user changes location via the
+picker on the forecast page itself. Lets us see which picker mode
+(city dropdown vs ZIP vs geolocation) gets used in practice — informs
+catalog expansion vs ZIP UX investment.
+
+`Forecast Link Click` fires from entry points on other surfaces
+(CityAlertsPage "View full forecast" CTA, StateForecastWidget on state
+alert pages). Pairs with Forecast Page View on the landing side to
+measure the entry funnel.
 
 ### SEO / indexing events
 

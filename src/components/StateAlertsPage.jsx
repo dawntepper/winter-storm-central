@@ -14,6 +14,7 @@ import { formatExpirationBadge } from '../utils/expirationBadge';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
+import StateForecastWidget from './StateForecastWidget';
 
 // Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
 // states get the tornado variant. TX gets its own variant. All other states
@@ -719,6 +720,9 @@ export default function StateAlertsPage() {
                 />
               )}
             </section>
+
+            {/* Forecast launcher — quick city links + ZIP entry + state forecast CTA */}
+            <StateForecastWidget stateSlug={stateSlug} stateName={stateData.name} />
 
             {/* Nearby State Alerts Visualization */}
             <NearbyStateAlertsViz

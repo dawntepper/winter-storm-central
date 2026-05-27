@@ -18,6 +18,9 @@ import {
   describeWeatherCode,
   degreesToCompass,
 } from '../utils/fetchOpenMeteoConditions';
+import { getForecastForCoords } from '../services/forecastService';
+import { ForecastHourly, ForecastDaily } from './ForecastSections';
+import { trackForecastLinkClick } from '../utils/analytics';
 import AlertSignupBar from './AlertSignupBar';
 import citiesIndex from '../content/cities/index.json';
 
@@ -615,6 +618,59 @@ function NearbyCities({ city }) {
 }
 
 // ============================================================
+// Forecast section — NWS-based hourly + 7-day outlook for this city.
+// Lives alongside the existing Open-Meteo current-conditions widget.
+// Lazy fetches on mount; failures degrade silently (section just hides).
+// ============================================================
+
+function CityForecastSection({ city }) {
+  const [forecast, setForecast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!city?.lat || !city?.lon) return;
+    let cancelled = false;
+    setLoading(true);
+    getForecastForCoords(city.lat, city.lon)
+      .then((data) => { if (!cancelled) setForecast(data); })
+      .catch(() => { /* hide section silently on failure */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [city?.lat, city?.lon]);
+
+  if (loading && !forecast) {
+    return (
+      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+        <p className="text-sm text-slate-400">Loading forecast…</p>
+      </section>
+    );
+  }
+
+  if (!forecast) return null;
+
+  return (
+    <section className="space-y-4">
+      <ForecastHourly
+        periods={forecast.hourly}
+        timeZone={forecast.location?.timeZone}
+        title={`Next 24 hours · ${city.city}`}
+      />
+      <ForecastDaily periods={forecast.daily} title={`7-day outlook · ${city.city}`} />
+      <div className="text-center">
+        <Link
+          to={`/forecast/${city.state_slug}?city=${city.slug}`}
+          onClick={() => trackForecastLinkClick('city-page', city.state_slug, 'city')}
+          className="inline-flex items-center gap-1.5 px-5 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 hover:text-sky-200 text-sm font-semibold rounded-lg transition-colors"
+        >
+          View full forecast for {city.city}
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
@@ -732,6 +788,7 @@ export default function CityAlertsPage() {
 
         <CurrentConditions city={city} conditions={conditions} error={conditionsError} />
         <ActiveAlerts city={city} alerts={alerts} error={alertsError} />
+        <CityForecastSection city={city} />
         <RelatedLinks city={city} />
         <NearbyCities city={city} />
         <SeasonalRisk city={city} season={season} />

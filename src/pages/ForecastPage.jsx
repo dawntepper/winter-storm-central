@@ -1,45 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { US_STATES } from '../data/stateConfig';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { getStateCentroid } from '../data/stateCentroids';
 import { getCityBySlug } from '../data/cityCatalog';
 import { getForecastForCoords, lookupZipCoords } from '../services/forecastService';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
+import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/ForecastSections';
 import StormMap from '../components/StormMap';
 import ContactLink from '../components/ContactLink';
-import { trackForecastPageView } from '../utils/analytics';
+import { trackForecastPageView, trackForecastLocationChanged } from '../utils/analytics';
+
+const PENDING_GEO_KEY = 'forecast_pending_geo';
+const PENDING_GEO_TTL = 30 * 1000; // 30s — enough to cover a redirect, not enough to leak across sessions
 
 /**
  * /forecast/[state-slug] — auto-generated for all 55 state/territory slugs.
  *
- * Default behavior: state centroid forecast. Picker lets users narrow to:
- *   - A specific city (?city=oklahoma-city, dropdown from catalog)
- *   - Any 5-digit US ZIP (?zip=73101, via Zippopotam.us lookup)
- *   - Browser geolocation (no URL change — ephemeral session pick)
+ * Default behavior: state centroid forecast. Picker lets users narrow via:
+ *   - City dropdown (catalogued cities for the current state)
+ *   - 5-digit ZIP (Zippopotam.us lookup)
+ *   - Browser geolocation
  *
- * Page sections, top to bottom:
- *   1. Page header + location picker
- *   2. Live radar map centered on selected location (reuses StormMap)
- *   3. Current conditions card
- *   4. Hourly forecast strip (~6.5 days)
- *   5. 7-day forecast cards (NWS daily periods, day/night condensed)
+ * Cross-state geolocation: if a user on /forecast/oklahoma clicks "Use my
+ * location" and is actually in Florida, after the NWS /points response
+ * reveals state=FL, the page redirects to /forecast/florida — preserving
+ * the geolocated coords via sessionStorage so the new page lands on the
+ * user's actual location, not Florida's state centroid.
  *
- * Data source: NWS api.weather.gov (free, no API key). See forecastService
- * for the two-step /points → /forecast + /forecast/hourly chain.
+ * Page sections (top to bottom):
+ *   1. Header + picker
+ *   2. Live radar centered on selected location (StormMap reused)
+ *   3. Current conditions (first hourly period)
+ *   4. Hourly strip (next 24h, ~6.5d available)
+ *   5. 7-day outlook (NWS daily periods grouped by date)
+ *
+ * Data source: api.weather.gov, no key. See forecastService for the chain.
  */
 export default function ForecastPage() {
   const { slug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const stateData = US_STATES[slug];
 
-  const [coords, setCoords] = useState(null); // { lat, lon, displayName }
+  const [coords, setCoords] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Plausible — fires once per mount with the initial location source.
-  // Captures state slug + how the user landed on this location so we can
-  // see which states get traffic and which picker modes get used most.
+  // One-time Plausible page view on mount.
   useEffect(() => {
     if (!stateData) return;
     const initialSource = searchParams.get('city') ? 'city'
@@ -49,14 +57,29 @@ export default function ForecastPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
-  // Resolve the initial location from URL query params or default to state centroid.
-  // Runs on mount + when slug / query params change.
+  // Resolve initial location. Precedence:
+  //   1. sessionStorage pending-geolocation (set by a cross-state redirect)
+  //   2. ?city= query param
+  //   3. ?zip= query param
+  //   4. State centroid default
   useEffect(() => {
     let cancelled = false;
-    async function resolveInitialLocation() {
-      const citySlug = searchParams.get('city');
-      const zip = searchParams.get('zip');
+    async function resolve() {
+      // 1. Pending geolocation handoff from a cross-state redirect
+      try {
+        const raw = sessionStorage.getItem(PENDING_GEO_KEY);
+        if (raw) {
+          sessionStorage.removeItem(PENDING_GEO_KEY);
+          const { lat, lon, savedAt } = JSON.parse(raw);
+          if (Date.now() - savedAt < PENDING_GEO_TTL && Number.isFinite(lat) && Number.isFinite(lon)) {
+            if (!cancelled) setCoords({ lat, lon, displayName: 'Your current location' });
+            return;
+          }
+        }
+      } catch { /* ignore parse errors */ }
 
+      // 2. URL ?city=
+      const citySlug = searchParams.get('city');
       if (citySlug) {
         const city = getCityBySlug(citySlug);
         if (city) {
@@ -67,9 +90,10 @@ export default function ForecastPage() {
           });
           return;
         }
-        // Fall through to state default if slug doesn't match
       }
 
+      // 3. URL ?zip=
+      const zip = searchParams.get('zip');
       if (zip && /^\d{5}$/.test(zip)) {
         try {
           const c = await lookupZipCoords(zip);
@@ -79,12 +103,10 @@ export default function ForecastPage() {
             displayName: `${c.place}, ${c.stateAbbr} ${zip}`,
           });
           return;
-        } catch {
-          // Fall through to state default on ZIP lookup failure
-        }
+        } catch { /* fall through to state default */ }
       }
 
-      // Default: state centroid
+      // 4. State centroid default
       if (stateData) {
         const centroid = getStateCentroid(stateData.abbr);
         if (centroid && !cancelled) {
@@ -96,11 +118,15 @@ export default function ForecastPage() {
         }
       }
     }
-    resolveInitialLocation();
+    resolve();
     return () => { cancelled = true; };
   }, [slug, searchParams, stateData]);
 
-  // Fetch forecast whenever coords change.
+  // Fetch forecast on coords change. After resolution, check if NWS reports
+  // a state that differs from the URL — that means geolocation (or a
+  // cross-state ZIP) landed us on the wrong state slug. Redirect with the
+  // coords preserved via sessionStorage so the new page shows the user's
+  // actual location, not the new state's centroid.
   useEffect(() => {
     if (!coords) return;
     let cancelled = false;
@@ -108,7 +134,26 @@ export default function ForecastPage() {
     setError(null);
     getForecastForCoords(coords.lat, coords.lon)
       .then((data) => {
-        if (!cancelled) setForecast(data);
+        if (cancelled) return;
+        setForecast(data);
+
+        const reportedAbbr = data.location?.state;
+        if (
+          reportedAbbr &&
+          stateData?.abbr &&
+          reportedAbbr !== stateData.abbr
+        ) {
+          const correctSlug = ABBR_TO_SLUG[reportedAbbr];
+          if (correctSlug && correctSlug !== slug) {
+            try {
+              sessionStorage.setItem(
+                PENDING_GEO_KEY,
+                JSON.stringify({ lat: coords.lat, lon: coords.lon, savedAt: Date.now() })
+              );
+            } catch { /* ignore */ }
+            navigate(`/forecast/${correctSlug}`, { replace: true });
+          }
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message || 'Failed to load forecast');
@@ -117,9 +162,9 @@ export default function ForecastPage() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [coords]);
+  }, [coords, slug, stateData, navigate]);
 
-  // SEO meta — set on mount + when state name resolves.
+  // SEO meta
   useEffect(() => {
     if (!stateData) return;
     const title = `${stateData.name} Weather Forecast | Hourly & 7-Day | StormTracking`;
@@ -134,17 +179,16 @@ export default function ForecastPage() {
     setMeta('meta[property="og:description"]', 'content', desc);
     setMeta('meta[property="og:url"]', 'content', `https://stormtracking.io/forecast/${slug}`);
     setMeta('link[rel="canonical"]', 'href', `https://stormtracking.io/forecast/${slug}`);
-
     return () => {
-      // Reset to defaults on unmount
       document.title = 'StormTracking | Live Weather Radar & Real-Time Storm Alerts';
     };
   }, [stateData, slug]);
 
   const handleLocationSelect = (pick) => {
     setCoords({ lat: pick.lat, lon: pick.lon, displayName: pick.displayName });
-    // Persist city + zip picks in URL for deep-linking. Geolocation stays
-    // ephemeral (no URL update — privacy + meaningless without re-permission).
+    trackForecastLocationChanged(pick.source);
+    // Persist city + zip picks in the URL. Geolocation stays ephemeral —
+    // the cross-state-redirect effect above handles state correction.
     const next = new URLSearchParams(searchParams);
     next.delete('city');
     next.delete('zip');
@@ -215,9 +259,9 @@ export default function ForecastPage() {
 
         {forecast && (
           <>
-            <CurrentConditions current={forecast.current} location={coords?.displayName} />
-            <HourlyForecast periods={forecast.hourly} timeZone={forecast.location?.timeZone} />
-            <SevenDayForecast periods={forecast.daily} />
+            <ForecastCurrent current={forecast.current} location={coords?.displayName} />
+            <ForecastHourly periods={forecast.hourly} timeZone={forecast.location?.timeZone} />
+            <ForecastDaily periods={forecast.daily} />
           </>
         )}
 
@@ -230,134 +274,4 @@ export default function ForecastPage() {
       </main>
     </div>
   );
-}
-
-function CurrentConditions({ current, location }) {
-  if (!current) return null;
-  return (
-    <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Right now</h2>
-      <div className="flex items-start gap-4">
-        {current.icon && (
-          <img src={current.icon} alt="" className="w-20 h-20 rounded-lg flex-shrink-0" />
-        )}
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl sm:text-5xl font-bold text-white">
-              {current.temperature}°{current.temperatureUnit || 'F'}
-            </span>
-          </div>
-          <p className="text-base text-slate-300 mt-1">{current.shortForecast}</p>
-          <p className="text-xs text-slate-500 mt-2">
-            Wind {current.windSpeed} {current.windDirection}
-            {location ? ` · ${location}` : ''}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function HourlyForecast({ periods, timeZone }) {
-  if (!periods || periods.length === 0) return null;
-  const next24 = periods.slice(0, 24);
-  const fmt = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString(undefined, { hour: 'numeric', timeZone: timeZone || undefined });
-  };
-  return (
-    <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Next 24 hours</h2>
-        <span className="text-[10px] text-slate-500">
-          {periods.length} hourly periods total (~{Math.round(periods.length / 24)} days)
-        </span>
-      </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-        {next24.map((p) => (
-          <div
-            key={p.startTime}
-            className="flex-shrink-0 w-20 bg-slate-900/60 border border-slate-700 rounded-lg p-2 flex flex-col items-center text-center"
-          >
-            <span className="text-[10px] text-slate-400 mb-1">{fmt(p.startTime)}</span>
-            {p.icon && <img src={p.icon} alt="" className="w-10 h-10" />}
-            <span className="text-sm font-semibold text-white mt-1">
-              {p.temperature}°
-            </span>
-            {p.probabilityOfPrecipitation?.value != null && p.probabilityOfPrecipitation.value > 0 && (
-              <span className="text-[10px] text-sky-400 mt-0.5">{p.probabilityOfPrecipitation.value}%</span>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function SevenDayForecast({ periods }) {
-  if (!periods || periods.length === 0) return null;
-  // NWS returns alternating day/night periods. Pair them into a daily view.
-  const days = useMemo(() => groupPeriodsIntoDays(periods), [periods]);
-  return (
-    <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">7-day outlook</h2>
-      <div className="space-y-2">
-        {days.map((d) => (
-          <div key={d.key} className="flex items-center gap-3 sm:gap-4 p-3 bg-slate-900/40 border border-slate-700 rounded-lg">
-            <div className="w-20 sm:w-28 flex-shrink-0">
-              <p className="text-sm font-semibold text-white">{d.dayName}</p>
-              <p className="text-[10px] text-slate-500">{d.dateLabel}</p>
-            </div>
-            {d.day?.icon ? (
-              <img src={d.day.icon} alt="" className="w-12 h-12 flex-shrink-0" />
-            ) : (
-              <div className="w-12 h-12 flex-shrink-0" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-200 truncate">
-                {d.day?.shortForecast || d.night?.shortForecast || '—'}
-              </p>
-              <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                {d.day?.detailedForecast || d.night?.detailedForecast || ''}
-              </p>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-sm font-semibold text-white">
-                {d.high != null ? `${d.high}°` : '—'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {d.low != null ? `${d.low}°` : '—'}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/**
- * NWS daily forecast returns alternating day/night periods (~14 total over 7 days).
- * Group them by calendar date with a high (day) + low (night) summary.
- */
-function groupPeriodsIntoDays(periods) {
-  const byDay = new Map();
-  for (const p of periods) {
-    const start = new Date(p.startTime);
-    const key = `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`;
-    if (!byDay.has(key)) {
-      const dayName = start.toLocaleDateString(undefined, { weekday: 'long' });
-      const dateLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      byDay.set(key, { key, dayName, dateLabel, day: null, night: null, high: null, low: null });
-    }
-    const bucket = byDay.get(key);
-    if (p.isDaytime) {
-      bucket.day = p;
-      bucket.high = p.temperature;
-    } else {
-      bucket.night = p;
-      bucket.low = p.temperature;
-    }
-  }
-  return Array.from(byDay.values());
 }

@@ -739,6 +739,35 @@ export function trackForecastPageView(stateSlug, locationSource) {
   });
 }
 
+/**
+ * Fire 'Forecast Location Changed' when the picker on /forecast/[state-slug]
+ * updates the displayed location after initial mount. Lets us see which
+ * picker mode subscribers actually use (city dropdown vs ZIP vs geolocation).
+ *
+ * source: 'city' | 'zip' | 'geolocation'
+ */
+export function trackForecastLocationChanged(source) {
+  track('Forecast Location Changed', { source });
+}
+
+/**
+ * Fire 'Forecast Link Click' when a user navigates to a forecast page from
+ * another surface (CityAlertsPage forecast section CTA, StateAlertsPage
+ * forecast widget city links, etc.). Pairs with Forecast Page View on the
+ * landing side to measure the entry funnel.
+ *
+ * source:           'city-page' | 'state-page-widget'  (where the click came from)
+ * destinationState: state slug being navigated to
+ * destinationType:  'city' | 'zip' | 'state-default'
+ */
+export function trackForecastLinkClick(source, destinationState, destinationType) {
+  track('Forecast Link Click', {
+    source,
+    destination_state: destinationState,
+    destination_type: destinationType
+  });
+}
+
 // ============================================
 // TEST FUNCTION
 // ============================================
@@ -890,5 +919,7 @@ export default {
   trackEssentialsCardClick,
   trackLocationChange,
   trackIndexNowSubmission,
-  trackForecastPageView
+  trackForecastPageView,
+  trackForecastLocationChanged,
+  trackForecastLinkClick
 };
