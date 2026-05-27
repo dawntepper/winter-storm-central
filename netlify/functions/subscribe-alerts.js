@@ -25,6 +25,16 @@ const { buildWelcomeEmail, SITE_URL } = require('./lib/email-templates.js');
 
 const HAS_COUNTY_INFO_TAG = 'has-county-info';
 
+// Map signup-source → additional Kit tag applied alongside location tags.
+// Lets us segment subscribers later by where they originally signed up
+// without changing the alert delivery flow (all sources receive the same
+// alert emails). Add new entries here when a new signup surface launches.
+const SOURCE_TAGS = {
+  prep: 'newsletter',   // /prep page inline form — these subscribers opted in
+                        // partly with newsletter framing, so they get the
+                        // 'newsletter' tag for future newsletter sends.
+};
+
 const KIT_FORM_ID = process.env.KIT_FORM_ID || '9086634';
 
 /**
@@ -102,7 +112,7 @@ exports.handler = async (event) => {
     };
   }
 
-  const { email, zip_code } = body;
+  const { email, zip_code, source } = body;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return {
@@ -224,6 +234,22 @@ exports.handler = async (event) => {
         }
       } catch (tagError) {
         console.warn(`[Subscribe] State tagging failed for ${email}:`, tagError.message);
+      }
+    }
+
+    // 3b. Apply source-specific tag (e.g. /prep signups → 'newsletter').
+    // Best-effort: failures here don't block the subscription — the
+    // subscriber is still on the alert list via location tags above.
+    const sourceTag = source ? SOURCE_TAGS[source] : null;
+    if (sourceTag) {
+      try {
+        const sourceTagId = await ensureTagByName(sourceTag);
+        if (sourceTagId) {
+          await tagSubscriberByEmail({ tagId: sourceTagId, email });
+          console.log(`[Subscribe] Tagged ${email} with ${sourceTag} (source: ${source})`);
+        }
+      } catch (sourceTagError) {
+        console.warn(`[Subscribe] Source tagging failed for ${email}:`, sourceTagError.message);
       }
     }
 

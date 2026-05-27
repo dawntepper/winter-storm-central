@@ -11,10 +11,15 @@ import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
 
-// Inline newsletter form for the /prep page. Uses the same /api/subscribe-alerts
+// Inline signup form for the /prep page. Uses the same /api/subscribe-alerts
 // endpoint, same analytics events, and same SUBSCRIBER_KEY as the site-wide
 // AlertSignupBar slide-up — so signing up here also dismisses the slide-up bar
 // on other pages.
+//
+// Passes source='prep' so the server can apply a 'newsletter' Kit tag to
+// /prep signups specifically. Same alert delivery as everyone else today;
+// the tag preserves the option to send /prep subscribers a newsletter later
+// without retroactively re-segmenting.
 function InlineNewsletterForm() {
   const [email, setEmail] = useState('');
   const [zipCode, setZipCode] = useState('');
@@ -39,7 +44,7 @@ function InlineNewsletterForm() {
       const response = await fetch('/api/subscribe-alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, zip_code: cleanZip }),
+        body: JSON.stringify({ email: cleanEmail, zip_code: cleanZip, source: 'prep' }),
       });
       if (!response.ok) {
         let msg = `Server error (${response.status})`;
@@ -68,7 +73,7 @@ function InlineNewsletterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 max-w-xl mx-auto" aria-label="Newsletter signup">
+    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 max-w-xl mx-auto" aria-label="Severe weather alerts signup">
       <input
         type="email"
         value={email}
@@ -341,16 +346,20 @@ export default function PrepPage() {
         })}
       </main>
 
-      {/* Newsletter — inline form using the same /api/subscribe-alerts endpoint
+      {/* Signup — inline form using the same /api/subscribe-alerts endpoint
           as the site-wide slide-up. The slide-up is intentionally NOT mounted
-          on /prep (would be double signup noise next to the inline form). */}
+          on /prep (would be double signup noise next to the inline form).
+          /prep signups also get a 'newsletter' Kit tag so they can be
+          targeted separately when a real newsletter ships. */}
       <section className="bg-slate-800 border-y border-slate-700 px-4 sm:px-6 py-12">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
-            Get the StormTracking newsletter
+            Sign up for severe weather alerts
           </h2>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-6">
-            Weekly during hurricane season. Free, no spam, no urgency manufactured.
+            Real-time NWS alerts for your area when severe weather threatens.
+            /prep subscribers will also be the first to receive a weekly
+            newsletter when we add one. Free, no spam, no urgency manufactured.
           </p>
           <InlineNewsletterForm />
           <p className="text-xs text-slate-500 mt-4">
