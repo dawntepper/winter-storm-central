@@ -77,10 +77,10 @@ export function ForecastDaily({ periods, title = '7-day outlook' }) {
       <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">{title}</h2>
       <div className="space-y-2">
         {days.map((d) => (
-          <div key={d.key} className="flex items-center gap-3 sm:gap-4 p-3 bg-slate-900/40 border border-slate-700 rounded-lg">
+          <div key={d.key} className="flex items-start gap-3 sm:gap-4 p-3 bg-slate-900/40 border border-slate-700 rounded-lg">
             <div className="w-20 sm:w-28 flex-shrink-0">
-              <p className="text-sm font-semibold text-white">{d.dayName}</p>
-              <p className="text-[10px] text-slate-500">{d.dateLabel}</p>
+              <p className="text-base font-semibold text-white">{d.dayName}</p>
+              <p className="text-xs text-slate-400">{d.dateLabel}</p>
             </div>
             {d.day?.icon ? (
               <img src={d.day.icon} alt="" className="w-12 h-12 flex-shrink-0" />
@@ -88,16 +88,16 @@ export function ForecastDaily({ periods, title = '7-day outlook' }) {
               <div className="w-12 h-12 flex-shrink-0" />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-200 truncate">
+              <p className="text-base font-medium text-slate-100">
                 {d.day?.shortForecast || d.night?.shortForecast || '—'}
               </p>
-              <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+              <p className="text-sm text-slate-400 mt-1 leading-relaxed">
                 {d.day?.detailedForecast || d.night?.detailedForecast || ''}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-sm font-semibold text-white">{d.high != null ? `${d.high}°` : '—'}</p>
-              <p className="text-xs text-slate-500">{d.low != null ? `${d.low}°` : '—'}</p>
+              <p className="text-base font-semibold text-white">{d.high != null ? `${d.high}°` : '—'}</p>
+              <p className="text-sm text-slate-400">{d.low != null ? `${d.low}°` : '—'}</p>
             </div>
           </div>
         ))}

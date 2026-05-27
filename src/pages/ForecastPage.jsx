@@ -234,21 +234,29 @@ export default function ForecastPage() {
           onSelect={handleLocationSelect}
         />
 
+        {/* Current conditions + radar side-by-side on desktop (1:2 split so
+            the map keeps its prominence). Stacks vertically on mobile with
+            current on top, radar below. */}
         {coords && (
-          <section aria-label="Live weather radar">
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[]}
-              alerts={[]}
-              isHero
-              centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
-            />
-          </section>
-        )}
-
-        {loading && !forecast && (
-          <p className="text-sm text-slate-400">Loading forecast…</p>
+          <div className="lg:grid lg:grid-cols-[1fr_2fr] gap-4 space-y-4 lg:space-y-0">
+            {forecast ? (
+              <ForecastCurrent current={forecast.current} location={coords?.displayName} />
+            ) : (
+              <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
+                <p className="text-sm text-slate-400">Loading current conditions…</p>
+              </div>
+            )}
+            <section aria-label="Live weather radar">
+              <StormMap
+                weatherData={{}}
+                stormPhase="active"
+                userLocations={[]}
+                alerts={[]}
+                isHero
+                centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
+              />
+            </section>
+          </div>
         )}
 
         {error && (
@@ -257,9 +265,12 @@ export default function ForecastPage() {
           </div>
         )}
 
+        {loading && !forecast && (
+          <p className="text-sm text-slate-400">Loading hourly + 7-day forecast…</p>
+        )}
+
         {forecast && (
           <>
-            <ForecastCurrent current={forecast.current} location={coords?.displayName} />
             <ForecastHourly periods={forecast.hourly} timeZone={forecast.location?.timeZone} />
             <ForecastDaily periods={forecast.daily} />
           </>
