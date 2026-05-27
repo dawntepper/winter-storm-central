@@ -63,6 +63,14 @@ function buildSitemap(storms, cities) {
     })
   ).join('\n');
 
+  const forecastUrls = STATE_SLUGS.map(slug =>
+    urlEntry(`${BASE_URL}/forecast/${slug}`, {
+      lastmod: now,
+      changefreq: 'hourly',
+      priority: '0.7'
+    })
+  ).join('\n');
+
   const cityUrls = cities.map(city =>
     urlEntry(`${BASE_URL}/alerts/${city.slug}`, {
       lastmod: now,
@@ -92,6 +100,7 @@ ${urlEntry(`${BASE_URL}/radar`, { lastmod: now, changefreq: 'daily', priority: '
 ${urlEntry(`${BASE_URL}/alerts`, { lastmod: now, changefreq: 'hourly', priority: '0.8' })}
 ${urlEntry(`${BASE_URL}/prep`, { lastmod: now, changefreq: 'weekly', priority: '0.9' })}
 ${stateUrls}
+${forecastUrls}
 ${cityUrls}
 ${stormUrls}
 </urlset>

@@ -725,6 +725,20 @@ export function trackIndexNowSubmission(source, urlsCount, success) {
   });
 }
 
+/**
+ * Fire 'Forecast Page View' on /forecast/[state-slug] mount. Captures which
+ * state was viewed and how the location was picked (default centroid, city
+ * dropdown, ZIP entry, or geolocation).
+ *
+ * locationSource: 'state-default' | 'city' | 'zip' | 'geolocation'
+ */
+export function trackForecastPageView(stateSlug, locationSource) {
+  track('Forecast Page View', {
+    state: stateSlug,
+    location_source: locationSource
+  });
+}
+
 // ============================================
 // TEST FUNCTION
 // ============================================
@@ -875,5 +889,6 @@ export default {
   trackAffiliateClick,
   trackEssentialsCardClick,
   trackLocationChange,
-  trackIndexNowSubmission
+  trackIndexNowSubmission,
+  trackForecastPageView
 };

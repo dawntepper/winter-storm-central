@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-05-26.
+Last reviewed: 2026-05-27.
 
 ---
 
@@ -176,6 +176,21 @@ The complete set of values the `category` prop can take, in display/safety-prior
 | `fire` | Fire Weather | Red Flag, Fire Weather, Fire Warning |
 
 History note: prior to the 2026-05 tornado category split, tornado events were classified as `severe`. Historical Plausible data filtered on `category=tornado` will be empty before that date — past tornado activity is bucketed under `severe`.
+
+### Forecast events
+
+```
+Forecast Page View
+  state            state slug (e.g. "oklahoma")
+  location_source  "state-default" | "city" | "zip"
+                   (geolocation picks don't update the URL, so initial
+                   page-view source can only be one of these three;
+                   later picker interactions don't refire this event)
+```
+
+Fires once per /forecast/[state-slug] mount. Captures which states get
+traffic and which picker mode the user landed with. Use it to size
+investment in expanding the city catalog vs. doubling down on ZIP entry UX.
 
 ### SEO / indexing events
 
