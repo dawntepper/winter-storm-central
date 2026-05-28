@@ -9,7 +9,8 @@
     "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-city-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:dedup": "node scripts/test-dedup.js"
+    "test:dedup": "node scripts/test-dedup.js",
+    "generate-favicons": "node scripts/generate-favicons.js"
   },
   "dependencies": {
     "@capacitor/cli": "^8.1.0",
