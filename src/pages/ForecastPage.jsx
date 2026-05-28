@@ -269,7 +269,20 @@ export default function ForecastPage() {
                 // whole state is in view; a centroid pin would be misleading.
                 coords.displayName?.endsWith('(state default)')
                   ? []
-                  : [{ id: 'forecast-pin', lat: coords.lat, lon: coords.lon, name: coords.displayName }]
+                  : [{
+                      id: 'forecast-pin',
+                      lat: coords.lat,
+                      lon: coords.lon,
+                      name: coords.displayName,
+                      // Feed NWS current data to the marker's hover popover so
+                      // it shows real conditions instead of "Weather data
+                      // loading..." once the forecast resolves.
+                      conditions: forecast?.current ? {
+                        temperature: forecast.current.temperature,
+                        temperatureUnit: forecast.current.temperatureUnit,
+                        shortForecast: forecast.current.shortForecast,
+                      } : null,
+                    }]
               }
               alerts={mapAlerts}
               isHero
