@@ -211,7 +211,7 @@ export default function ForecastLocationPicker({
                   source: 'city',
                   citySlug: c.slug,
                 })}
-                className="px-2.5 py-1 bg-slate-900/60 hover:bg-slate-900 border border-slate-700 hover:border-sky-500/40 rounded-md text-xs text-slate-200 hover:text-white transition-colors"
+                className="px-2.5 py-1 bg-slate-900/60 hover:bg-slate-900 border border-slate-700 hover:border-sky-500/40 rounded-md text-xs text-slate-200 hover:text-white transition-colors cursor-pointer"
               >
                 {c.city}
               </button>
