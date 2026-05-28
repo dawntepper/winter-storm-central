@@ -188,6 +188,42 @@ export default function ForecastLocationPicker({
           )}
         </form>
       )}
+
+      {/* Quick-jump nearby cities for this state. Fills the picker card with
+          something useful (vs. empty space when the picker's content is
+          short) and encourages users to keep exploring forecasts. Pulls from
+          the same cityCatalog the dropdown uses; hidden when the state has
+          no catalogued cities. */}
+      {cities.length > 0 && (
+        <div className="pt-3 border-t border-slate-700">
+          <p className="text-[11px] text-slate-500 uppercase tracking-wide mb-2">
+            Quick jump · {stateName}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {cities.map((c) => (
+              <button
+                key={c.slug}
+                type="button"
+                onClick={() => onSelect({
+                  lat: c.lat,
+                  lon: c.lon,
+                  displayName: `${c.city}, ${c.state_abbr}`,
+                  source: 'city',
+                  citySlug: c.slug,
+                })}
+                className="px-2.5 py-1 bg-slate-900/60 hover:bg-slate-900 border border-slate-700 hover:border-sky-500/40 rounded-md text-xs text-slate-200 hover:text-white transition-colors"
+              >
+                {c.city}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-[11px] text-slate-500 pt-2 leading-relaxed">
+        <span aria-hidden="true">💡</span> Tip: ZIP entry works for any US
+        location — handy when your city isn't in the dropdown.
+      </p>
     </div>
   );
 }
