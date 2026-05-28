@@ -84,35 +84,63 @@ export function TemperatureSparkline({ periods }) {
 }
 
 /**
- * Horizontal heatmap of rain probability over the next 24 hours.
- * Each hour is a bar tinted sky-blue by % chance of precipitation.
- * Returns null when the entire 24-hour window has 0% — no point in
- * showing an empty strip.
+ * Horizontal heatmap of rain chance over the next 24 hours. Each segment
+ * is one hour, left to right (Now → +24h). Sky-blue intensity scales with
+ * how likely rain is that hour; 0% hours are dimmed gray so users can scan
+ * "when is it dry" vs "when is rain expected."
+ *
+ * Opacity is keyed to the peak hour rather than the absolute 0-100% scale —
+ * a forecast that maxes at 30% should still show clearly which hours are
+ * the wettest, not be uniformly faint just because nothing crosses 50%.
+ *
+ * Returns null when the entire 24-hour window has 0% chance — no point
+ * in showing an empty strip.
  */
-export function PrecipitationStrip({ periods }) {
+export function PrecipitationStrip({ periods, timeZone }) {
   if (!periods || periods.length === 0) return null;
   const next24 = periods.slice(0, 24);
   const probs = next24.map((p) => p.probabilityOfPrecipitation?.value || 0);
   const peak = Math.max(...probs);
   if (peak === 0) return null;
 
+  const peakIndex = probs.indexOf(peak);
+  const peakPeriod = next24[peakIndex];
+  const peakTimeLabel = peakPeriod
+    ? new Date(peakPeriod.startTime).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        timeZone: timeZone || undefined,
+      })
+    : null;
+
   return (
     <div className="mt-3 pt-3 border-t border-slate-700">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
         <span className="text-[10px] text-slate-500 uppercase tracking-wide">
-          Rain probability · next 24h
+          Rain chance · next 24h
         </span>
-        <span className="text-[10px] text-slate-500">Peak {peak}%</span>
+        <span className="text-[10px] text-slate-400">
+          Peak <span className="text-sky-300 font-semibold">{peak}%</span>
+          {peakTimeLabel && (
+            <> around <span className="text-sky-300 font-semibold">{peakTimeLabel}</span></>
+          )}
+        </span>
       </div>
-      <div className="flex gap-px h-6 rounded overflow-hidden">
-        {probs.map((pop, i) => (
-          <div
-            key={i}
-            className="flex-1 bg-sky-400"
-            style={{ opacity: 0.08 + (pop / 100) * 0.85 }}
-            title={`+${i}h: ${pop}%`}
-          />
-        ))}
+      <div className="flex gap-px h-7 rounded overflow-hidden" role="img" aria-label={`Hourly rain chance over the next 24 hours. Peak ${peak}%${peakTimeLabel ? ` around ${peakTimeLabel}` : ''}.`}>
+        {probs.map((pop, i) => {
+          const isDry = pop === 0;
+          // Non-zero hours scale from 30% opacity (lightest blue, 1% chance)
+          // up to 100% (the peak hour). 0% hours render as dim slate so they
+          // visually read as "nothing here" instead of "tiny bit of rain."
+          const opacity = isDry ? 0.3 : 0.3 + (pop / peak) * 0.7;
+          return (
+            <div
+              key={i}
+              className={`flex-1 ${isDry ? 'bg-slate-600' : 'bg-sky-400'}`}
+              style={{ opacity }}
+              title={`+${i}h: ${pop}% chance`}
+            />
+          );
+        })}
       </div>
       <div className="flex justify-between mt-1 text-[9px] text-slate-500">
         <span>Now</span>

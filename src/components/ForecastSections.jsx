@@ -95,7 +95,7 @@ export function ForecastHourly({ periods, timeZone, title = 'Next 24 hours' }) {
           </div>
         ))}
       </div>
-      <PrecipitationStrip periods={next24} />
+      <PrecipitationStrip periods={next24} timeZone={timeZone} />
     </section>
   );
 }
