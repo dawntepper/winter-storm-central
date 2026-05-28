@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { TemperatureSparkline, PrecipitationStrip, WindCompass } from './ForecastVisuals';
 
 /**
  * Shared forecast UI sections — used by both /forecast/[state-slug] (top-level
@@ -9,7 +10,18 @@ import { useMemo } from 'react';
  * presentational — they don't fetch or own state; the caller does.
  */
 
-export function ForecastCurrent({ current, location }) {
+/**
+ * Current conditions card. Renders icon + big temp, with a wind compass
+ * to the right and a 24h temperature sparkline below — gives the user
+ * "where today is going" at a glance.
+ *
+ * @param {Object} props
+ * @param {Object} props.current   The first hourly period (proxy for "now")
+ * @param {Object[]} [props.hourly] Hourly periods (for the sparkline). Optional —
+ *   the card still renders without it; the sparkline section is skipped.
+ * @param {string} [props.location] Display name shown in the wind footnote.
+ */
+export function ForecastCurrent({ current, hourly, location }) {
   if (!current) return null;
   return (
     <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
@@ -18,19 +30,29 @@ export function ForecastCurrent({ current, location }) {
         {current.icon && (
           <img src={current.icon} alt="" className="w-20 h-20 rounded-lg flex-shrink-0" />
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="text-4xl sm:text-5xl font-bold text-white">
               {current.temperature}°{current.temperatureUnit || 'F'}
             </span>
           </div>
           <p className="text-base text-slate-300 mt-1">{current.shortForecast}</p>
-          <p className="text-xs text-slate-500 mt-2">
-            Wind {current.windSpeed} {current.windDirection}
-            {location ? ` · ${location}` : ''}
-          </p>
+          {location && (
+            <p className="text-xs text-slate-500 mt-2 truncate">{location}</p>
+          )}
         </div>
+        {current.windDirection && (
+          <WindCompass direction={current.windDirection} speed={current.windSpeed} />
+        )}
       </div>
+      {hourly && hourly.length >= 2 && (
+        <div className="mt-4 pt-3 border-t border-slate-700">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wide">Next 24h trend</span>
+          </div>
+          <TemperatureSparkline periods={hourly} />
+        </div>
+      )}
     </section>
   );
 }
@@ -65,6 +87,7 @@ export function ForecastHourly({ periods, timeZone, title = 'Next 24 hours' }) {
           </div>
         ))}
       </div>
+      <PrecipitationStrip periods={next24} />
     </section>
   );
 }

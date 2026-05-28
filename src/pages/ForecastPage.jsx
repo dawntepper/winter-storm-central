@@ -7,6 +7,7 @@ import { getForecastForCoords, lookupZipCoords } from '../services/forecastServi
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
 import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/ForecastSections';
+import { getTimeOfDayClass } from '../components/ForecastVisuals';
 import StormMap from '../components/StormMap';
 import PageHeaderNav from '../components/PageHeaderNav';
 import ContactLink from '../components/ContactLink';
@@ -215,8 +216,15 @@ export default function ForecastPage() {
     );
   }
 
+  // Day/night background tint based on local time at the picked location.
+  // Falls back to plain dark slate ('forecast-tod-day') until timezone data
+  // is available, so the page doesn't flash through tints during loading.
+  const todClass = forecast?.location?.timeZone
+    ? getTimeOfDayClass(forecast.location.timeZone)
+    : 'forecast-tod-day';
+
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className={`min-h-screen ${todClass}`}>
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
@@ -250,7 +258,11 @@ export default function ForecastPage() {
             onSelect={handleLocationSelect}
           />
           {forecast ? (
-            <ForecastCurrent current={forecast.current} location={coords?.displayName} />
+            <ForecastCurrent
+              current={forecast.current}
+              hourly={forecast.hourly}
+              location={coords?.displayName}
+            />
           ) : (
             <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
               <p className="text-sm text-slate-400">Loading current conditions…</p>

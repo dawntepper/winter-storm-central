@@ -146,6 +146,30 @@ body {
   }
 }
 
+/* Forecast page background tint — applied to the page-level wrapper by
+   ForecastPage based on local time at the picked location (see
+   getTimeOfDayClass in ForecastVisuals.jsx). Subtle gradient overlay
+   at the top fades into the default dark slate background within ~400px,
+   so only the upper portion of the page reads the tint. */
+.forecast-tod-day {
+  background: #0f172a;
+}
+.forecast-tod-dawn {
+  background:
+    linear-gradient(to bottom, rgba(251, 191, 36, 0.10) 0%, rgba(15, 23, 42, 0) 360px),
+    #0f172a;
+}
+.forecast-tod-dusk {
+  background:
+    linear-gradient(to bottom, rgba(244, 114, 182, 0.10) 0%, rgba(15, 23, 42, 0) 360px),
+    #0f172a;
+}
+.forecast-tod-night {
+  background:
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.12) 0%, rgba(15, 23, 42, 0) 400px),
+    #0f172a;
+}
+
 /* Alert Signup Bar - responsive layout */
 .signup-bar-form {
   width: 100%;
