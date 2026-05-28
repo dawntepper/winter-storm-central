@@ -88,7 +88,7 @@ export default function ForecastLocationPicker({
   };
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 sm:p-5 space-y-3">
+    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 sm:p-5 space-y-3 h-full">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="text-sm text-slate-300">
           <span className="text-slate-500">Forecast for </span>

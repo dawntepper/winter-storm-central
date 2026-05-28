@@ -24,8 +24,16 @@ import { TemperatureSparkline, PrecipitationStrip, WindCompass } from './Forecas
 export function ForecastCurrent({ current, hourly, location }) {
   if (!current) return null;
   return (
-    <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Right now</h2>
+    <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Right now</h2>
+        <a
+          href="#forecast-7day"
+          className="text-xs text-sky-400 hover:text-sky-300 font-medium whitespace-nowrap"
+        >
+          7-day outlook ↓
+        </a>
+      </div>
       <div className="flex items-start gap-4">
         {current.icon && (
           <img src={current.icon} alt="" className="w-20 h-20 rounded-lg flex-shrink-0" />
@@ -46,7 +54,7 @@ export function ForecastCurrent({ current, hourly, location }) {
         )}
       </div>
       {hourly && hourly.length >= 2 && (
-        <div className="mt-4 pt-3 border-t border-slate-700">
+        <div className="mt-auto pt-3 border-t border-slate-700">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] text-slate-500 uppercase tracking-wide">Next 24h trend</span>
           </div>

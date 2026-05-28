@@ -8,6 +8,7 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
 import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/ForecastSections';
 import { getTimeOfDayClass } from '../components/ForecastVisuals';
+import TornadoWarningBanner from '../components/TornadoWarningBanner';
 import StormMap from '../components/StormMap';
 import PageHeaderNav from '../components/PageHeaderNav';
 import ContactLink from '../components/ContactLink';
@@ -57,6 +58,22 @@ export default function ForecastPage() {
   const mapAlerts = useMemo(() => (
     alertsData?.byCategory ? Object.values(alertsData.byCategory).flat() : []
   ), [alertsData]);
+
+  // Find the most-imminent active Tornado Warning in the picked location's
+  // state (state-level v1 — see TornadoWarningBanner for the rationale on
+  // why we don't tighten to UGC zone or polygon containment yet). If found,
+  // we render the urgent banner at the top of the page above the picker.
+  const tornadoWarning = useMemo(() => {
+    const userStateAbbr = forecast?.location?.state;
+    if (!userStateAbbr) return null;
+    const candidates = mapAlerts.filter(
+      (a) => a.event === 'Tornado Warning' && a.state === userStateAbbr
+    );
+    if (candidates.length === 0) return null;
+    return [...candidates].sort(
+      (a, b) => new Date(a.expires).getTime() - new Date(b.expires).getTime()
+    )[0];
+  }, [mapAlerts, forecast?.location?.state]);
 
   // One-time Plausible page view on mount.
   useEffect(() => {
@@ -246,11 +263,17 @@ export default function ForecastPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {tornadoWarning && (
+          <TornadoWarningBanner alert={tornadoWarning} />
+        )}
+
         {/* Row 1: Picker + Current Conditions side-by-side on desktop.
-            Picker is wider (2fr) since it has more controls; Current is
-            the compact summary on the right (1fr). Stacks on mobile with
-            picker on top, current below — then radar fills the row below. */}
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 lg:items-start space-y-4 lg:space-y-0">
+            Both cards stretch to match the row height (default grid items-
+            stretch behavior) so the row reads as one balanced block rather
+            than two ragged-bottom cards. Picker takes 2fr, Current 1fr.
+            Stacks on mobile with picker on top, current below; radar fills
+            the row below. */}
+        <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
           <ForecastLocationPicker
             stateSlug={slug}
             stateName={stateData.name}
@@ -316,7 +339,9 @@ export default function ForecastPage() {
         {forecast && (
           <>
             <ForecastHourly periods={forecast.hourly} timeZone={forecast.location?.timeZone} />
-            <ForecastDaily periods={forecast.daily} />
+            <div id="forecast-7day">
+              <ForecastDaily periods={forecast.daily} />
+            </div>
           </>
         )}
 
