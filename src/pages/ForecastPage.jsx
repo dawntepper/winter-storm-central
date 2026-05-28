@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { getStateCentroid } from '../data/stateCentroids';
 import { getCityBySlug } from '../data/cityCatalog';
 import { getForecastForCoords, lookupZipCoords } from '../services/forecastService';
+import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
 import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/ForecastSections';
 import StormMap from '../components/StormMap';
+import PageHeaderNav from '../components/PageHeaderNav';
 import ContactLink from '../components/ContactLink';
-import { trackForecastPageView, trackForecastLocationChanged } from '../utils/analytics';
+import { trackForecastPageView, trackForecastLocationChanged, trackRadarLinkClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 const PENDING_GEO_KEY = 'forecast_pending_geo';
 const PENDING_GEO_TTL = 30 * 1000; // 30s — enough to cover a redirect, not enough to leak across sessions
@@ -46,6 +48,14 @@ export default function ForecastPage() {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pull active NWS alerts so the radar map can show alert markers + the
+  // hover popup if any alert is active at the picked location. Same hook
+  // and adaptive-refresh cadence as the homepage/state pages.
+  const { alerts: alertsData } = useExtremeWeather(true);
+  const mapAlerts = useMemo(() => (
+    alertsData?.byCategory ? Object.values(alertsData.byCategory).flat() : []
+  ), [alertsData]);
 
   // One-time Plausible page view on mount.
   useEffect(() => {
@@ -208,7 +218,7 @@ export default function ForecastPage() {
   return (
     <div className="min-h-screen bg-slate-900">
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <Link to="/" className="text-slate-400 hover:text-white text-sm">← Home</Link>
             <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
@@ -216,6 +226,7 @@ export default function ForecastPage() {
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>
             </Link>
           </div>
+          <PageHeaderNav source={NAV_SOURCES.HEADER_NAVIGATION} />
         </div>
       </header>
 
@@ -227,36 +238,44 @@ export default function ForecastPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <ForecastLocationPicker
-          stateSlug={slug}
-          stateName={stateData.name}
-          currentLabel={coords?.displayName || 'Loading…'}
-          onSelect={handleLocationSelect}
-        />
+        {/* Row 1: Picker + Current Conditions side-by-side on desktop.
+            Picker is wider (2fr) since it has more controls; Current is
+            the compact summary on the right (1fr). Stacks on mobile with
+            picker on top, current below — then radar fills the row below. */}
+        <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 lg:items-start space-y-4 lg:space-y-0">
+          <ForecastLocationPicker
+            stateSlug={slug}
+            stateName={stateData.name}
+            currentLabel={coords?.displayName || 'Loading…'}
+            onSelect={handleLocationSelect}
+          />
+          {forecast ? (
+            <ForecastCurrent current={forecast.current} location={coords?.displayName} />
+          ) : (
+            <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
+              <p className="text-sm text-slate-400">Loading current conditions…</p>
+            </div>
+          )}
+        </div>
 
-        {/* Current conditions + radar side-by-side on desktop (1:2 split so
-            the map keeps its prominence). Stacks vertically on mobile with
-            current on top, radar below. */}
         {coords && (
-          <div className="lg:grid lg:grid-cols-[1fr_2fr] gap-4 space-y-4 lg:space-y-0">
-            {forecast ? (
-              <ForecastCurrent current={forecast.current} location={coords?.displayName} />
-            ) : (
-              <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
-                <p className="text-sm text-slate-400">Loading current conditions…</p>
-              </div>
-            )}
-            <section aria-label="Live weather radar">
-              <StormMap
-                weatherData={{}}
-                stormPhase="active"
-                userLocations={[]}
-                alerts={[]}
-                isHero
-                centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
-              />
-            </section>
-          </div>
+          <section aria-label="Live weather radar">
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={
+                // Only show the location pin when the user has explicitly
+                // picked a city/ZIP/their location. For state-default the
+                // whole state is in view; a centroid pin would be misleading.
+                coords.displayName?.endsWith('(state default)')
+                  ? []
+                  : [{ id: 'forecast-pin', lat: coords.lat, lon: coords.lon, name: coords.displayName }]
+              }
+              alerts={mapAlerts}
+              isHero
+              centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
+            />
+          </section>
         )}
 
         {error && (

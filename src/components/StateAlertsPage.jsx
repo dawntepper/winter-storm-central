@@ -15,6 +15,7 @@ import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
 import StateForecastWidget from './StateForecastWidget';
+import PageHeaderNav from './PageHeaderNav';
 
 // Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
 // states get the tornado variant. TX gets its own variant. All other states
@@ -593,28 +594,7 @@ export default function StateAlertsPage() {
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>
             </Link>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-            <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.STATE_PAGE_RADAR_LINK); setNavSource(NAV_SOURCES.STATE_PAGE_RADAR_LINK); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN });
-                  setNavSource(NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN);
-                  navigate(`/alerts/${e.target.value}`);
-                  e.target.value = '';
-                }
-              }}
-              className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
-            >
-              <option value="" disabled>State Weather/Radar ▾</option>
-              {Object.entries(US_STATES).map(([slug, s]) => (
-                <option key={slug} value={slug}>{s.name}</option>
-              ))}
-            </select>
-          </div>
+          <PageHeaderNav source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN} />
         </div>
       </header>
 
