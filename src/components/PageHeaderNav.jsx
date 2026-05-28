@@ -49,7 +49,7 @@ export default function PageHeaderNav({ source = NAV_SOURCES.HEADER_NAVIGATION }
           }}
           className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2.5 pr-2 py-1 rounded focus:outline-none text-xs sm:text-sm font-medium border border-sky-500/30 transition-colors"
         >
-          <option value="" disabled>State Weather/Radar ▾</option>
+          <option value="" disabled>State Alerts/Radar ▾</option>
           {Object.entries(US_STATES).map(([slug, s]) => (
             <option key={slug} value={slug}>{s.name}</option>
           ))}
