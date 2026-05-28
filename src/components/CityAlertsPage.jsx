@@ -21,6 +21,8 @@ import {
 import { getForecastForCoords } from '../services/forecastService';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
 import { trackForecastLinkClick } from '../utils/analytics';
+import { useExtremeWeather } from '../hooks/useExtremeWeather';
+import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
 import citiesIndex from '../content/cities/index.json';
 
@@ -683,6 +685,15 @@ export default function CityAlertsPage() {
   const [conditions, setConditions] = useState(null);
   const [conditionsError, setConditionsError] = useState(false);
 
+  // Pull all active NWS alerts (national feed) so the inline StormMap can
+  // render alert markers + hover popups around the city, matching the
+  // pattern on state/forecast pages. Adaptive refresh cadence (10/2 min)
+  // is handled by the hook.
+  const { alerts: allAlertsData } = useExtremeWeather(true);
+  const mapAlerts = useMemo(() => (
+    allAlertsData?.byCategory ? Object.values(allAlertsData.byCategory).flat() : []
+  ), [allAlertsData]);
+
   useEffect(() => {
     if (!city) return;
     setCityMetaTags(city);
@@ -785,6 +796,31 @@ export default function CityAlertsPage() {
             {city.description_short} Live National Weather Service warnings, current temperature and conditions, and a 4-day forecast for {city.county} County. {alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'} Data from the NWS and Open-Meteo. No ads, no clutter, no paywalls.
           </p>
         </div>
+
+        {/* Live radar centered on the city — alert markers + hover popups
+            for any active NWS alert in range, plus a green pin labelling
+            the city itself. Same StormMap component used on the homepage,
+            state alerts pages, and /forecast/[state-slug]. */}
+        <section aria-label={`Live weather radar — ${city.city}`}>
+          <StormMap
+            weatherData={{}}
+            stormPhase="active"
+            userLocations={[{
+              id: `city-pin-${city.slug}`,
+              lat: city.lat,
+              lon: city.lon,
+              name: `${city.city}, ${city.state_abbr}`,
+              conditions: conditions ? {
+                temperature: conditions.temperature,
+                temperatureUnit: 'F',
+                shortForecast: conditions.shortForecast || conditions.condition,
+              } : null,
+            }]}
+            alerts={mapAlerts}
+            isHero
+            centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
+          />
+        </section>
 
         <CurrentConditions city={city} conditions={conditions} error={conditionsError} />
         <ActiveAlerts city={city} alerts={alerts} error={alertsError} />
