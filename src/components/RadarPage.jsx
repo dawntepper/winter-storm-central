@@ -206,7 +206,7 @@ export default function RadarPage() {
     const abbr = feature?.properties?.state;
     const slug = abbr ? ABBR_TO_SLUG[abbr] : null;
     if (!slug) return;
-    trackBrowseByStateClick({ stateCode: abbr, source: 'map_county_click' });
+    trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.MAP_COUNTY_CLICK });
     navigate(`/alerts/${slug}`);
   };
 
