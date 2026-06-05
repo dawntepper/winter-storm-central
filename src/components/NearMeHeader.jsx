@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { fetchApproxLocation, reverseGeocode } from '../services/geoLocationService';
 import { ABBR_TO_SLUG, US_STATES } from '../data/stateConfig';
 import { getCitySlugForLocation } from '../utils/cityLookup';
-import { trackGeolocationUsed, trackBrowseByStateClick } from '../utils/analytics';
+import { trackGeolocationUsed, trackBrowseByStateClick, NAV_SOURCES } from '../utils/analytics';
 
 /**
  * Localized "Weather Near Me" headline + dual-layer location detection.
@@ -43,6 +43,7 @@ export default function NearMeHeader({
 
   const [resolved, setResolved] = useState(null); // { city, region } — region is the state abbr ("TX")
   const [gpsStatus, setGpsStatus] = useState('idle'); // idle | locating | denied | unsupported | error
+  const [geoDenied, setGeoDenied] = useState(false); // location blocked / turned off in the browser
 
   // Layer 1 — silent IP (Netlify geo). Header text + jump links only; no map change.
   useEffect(() => {
@@ -53,6 +54,27 @@ export default function NearMeHeader({
     });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Watch the geolocation permission. If the user has blocked/turned off
+  // location, we hide the whole near-me UI (see early return below). Using the
+  // Permissions API means we detect this without ever triggering a prompt, and
+  // onchange keeps it in sync if they toggle it in browser settings.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.permissions?.query) return;
+    let status;
+    const sync = () => setGeoDenied(status.state === 'denied');
+    navigator.permissions
+      .query({ name: 'geolocation' })
+      .then((s) => {
+        status = s;
+        sync();
+        status.onchange = sync;
+      })
+      .catch(() => {});
+    return () => {
+      if (status) status.onchange = null;
     };
   }, []);
 
@@ -90,6 +112,12 @@ export default function NearMeHeader({
     );
   }, [onLocate, onResolveState]);
 
+  // The user doesn't want to share location — either they blocked it in the
+  // browser (geoDenied) or denied our prompt (gpsStatus). Remove the localized
+  // headline AND the "Find Weather Near Me" button entirely. Crawlers never
+  // reach the 'denied' state, so the SEO headline is unaffected.
+  if (geoDenied || gpsStatus === 'denied') return null;
+
   const region = resolved?.region || null;
   const label = resolved ? (region ? `${resolved.city}, ${region}` : resolved.city) : null;
   const heading = label ? `${BASE_HEADING} (${label})` : BASE_HEADING;
@@ -121,9 +149,6 @@ export default function NearMeHeader({
             <span aria-hidden="true">🎯</span>
             {gpsStatus === 'locating' ? 'Locating…' : 'Find Weather Near Me'}
           </button>
-          {gpsStatus === 'denied' && (
-            <span className="text-[11px] text-amber-400">Location access denied — search by ZIP below.</span>
-          )}
           {gpsStatus === 'unsupported' && (
             <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
           )}
@@ -146,7 +171,7 @@ export default function NearMeHeader({
           {stateSlug && (
             <Link
               to={`/alerts/${stateSlug}`}
-              onClick={() => trackBrowseByStateClick({ stateCode: region, source: 'near_me_header' })}
+              onClick={() => trackBrowseByStateClick({ stateCode: region, source: NAV_SOURCES.NEAR_ME_HEADER })}
               className={chipClass}
             >
               {stateName} alerts &amp; city forecasts <span aria-hidden="true">→</span>

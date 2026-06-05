@@ -20,9 +20,10 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Storm Page View` | Any storm event page mount |
 | `Storm Banner Click` | Active storm banner on homepage |
 | `Radar Link Click` | Click intent to navigate to `/radar` |
-| `Browse By State Click` | Any state dropdown selection |
+| `Browse By State Click` | State dropdown selection, "Weather Near Me" state chip, or county-polygon click (see `source`) |
 | `Storm Radar Click` | "View Full Radar Map" CTA on storm pages |
 | `Location Count Changed` | Saved-location add/remove (count + trigger context) |
+| `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
 
@@ -94,7 +95,15 @@ Storm Radar Click
 
 Browse By State Click
   stateCode      "FL", "TX", etc.
-  source         a value from NAV_SOURCES (one of the *_STATE_DROPDOWN values today)
+  source         a value from NAV_SOURCES — the *_STATE_DROPDOWN values, plus
+                 NEAR_ME_HEADER (the "Weather Near Me" state chip) and
+                 MAP_COUNTY_CLICK (clicking the highlighted county polygon).
+                 (NOTE: the homepage state grid still passes a raw "homepage_grid"
+                 string — pre-existing drift, not yet promoted to a constant.)
+
+Geolocation Used
+  (no props)     Fired when the user grants the GPS prompt from a "Find Weather
+                 Near Me" / "Use my location" button (NearMeHeader + StormMap).
 
 Map Region Click
   state          state abbr ("FL", "TX", etc.)
@@ -277,6 +286,10 @@ STORM_PAGE_RADAR_LINK       "storm_page_radar_link"
 
 // Radar-page outbound nav
 RADAR_PAGE_LINK             "radar_page_link"
+
+// "Weather Near Me" feature → state alerts page
+NEAR_ME_HEADER              "near_me_header"            "{State} alerts & city forecasts" chip
+MAP_COUNTY_CLICK            "map_county_click"          Highlighted "your area" county polygon
 
 // Generic
 HEADER_NAVIGATION           "header_navigation"

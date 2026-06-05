@@ -535,6 +535,10 @@ export const NAV_SOURCES = {
   // Radar-page outbound nav
   RADAR_PAGE_LINK: 'radar_page_link',
 
+  // "Weather Near Me" feature → state alerts page
+  NEAR_ME_HEADER: 'near_me_header',        // "{State} alerts & city forecasts" chip in NearMeHeader
+  MAP_COUNTY_CLICK: 'map_county_click',    // clicking the highlighted "your area" county polygon
+
   // Generic
   HEADER_NAVIGATION: 'header_navigation',
   FOOTER_LINK: 'footer_link',
