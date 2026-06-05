@@ -915,6 +915,46 @@ function StateBorderHighlight({ stateCode }) {
   );
 }
 
+// "Your area" county polygon — passed as a GeoJSON Feature (from NWS zone
+// geometry). Emerald, so it reads as distinct from the white state border it
+// sits inside. Re-keyed by county name so react-leaflet swaps layers on change.
+// When onAreaClick is provided, the polygon becomes a button to the state
+// alerts page (Leaflet gives interactive paths a pointer cursor by default).
+function AreaHighlight({ geojson, onAreaClick }) {
+  if (!geojson?.geometry) return null;
+
+  const county = geojson.properties?.name;
+  const stateAbbr = geojson.properties?.state;
+  const clickable = Boolean(onAreaClick && stateAbbr);
+  const label = county
+    ? `${county} County${stateAbbr ? ` · View ${stateAbbr} alerts →` : ''}`
+    : stateAbbr
+      ? `View ${stateAbbr} alerts →`
+      : null;
+
+  return (
+    <GeoJSON
+      key={county || 'user-area'}
+      data={geojson}
+      interactive={clickable}
+      eventHandlers={clickable ? { click: () => onAreaClick(geojson) } : undefined}
+      style={{
+        color: '#34d399',
+        weight: 2,
+        opacity: 0.95,
+        fillColor: '#34d399',
+        fillOpacity: 0.15,
+      }}
+    >
+      {clickable && label && (
+        <Tooltip sticky direction="top" opacity={0.95}>
+          {label}
+        </Tooltip>
+      )}
+    </GeoJSON>
+  );
+}
+
 // City marker for state alert pages — small sky-blue dot + clickable label that links to /alerts/{slug}.
 // Visually distinct from red category-colored alert dots so users can see which markers lead to a city page.
 function StateCityMarker({ city }) {
@@ -1007,7 +1047,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
@@ -1326,6 +1366,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* State border highlight */}
           <StateBorderHighlight stateCode={selectedStateCode} />
+
+          {/* "Your area" county highlight (drawn over the state outline) */}
+          <AreaHighlight geojson={highlightArea} onAreaClick={onAreaClick} />
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>

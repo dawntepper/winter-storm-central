@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from './hooks/useExtremeWeather';
 import { useLocationParam } from './hooks/useLocationParam';
 import { getActiveStormEvents } from './services/stormEventsService';
@@ -18,7 +18,9 @@ import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
+import NearMeHeader from './components/NearMeHeader';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
+import { fetchCountyGeoJSON } from './services/geoLocationService';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -269,6 +271,7 @@ function StormEventBanner() {
 
 export default function App() {
 
+  const navigate = useNavigate();
   const [searchLocations, setSearchLocations] = useState([]); // From ZipCodeSearch
   const [alertLocations, setAlertLocations] = useState(() => {
     // Hydrate alert-pin locations from localStorage so they survive a refresh.
@@ -282,6 +285,8 @@ export default function App() {
     }
   });
   const [mapCenterOn, setMapCenterOn] = useState(null);
+  const [userArea, setUserArea] = useState(null); // "Your area" county polygon (GeoJSON Feature)
+  const areaReqRef = useRef(0); // guards against out-of-order county fetches
   const [viewedLocations, setViewedLocations] = useState([]); // Track locations user has clicked
   const [previewCity, setPreviewCity] = useState(null); // City being previewed
   const [yourLocationsExpanded, setYourLocationsExpanded] = useState(true); // Your Locations section collapsed state
@@ -296,6 +301,27 @@ export default function App() {
     setInitialLocation(locationData);
   }, []);
   useLocationParam(handleLocationParam);
+
+  // Highlight the county containing a focused user point ("your area"). Fired
+  // when the map centers on a specific location (GPS, ZIP/city search, saved
+  // pin). The req-id guard ensures only the latest lookup wins if a user
+  // focuses several locations quickly.
+  const focusCounty = useCallback((lat, lon) => {
+    if (lat == null || lon == null) return;
+    const reqId = ++areaReqRef.current;
+    fetchCountyGeoJSON(lat, lon).then((feature) => {
+      if (reqId === areaReqRef.current) setUserArea(feature);
+    });
+  }, []);
+
+  // Click the highlighted county → its state alerts/radar page.
+  const handleAreaClick = useCallback((feature) => {
+    const abbr = feature?.properties?.state;
+    const slug = abbr ? ABBR_TO_SLUG[abbr] : null;
+    if (!slug) return;
+    trackBrowseByStateClick({ stateCode: abbr, source: 'map_county_click' });
+    navigate(`/alerts/${slug}`);
+  }, [navigate]);
 
   // Combine search and alert locations for the map
   const userLocations = [...searchLocations, ...alertLocations];
@@ -485,6 +511,7 @@ export default function App() {
   const handleViewedLocationClick = (location) => {
     if (location.lat && location.lon) {
       setMapCenterOn({ lat: location.lat, lon: location.lon, id: Date.now() });
+      focusCounty(location.lat, location.lon);
       // Show preview marker with the location name
       setPreviewCity({
         id: location.id,
@@ -525,6 +552,7 @@ export default function App() {
   const handleSearchLocationClick = (locationData) => {
     if (locationData.lat && locationData.lon) {
       setMapCenterOn({ lat: locationData.lat, lon: locationData.lon, id: Date.now() });
+      focusCounty(locationData.lat, locationData.lon);
       // Show preview marker
       setPreviewCity({
         id: locationData.id || `search-${Date.now()}`,
@@ -565,6 +593,7 @@ export default function App() {
   const handleMapResetView = () => {
     setSelectedStateCode(null);
     setSelectedAlertId(null);
+    setUserArea(null);
   };
 
   return (
@@ -600,6 +629,17 @@ export default function App() {
       <StickyMiniMap selectedStateCode={selectedStateCode} />
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Localized SEO headline + dual-layer "near me" location detection.
+            Rendered as <h2> because the shared <Header> already owns the page's
+            <h1> (the "StormTracking" brand) — keeps a single top-level heading.
+            Layer 1 (silent IP) only personalizes this text; the 🎯 button uses
+            GPS to re-center the map (setMapCenterOn) and refine the label. */}
+        <NearMeHeader
+          as="h2"
+          onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
+          onResolveState={setSelectedStateCode}
+        />
+
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={alertsIsStale} lastSuccessfulUpdate={alertsLastUpdated} error={alertsError && alertsData ? alertsError : null} />
 
@@ -764,6 +804,8 @@ export default function App() {
               highlightedAlertId={highlightedAlertId}
               selectedAlertId={selectedAlertId}
               selectedStateCode={selectedStateCode}
+              highlightArea={userArea}
+              onAreaClick={handleAreaClick}
               onResetView={handleMapResetView}
             />
           </div>
@@ -827,6 +869,8 @@ export default function App() {
                   highlightedAlertId={highlightedAlertId}
                   selectedAlertId={selectedAlertId}
                   selectedStateCode={selectedStateCode}
+                  highlightArea={userArea}
+                  onAreaClick={handleAreaClick}
                   onResetView={handleMapResetView}
                 />
               </div>
