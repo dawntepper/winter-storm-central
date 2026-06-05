@@ -19,6 +19,7 @@ import {
   degreesToCompass,
 } from '../utils/fetchOpenMeteoConditions';
 import { getForecastForCoords } from '../services/forecastService';
+import { HOMEPAGE_META } from '../data/homepageMeta';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
 import { trackForecastLinkClick } from '../utils/analytics';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
@@ -83,20 +84,19 @@ function setCityMetaTags(city) {
 }
 
 function resetMetaTags() {
-  document.title = 'StormTracking | Live Weather Radar & Real-Time Storm Alerts';
-  const desc = 'Track severe weather in real-time with live radar, NWS alerts, and storm tracking. Free NOAA data for winter storms, tornadoes, and extreme weather across the US.';
+  document.title = HOMEPAGE_META.title;
 
   const reset = (selector, attr, value) => {
     const el = document.querySelector(selector);
     if (el) el.setAttribute(attr, value);
   };
 
-  reset('meta[name="description"]', 'content', desc);
-  reset('meta[property="og:title"]', 'content', 'StormTracking | Live Weather Radar & Storm Alerts');
-  reset('meta[property="og:description"]', 'content', desc);
-  reset('meta[property="og:url"]', 'content', BASE_URL);
-  reset('meta[property="og:image"]', 'content', `${BASE_URL}/og-image.png`);
-  reset('link[rel="canonical"]', 'href', BASE_URL);
+  reset('meta[name="description"]', 'content', HOMEPAGE_META.description);
+  reset('meta[property="og:title"]', 'content', HOMEPAGE_META.ogTitle);
+  reset('meta[property="og:description"]', 'content', HOMEPAGE_META.ogDescription);
+  reset('meta[property="og:url"]', 'content', HOMEPAGE_META.url);
+  reset('meta[property="og:image"]', 'content', HOMEPAGE_META.image);
+  reset('link[rel="canonical"]', 'href', HOMEPAGE_META.url);
 }
 
 // ============================================================

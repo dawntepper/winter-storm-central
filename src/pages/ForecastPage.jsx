@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { getStateCentroid } from '../data/stateCentroids';
 import { getCityBySlug } from '../data/cityCatalog';
+import { HOMEPAGE_META } from '../data/homepageMeta';
 import { getForecastForCoords, lookupZipCoords } from '../services/forecastService';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
@@ -208,7 +209,7 @@ export default function ForecastPage() {
     setMeta('meta[property="og:url"]', 'content', `https://stormtracking.io/forecast/${slug}`);
     setMeta('link[rel="canonical"]', 'href', `https://stormtracking.io/forecast/${slug}`);
     return () => {
-      document.title = 'StormTracking | Live Weather Radar & Real-Time Storm Alerts';
+      document.title = HOMEPAGE_META.title;
     };
   }, [stateData, slug]);
 

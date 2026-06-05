@@ -9,7 +9,10 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
 import EssentialsCard from './EssentialsCard';
-import { US_STATES } from '../data/stateConfig';
+import NearMeHeader from './NearMeHeader';
+import { HOMEPAGE_META } from '../data/homepageMeta';
+import { fetchCountyGeoJSON } from '../services/geoLocationService';
+import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
@@ -66,36 +69,34 @@ function setRadarMetaTags() {
   if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/api/og-image/radar');
 }
 
-// Reset meta tags to homepage defaults
+// Reset meta tags to homepage defaults (canonical values from HOMEPAGE_META,
+// kept in sync with index.html so an in-session share never reverts to stale copy).
 function resetMetaTags() {
-  const defaultTitle = 'StormTracking - Live Weather Radar & Real-Time Storm Alerts';
-  const defaultDesc = 'Live weather radar with real-time severe weather alerts. Track winter storms, hurricanes, and severe weather with interactive radar maps. Free NOAA/NWS data.';
-
-  document.title = defaultTitle;
+  document.title = HOMEPAGE_META.title;
 
   let metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) metaDesc.setAttribute('content', defaultDesc);
+  if (metaDesc) metaDesc.setAttribute('content', HOMEPAGE_META.description);
 
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', defaultTitle);
+  if (ogTitle) ogTitle.setAttribute('content', HOMEPAGE_META.ogTitle);
 
   let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', defaultDesc);
+  if (ogDesc) ogDesc.setAttribute('content', HOMEPAGE_META.ogDescription);
 
   let ogUrl = document.querySelector('meta[property="og:url"]');
-  if (ogUrl) ogUrl.setAttribute('content', 'https://stormtracking.io');
+  if (ogUrl) ogUrl.setAttribute('content', HOMEPAGE_META.url);
 
   let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', defaultTitle);
+  if (twTitle) twTitle.setAttribute('content', HOMEPAGE_META.twitterTitle);
 
   let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', defaultDesc);
+  if (twDesc) twDesc.setAttribute('content', HOMEPAGE_META.twitterDescription);
 
   let canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', 'https://stormtracking.io');
 
   let metaKeywords = document.querySelector('meta[name="keywords"]');
-  if (metaKeywords) metaKeywords.setAttribute('content', 'weather radar, live weather radar, radar weather, weather map, storm tracking, severe weather alerts, real-time weather, interactive radar, storm radar');
+  if (metaKeywords) metaKeywords.setAttribute('content', HOMEPAGE_META.keywords);
 
   // Reset OG image to default
   let ogImage = document.querySelector('meta[property="og:image"]');
@@ -187,6 +188,28 @@ export default function RadarPage() {
   const [colorScheme, setColorScheme] = useState(4);
   const [showInfo, setShowInfo] = useState(false);
 
+  // GPS center from the "Find Weather Near Me" button. Takes precedence over
+  // the ?lat/?lon deep-link so an explicit tap always wins.
+  const [gpsCenter, setGpsCenter] = useState(null);
+  // State to outline on the map once GPS resolves the user's state.
+  const [gpsStateCode, setGpsStateCode] = useState(null);
+  // "Your area" county polygon (GeoJSON Feature) once GPS coords resolve.
+  const [userArea, setUserArea] = useState(null);
+
+  const handleGpsLocate = (c) => {
+    setGpsCenter(c);
+    fetchCountyGeoJSON(c.lat, c.lon).then(setUserArea);
+  };
+
+  // Click the highlighted county → its state alerts/radar page.
+  const handleAreaClick = (feature) => {
+    const abbr = feature?.properties?.state;
+    const slug = abbr ? ABBR_TO_SLUG[abbr] : null;
+    if (!slug) return;
+    trackBrowseByStateClick({ stateCode: abbr, source: 'map_county_click' });
+    navigate(`/alerts/${slug}`);
+  };
+
   // Optional deep-link: /radar?lat=25.76&lon=-80.19[&zoom=9] centers the map on
   // a specific location (used by city alert pages "Live radar centered on X").
   const centerOn = useMemo(() => {
@@ -273,6 +296,18 @@ export default function RadarPage() {
           </button>
         </div>
 
+        {/* Localized "weather near me" subhead. Renders as <h2> (the page
+            already owns the <h1> above), silently personalized via IP and
+            re-centers the radar on GPS tap. */}
+        <div className="max-w-7xl mx-auto mt-3">
+          <NearMeHeader
+            as="h2"
+            onLocate={handleGpsLocate}
+            onResolveState={setGpsStateCode}
+            headingClassName="text-base sm:text-lg font-semibold text-slate-200"
+          />
+        </div>
+
         {/* Collapsible info panel */}
         {showInfo && (
           <div className="max-w-7xl mx-auto mt-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700 relative">
@@ -357,7 +392,10 @@ export default function RadarPage() {
             isHero
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
-            centerOn={centerOn}
+            centerOn={gpsCenter || centerOn}
+            selectedStateCode={gpsStateCode}
+            highlightArea={userArea}
+            onAreaClick={handleAreaClick}
           />
         </section>
 

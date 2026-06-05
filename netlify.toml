@@ -47,6 +47,13 @@
   to = "/index.html"
   status = 200
 
+# Approximate visitor location for the "Weather Near Me" headline (Layer 1).
+# Returns coarse city/region from Netlify's geo context — no third-party API.
+# Runs before the /api/* redirect, so it short-circuits the SPA fallback.
+[[edge_functions]]
+  path = "/api/geo"
+  function = "geo"
+
 # Edge functions for crawler OG meta tag injection
 [[edge_functions]]
   path = "/storm/*"
