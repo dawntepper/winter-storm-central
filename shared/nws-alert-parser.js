@@ -79,7 +79,7 @@ export const ALERT_CATEGORIES = {
     id: 'tropical',
     name: 'Tropical',
     icon: '🌀',
-    color: '#1e3a8a',
+    color: '#0ea5e9',
     events: ['Hurricane', 'Tropical Storm', 'Storm Surge'],
   },
   severe: {

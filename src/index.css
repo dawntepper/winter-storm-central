@@ -136,6 +136,25 @@ body {
   animation: tornado-warning-pulse 1.5s ease-in-out infinite;
 }
 
+/* Tropical alert marker — same filled-circle-with-emoji shape as the tornado
+   marker, in bright azure (matches the tropical category color in
+   StormMap/nws-alert-parser). Gives hurricane/tropical-storm/storm-surge
+   alerts a legible 🌀 disc on the dark map. No pulse variant by design. */
+.tropical-alert-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tornado-warning-pulse,
   .tornado-warning-marker-pulse {

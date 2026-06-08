@@ -804,7 +804,7 @@ function UserLocationMarker({ location, stormPhase, isMobile = false, onHover, o
 // Alert category colors for dots (and pill backgrounds in the legend below)
 const alertCategoryColors = {
   tornado: '#dc2626',  // deep red — most life-threatening, distinct from severe
-  tropical: '#1e3a8a', // dark blue
+  tropical: '#0ea5e9', // bright azure — reads on the dark map (was #1e3a8a navy)
   severe: '#ef4444',   // red
   winter: '#3b82f6',   // blue
   flood: '#06b6d4',    // cyan - matches flooding card
@@ -838,6 +838,33 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
     const pulseClass = shouldPulse ? ' tornado-warning-marker-pulse' : '';
     const icon = L.divIcon({
       html: `<div class="tornado-warning-marker${pulseClass}" role="img" aria-label="Tornado Warning"><span aria-hidden="true">🌪️</span></div>`,
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    return (
+      <Marker
+        position={position}
+        icon={icon}
+        eventHandlers={{
+          mouseover: (e) => onHover(alert, e),
+          mouseout: onLeave,
+          click: (e) => onClick(alert, e)
+        }}
+      />
+    );
+  }
+
+  // Tropical alerts (hurricane/tropical storm/storm surge) get the same
+  // emoji-in-circle treatment as Tornado Warnings — a filled azure circle with
+  // the 🌀 icon — so they read clearly on the dark map instead of as a small
+  // dark-blue dot. No pulse: tropical systems are slower-moving than the
+  // "take shelter now" tornado signal, so the static circle suffices. Selected
+  // state falls through to the green CircleMarker treatment below.
+  const isTropical = alert.category === 'tropical';
+  if (isTropical && !selected) {
+    const icon = L.divIcon({
+      html: `<div class="tropical-alert-marker" role="img" aria-label="${alert.event || 'Tropical alert'}"><span aria-hidden="true">🌀</span></div>`,
       className: '',
       iconSize: [28, 28],
       iconAnchor: [14, 14]
