@@ -10,7 +10,7 @@ import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
-import { HOMEPAGE_META } from '../data/homepageMeta';
+import { setHomepageMetaTags } from '../data/homepageMeta';
 import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
@@ -70,41 +70,9 @@ function setRadarMetaTags() {
   if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/api/og-image/radar');
 }
 
-// Reset meta tags to homepage defaults (canonical values from HOMEPAGE_META,
-// kept in sync with index.html so an in-session share never reverts to stale copy).
+// Reset meta tags to seasonal homepage defaults (see homepageMeta.js).
 function resetMetaTags() {
-  document.title = HOMEPAGE_META.title;
-
-  let metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) metaDesc.setAttribute('content', HOMEPAGE_META.description);
-
-  let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', HOMEPAGE_META.ogTitle);
-
-  let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', HOMEPAGE_META.ogDescription);
-
-  let ogUrl = document.querySelector('meta[property="og:url"]');
-  if (ogUrl) ogUrl.setAttribute('content', HOMEPAGE_META.url);
-
-  let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', HOMEPAGE_META.twitterTitle);
-
-  let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', HOMEPAGE_META.twitterDescription);
-
-  let canonical = document.querySelector('link[rel="canonical"]');
-  if (canonical) canonical.setAttribute('href', 'https://stormtracking.io');
-
-  let metaKeywords = document.querySelector('meta[name="keywords"]');
-  if (metaKeywords) metaKeywords.setAttribute('content', HOMEPAGE_META.keywords);
-
-  // Reset OG image to default
-  let ogImage = document.querySelector('meta[property="og:image"]');
-  if (ogImage) ogImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
-
-  let twImage = document.querySelector('meta[property="twitter:image"]');
-  if (twImage) twImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
+  setHomepageMetaTags();
 }
 
 // Active storms highlight section

@@ -11,7 +11,7 @@ import { useMinuteTick } from '../hooks/useMinuteTick';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { formatExpirationBadge } from '../utils/expirationBadge';
-import { HOMEPAGE_META } from '../data/homepageMeta';
+import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
@@ -97,37 +97,7 @@ function setStateMetaTags(stateName, stateSlug) {
 }
 
 function resetMetaTags() {
-  document.title = HOMEPAGE_META.title;
-
-  let metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) metaDesc.setAttribute('content', HOMEPAGE_META.description);
-
-  let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', HOMEPAGE_META.ogTitle);
-
-  let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', HOMEPAGE_META.ogDescription);
-
-  let ogUrl = document.querySelector('meta[property="og:url"]');
-  if (ogUrl) ogUrl.setAttribute('content', HOMEPAGE_META.url);
-
-  let ogImage = document.querySelector('meta[property="og:image"]');
-  if (ogImage) ogImage.setAttribute('content', HOMEPAGE_META.image);
-
-  let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', HOMEPAGE_META.twitterTitle);
-
-  let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', HOMEPAGE_META.twitterDescription);
-
-  let twImage = document.querySelector('meta[property="twitter:image"]');
-  if (twImage) twImage.setAttribute('content', HOMEPAGE_META.image);
-
-  let canonical = document.querySelector('link[rel="canonical"]');
-  if (canonical) canonical.setAttribute('href', HOMEPAGE_META.url);
-
-  let keywords = document.querySelector('meta[name="keywords"]');
-  if (keywords) keywords.setAttribute('content', HOMEPAGE_META.keywords);
+  setHomepageMetaTags();
 }
 
 // =============================================

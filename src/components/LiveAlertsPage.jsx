@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { US_STATES } from '../data/stateConfig';
-import { HOMEPAGE_META } from '../data/homepageMeta';
+import { setHomepageMetaTags } from '../data/homepageMeta';
 import { rankAlerts } from '../utils/alertRanking';
 import LiveAlertCard from './LiveAlertCard';
 import StormMap from './StormMap';
@@ -40,23 +40,7 @@ function setLiveAlertsMetaTags() {
 }
 
 function resetMetaTags() {
-  document.title = HOMEPAGE_META.title;
-  const defaults = {
-    'meta[name="description"]': HOMEPAGE_META.description,
-    'meta[property="og:title"]': HOMEPAGE_META.ogTitle,
-    'meta[property="og:description"]': HOMEPAGE_META.ogDescription,
-    'meta[property="og:url"]': HOMEPAGE_META.url,
-    'meta[property="og:image"]': HOMEPAGE_META.image,
-    'meta[property="twitter:title"]': HOMEPAGE_META.twitterTitle,
-    'meta[property="twitter:description"]': HOMEPAGE_META.twitterDescription,
-    'meta[property="twitter:image"]': HOMEPAGE_META.image,
-  };
-  for (const [selector, content] of Object.entries(defaults)) {
-    const el = document.querySelector(selector);
-    if (el) el.setAttribute('content', content);
-  }
-  const canonical = document.querySelector('link[rel="canonical"]');
-  if (canonical) canonical.setAttribute('href', HOMEPAGE_META.url);
+  setHomepageMetaTags();
 }
 
 // =============================================

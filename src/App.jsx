@@ -21,6 +21,7 @@ import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
+import { setHomepageMetaTags } from './data/homepageMeta';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -349,6 +350,11 @@ export default function App() {
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Seasonal homepage title/meta (Bing demand–aligned; see homepageMeta.js)
+  useEffect(() => {
+    setHomepageMetaTags();
   }, []);
 
   // Start session tracking on mount

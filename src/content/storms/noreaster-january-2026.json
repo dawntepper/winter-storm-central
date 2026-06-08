@@ -3,7 +3,7 @@
   "slug": "noreaster-january-2026",
   "type": "winter_storm",
   "type_label": "Winter Storm",
-  "status": "forecasted",
+  "status": "completed",
   "start_date": "2026-01-28",
   "end_date": "2026-01-30",
   "description": "Major nor'easter that impacted the Northeast United States with heavy snow, strong winds, and coastal flooding in late January 2026.",
@@ -14,9 +14,26 @@
     "Coastal flooding during high tide cycles",
     "Significant travel disruptions across the region"
   ],
-  "affected_states": ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA"],
-  "alert_categories": ["winter", "flood"],
-  "map_center": { "latitude": 42.0, "longitude": -72.0, "zoom": 6 },
+  "affected_states": [
+    "ME",
+    "NH",
+    "VT",
+    "MA",
+    "RI",
+    "CT",
+    "NY",
+    "NJ",
+    "PA"
+  ],
+  "alert_categories": [
+    "winter",
+    "flood"
+  ],
+  "map_center": {
+    "latitude": 42,
+    "longitude": -72,
+    "zoom": 6
+  },
   "seo": {
     "title": "Nor'easter January 2026 Live Tracker | Real-Time Alerts & Radar",
     "description": "Track the January 2026 nor'easter in real-time. Live weather alerts, radar, and snow forecasts for New England and Mid-Atlantic states.",

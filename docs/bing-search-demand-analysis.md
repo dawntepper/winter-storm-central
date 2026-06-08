@@ -177,7 +177,7 @@ Align SERP copy with query vocabulary. Shorten titles; drop trailing brand where
 
 ### 5. Quick wins (no new features)
 
-1. **A/B homepage `<title>`** to include “Hurricane Tracker” during active tropical season.
+1. ~~**A/B homepage `<title>`** to include “Hurricane Tracker” during active tropical season.~~ **Done (2026-06-08):** seasonal homepage meta in `src/data/homepageMeta.js` — hurricane (Jun–Nov), severe/spring (Mar–May), winter (Dec–Feb), default fallback. Applied at SPA mount and build time via `scripts/generate-static-pages.js`.
 2. **Update `/radar` title** to lead with “NWS Live Radar” (matches 5.8K imp `nws radar` term).
 3. **Meta description** on homepage: first sentence = live NWS radar + hurricane/storm tracking.
 4. **Storm event `seo.title`** audit — ensure “Tracker” appears in every active storm page.

@@ -96,13 +96,32 @@ function generateStaticHTML(baseHTML, page) {
   return html;
 }
 
-function main() {
+function applyHomepageMetaToHTML(html, meta) {
+  let out = html;
+  out = out.replace(/<title>[^<]*<\/title>/, `<title>${meta.title}</title>`);
+  out = out.replace(/(<meta\s+name="title"\s+content=")[^"]*"/, `$1${meta.title}"`);
+  out = out.replace(/(<meta\s+name="description"\s+content=")[^"]*"/, `$1${meta.description}"`);
+  out = out.replace(/(<meta\s+property="og:title"\s+content=")[^"]*"/, `$1${meta.ogTitle}"`);
+  out = out.replace(/(<meta\s+property="og:description"\s+content=")[^"]*"/, `$1${meta.ogDescription}"`);
+  out = out.replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*"/, `$1${meta.twitterTitle}"`);
+  out = out.replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*"/, `$1${meta.twitterDescription}"`);
+  return out;
+}
+
+async function main() {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (!fs.existsSync(indexPath)) {
     console.error('Error: dist/index.html not found. Run vite build first.');
     process.exit(1);
   }
-  const baseHTML = fs.readFileSync(indexPath, 'utf-8');
+
+  const { getSeasonalHomepageMeta } = await import('../src/data/homepageMeta.js');
+  const homepageMeta = getSeasonalHomepageMeta();
+  let baseHTML = fs.readFileSync(indexPath, 'utf-8');
+  baseHTML = applyHomepageMetaToHTML(baseHTML, homepageMeta);
+  fs.writeFileSync(indexPath, baseHTML, 'utf-8');
+  console.log(`Homepage meta (${homepageMeta.season}): ${homepageMeta.title}`);
+
   let count = 0;
   for (const page of PAGES) {
     const dir = path.join(DIST_DIR, page.route);

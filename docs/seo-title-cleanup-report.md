@@ -46,6 +46,19 @@ Updated `<title>`, meta descriptions, Open Graph, and Twitter tags across state,
 
 **Canonical:** unchanged (`https://stormtracking.io`). `homepageMeta.js` and `index.html` kept in sync.
 
+### Seasonal homepage variants (2026-06-08)
+
+Homepage title and meta description now rotate by month via `getSeasonalHomepageMeta()` in `src/data/homepageMeta.js`. SPA mount (`App.jsx`) and build-time `dist/index.html` patching (`scripts/generate-static-pages.js`) both use the same function. `HOMEPAGE_META` remains the default/fallback copy (also in source `index.html`).
+
+| Season | Months | Title |
+| --- | --- | --- |
+| **Winter** | Dec, Jan, Feb | `Live Weather Radar & Winter Storm Alerts — NWS Map` |
+| **Severe / spring** | Mar–May | `Live Storm & Tornado Tracker — NWS Radar & Warnings` |
+| **Hurricane** | Jun–Nov | `Live NWS Radar & Hurricane Tracker — Storm Map` |
+| **Default** | *(fallback)* | `Live Weather Radar Near You — NWS Alerts & Storm Map` |
+
+Page unmount `resetMetaTags()` handlers call `setHomepageMetaTags()` so in-session navigation back to `/` restores the current season's copy.
+
 ---
 
 ## 4. Radar Page (`/radar`)
