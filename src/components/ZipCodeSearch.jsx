@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { trackLocationSaved, trackLocationSearch, trackLocationSearchFailed, trackLocationChange, SAVE_TRIGGERS } from '../utils/analytics';
+import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -698,7 +698,7 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
   );
 }
 
-export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocationClick, initialLocation }) {
+export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLocationsChange, onLocationClick, initialLocation }) {
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -902,16 +902,18 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
 
     if (!locationData) return;
 
-    // Track location toggled on the map. Fires 'Location Count Changed' with
-    // full trigger context via the analytics utility (replaces a previous
-    // direct window.plausible call for 'Location Added').
     if (checked) {
-      const state = locationData.name?.split(',').pop()?.trim() || 'Unknown';
-      const existingOnMap = Object.values(savedLocations).filter(l => l.onMap).length;
-      trackLocationChange('add', SAVE_TRIGGERS.YOUR_LOCATIONS_WIDGET, state, existingOnMap === 0);
+      trackLocationAdded({
+        trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,
+        locationName: locationData.name,
+        previousCount: totalLocationCount
+      });
     } else {
-      const state = locationData.name?.split(',').pop()?.trim() || 'Unknown';
-      trackLocationChange('remove', SAVE_TRIGGERS.YOUR_LOCATIONS_WIDGET, state, false);
+      trackLocationRemoved({
+        trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,
+        locationName: locationData.name,
+        remainingCount: totalLocationCount - 1
+      });
     }
 
     const newLocations = {
@@ -930,6 +932,14 @@ export default function ZipCodeSearch({ stormPhase, onLocationsChange, onLocatio
 
   const handleRemove = () => {
     if (!currentLocationData) return;
+
+    if (isCurrentOnMap) {
+      trackLocationRemoved({
+        trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,
+        locationName: currentLocationData.name,
+        remainingCount: totalLocationCount - 1
+      });
+    }
 
     const locationId = currentLocationData.zip || currentLocationData.id?.replace('user-', '');
     const newLocations = { ...savedLocations };

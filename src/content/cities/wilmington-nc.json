@@ -22,7 +22,7 @@
     "fall": ["hurricane", "tropical-storm", "storm-surge", "flooding"],
     "winter": ["cold-front", "winter-storm", "ice-storm"]
   },
-  "nearby_cities": ["charleston-sc", "virginia-beach-va"],
+  "nearby_cities": ["charlotte-nc", "raleigh-nc", "charleston-sc"],
   "alternate_names": ["Wilmington, NC", "Wilmington North Carolina", "Cape Fear"],
   "description_short": "Wilmington sits at the mouth of the Cape Fear River on the Atlantic and is one of the most hurricane-impacted cities on the East Coast.",
   "description_long": "Located in southeastern North Carolina where the Cape Fear River meets the Atlantic, Wilmington is repeatedly impacted by Atlantic hurricanes — most recently Florence in 2018, which caused catastrophic inland flooding. The region also sees occasional winter storms and ice. New Hanover County is served by NWS Wilmington (office code ILM) within forecast zone NCZ107 (Coastal New Hanover)."

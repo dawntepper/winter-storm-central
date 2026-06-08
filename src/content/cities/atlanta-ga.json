@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "atlanta-ga",
+  "slug": "atlanta-ga",
+  "city": "Atlanta",
+  "state": "Georgia",
+  "state_abbr": "GA",
+  "state_slug": "georgia",
+  "county": "Fulton",
+  "county_fips": "13121",
+  "nws_zone": "GAZ033",
+  "nws_office": "FFC",
+  "lat": 33.7490,
+  "lon": -84.3880,
+  "population": 498715,
+  "metro_area": "Atlanta-Sandy Springs-Alpharetta",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "flooding", "ice-storm", "hail"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning", "extreme-heat", "flooding"],
+    "fall": ["tornado", "severe-thunderstorm", "flooding"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["charlotte-nc", "nashville-tn", "birmingham-al"],
+  "alternate_names": ["Atlanta, GA", "Atlanta Georgia", "ATL", "Metro Atlanta"],
+  "description_short": "Atlanta is the largest city in the Southeast and sits in Dixie Alley with frequent tornadoes, severe thunderstorms, and disruptive winter ice storms.",
+  "description_long": "Located in north-central Georgia on the Piedmont plateau, Atlanta faces year-round severe weather risk characteristic of Dixie Alley — including violent spring tornadoes, damaging hail, flash flooding from intense thunderstorms, and occasional crippling ice storms in winter. Fulton County is served by NWS Peachtree City (office code FFC) within forecast zone GAZ033 (Fulton)."
+}

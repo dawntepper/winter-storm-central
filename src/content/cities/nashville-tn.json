@@ -22,7 +22,7 @@
     "fall": ["tornado", "severe-thunderstorm"],
     "winter": ["winter-storm", "ice-storm", "tornado"]
   },
-  "nearby_cities": ["memphis-tn", "birmingham-al", "little-rock-ar"],
+  "nearby_cities": ["memphis-tn", "atlanta-ga", "birmingham-al"],
   "alternate_names": ["Nashville, TN", "Nashville Tennessee", "Music City"],
   "description_short": "Nashville sits in central Tennessee with year-round tornado risk, including the devastating March 2020 outbreak.",
   "description_long": "Located along the Cumberland River in central Tennessee, Nashville faces severe tornado risk during the spring and a secondary peak in late fall and winter — characteristic of \"Dixie Alley.\" Flooding from heavy rain and disruptive winter storms also affect the region. Davidson County is served by NWS Nashville (office code OHX) within forecast zone TNZ027 (Davidson)."

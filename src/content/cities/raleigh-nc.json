@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "raleigh-nc",
+  "slug": "raleigh-nc",
+  "city": "Raleigh",
+  "state": "North Carolina",
+  "state_abbr": "NC",
+  "state_slug": "north-carolina",
+  "county": "Wake",
+  "county_fips": "37183",
+  "nws_zone": "NCZ041",
+  "nws_office": "RAH",
+  "lat": 35.7796,
+  "lon": -78.6382,
+  "population": 467665,
+  "metro_area": "Raleigh-Cary",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["tornado", "severe-thunderstorm", "flooding", "hurricane", "ice-storm"],
+  "seasonal_risks": {
+    "spring": ["tornado", "severe-thunderstorm", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "hurricane", "tropical-storm", "lightning"],
+    "fall": ["hurricane", "tropical-storm", "severe-thunderstorm", "flooding"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["charlotte-nc", "wilmington-nc", "virginia-beach-va"],
+  "alternate_names": ["Raleigh, NC", "Raleigh North Carolina", "Research Triangle", "RDU"],
+  "description_short": "Raleigh is North Carolina's capital and an anchor of the Research Triangle, exposed to tornadoes, hurricanes, and Piedmont ice storms.",
+  "description_long": "Located in central North Carolina's Piedmont, Raleigh faces tornado and severe thunderstorm risk during the spring, tropical storm and hurricane impacts from the Atlantic in summer and fall, and disruptive ice storms in winter. Wake County is served by NWS Raleigh (office code RAH) within forecast zone NCZ041 (Wake)."
+}

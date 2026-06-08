@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "charlotte-nc",
+  "slug": "charlotte-nc",
+  "city": "Charlotte",
+  "state": "North Carolina",
+  "state_abbr": "NC",
+  "state_slug": "north-carolina",
+  "county": "Mecklenburg",
+  "county_fips": "37119",
+  "nws_zone": "NCZ071",
+  "nws_office": "GSP",
+  "lat": 35.2271,
+  "lon": -80.8431,
+  "population": 874579,
+  "metro_area": "Charlotte-Concord-Gastonia",
+  "timezone": "America/New_York",
+  "primary_weather_concerns": ["severe-thunderstorm", "tornado", "flooding", "ice-storm", "winter-storm"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "hail", "flooding"],
+    "summer": ["severe-thunderstorm", "lightning", "extreme-heat", "flooding"],
+    "fall": ["severe-thunderstorm", "tornado", "flooding"],
+    "winter": ["ice-storm", "winter-storm", "cold-front"]
+  },
+  "nearby_cities": ["raleigh-nc", "atlanta-ga", "wilmington-nc"],
+  "alternate_names": ["Charlotte, NC", "Charlotte North Carolina", "Queen City", "CLT"],
+  "description_short": "Charlotte is the largest city in North Carolina and faces tornadoes, severe thunderstorms, and occasional winter ice storms across the Piedmont.",
+  "description_long": "Located in the Carolina Piedmont near the South Carolina border, Charlotte experiences severe thunderstorms and tornadoes during the spring and fall, with a secondary winter threat from ice storms and cold snaps. Heavy rain from tropical systems can bring inland flooding. Mecklenburg County is served by NWS Greenville-Spartanburg (office code GSP) within forecast zone NCZ071 (Mecklenburg)."
+}

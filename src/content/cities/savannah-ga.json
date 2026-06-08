@@ -22,7 +22,7 @@
     "fall": ["hurricane", "tropical-storm", "storm-surge"],
     "winter": ["cold-front", "freeze"]
   },
-  "nearby_cities": ["charleston-sc", "jacksonville-fl"],
+  "nearby_cities": ["atlanta-ga", "charleston-sc", "jacksonville-fl"],
   "alternate_names": ["Savannah, GA", "Savannah Georgia", "Coastal Georgia"],
   "description_short": "Savannah is Georgia's oldest city, sitting just inland from the Atlantic and exposed to hurricane, storm surge, and river flooding.",
   "description_long": "Located on the Savannah River about 20 miles from the Atlantic, Savannah faces hurricane and storm-surge risk during the Atlantic season, with low elevation contributing to flooding during heavy rain events. Chatham County is served by NWS Charleston (office code CHS) within forecast zone GAZ218 (Coastal Chatham)."

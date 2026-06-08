@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-05-27.
+Last reviewed: 2026-06-08.
 
 ---
 
@@ -22,7 +22,11 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Radar Link Click` | Click intent to navigate to `/radar` |
 | `Browse By State Click` | State dropdown selection, "Weather Near Me" state chip, or county-polygon click (see `source`) |
 | `Storm Radar Click` | "View Full Radar Map" CTA on storm pages |
-| `Location Count Changed` | Saved-location add/remove (count + trigger context) |
+| `Location Count Changed` | High-level saved-location count snapshot (`location_count`, `has_locations`) |
+| `Location Added` | User intentionally saved a map pin (trigger, state, city, is_first_location) |
+| `Location Removed` | User intentionally removed a map pin (trigger, state, city, remaining_location_count) |
+| `First Location Added` | Once per session when user saves their first pin |
+| `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
@@ -47,14 +51,15 @@ These are the events to register as goals in the Plausible dashboard. Properties
 
 Neither click navigates today — both just re-center the homepage map. This event captures **interest signal**, not action. If we ever add navigation affordances to these UIs, real nav sources will be added to `NAV_SOURCES` at that time.
 
-### Why some location events fire twice
+### Location intent vs count snapshots
 
-`Location Count Changed` fires from two paths:
+**Intent events** (`Location Added`, `Location Removed`, `First Location Added`, `Multiple Locations Reached`) fire only from explicit UI handlers — never on localStorage hydration.
 
-1. **Count-change useEffect** in `App.jsx` — fires on every change to `userLocations.length`. Props: `location_count`, `has_locations`.
-2. **Rich helper `trackLocationChange()`** at explicit UI handlers (currently only `ZipCodeSearch` toggle). Props: `action`, `trigger`, `location_state`, `is_first_location`.
+**Count snapshots** (`Location Count Changed`) fire from a `useEffect` in `App.jsx` on every `userLocations.length` change, including page load when saved pins are restored.
 
-To analyze rich trigger data in Plausible, filter for events that have an `action` prop. The count-change events have an empty `action`.
+For trigger-level analysis, use `Location Added` / `Location Removed`. For aggregate pin counts, use `Location Count Changed`.
+
+See `docs/location-analytics-audit.md` for the full code-path audit and dashboard recommendations.
 
 ---
 
@@ -114,22 +119,32 @@ Map Region Click
 
 ```
 Location Count Changed
-  Path A (existing count-change effect):
-    location_count   number
-    has_locations    "yes" | "no"
+  location_count     number
+  has_locations      "yes" | "no"
 
-  Path B (rich trigger fire — preferred for new callsites):
-    action           "add" | "remove"
-    trigger          a value from SAVE_TRIGGERS
-    location_state   normalized slug
-    is_first_location boolean
-
-Location Saved
-  location_name
-  location_type    "search" | "geolocation" | "alert"
+Location Added
+  trigger            a value from SAVE_TRIGGERS
+  state              normalized state slug
+  city               present when parseable from "City, ST"
+  is_first_location  boolean
 
 Location Removed
+  trigger                  a value from SAVE_TRIGGERS
+  state                    normalized state slug
+  city                     present when parseable
+  remaining_location_count number
+
+First Location Added
+  trigger            a value from SAVE_TRIGGERS
+  state              normalized state slug
+  city               present when parseable
+
+Multiple Locations Reached
+  location_count     2 | 3 | 5
+
+Location Saved (legacy — not wired in UI)
   location_name
+  location_type    "search" | "geolocation" | "alert"
 
 Location Viewed on Map
   location_name
@@ -305,10 +320,12 @@ SOCIAL_REFERRAL             "social_referral"
 ### SAVE_TRIGGERS
 
 ```
-CHECK_LOCATION_BUTTON       "check_location_button"
-YOUR_LOCATIONS_WIDGET       "your_locations_widget"
-MAP_LOCATION_PIN_CLICK      "map_location_pin_click"
-AUTO_GEOLOCATE              "auto_geolocate"
+CHECK_LOCATION_BUTTON       "check_location_button"   — ZIP/city search Add to Map toggle
+YOUR_LOCATIONS_WIDGET       "your_locations_widget"   — reserved
+YOUR_LOCATIONS_REMOVE       "your_locations_remove"   — × in Your Locations list
+ALERT_ADD_TO_MAP            "alert_add_to_map"        — Live Alert card Add to Map
+MAP_LOCATION_PIN_CLICK      "map_location_pin_click"  — reserved
+AUTO_GEOLOCATE              "auto_geolocate"          — reserved
 ```
 
 `STATE_PAGE_SAVE_BUTTON` is intentionally omitted — state pages have no save button today. Add the constant when the feature is built.

@@ -26,7 +26,8 @@ function track(eventName, props = {}) {
 // ============================================
 
 /**
- * Track when user saves a location
+ * Legacy location-save signal (search / geolocation / alert type).
+ * Prefer trackLocationAdded() for intent measurement.
  */
 export function trackLocationSaved(locationName, locationType = 'search') {
   track('Location Saved', {
@@ -35,13 +36,71 @@ export function trackLocationSaved(locationName, locationType = 'search') {
   });
 }
 
+// Session-scoped flags for milestone / first-location events (not fired on hydration)
+let firstLocationAddedThisSession = false;
+const locationMilestonesReached = new Set();
+
+function parseLocationCityState(locationName) {
+  if (!locationName) return { city: null, state: null };
+  const parts = String(locationName).split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return {
+      city: parts.slice(0, -1).join(', '),
+      state: normalizeSlug(parts[parts.length - 1])
+    };
+  }
+  return { city: locationName, state: null };
+}
+
 /**
- * Track when user removes a location
+ * User intentionally added a saved map location.
+ * Fires Location Added; may also fire First Location Added and Multiple Locations Reached.
+ *
+ * @param {{ trigger: string, locationName: string, previousCount: number }} params
  */
-export function trackLocationRemoved(locationName) {
-  track('Location Removed', {
-    location_name: locationName
-  });
+export function trackLocationAdded({ trigger, locationName, previousCount }) {
+  const { city, state } = parseLocationCityState(locationName);
+  const isFirstLocation = previousCount === 0;
+  const totalCount = previousCount + 1;
+
+  const props = {
+    trigger,
+    state: state || 'unknown',
+    is_first_location: isFirstLocation
+  };
+  if (city) props.city = city;
+
+  track('Location Added', props);
+
+  if (isFirstLocation && !firstLocationAddedThisSession) {
+    firstLocationAddedThisSession = true;
+    const firstProps = { trigger, state: state || 'unknown' };
+    if (city) firstProps.city = city;
+    track('First Location Added', firstProps);
+  }
+
+  for (const milestone of [2, 3, 5]) {
+    if (previousCount < milestone && totalCount >= milestone && !locationMilestonesReached.has(milestone)) {
+      locationMilestonesReached.add(milestone);
+      track('Multiple Locations Reached', { location_count: milestone });
+    }
+  }
+}
+
+/**
+ * User intentionally removed a saved map location.
+ *
+ * @param {{ trigger: string, locationName: string, remainingCount: number }} params
+ */
+export function trackLocationRemoved({ trigger, locationName, remainingCount }) {
+  const { city, state } = parseLocationCityState(locationName);
+  const props = {
+    trigger,
+    state: state || 'unknown',
+    remaining_location_count: remainingCount
+  };
+  if (city) props.city = city;
+  track('Location Removed', props);
 }
 
 /**
@@ -556,6 +615,8 @@ export const NAV_SOURCES = {
 export const SAVE_TRIGGERS = {
   CHECK_LOCATION_BUTTON: 'check_location_button',
   YOUR_LOCATIONS_WIDGET: 'your_locations_widget',
+  YOUR_LOCATIONS_REMOVE: 'your_locations_remove',
+  ALERT_ADD_TO_MAP: 'alert_add_to_map',
   MAP_LOCATION_PIN_CLICK: 'map_location_pin_click',
   AUTO_GEOLOCATE: 'auto_geolocate',
 };
@@ -695,24 +756,6 @@ export function trackEssentialsCardClick(productId, placement) {
 }
 
 /**
- * Rich location-change event. Fires 'Location Count Changed' with full
- * trigger context. Call from explicit UI handlers (Check Location CTA,
- * Your Locations widget toggle, etc.). The existing trackLocationCountChanged
- * effect still fires alongside for the basic count signal.
- *
- * action: 'add' | 'remove'
- * trigger: SAVE_TRIGGERS.X
- */
-export function trackLocationChange(action, trigger, locationState, isFirstLocation) {
-  track('Location Count Changed', {
-    action,
-    trigger,
-    location_state: normalizeSlug(locationState),
-    is_first_location: isFirstLocation
-  });
-}
-
-/**
  * Fire 'IndexNow Submission' when URLs are pushed to Bing IndexNow from
  * either the /admin/seo bulk buttons or (Session 2) the build-time hook in
  * scripts/generate-sitemap.js. Tracks how often submissions happen and
@@ -786,7 +829,16 @@ export function testAllTracking() {
   // Location events
   console.log('1. Location Management Events:');
   trackLocationSaved('Boulder, CO', 'search');
-  trackLocationRemoved('Boulder, CO');
+  trackLocationAdded({
+    trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,
+    locationName: 'Boulder, CO',
+    previousCount: 0
+  });
+  trackLocationRemoved({
+    trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+    locationName: 'Boulder, CO',
+    remainingCount: 0
+  });
   trackLocationViewedOnMap('Boulder, CO');
   trackLocationCountChanged(2);
 
@@ -867,6 +919,7 @@ if (typeof window !== 'undefined') {
 export default {
   track,
   trackLocationSaved,
+  trackLocationAdded,
   trackLocationRemoved,
   trackLocationViewedOnMap,
   trackLocationCountChanged,
@@ -921,7 +974,6 @@ export default {
   trackMapRegionClick,
   trackAffiliateClick,
   trackEssentialsCardClick,
-  trackLocationChange,
   trackIndexNowSubmission,
   trackForecastPageView,
   trackForecastLocationChanged,

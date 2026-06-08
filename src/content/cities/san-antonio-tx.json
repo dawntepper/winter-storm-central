@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "san-antonio-tx",
+  "slug": "san-antonio-tx",
+  "city": "San Antonio",
+  "state": "Texas",
+  "state_abbr": "TX",
+  "state_slug": "texas",
+  "county": "Bexar",
+  "county_fips": "48029",
+  "nws_zone": "TXZ205",
+  "nws_office": "EWX",
+  "lat": 29.4241,
+  "lon": -98.4936,
+  "population": 1434625,
+  "metro_area": "San Antonio-New Braunfels",
+  "timezone": "America/Chicago",
+  "primary_weather_concerns": ["severe-thunderstorm", "flash-flood", "tornado", "hail", "extreme-heat"],
+  "seasonal_risks": {
+    "spring": ["severe-thunderstorm", "tornado", "hail", "flash-flood"],
+    "summer": ["extreme-heat", "severe-thunderstorm", "flash-flood", "lightning"],
+    "fall": ["severe-thunderstorm", "flash-flood"],
+    "winter": ["cold-front", "ice-storm", "severe-thunderstorm"]
+  },
+  "nearby_cities": ["austin-tx", "houston-tx", "dallas-tx"],
+  "alternate_names": ["San Antonio, TX", "San Antonio Texas", "SAT", "Alamo City"],
+  "description_short": "San Antonio is the seventh-largest U.S. city and lies in Flash Flood Alley with frequent severe thunderstorms, hail, and extreme summer heat.",
+  "description_long": "Located in south-central Texas on the edge of the Hill Country, San Antonio faces flash flooding from intense thunderstorms, hail and tornado risk during the spring, and prolonged extreme heat in summer. Bexar County is served by NWS Austin/San Antonio (office code EWX) within forecast zone TXZ205 (Bexar)."
+}

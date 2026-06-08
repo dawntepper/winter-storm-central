@@ -25,6 +25,7 @@ import {
   startSessionTracking,
   stopSessionTracking,
   trackLocationCountChanged,
+  trackLocationAdded,
   trackAlertTapped,
   trackAlertAddedToMap,
   trackLocationViewedOnMap,
@@ -32,7 +33,6 @@ import {
   trackStormBannerClick,
   trackRadarLinkClick,
   trackBrowseByStateClick,
-  trackLocationChange,
   setNavSource,
   NAV_SOURCES,
   SAVE_TRIGGERS
@@ -434,6 +434,7 @@ export default function App() {
     };
 
     // Add to alert locations (separate state)
+    const previousCount = userLocations.length;
     let wasAdded = false;
     setAlertLocations(prev => {
       const exists = prev.some(loc => loc.name === alert.location);
@@ -447,6 +448,11 @@ export default function App() {
     // Fetch forecast in the background. When it lands, patch the pin's
     // conditions so the card switches from the headline to H/L · forecast.
     if (wasAdded) {
+      trackLocationAdded({
+        trigger: SAVE_TRIGGERS.ALERT_ADD_TO_MAP,
+        locationName: alert.location,
+        previousCount
+      });
       fetchCurrentConditions(alert.lat, alert.lon).then(conditions => {
         if (!conditions) return;
         setAlertLocations(prev =>
@@ -474,7 +480,11 @@ export default function App() {
   const handleRemoveAlertLocation = (locationId) => {
     const location = alertLocations.find(loc => loc.id === locationId);
     if (location) {
-      trackLocationRemoved(location.name);
+      trackLocationRemoved({
+        trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+        locationName: location.name,
+        remainingCount: userLocations.length - 1
+      });
     }
     setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
   };
@@ -484,7 +494,11 @@ export default function App() {
     // Find location name for tracking before removing
     const location = searchLocations.find(loc => loc.id === locationId);
     if (location) {
-      trackLocationRemoved(location.name);
+      trackLocationRemoved({
+        trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+        locationName: location.name,
+        remainingCount: userLocations.length - 1
+      });
     }
 
     // Remove from state
@@ -647,7 +661,7 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Check Location - TOP on mobile */}
           <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+            <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 
           {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
@@ -897,7 +911,7 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase="active" onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+              <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
             </div>
 
             {/* Your Locations (if any) - COLLAPSIBLE */}
