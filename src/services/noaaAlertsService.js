@@ -26,6 +26,11 @@ import {
 // Vite tree-shakes this import from prod bundles — the only call site is
 // gated on import.meta.env.DEV.
 import { makeTornadoFixtures } from '../test/tornadoFixture.js';
+// Dev-only fixture for verifying tropical UI (hurricane/tropical storm/storm
+// surge) on the main radar and per-state radars without waiting for a real
+// system (see src/test/tropicalFixture.js). Tree-shaken from prod — the only
+// call site is gated on import.meta.env.DEV.
+import { makeTropicalFixtures } from '../test/tropicalFixture.js';
 
 export { ALERT_CATEGORIES, CATEGORY_ORDER };
 
@@ -37,6 +42,18 @@ function isTornadoTestActive() {
     import.meta.env.DEV &&
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('test-tornado')
+  );
+}
+
+// True when the dev server is running AND the URL has ?test-tropical. Same
+// mechanism as isTornadoTestActive() — injects fixture tropical alerts
+// (hurricane/tropical storm/storm surge) end-to-end so the main radar,
+// per-state radars, cards, and homepage widget all see them.
+function isTropicalTestActive() {
+  return (
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('test-tropical')
   );
 }
 
@@ -250,14 +267,15 @@ function selectBalancedAlerts(alerts, perCategory = 5, maxTotal = 20) {
  * Main function: Fetch and process NOAA alerts
  */
 export async function fetchExtremeWeather(forceRefresh = false) {
-  // Bypass cache entirely when the tornado dev-fixture is active, so the
-  // fixture is regenerated each call (fresh timestamps) and a stale cache
-  // from a previous session can't poison the page when ?test-tornado=1
-  // is set/unset.
+  // Bypass cache entirely when a dev-fixture is active, so the fixture is
+  // regenerated each call (fresh timestamps) and a stale cache from a
+  // previous session can't poison the page when ?test-tornado=1 or
+  // ?test-tropical=1 is set/unset.
   const tornadoTest = isTornadoTestActive();
+  const tropicalTest = isTropicalTestActive();
 
   // Check cache first (unless forcing refresh or smoke-testing)
-  if (!forceRefresh && !tornadoTest) {
+  if (!forceRefresh && !tornadoTest && !tropicalTest) {
     const cached = getCachedAlerts();
     if (cached) {
       console.log('Using cached NOAA alerts, age:', Math.round(cached.age / 1000 / 60), 'min');
@@ -283,9 +301,13 @@ export async function fetchExtremeWeather(forceRefresh = false) {
       .map(parseAlert)
       .filter(Boolean); // Remove nulls
 
-    // Prepend tornado fixtures (dev-only) so they appear in allAlerts AND
-    // byCategory.tornado AND the selected/map flow, end-to-end.
-    const allAlerts = tornadoTest ? [...makeTornadoFixtures(), ...parsed] : parsed;
+    // Prepend dev-only fixtures (tornado and/or tropical) so they appear in
+    // allAlerts AND byCategory AND the selected/map flow, end-to-end.
+    const allAlerts = [
+      ...(tornadoTest ? makeTornadoFixtures() : []),
+      ...(tropicalTest ? makeTropicalFixtures() : []),
+      ...parsed,
+    ];
 
     // Group by category
     const byCategory = {};
