@@ -3,7 +3,7 @@
  * Individual page for tracking specific weather events (e.g., Winter Storm Fern, Nor'easter)
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
@@ -26,6 +26,17 @@ import {
   setNavSource,
   NAV_SOURCES
 } from '../utils/analytics';
+
+const EmergencyInfoPanel = lazy(() => import('./EmergencyInfoPanel'));
+
+function EmergencyPanelFallback() {
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-slate-800 p-6 animate-pulse">
+      <div className="h-4 bg-slate-700 rounded w-1/2 mb-2" />
+      <div className="h-3 bg-slate-700 rounded w-3/4" />
+    </div>
+  );
+}
 
 // Category header colors
 const categoryHeaderColors = {
@@ -341,17 +352,20 @@ function EventAlertItem({ alert, onZoomToAlert, onShowDetail, isEven = false }) 
         {isExpanded && (
           <div className="flex items-center gap-2 ml-2 flex-shrink-0">
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onShowDetail(alert);
               }}
-              className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+              className="min-h-11 px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             >
               View Alert
             </button>
             <button
+              type="button"
               onClick={handleClose}
-              className="p-1 text-slate-400 hover:text-white bg-slate-600 hover:bg-slate-500 rounded transition-colors cursor-pointer"
+              aria-label="Close alert details"
+              className="min-h-11 min-w-11 flex items-center justify-center text-slate-400 hover:text-white bg-slate-600 hover:bg-slate-500 rounded transition-colors cursor-pointer"
               title="Close"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -554,44 +568,46 @@ function AlertCategoryGroup({ category, alerts, onZoomToAlert, onShowDetail, onS
   );
 }
 
-// Mobile-only collapsed alerts card (shown above map on mobile)
+// Mobile-only collapsed alerts card (shown after map on mobile)
 function MobileAlertsCard({ filteredAlerts, alertsLoading, refreshAlerts, handleZoomToAlert, handleShowDetail, handleStateZoom, selectedStateCode }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
-      {/* Collapsible Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-amber-500">⚠️</span>
-          <h2 className="text-base font-semibold text-white">
-            Active Alerts ({filteredAlerts.length})
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              refreshAlerts();
-            }}
-            disabled={alertsLoading}
-            className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
-          </button>
+      {/* Collapsible Header — refresh is a sibling, not nested inside the toggle button */}
+      <div className="flex items-center bg-slate-800 hover:bg-slate-700/80 transition-colors">
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          className="flex-1 min-h-11 px-4 py-3 flex items-center justify-between cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-amber-500" aria-hidden="true">⚠️</span>
+            <h2 className="text-base font-semibold text-white">
+              Active Alerts ({filteredAlerts.length})
+            </h2>
+          </div>
           <svg
-            className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-        </div>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={refreshAlerts}
+          disabled={alertsLoading}
+          aria-label="Refresh alerts"
+          className="min-h-11 min-w-11 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+        >
+          <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+        </button>
+      </div>
 
       {/* Expandable Content */}
       {isExpanded && (
@@ -629,6 +645,106 @@ function MobileAlertsCard({ filteredAlerts, alertsLoading, refreshAlerts, handle
         </div>
       )}
     </div>
+  );
+}
+
+// Storm impacts / details block (shared by mobile + desktop)
+function StormImpactsSection({ event }) {
+  if (!event.impacts?.length) return null;
+  return (
+    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-700">
+        <h2 className="text-base font-semibold text-white">
+          {event.status === 'forecasted' ? 'Expected Impacts' : 'Reported Impacts'}
+        </h2>
+      </div>
+      <div className="p-4">
+        <ul className="space-y-2">
+          {event.impacts.map((impact, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+              <span className="text-amber-500 mt-0.5" aria-hidden="true">•</span>
+              {impact}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// Desktop alerts column (also used inside main content area)
+function ActiveAlertsPanel({
+  filteredAlerts,
+  alertsLoading,
+  refreshAlerts,
+  handleZoomToAlert,
+  handleShowDetail,
+  handleStateZoom,
+  selectedStateCode,
+  event,
+  sticky = true
+}) {
+  return (
+    <div className={`space-y-4 ${sticky ? 'lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto' : ''}`}>
+      <div className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3 border border-slate-700 min-h-11">
+        <h2 className="text-base font-semibold text-white">
+          Active Alerts ({filteredAlerts.length})
+        </h2>
+        <button
+          type="button"
+          onClick={refreshAlerts}
+          disabled={alertsLoading}
+          aria-label="Refresh alerts"
+          className="min-h-11 min-w-11 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
+        </button>
+      </div>
+
+      {alertsLoading && filteredAlerts.length === 0 ? (
+        <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
+          <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs text-slate-500">Loading alerts...</p>
+        </div>
+      ) : filteredAlerts.length > 0 ? (
+        <div className="space-y-3">
+          {CATEGORY_ORDER.map(categoryId => {
+            const category = ALERT_CATEGORIES[categoryId];
+            const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
+            if (categoryAlerts.length === 0) return null;
+            return (
+              <AlertCategoryGroup
+                key={categoryId}
+                category={category}
+                alerts={categoryAlerts}
+                onZoomToAlert={handleZoomToAlert}
+                onShowDetail={handleShowDetail}
+                onStateZoom={handleStateZoom}
+                selectedStateCode={selectedStateCode}
+                defaultExpanded={true}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
+          <p className="text-slate-500 text-sm">
+            {event.status === 'forecasted'
+              ? 'Alerts will appear as the event approaches'
+              : 'No active alerts for this event'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmergencyPanelSlot({ event }) {
+  if (!event.showEmergencyInfoPanel) return null;
+  return (
+    <Suspense fallback={<EmergencyPanelFallback />}>
+      <EmergencyInfoPanel event={event} />
+    </Suspense>
   );
 }
 
@@ -670,8 +786,9 @@ function ShareButton({ event }) {
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={handleShare}
-        className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center gap-2 border border-slate-600 cursor-pointer"
+        className="min-h-11 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center gap-2 border border-slate-600 cursor-pointer"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -1051,8 +1168,10 @@ export default function StormEventPage() {
   const statusColor = statusColors[event.status] || statusColors.forecasted;
   const statusLabel = statusLabels[event.status] || event.status;
 
+  const showEmergencyPanel = Boolean(event.showEmergencyInfoPanel);
+
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-slate-900 overflow-x-hidden">
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -1215,10 +1334,11 @@ export default function StormEventPage() {
       )} */}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full min-w-0">
         {event.status === 'completed' ? (
           /* COMPLETED EVENT - Historical Summary */
-          <div className="max-w-3xl mx-auto">
+          <div className={`mx-auto space-y-6 ${showEmergencyPanel ? 'max-w-7xl lg:grid lg:grid-cols-[7fr_3fr] lg:gap-6 lg:items-start' : 'max-w-3xl'}`}>
+            <div className="space-y-6 min-w-0">
             {/* Historical Notice */}
             <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-3">
@@ -1279,7 +1399,7 @@ export default function StormEventPage() {
             )}
 
             {/* Static Map showing affected area */}
-            <div className="mb-6">
+            <div className="w-full max-w-full overflow-hidden">
               <StormMap
                 weatherData={{}}
                 stormPhase="post-storm"
@@ -1293,141 +1413,139 @@ export default function StormEventPage() {
             {/* Back to Main Tracker */}
             <Link
               to="/"
-              className="block text-center py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              className="block text-center min-h-11 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
             >
               View Current Weather Alerts →
             </Link>
+            </div>
+
+            {showEmergencyPanel && (
+              <div className="lg:sticky lg:top-4 min-w-0">
+                <EmergencyPanelSlot event={event} />
+              </div>
+            )}
           </div>
         ) : (
           /* ACTIVE/FORECASTED EVENT - Live Tracker */
-          <>
-            {/* ===== MOBILE LAYOUT ===== */}
-            <div className="lg:hidden space-y-4">
-              {/* Mobile: Collapsed Alerts Card (above map) */}
-              <MobileAlertsCard
-                filteredAlerts={filteredAlerts}
-                alertsLoading={alertsLoading}
-                refreshAlerts={refreshAlerts}
-                handleZoomToAlert={handleZoomToAlert}
-                handleShowDetail={handleShowDetail}
-                handleStateZoom={handleStateZoom}
-                selectedStateCode={selectedStateCode}
-              />
-
-              {/* Mobile: Map */}
-              <div ref={mobileMapRef}>
-                <StormMap
-                  weatherData={{}}
-                  stormPhase="active"
-                  userLocations={[]}
-                  alerts={mapAlerts}
-                  isHero
-                  centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
-                  selectedAlertId={selectedAlertId}
-                  selectedStateCode={selectedStateCode}
-                />
-              </div>
-            </div>
-
-            {/* ===== DESKTOP LAYOUT ===== */}
-            <div className="hidden lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
-              {/* Left Column: Map (~60% on desktop) */}
-              <div>
-                <StormMap
-                  weatherData={{}}
-                  stormPhase="active"
-                  userLocations={[]}
-                  alerts={mapAlerts}
-                  isHero
-                  centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
-                  selectedAlertId={selectedAlertId}
-                  selectedStateCode={selectedStateCode}
-                />
-              </div>
-
-              {/* Right Column: Alerts & Details (~40% on desktop) */}
-              <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-                {/* Active Alerts Header */}
-                <div className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3 border border-slate-700">
-                  <h2 className="text-base font-semibold text-white">
-                    Active Alerts ({filteredAlerts.length})
-                  </h2>
-                  <button
-                    onClick={refreshAlerts}
-                    disabled={alertsLoading}
-                    className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <span className={alertsLoading ? 'animate-spin inline-block' : ''}>&#8635;</span>
-                  </button>
+          <div className={showEmergencyPanel ? 'lg:grid lg:grid-cols-[7fr_3fr] lg:gap-6 lg:items-start' : ''}>
+            <div className="space-y-4 min-w-0">
+              {/* ===== MOBILE LAYOUT (lg:hidden) =====
+                  Order: map → warnings → emergency panel → storm details */}
+              <div className="lg:hidden space-y-4">
+                <div ref={mobileMapRef} className="w-full max-w-full overflow-hidden">
+                  <StormMap
+                    weatherData={{}}
+                    stormPhase="active"
+                    userLocations={[]}
+                    alerts={mapAlerts}
+                    isHero
+                    centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                    selectedAlertId={selectedAlertId}
+                    selectedStateCode={selectedStateCode}
+                  />
                 </div>
 
-                {alertsLoading && filteredAlerts.length === 0 ? (
-                  <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
-                    <div className="w-6 h-6 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">Loading alerts...</p>
-                  </div>
-                ) : filteredAlerts.length > 0 ? (
-                  <div className="space-y-3">
-                    {/* Group alerts by category */}
-                    {CATEGORY_ORDER.map(categoryId => {
-                      const category = ALERT_CATEGORIES[categoryId];
-                      const categoryAlerts = filteredAlerts.filter(a => a.category === categoryId);
-                      if (categoryAlerts.length === 0) return null;
-                      return (
-                        <AlertCategoryGroup
-                          key={categoryId}
-                          category={category}
-                          alerts={categoryAlerts}
-                          onZoomToAlert={handleZoomToAlert}
-                          onShowDetail={handleShowDetail}
-                          onStateZoom={handleStateZoom}
-                          selectedStateCode={selectedStateCode}
-                          defaultExpanded={true}
+                <MobileAlertsCard
+                  filteredAlerts={filteredAlerts}
+                  alertsLoading={alertsLoading}
+                  refreshAlerts={refreshAlerts}
+                  handleZoomToAlert={handleZoomToAlert}
+                  handleShowDetail={handleShowDetail}
+                  handleStateZoom={handleStateZoom}
+                  selectedStateCode={selectedStateCode}
+                />
+
+                {showEmergencyPanel && <EmergencyPanelSlot event={event} />}
+
+                <StormImpactsSection event={event} />
+
+                <Link
+                  to="/"
+                  className="block text-center min-h-11 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+                >
+                  View All Weather Alerts →
+                </Link>
+              </div>
+
+              {/* ===== DESKTOP LAYOUT (hidden lg:*) ===== */}
+              {showEmergencyPanel ? (
+                <div className="hidden lg:block space-y-4">
+                  <div className="lg:grid lg:grid-cols-[3fr_2fr] lg:gap-6 lg:items-start">
+                    <div className="w-full max-w-full overflow-hidden min-w-0">
+                      <StormMap
+                        weatherData={{}}
+                        stormPhase="active"
+                        userLocations={[]}
+                        alerts={mapAlerts}
+                        isHero
+                        centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                        selectedAlertId={selectedAlertId}
+                        selectedStateCode={selectedStateCode}
                       />
-                    );
-                  })}
+                    </div>
+                    <ActiveAlertsPanel
+                      filteredAlerts={filteredAlerts}
+                      alertsLoading={alertsLoading}
+                      refreshAlerts={refreshAlerts}
+                      handleZoomToAlert={handleZoomToAlert}
+                      handleShowDetail={handleShowDetail}
+                      handleStateZoom={handleStateZoom}
+                      selectedStateCode={selectedStateCode}
+                      event={event}
+                    />
+                  </div>
+                  <StormImpactsSection event={event} />
+                  <Link
+                    to="/"
+                    className="block text-center min-h-11 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+                  >
+                    View All Weather Alerts →
+                  </Link>
                 </div>
               ) : (
-                <div className="p-6 text-center bg-slate-800 rounded-xl border border-slate-700">
-                  <p className="text-slate-500 text-sm">
-                    {event.status === 'forecasted'
-                      ? 'Alerts will appear as the event approaches'
-                      : 'No active alerts for this event'}
-                  </p>
+                <div className="hidden lg:grid lg:grid-cols-[3fr_2fr] lg:gap-6 lg:items-start">
+                  <div className="w-full max-w-full overflow-hidden min-w-0">
+                    <StormMap
+                      weatherData={{}}
+                      stormPhase="active"
+                      userLocations={[]}
+                      alerts={mapAlerts}
+                      isHero
+                      centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                      selectedAlertId={selectedAlertId}
+                      selectedStateCode={selectedStateCode}
+                    />
+                  </div>
+                  <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+                    <ActiveAlertsPanel
+                      filteredAlerts={filteredAlerts}
+                      alertsLoading={alertsLoading}
+                      refreshAlerts={refreshAlerts}
+                      handleZoomToAlert={handleZoomToAlert}
+                      handleShowDetail={handleShowDetail}
+                      handleStateZoom={handleStateZoom}
+                      selectedStateCode={selectedStateCode}
+                      event={event}
+                      sticky={false}
+                    />
+                    <StormImpactsSection event={event} />
+                    <Link
+                      to="/"
+                      className="block text-center min-h-11 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+                    >
+                      View All Weather Alerts →
+                    </Link>
+                  </div>
                 </div>
               )}
-
-              {/* Expected Impacts */}
-              {event.impacts && event.impacts.length > 0 && (
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-700">
-                    <h2 className="text-base font-semibold text-white">
-                      {event.status === 'forecasted' ? 'Expected Impacts' : 'Reported Impacts'}
-                    </h2>
-                  </div>
-                  <div className="p-4">
-                    <ul className="space-y-2">
-                      {event.impacts.map((impact, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                          <span className="text-amber-500 mt-0.5">•</span>
-                          {impact}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Back to Main Tracker */}
-              <Link
-                to="/"
-                className="block text-center py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
-              >
-                View All Weather Alerts →
-              </Link>
             </div>
+
+            {showEmergencyPanel && (
+              <div className="hidden lg:block lg:sticky lg:top-4 min-w-0">
+                <EmergencyPanelSlot event={event} />
+              </div>
+            )}
           </div>
-          </>
         )}
 
         {/* Storm prep essentials — only surfaces for hurricane / severe_weather

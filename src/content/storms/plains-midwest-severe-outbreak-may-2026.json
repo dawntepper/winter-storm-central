@@ -42,6 +42,32 @@
     "og_image_url": "",
     "keywords": "plains severe weather, midwest tornado outbreak, nebraska tornadoes, iowa severe weather, may 2026 severe weather, enhanced risk tornadoes"
   },
-  "peak_alert_count": null,
-  "total_alerts_issued": null
+  "peak_alert_count": 0,
+  "total_alerts_issued": null,
+  "show_emergency_info_panel": true,
+  "emergency_summary": {
+    "title": "Emergency Status",
+    "items": [
+      "Which Grocery Stores Are Open in Fort Myers"
+    ],
+    "updated_at": "2026-06-08T19:09:20.275Z"
+  },
+  "emergency_entries": [
+    {
+      "id": "9513becf-74ee-4521-88cf-c1ac6e9c3eb5",
+      "title": "Emergency Title",
+      "category": "Ice",
+      "location": "Fort Myers, FL",
+      "description": "Ice is available at: \n- Publix on Summerlin\n- Walmart on College",
+      "source_name": "Fort Myers Weekly",
+      "source_url": "https://www.espn.com",
+      "social_url": "",
+      "is_official": true,
+      "status": "active",
+      "created_at": "2026-06-08T19:09:33.957Z",
+      "updated_at": "2026-06-08T19:10:31.454Z",
+      "expires_at": null,
+      "storm_slug": "plains-midwest-severe-outbreak-may-2026"
+    }
+  ]
 }

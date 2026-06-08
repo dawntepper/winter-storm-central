@@ -3,7 +3,7 @@
   "slug": "noreaster-january-2026",
   "type": "winter_storm",
   "type_label": "Winter Storm",
-  "status": "completed",
+  "status": "forecasted",
   "start_date": "2026-01-28",
   "end_date": "2026-01-30",
   "description": "Major nor'easter that impacted the Northeast United States with heavy snow, strong winds, and coastal flooding in late January 2026.",
@@ -24,5 +24,97 @@
     "keywords": "noreaster, northeast storm, nor'easter january 2026, winter storm northeast, new england snow storm"
   },
   "peak_alert_count": null,
-  "total_alerts_issued": null
+  "total_alerts_issued": null,
+  "show_emergency_info_panel": true,
+  "emergency_summary": {
+    "title": "Emergency Status",
+    "items": [
+      "❄️ Winter Storm Warning in effect for coastal New England",
+      "🌊 Coastal flood advisory for high tide cycles",
+      "⚡ 45,000 customers without power in Massachusetts"
+    ],
+    "updated_at": "2026-01-28T14:30:00.000Z"
+  },
+  "emergency_entries": [
+    {
+      "id": "noreaster-shelter-boston",
+      "title": "City warming centers open",
+      "category": "Shelters",
+      "location": "Boston, MA",
+      "description": "Twelve warming centers are open 24 hours for residents without heat or power. Bring ID if possible.",
+      "source_name": "City of Boston OEM",
+      "source_url": "https://www.boston.gov/emergency",
+      "social_url": "",
+      "is_official": true,
+      "status": "active",
+      "created_at": "2026-01-28T10:00:00.000Z",
+      "updated_at": "2026-01-28T13:45:00.000Z",
+      "expires_at": null,
+      "storm_slug": "noreaster-january-2026"
+    },
+    {
+      "id": "noreaster-roads-mass-pike",
+      "title": "Travel ban lifted on secondary roads",
+      "category": "Roads",
+      "location": "Massachusetts Turnpike",
+      "description": "MassDOT reports main highways are passable with caution. Secondary roads remain hazardous in western counties.",
+      "source_name": "MassDOT",
+      "source_url": "https://www.mass.gov/orgs/massachusetts-department-of-transportation",
+      "social_url": "",
+      "is_official": true,
+      "status": "active",
+      "created_at": "2026-01-28T08:00:00.000Z",
+      "updated_at": "2026-01-28T12:00:00.000Z",
+      "expires_at": null,
+      "storm_slug": "noreaster-january-2026"
+    },
+    {
+      "id": "noreaster-power-outages",
+      "title": "Power restoration underway",
+      "category": "Power",
+      "location": "Eastern Massachusetts",
+      "description": "Utility crews are prioritizing hospitals and emergency services. Estimated restoration for most customers: 48–72 hours.",
+      "source_name": "Eversource",
+      "source_url": "https://www.eversource.com",
+      "social_url": "",
+      "is_official": true,
+      "status": "active",
+      "created_at": "2026-01-27T22:00:00.000Z",
+      "updated_at": "2026-01-28T11:30:00.000Z",
+      "expires_at": null,
+      "storm_slug": "noreaster-january-2026"
+    },
+    {
+      "id": "noreaster-school-closures",
+      "title": "Schools closed Wednesday",
+      "category": "School Closures",
+      "location": "Rhode Island & Connecticut",
+      "description": "Most public school districts have announced closures for Wednesday. Check your district website for remote learning plans.",
+      "source_name": "RI Department of Education",
+      "source_url": "https://ride.ri.gov",
+      "social_url": "",
+      "is_official": true,
+      "status": "active",
+      "created_at": "2026-01-28T06:00:00.000Z",
+      "updated_at": "2026-01-28T09:15:00.000Z",
+      "expires_at": "2026-01-29T23:59:59.000Z",
+      "storm_slug": "noreaster-january-2026"
+    },
+    {
+      "id": "noreaster-evacuation-coastal",
+      "title": "Voluntary evacuation — low-lying coastal areas",
+      "category": "Evacuation",
+      "location": "Cape Cod & South Shore, MA",
+      "description": "Voluntary evacuation recommended for flood-prone neighborhoods ahead of tonight's high tide. Shelters listed on mass.gov.",
+      "source_name": "Massachusetts EMA",
+      "source_url": "https://www.mass.gov/orgs/massachusetts-emergency-management-agency",
+      "social_url": "",
+      "is_official": true,
+      "status": "resolved",
+      "created_at": "2026-01-27T18:00:00.000Z",
+      "updated_at": "2026-01-28T04:00:00.000Z",
+      "expires_at": null,
+      "storm_slug": "noreaster-january-2026"
+    }
+  ]
 }

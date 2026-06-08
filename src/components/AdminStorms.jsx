@@ -9,6 +9,10 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getAllStormEvents } from '../services/stormEventsService';
+import {
+  EMERGENCY_ENTRY_CATEGORIES,
+  EMERGENCY_ENTRY_STATUSES
+} from '../data/emergencyInfoCategories';
 
 /**
  * Convert the admin form's internal camelCase state into the snake_case
@@ -39,7 +43,51 @@ function formDataToJSON(formData) {
       keywords: (formData.keywords || []).filter(k => k && k.trim()).join(', ')
     },
     peak_alert_count: formData.peakAlertCount ?? null,
-    total_alerts_issued: formData.totalAlertsIssued ?? null
+    total_alerts_issued: formData.totalAlertsIssued ?? null,
+    show_emergency_info_panel: Boolean(formData.showEmergencyInfoPanel),
+    emergency_summary: formData.emergencySummary
+      ? {
+          title: formData.emergencySummary.title || '',
+          items: (formData.emergencySummary.items || []).filter(i => i && i.trim()),
+          updated_at: formData.emergencySummary.updatedAt || new Date().toISOString()
+        }
+      : null,
+    emergency_entries: (formData.emergencyEntries || []).map(entry => ({
+      id: entry.id,
+      title: entry.title || '',
+      category: entry.category || 'Other',
+      location: entry.location || '',
+      description: entry.description || '',
+      source_name: entry.sourceName || '',
+      source_url: entry.sourceUrl || '',
+      social_url: entry.socialUrl || '',
+      is_official: Boolean(entry.isOfficial),
+      status: entry.status || 'active',
+      created_at: entry.createdAt || new Date().toISOString(),
+      updated_at: entry.updatedAt || new Date().toISOString(),
+      expires_at: entry.expiresAt ?? null,
+      storm_slug: entry.stormSlug || formData.slug || ''
+    }))
+  };
+}
+
+function createEmptyEmergencyEntry(stormSlug = '') {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: '',
+    category: 'Official Updates',
+    location: '',
+    description: '',
+    sourceName: '',
+    sourceUrl: '',
+    socialUrl: '',
+    isOfficial: false,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: null,
+    stormSlug
   };
 }
 
@@ -274,7 +322,10 @@ function StormForm({ event, onSave, onCancel }) {
     seoDescription: '',
     ogImageUrl: '',
     peakAlertCount: null,
-    totalAlertsIssued: null
+    totalAlertsIssued: null,
+    showEmergencyInfoPanel: false,
+    emergencySummary: { title: 'Emergency Status', items: [''], updatedAt: new Date().toISOString() },
+    emergencyEntries: []
   };
 
   const [formData, setFormData] = useState(defaultFormData);
@@ -306,7 +357,17 @@ function StormForm({ event, onSave, onCancel }) {
         alertCategories: event.alertCategories || ['winter'],
         mapCenter: event.mapCenter || { lat: 39.0, lon: -98.0 },
         peakAlertCount: event.peakAlertCount || null,
-        totalAlertsIssued: event.totalAlertsIssued || null
+        totalAlertsIssued: event.totalAlertsIssued || null,
+        showEmergencyInfoPanel: event.showEmergencyInfoPanel ?? false,
+        emergencySummary: event.emergencySummary
+          ? {
+              ...event.emergencySummary,
+              items: event.emergencySummary.items?.length
+                ? event.emergencySummary.items
+                : ['']
+            }
+          : { title: 'Emergency Status', items: [''], updatedAt: new Date().toISOString() },
+        emergencyEntries: event.emergencyEntries?.length ? event.emergencyEntries : []
       });
     }
   }, [event]);
@@ -445,6 +506,15 @@ function StormForm({ event, onSave, onCancel }) {
               : (Array.isArray(json.seo?.keywords) ? json.seo.keywords : [''])),
           peakAlertCount: json.peakAlertCount ?? null,
           totalAlertsIssued: json.totalAlertsIssued ?? null,
+          showEmergencyInfoPanel: Boolean(
+            json.show_emergency_info_panel ?? json.showEmergencyInfoPanel
+          ),
+          emergencySummary: json.emergency_summary ?? json.emergencySummary ?? {
+            title: 'Emergency Status',
+            items: [''],
+            updatedAt: new Date().toISOString()
+          },
+          emergencyEntries: json.emergency_entries ?? json.emergencyEntries ?? []
         };
 
         // Ensure array fields have at least one entry for the form UI
@@ -713,6 +783,278 @@ function StormForm({ event, onSave, onCancel }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Emergency Information Panel */}
+      <div className="border border-amber-500/30 rounded-lg p-4 bg-amber-900/10">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-amber-200">Emergency Information Panel</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Manually curated local updates — no API feeds. Data is kept when disabled.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleChange('showEmergencyInfoPanel', !formData.showEmergencyInfoPanel)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
+              formData.showEmergencyInfoPanel ? 'bg-amber-600' : 'bg-slate-600'
+            }`}
+            aria-pressed={formData.showEmergencyInfoPanel}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                formData.showEmergencyInfoPanel ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
+        {formData.showEmergencyInfoPanel && (
+          <div className="space-y-4 border-t border-amber-500/20 pt-4">
+            {/* Emergency Summary */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Summary Title</label>
+              <input
+                type="text"
+                value={formData.emergencySummary?.title || ''}
+                onChange={(e) => handleChange('emergencySummary', {
+                  ...formData.emergencySummary,
+                  title: e.target.value,
+                  updatedAt: new Date().toISOString()
+                })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+                placeholder="Emergency Status"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Summary Items</label>
+              {(formData.emergencySummary?.items || ['']).map((item, i) => (
+                <div key={i} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => {
+                      const items = [...(formData.emergencySummary?.items || [''])];
+                      items[i] = e.target.value;
+                      handleChange('emergencySummary', {
+                        ...formData.emergencySummary,
+                        items,
+                        updatedAt: new Date().toISOString()
+                      });
+                    }}
+                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
+                    placeholder="🌀 Hurricane Warning"
+                  />
+                  {(formData.emergencySummary?.items?.length || 0) > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const items = formData.emergencySummary.items.filter((_, idx) => idx !== i);
+                        handleChange('emergencySummary', {
+                          ...formData.emergencySummary,
+                          items: items.length ? items : [''],
+                          updatedAt: new Date().toISOString()
+                        });
+                      }}
+                      className="px-3 py-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleChange('emergencySummary', {
+                  ...formData.emergencySummary,
+                  items: [...(formData.emergencySummary?.items || []), ''],
+                  updatedAt: new Date().toISOString()
+                })}
+                className="text-sm text-sky-400 hover:text-sky-300 cursor-pointer"
+              >
+                + Add summary item
+              </button>
+            </div>
+
+            {/* Emergency Entries */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-300">Emergency Entries</label>
+                <button
+                  type="button"
+                  onClick={() => handleChange('emergencyEntries', [
+                    ...formData.emergencyEntries,
+                    createEmptyEmergencyEntry(formData.slug)
+                  ])}
+                  className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer"
+                >
+                  + Add entry
+                </button>
+              </div>
+              {formData.emergencyEntries.length === 0 && (
+                <p className="text-xs text-slate-500 mb-2">No entries yet. Add curated updates for this event.</p>
+              )}
+              <div className="space-y-4">
+                {formData.emergencyEntries.map((entry, index) => (
+                  <div key={entry.id} className="rounded-lg border border-slate-600 bg-slate-800/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-slate-500">Entry {index + 1}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => {
+                            const entries = [...formData.emergencyEntries];
+                            [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
+                            handleChange('emergencyEntries', entries);
+                          }}
+                          className="px-2 py-1 text-xs bg-slate-700 text-slate-300 rounded disabled:opacity-30 cursor-pointer"
+                          title="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === formData.emergencyEntries.length - 1}
+                          onClick={() => {
+                            const entries = [...formData.emergencyEntries];
+                            [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
+                            handleChange('emergencyEntries', entries);
+                          }}
+                          className="px-2 py-1 text-xs bg-slate-700 text-slate-300 rounded disabled:opacity-30 cursor-pointer"
+                          title="Move down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleChange('emergencyEntries',
+                            formData.emergencyEntries.filter((_, i) => i !== index)
+                          )}
+                          className="px-2 py-1 text-xs bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={entry.title}
+                        onChange={(e) => {
+                          const entries = [...formData.emergencyEntries];
+                          entries[index] = { ...entry, title: e.target.value, updatedAt: new Date().toISOString() };
+                          handleChange('emergencyEntries', entries);
+                        }}
+                        placeholder="Title *"
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                      />
+                      <select
+                        value={entry.category}
+                        onChange={(e) => {
+                          const entries = [...formData.emergencyEntries];
+                          entries[index] = { ...entry, category: e.target.value, updatedAt: new Date().toISOString() };
+                          handleChange('emergencyEntries', entries);
+                        }}
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                      >
+                        {EMERGENCY_ENTRY_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      value={entry.location}
+                      onChange={(e) => {
+                        const entries = [...formData.emergencyEntries];
+                        entries[index] = { ...entry, location: e.target.value, updatedAt: new Date().toISOString() };
+                        handleChange('emergencyEntries', entries);
+                      }}
+                      placeholder="Location (e.g. Suffolk County, NY)"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                    />
+                    <textarea
+                      value={entry.description}
+                      onChange={(e) => {
+                        const entries = [...formData.emergencyEntries];
+                        entries[index] = { ...entry, description: e.target.value, updatedAt: new Date().toISOString() };
+                        handleChange('emergencyEntries', entries);
+                      }}
+                      rows={2}
+                      placeholder="Description"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                    />
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={entry.sourceName}
+                        onChange={(e) => {
+                          const entries = [...formData.emergencyEntries];
+                          entries[index] = { ...entry, sourceName: e.target.value, updatedAt: new Date().toISOString() };
+                          handleChange('emergencyEntries', entries);
+                        }}
+                        placeholder="Source name (displayed to users)"
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                      />
+                      <input
+                        type="url"
+                        value={entry.sourceUrl}
+                        onChange={(e) => {
+                          const entries = [...formData.emergencyEntries];
+                          entries[index] = { ...entry, sourceUrl: e.target.value, updatedAt: new Date().toISOString() };
+                          handleChange('emergencyEntries', entries);
+                        }}
+                        placeholder="Source URL"
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <input
+                      type="url"
+                      value={entry.socialUrl}
+                      onChange={(e) => {
+                        const entries = [...formData.emergencyEntries];
+                        entries[index] = { ...entry, socialUrl: e.target.value, updatedAt: new Date().toISOString() };
+                        handleChange('emergencyEntries', entries);
+                      }}
+                      placeholder="Social URL (optional)"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+                    />
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={entry.isOfficial}
+                          onChange={(e) => {
+                            const entries = [...formData.emergencyEntries];
+                            entries[index] = { ...entry, isOfficial: e.target.checked, updatedAt: new Date().toISOString() };
+                            handleChange('emergencyEntries', entries);
+                          }}
+                          className="rounded border-slate-600"
+                        />
+                        Official source
+                      </label>
+                      <select
+                        value={entry.status}
+                        onChange={(e) => {
+                          const entries = [...formData.emergencyEntries];
+                          entries[index] = { ...entry, status: e.target.value, updatedAt: new Date().toISOString() };
+                          handleChange('emergencyEntries', entries);
+                        }}
+                        className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:border-sky-500"
+                      >
+                        {EMERGENCY_ENTRY_STATUSES.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Map Center */}

@@ -411,6 +411,38 @@ export function trackStormPageEntry({ stormSlug, referrer, isDirect }) {
   });
 }
 
+/**
+ * Emergency Information Panel became visible on a storm page.
+ */
+export function trackEmergencyInfoPanelViewed({ stormSlug, stormType, entryCount }) {
+  track('Emergency Info Panel Viewed', {
+    storm_slug: stormSlug,
+    storm_type: stormType,
+    entry_count: entryCount
+  });
+}
+
+/**
+ * User clicked a source or social link in the Emergency Information Panel.
+ */
+export function trackEmergencyInfoLinkClicked({
+  stormSlug,
+  stormType,
+  category,
+  sourceName,
+  isOfficial,
+  linkType
+}) {
+  track('Emergency Info Link Clicked', {
+    storm_slug: stormSlug,
+    storm_type: stormType,
+    category,
+    source_name: sourceName,
+    is_official: isOfficial,
+    link_type: linkType
+  });
+}
+
 // ============================================
 // RADAR PAGE NAVIGATION EVENTS
 // ============================================
@@ -953,6 +985,8 @@ export default {
   trackStormBannerClick,
   trackStormAlertDetailView,
   trackStormPageEntry,
+  trackEmergencyInfoPanelViewed,
+  trackEmergencyInfoLinkClicked,
   trackRadarLinkClick,
   trackStormRadarClick,
   trackRadarTypeChange,

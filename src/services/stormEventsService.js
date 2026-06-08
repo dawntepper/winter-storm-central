@@ -19,6 +19,40 @@ function toArray(value, fallback = []) {
   return fallback;
 }
 
+function normalizeEmergencySummary(raw) {
+  if (!raw) return null;
+  return {
+    title: raw.title || '',
+    items: toArray(raw.items),
+    updatedAt: raw.updated_at || raw.updatedAt || null
+  };
+}
+
+function normalizeEmergencyEntry(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    title: raw.title || '',
+    category: raw.category || 'Other',
+    location: raw.location || '',
+    description: raw.description || '',
+    sourceName: raw.source_name || raw.sourceName || '',
+    sourceUrl: raw.source_url || raw.sourceUrl || '',
+    socialUrl: raw.social_url || raw.socialUrl || '',
+    isOfficial: Boolean(raw.is_official ?? raw.isOfficial),
+    status: raw.status || 'active',
+    createdAt: raw.created_at || raw.createdAt || null,
+    updatedAt: raw.updated_at || raw.updatedAt || null,
+    expiresAt: raw.expires_at ?? raw.expiresAt ?? null,
+    stormSlug: raw.storm_slug || raw.stormSlug || ''
+  };
+}
+
+function normalizeEmergencyEntries(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(normalizeEmergencyEntry).filter(Boolean);
+}
+
 function normalize(raw) {
   if (!raw) return null;
 
@@ -48,7 +82,16 @@ function normalize(raw) {
     ogImageUrl: seo.og_image_url || raw.og_image_url || '',
     keywords: toArray(seo.keywords ?? raw.keywords),
     peakAlertCount: raw.peak_alert_count ?? null,
-    totalAlertsIssued: raw.total_alerts_issued ?? null
+    totalAlertsIssued: raw.total_alerts_issued ?? null,
+    showEmergencyInfoPanel: Boolean(
+      raw.show_emergency_info_panel ?? raw.showEmergencyInfoPanel ?? false
+    ),
+    emergencySummary: normalizeEmergencySummary(
+      raw.emergency_summary ?? raw.emergencySummary
+    ),
+    emergencyEntries: normalizeEmergencyEntries(
+      raw.emergency_entries ?? raw.emergencyEntries
+    )
   };
 }
 
