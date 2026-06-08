@@ -73,8 +73,8 @@ function generateStateHTML(baseHTML, state) {
   const { slug, name } = state;
   const pageUrl = `${BASE_URL}/alerts/${slug}`;
 
-  const title = `${name} Weather Alerts — Live Severe Weather Warnings | StormTracking`;
-  const description = `Live ${name} severe weather alerts from the National Weather Service. Real-time warnings, watches, and advisories for storms, hurricanes, tornadoes, flooding, and winter weather. Updated every 30 minutes.`;
+  const title = `${name} Weather Alerts Today — Live NWS Warnings & Radar`;
+  const description = `Active NWS warnings across ${name} right now. Live radar, tornado and severe thunderstorm watches, flood and winter alerts — updated continuously.`;
 
   // Replace <title>
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
@@ -106,20 +106,20 @@ function generateStateHTML(baseHTML, state) {
   }
 
   // Replace OG tags
-  html = html.replace(/(<meta\s+property="og:title"\s+content=")[^"]*"/, `$1${name} Weather Alerts | StormTracking"`);
-  html = html.replace(/(<meta\s+property="og:description"\s+content=")[^"]*"/, `$1Live severe weather alerts for ${name}. Real-time NWS warnings and watches updated every 30 minutes."`);
+  html = html.replace(/(<meta\s+property="og:title"\s+content=")[^"]*"/, `$1${title}"`);
+  html = html.replace(/(<meta\s+property="og:description"\s+content=")[^"]*"/, `$1${description}"`);
   html = html.replace(/(<meta\s+property="og:url"\s+content=")[^"]*"/, `$1${pageUrl}"`);
 
   // Replace Twitter tags
-  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*"/, `$1${name} Weather Alerts | StormTracking"`);
-  html = html.replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*"/, `$1Live severe weather alerts for ${name}. Real-time NWS warnings and watches updated every 30 minutes."`);
+  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*"/, `$1${title}"`);
+  html = html.replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*"/, `$1${description}"`);
 
   // Replace existing JSON-LD with page-specific one
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    'name': `${name} Weather Alerts`,
-    'description': `Live severe weather alerts for ${name}`,
+    'name': title,
+    'description': description,
     'url': pageUrl,
     'isPartOf': {
       '@type': 'WebSite',

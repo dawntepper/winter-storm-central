@@ -27,12 +27,12 @@ const PAGES = [
   },
   {
     route: 'radar',
-    title: 'Live Weather Radar Map — Real-Time NOAA/NWS Radar | StormTracking',
-    description: 'Interactive live weather radar map for the United States. Track precipitation, storms, and severe weather in real-time. Free, no ads.',
-    ogTitle: 'Live Weather Radar Map | StormTracking',
-    ogDescription: 'Interactive live weather radar for the US. Real-time precipitation and severe weather.',
-    schemaName: 'Live Weather Radar Map',
-    schemaDescription: 'Interactive live weather radar map for the United States',
+    title: 'NWS Live Radar Map — NOAA Precipitation & Storms',
+    description: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.',
+    ogTitle: 'NWS Live Radar Map — NOAA Precipitation & Storms',
+    ogDescription: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.',
+    schemaName: 'NWS Live Radar Map',
+    schemaDescription: 'Interactive US weather radar with precipitation, satellite, and forecast layers',
   },
   {
     route: 'prep',

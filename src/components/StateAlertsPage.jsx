@@ -56,15 +56,16 @@ import {
 // =============================================
 
 function setStateMetaTags(stateName, stateSlug) {
-  document.title = `${stateName} Weather Alerts | Live NWS Alerts | StormTracking`;
+  const title = `${stateName} Weather Alerts Today — Live NWS Warnings & Radar`;
+  const desc = `Active NWS warnings across ${stateName} right now. Live radar, tornado and severe thunderstorm watches, flood and winter alerts — updated continuously.`;
 
-  const desc = `Active weather alerts for ${stateName}. Track winter storms, severe weather, flood warnings, and more with live radar and real-time NWS data.`;
+  document.title = title;
 
   let metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', desc);
 
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', `${stateName} Weather Alerts | StormTracking`);
+  if (ogTitle) ogTitle.setAttribute('content', title);
 
   let ogDesc = document.querySelector('meta[property="og:description"]');
   if (ogDesc) ogDesc.setAttribute('content', desc);
@@ -76,7 +77,7 @@ function setStateMetaTags(stateName, stateSlug) {
   if (ogImage) ogImage.setAttribute('content', 'https://stormtracking.io/og-image.png');
 
   let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', `${stateName} Weather Alerts | StormTracking`);
+  if (twTitle) twTitle.setAttribute('content', title);
 
   let twDesc = document.querySelector('meta[property="twitter:description"]');
   if (twDesc) twDesc.setAttribute('content', desc);
@@ -568,8 +569,8 @@ export default function StateAlertsPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebPage",
-            "name": `${stateData.name} Weather Alerts`,
-            "description": `Active weather alerts for ${stateData.name}. Real-time NWS warnings, watches, and advisories.`,
+            "name": `${stateData.name} Weather Alerts Today — Live NWS Warnings & Radar`,
+            "description": `Active NWS warnings across ${stateData.name} right now. Live radar, tornado and severe thunderstorm watches, flood and winter alerts — updated continuously.`,
             "url": `https://stormtracking.io/alerts/${stateSlug}`,
             "isPartOf": {
               "@type": "WebSite",

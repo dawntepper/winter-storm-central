@@ -33,27 +33,28 @@ const statusColors = {
 
 // SEO helper - set meta tags for radar page
 function setRadarMetaTags() {
-  document.title = 'Live Weather Radar Map | Real-Time Storm Tracking | StormTracking';
+  const title = 'NWS Live Radar Map — NOAA Precipitation & Storms';
+  const desc = 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.';
 
-  const desc = 'Interactive live weather radar map for the United States. Track severe weather, storms, and precipitation in real-time with radar overlay. Free NOAA/NWS radar data.';
+  document.title = title;
 
   let metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', desc);
 
   let ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', 'Live Weather Radar Map | StormTracking');
+  if (ogTitle) ogTitle.setAttribute('content', title);
 
   let ogDesc = document.querySelector('meta[property="og:description"]');
-  if (ogDesc) ogDesc.setAttribute('content', 'Interactive weather radar showing live precipitation, storms, and severe weather alerts across the United States.');
+  if (ogDesc) ogDesc.setAttribute('content', desc);
 
   let ogUrl = document.querySelector('meta[property="og:url"]');
   if (ogUrl) ogUrl.setAttribute('content', 'https://stormtracking.io/radar');
 
   let twTitle = document.querySelector('meta[property="twitter:title"]');
-  if (twTitle) twTitle.setAttribute('content', 'Live Weather Radar Map | StormTracking');
+  if (twTitle) twTitle.setAttribute('content', title);
 
   let twDesc = document.querySelector('meta[property="twitter:description"]');
-  if (twDesc) twDesc.setAttribute('content', 'Track storms with interactive live weather radar. Real-time precipitation and severe weather alerts.');
+  if (twDesc) twDesc.setAttribute('content', desc);
 
   let canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', 'https://stormtracking.io/radar');

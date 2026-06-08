@@ -26,8 +26,9 @@ function buildHtml(baseHTML, city) {
   let html = baseHTML;
 
   const url = `${BASE_URL}/alerts/${city.slug}`;
-  const title = `${city.city}, ${city.state} Weather Alerts & Forecast — Live NWS Warnings | StormTracking.io`;
-  const description = `Live weather alerts and current conditions for ${city.city}, ${city.state}. Real-time National Weather Service warnings, watches, and current temperature. Updated continuously, no ads.`;
+  const st = city.state_abbr;
+  const title = `${city.city}, ${st} Weather Alerts — Live Warnings & Radar`;
+  const description = `Is ${city.city} under a weather warning right now? Live NWS alerts, current conditions, and radar for ${city.city}, ${st} — updated every few minutes.`;
   const ogImage = `${BASE_URL}/og-image.png`;
 
   // <title>
@@ -66,8 +67,8 @@ function buildHtml(baseHTML, city) {
   html = html.replace(/(<meta\s+property="og:image"\s+content=")[^"]*"/, `$1${ogImage}"`);
 
   // Twitter
-  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*"/, `$1${city.city}, ${city.state} Weather Alerts"`);
-  html = html.replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*"/, `$1Live NWS warnings and current conditions for ${city.city}. No ads, no clutter."`);
+  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*"/, `$1${title}"`);
+  html = html.replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*"/, `$1${description}"`);
 
   // JSON-LD — WebPage + Place + BreadcrumbList
   const jsonLd = JSON.stringify({
@@ -75,8 +76,8 @@ function buildHtml(baseHTML, city) {
     '@graph': [
       {
         '@type': 'WebPage',
-        name: `${city.city}, ${city.state} Weather Alerts & Forecast`,
-        description: `Live weather alerts and current conditions for ${city.city}, ${city.state} from the National Weather Service.`,
+        name: title,
+        description,
         url,
         mainEntity: {
           '@type': 'Place',
