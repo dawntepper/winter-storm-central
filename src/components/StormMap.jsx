@@ -448,7 +448,7 @@ function getGibsTimestamp() {
 // - precipitation: RainViewer (past radar with color scheme support)
 // - satellite: NASA GIBS GOES-East GeoColor (true color day, IR night)
 // - infrared: NASA GIBS GOES-East Clean Infrared (cloud tops)
-function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
+function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
   const layerRef = useRef(null);
 
@@ -458,7 +458,15 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
       layerRef.current = null;
     }
 
-    if (!show) return;
+    if (!show) {
+      onLoadingChange?.(false);
+      return;
+    }
+
+    // Show the spinner up front — covers the gap before tiles begin loading
+    // (notably the RainViewer JSON fetch on the precipitation path). The
+    // layer's 'load' event clears it once the imagery is actually painted.
+    onLoadingChange?.(true);
 
     const addLayer = (url, options = {}) => {
       if (layerRef.current) map.removeLayer(layerRef.current);
@@ -468,6 +476,12 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
         tileSize: 256,
         ...options,
       });
+      // Clear the spinner the moment tiles finish painting. We only listen for
+      // 'load' (not 'loading'): the spinner is switched on once per pull-in at
+      // the top of the effect, so leaving out the 'loading' handler means
+      // pan/zoom tile reloads don't re-flash it — only the initial load, a
+      // radar toggle, or a layer/color change shows it.
+      layer.on('load', () => onLoadingChange?.(false));
       layer.addTo(map);
       layerRef.current = layer;
     };
@@ -513,9 +527,12 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
                 maxZoom: 18,
               }
             );
+          } else {
+            onLoadingChange?.(false); // no frame to show — don't leave the spinner hanging
           }
         } catch (err) {
           console.error('Radar fetch error:', err);
+          onLoadingChange?.(false);
         }
       };
       fetchRadar();
@@ -560,12 +577,13 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4 }) {
 
     return () => {
       clearInterval(interval);
+      onLoadingChange?.(false);
       if (layerRef.current) {
         map.removeLayer(layerRef.current);
         layerRef.current = null;
       }
     };
-  }, [show, map, layerType, colorScheme]);
+  }, [show, map, layerType, colorScheme, onLoadingChange]);
 
   return null;
 }
@@ -1076,6 +1094,7 @@ function PreviewMarker({ location }) {
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
+  const [radarLoading, setRadarLoading] = useState(false);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [hoveredAlert, setHoveredAlert] = useState(null);
@@ -1389,7 +1408,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           />
 
           {/* Radar overlay */}
-          <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} />
+          <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} onLoadingChange={setRadarLoading} />
 
           {/* State border highlight */}
           <StateBorderHighlight stateCode={selectedStateCode} />
@@ -1438,6 +1457,18 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             )}
           </ZoomContext.Provider>
         </MapContainer>
+
+        {/* Radar loading indicator — gentle pill while tiles fetch/paint, so
+            the imagery eases in behind a spinner instead of popping into view.
+            pointer-events-none keeps the map fully interactive underneath. */}
+        {showRadar && radarLoading && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
+            <div className="radar-loading-fade flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-sm border border-slate-700 shadow-lg">
+              <span className="radar-spinner" aria-hidden="true"></span>
+              <span className="text-xs font-medium text-slate-200">Loading radar…</span>
+            </div>
+          </div>
+        )}
 
         {/* Gradient overlay at edges for polish */}
         <div className="absolute inset-0 pointer-events-none">
@@ -1676,6 +1707,29 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         @keyframes pulse-selected {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 0.8; }
+        }
+        .radar-spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(148, 163, 184, 0.35);
+          border-top-color: #0ea5e9;
+          border-radius: 50%;
+          display: inline-block;
+          animation: radar-spin 0.7s linear infinite;
+        }
+        @keyframes radar-spin {
+          to { transform: rotate(360deg); }
+        }
+        .radar-loading-fade {
+          animation: radar-loading-in 0.25s ease-out;
+        }
+        @keyframes radar-loading-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .radar-spinner { animation-duration: 1.4s; }
+          .radar-loading-fade { animation: none; }
         }
         .leaflet-tooltip.enhanced-tooltip {
           background: #f8fafc;
