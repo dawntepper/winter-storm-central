@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { markAccountKnown } from '../lib/accountHint';
 
 // Auth context for app-wide access
 const AuthContext = createContext(null);
@@ -68,6 +69,7 @@ function useAuthState() {
 
         // Handle specific events
         if (event === 'SIGNED_IN') {
+          markAccountKnown(); // returning visitors see "Sign in" copy next time
           console.log('User signed in:', session?.user?.email);
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
@@ -161,6 +163,7 @@ function useAuthState() {
       return { error };
     }
 
+    markAccountKnown(); // they've started an account → "Sign in" copy next time
     return { data, message: 'Check your email for the login link!' };
   }, []);
 

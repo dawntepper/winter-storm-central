@@ -749,6 +749,23 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     }
   }, []);
 
+  // Re-hydrate when another part of the app mutates saved locations (e.g. the
+  // "Your Locations" widget removing a pin). Without this, our in-memory copy
+  // goes stale and a later add here merges onto it — resurrecting locations the
+  // user already deleted.
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const stored = localStorage.getItem(LOCATIONS_KEY);
+        setSavedLocations(stored ? JSON.parse(stored) : {});
+      } catch (e) {
+        console.error('Error re-reading saved locations:', e);
+      }
+    };
+    window.addEventListener('savedLocationsChanged', handler);
+    return () => window.removeEventListener('savedLocationsChanged', handler);
+  }, []);
+
   // Handle initial location from URL parameter
   useEffect(() => {
     if (!initialLocation || initialProcessed) return;

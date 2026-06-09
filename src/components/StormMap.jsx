@@ -448,11 +448,26 @@ function getGibsTimestamp() {
 // - precipitation: RainViewer (past radar with color scheme support)
 // - satellite: NASA GIBS GOES-East GeoColor (true color day, IR night)
 // - infrared: NASA GIBS GOES-East Clean Infrared (cloud tops)
+const RADAR_PANE = 'radar-overlay';
+
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
   const layerRef = useRef(null);
 
   useEffect(() => {
+    // Dedicated pane so we can fade the WHOLE radar layer in at once via the
+    // pane's opacity, instead of tiles popping in one-by-one (the "choppy"
+    // look). The pane stays hidden until the layer's 'load' fires, then eases
+    // in. CSS transition lives in .radar-overlay-pane.
+    let pane = map.getPane(RADAR_PANE);
+    if (!pane) {
+      pane = map.createPane(RADAR_PANE);
+      pane.style.zIndex = 400;
+      pane.classList.add('radar-overlay-pane');
+    }
+    const revealRadar = () => { pane.style.opacity = '1'; };
+    const hideRadar = () => { pane.style.opacity = '0'; };
+
     if (layerRef.current) {
       map.removeLayer(layerRef.current);
       layerRef.current = null;
@@ -460,6 +475,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
 
     if (!show) {
       onLoadingChange?.(false);
+      hideRadar();
       return;
     }
 
@@ -467,21 +483,21 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
     // (notably the RainViewer JSON fetch on the precipitation path). The
     // layer's 'load' event clears it once the imagery is actually painted.
     onLoadingChange?.(true);
+    hideRadar(); // start hidden; reveal (faded) once tiles finish on this pull-in
 
     const addLayer = (url, options = {}) => {
       if (layerRef.current) map.removeLayer(layerRef.current);
       const layer = L.tileLayer(url, {
         opacity: 0.7,
-        zIndex: 400,
         tileSize: 256,
+        pane: RADAR_PANE,
         ...options,
       });
-      // Clear the spinner the moment tiles finish painting. We only listen for
-      // 'load' (not 'loading'): the spinner is switched on once per pull-in at
-      // the top of the effect, so leaving out the 'loading' handler means
-      // pan/zoom tile reloads don't re-flash it — only the initial load, a
-      // radar toggle, or a layer/color change shows it.
-      layer.on('load', () => onLoadingChange?.(false));
+      // On load: clear the spinner and fade the radar in. We only listen for
+      // 'load' (not 'loading'): the spinner/fade are armed once per pull-in at
+      // the top of the effect, so pan/zoom tile reloads don't re-flash them —
+      // only the initial load, a radar toggle, or a layer/color change does.
+      layer.on('load', () => { onLoadingChange?.(false); revealRadar(); });
       layer.addTo(map);
       layerRef.current = layer;
     };
@@ -1095,8 +1111,21 @@ function PreviewMarker({ location }) {
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
   const [showRadar, setShowRadar] = useState(true);
   const [radarLoading, setRadarLoading] = useState(false);
+  // Delay the radar spinner so fast loads (the common case) never flash it.
+  // Only surfaces if the radar genuinely takes a beat; otherwise the tiles just
+  // ease in via Leaflet's fade. Kills the jarring split-second spinner.
+  const [radarSpinnerVisible, setRadarSpinnerVisible] = useState(false);
+  useEffect(() => {
+    if (showRadar && radarLoading) {
+      const t = setTimeout(() => setRadarSpinnerVisible(true), 400);
+      return () => clearTimeout(t);
+    }
+    setRadarSpinnerVisible(false);
+  }, [showRadar, radarLoading]);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
+  const [hoveredCatTip, setHoveredCatTip] = useState(null); // { label, x } — instant pill tooltip
+  const catRowRef = useRef(null);
   const [hoveredAlert, setHoveredAlert] = useState(null);
   const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
   const [hoverCardPosition, setHoverCardPosition] = useState(null);
@@ -1138,11 +1167,26 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     return new Set(warnings.map(a => a.id));
   }, [alerts]);
 
+  // Smart focus: from "all shown", the first tap isolates that hazard; tapping
+  // the lone focused hazard again restores all. Any other tap adds/removes
+  // additively. Makes "just show me tornadoes" a single tap without losing the
+  // ability to build multi-hazard combos.
   const toggleCategory = (id) => {
     setActiveCategories(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const total = CATEGORY_ORDER.length;
+      let next;
+      if (prev.size === total) {
+        // All shown → focus just this one.
+        next = new Set([id]);
+      } else if (prev.size === 1 && prev.has(id)) {
+        // Only this one shown, tapped again → restore all.
+        next = new Set(CATEGORY_ORDER);
+      } else {
+        // Refine the current subset additively.
+        next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
       setShowAlerts(next.size > 0);
       return next;
     });
@@ -1339,7 +1383,19 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
         {/* Alerts toggle + category filter chips */}
         {alerts.length > 0 && (
-          <div className="mt-2 flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
+          <div ref={catRowRef} className="relative mt-2">
+            {/* Instant tooltip, anchored above the specific hovered pill (rendered
+                outside the scroll row so overflow-x doesn't clip it; native title
+                has a ~1s OS delay). */}
+            {hoveredCatTip && (
+              <div
+                className="absolute -top-7 -translate-x-1/2 z-[20] px-2 py-1 rounded bg-slate-900 text-slate-100 text-[10px] whitespace-nowrap shadow-lg border border-slate-700 pointer-events-none"
+                style={{ left: `${hoveredCatTip.x}px` }}
+              >
+                {hoveredCatTip.label}
+              </div>
+            )}
+            <div className="flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
             <button
               onClick={() => {
                 const allOn = activeCategories.size === CATEGORY_ORDER.length;
@@ -1362,10 +1418,28 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               if (count === 0) return null;
               const active = activeCategories.has(id);
               const color = alertCategoryColors[id] || alertCategoryColors.default;
+              const allShown = activeCategories.size === CATEGORY_ORDER.length;
+              const onlyThis = activeCategories.size === 1 && active;
+              const title = allShown
+                ? `Show only ${cat.name}`
+                : onlyThis
+                  ? 'Show all alerts'
+                  : active
+                    ? `Hide ${cat.name}`
+                    : `Add ${cat.name}`;
               return (
                 <button
                   key={id}
                   onClick={() => toggleCategory(id)}
+                  onMouseEnter={(e) => {
+                    const row = catRowRef.current;
+                    if (!row) { setHoveredCatTip({ label: title, x: 0 }); return; }
+                    const pill = e.currentTarget.getBoundingClientRect();
+                    const wrap = row.getBoundingClientRect();
+                    setHoveredCatTip({ label: title, x: pill.left - wrap.left + pill.width / 2 });
+                  }}
+                  onMouseLeave={() => setHoveredCatTip(null)}
+                  aria-label={title}
                   className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                     active
                       ? ''
@@ -1381,6 +1455,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 </button>
               );
             })}
+            </div>
           </div>
         )}
       </div>
@@ -1461,7 +1536,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         {/* Radar loading indicator — gentle pill while tiles fetch/paint, so
             the imagery eases in behind a spinner instead of popping into view.
             pointer-events-none keeps the map fully interactive underneath. */}
-        {showRadar && radarLoading && (
+        {radarSpinnerVisible && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
             <div className="radar-loading-fade flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-sm border border-slate-700 shadow-lg">
               <span className="radar-spinner" aria-hidden="true"></span>
@@ -1707,6 +1782,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         @keyframes pulse-selected {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 0.8; }
+        }
+        .radar-overlay-pane {
+          transition: opacity 0.55s ease-in-out;
+          opacity: 0;
         }
         .radar-spinner {
           width: 14px;

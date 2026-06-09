@@ -14,13 +14,16 @@ import ForecastPage from './pages/ForecastPage.jsx'
 import LiveAlertsPage from './components/LiveAlertsPage.jsx'
 import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import { AuthProvider } from './hooks/useAuth.jsx'
+import AuthCallback from './components/auth/AuthCallback.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<App />} />
+      <AuthProvider>
+        <ScrollToTop />
+        <Routes>
+          <Route path="/" element={<App />} />
         <Route path="/radar" element={<RadarPage />} />
         <Route path="/storm/:slug" element={<StormEventPage />} />
         <Route path="/alerts" element={<LiveAlertsPage />} />
@@ -33,7 +36,9 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin/storms" element={<AdminStorms />} />
         <Route path="/admin/weather-summary" element={<AdminWeatherSummary />} />
         <Route path="/admin/seo" element={<AdminSeo />} />
-      </Routes>
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
 import { US_STATES } from '../data/stateConfig';
 import ContactLink from './ContactLink';
+import AccountMenu from './auth/AccountMenu';
 
 const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
 
@@ -193,6 +194,9 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
 
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          {/* Account menu (hidden entirely when Supabase isn't configured) */}
+          <AccountMenu />
+
           {/* Last Updated - hidden on mobile */}
           <div className="text-right text-sm text-slate-400 hidden md:block">
             {lastRefresh && (

@@ -19,6 +19,10 @@ import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
+import { useSavedLocations } from './hooks/useSavedLocations';
+import { hasAccountHint } from './lib/accountHint';
+import LocationImportPrompt from './components/auth/LocationImportPrompt';
+import SignInModal from './components/auth/SignInModal';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
 import { setHomepageMetaTags } from './data/homepageMeta';
@@ -298,6 +302,23 @@ export default function App() {
   const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
   const [alertFilter, setAlertFilter] = useState(null); // null = national, "PA" = state filter
 
+  // Saved-locations abstraction (anon localStorage vs authed Supabase).
+  // Weather access never depends on this — accounts are pure convenience.
+  const saved = useSavedLocations();
+  const [saveToast, setSaveToast] = useState(null);       // "Location saved" confirmation
+  const [showSyncCta, setShowSyncCta] = useState(false);  // gentle, dismissible "sign in to sync" CTA
+  const [showSignIn, setShowSignIn] = useState(false);
+  const prevLocCountRef = useRef(null);
+  const syncCtaShownRef = useRef(false);
+  const toastReadyRef = useRef(false); // suppress toasts during initial hydration
+
+  // Mark toasts ready shortly after mount so hydrating saved pins (which arrive
+  // a tick after ZipCodeSearch mounts) don't fire a spurious "saved" toast.
+  useEffect(() => {
+    const t = setTimeout(() => { toastReadyRef.current = true; }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   // Handle ?location= URL parameter
   const handleLocationParam = useCallback((locationData) => {
     setInitialLocation(locationData);
@@ -370,6 +391,32 @@ export default function App() {
   useEffect(() => {
     trackLocationCountChanged(userLocations.length);
   }, [userLocations.length]);
+
+  // Confirmation toast + gentle account nudge when saved-location count grows.
+  // Watches the composed count so it covers both search pins and alert pins.
+  useEffect(() => {
+    const len = userLocations.length;
+    const prev = prevLocCountRef.current;
+    prevLocCountRef.current = len;
+    if (prev === null || !toastReadyRef.current) return; // skip initial hydration
+    if (len > prev) {
+      setSaveToast('📍 Location saved');
+      // Anonymous saving is unlimited. Once a guest has a few locations, show a
+      // one-time, dismissible "sign in to sync" CTA — never a block, and never
+      // framed as required to use StormTracking.
+      if (!saved.isAuthenticated && len >= saved.syncCtaThreshold && !syncCtaShownRef.current) {
+        syncCtaShownRef.current = true;
+        setShowSyncCta(true);
+      }
+    }
+  }, [userLocations.length, saved.isAuthenticated, saved.syncCtaThreshold]);
+
+  // Auto-dismiss the save toast.
+  useEffect(() => {
+    if (!saveToast) return;
+    const t = setTimeout(() => setSaveToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [saveToast]);
 
   // Extreme weather alerts (for when no active storm event)
   const {
@@ -462,6 +509,10 @@ export default function App() {
         locationName: alert.location,
         previousCount
       });
+      // Sync to the account so it's available on the user's other devices.
+      if (saved.isAuthenticated) {
+        saved.addToAccount({ name: alert.location, lat: alert.lat, lon: alert.lon });
+      }
       fetchCurrentConditions(alert.lat, alert.lon).then(conditions => {
         if (!conditions) return;
         setAlertLocations(prev =>
@@ -484,6 +535,20 @@ export default function App() {
     // Track
     trackAlertAddedToMap(alert.category);
   };
+
+  // Receive search-pin changes from ZipCodeSearch. For signed-in users, mirror
+  // each on-map location into their account (idempotent — the DB de-dupes by
+  // rounded lat/lon, and addUserLocation ignores an existing save).
+  const handleSearchLocationsChange = useCallback((locs) => {
+    setSearchLocations(locs);
+    if (saved.isAuthenticated && Array.isArray(locs)) {
+      locs.forEach((l) => {
+        if (l?.lat != null && l?.lon != null) {
+          saved.addToAccount({ name: l.name, lat: l.lat, lon: l.lon, zip: l.zip });
+        }
+      });
+    }
+  }, [saved]);
 
   // Handle removing an alert location from map
   const handleRemoveAlertLocation = (locationId) => {
@@ -528,6 +593,10 @@ export default function App() {
     } catch (e) {
       console.error('Error updating localStorage:', e);
     }
+
+    // Tell ZipCodeSearch to re-read localStorage so its in-memory copy doesn't
+    // go stale and resurrect this location on the next add.
+    window.dispatchEvent(new CustomEvent('savedLocationsChanged'));
   };
 
   // Handle clicking a viewed location to re-center map and show marker
@@ -670,7 +739,7 @@ export default function App() {
         <div className="lg:hidden space-y-4">
           {/* 1. Check Location - TOP on mobile */}
           <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+            <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 
           {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
@@ -804,6 +873,16 @@ export default function App() {
                   </div>
                   <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                     <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
+                    {!saved.isAuthenticated ? (
+                      <button
+                        onClick={() => setShowSignIn(true)}
+                        className="mt-1 w-full text-center text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
+                      >
+                        {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
+                      </button>
+                    ) : (
+                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved to your account ✓</p>
+                    )}
                   </div>
                 </>
               )}
@@ -920,7 +999,7 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={setSearchLocations} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+              <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
             </div>
 
             {/* Your Locations (if any) - COLLAPSIBLE */}
@@ -1049,6 +1128,16 @@ export default function App() {
                     </div>
                     <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                       <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
+                    {!saved.isAuthenticated ? (
+                      <button
+                        onClick={() => setShowSignIn(true)}
+                        className="mt-1 w-full text-center text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
+                      >
+                        {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
+                      </button>
+                    ) : (
+                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved to your account ✓</p>
+                    )}
                     </div>
                   </>
                 )}
@@ -1153,6 +1242,50 @@ export default function App() {
       {/* Sticky signup bar — email on web, push notifications on native */}
       <AlertSignupBar />
       <PushNotificationCard />
+
+      {/* "Location saved" confirmation toast */}
+      {saveToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1500] pointer-events-none">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/95 border border-slate-600 shadow-lg text-sm font-medium text-slate-100">
+            {saveToast}
+          </div>
+        </div>
+      )}
+
+      {/* Gentle, dismissible "sync across devices" CTA. Saving is never capped
+          or blocked; this is pure convenience and easy to dismiss. Copy adapts
+          to newcomer ("Create a free account") vs returning ("Sign in"). */}
+      {showSyncCta && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1600] w-[min(92vw,26rem)]">
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl p-4">
+            <p className="text-sm text-slate-200 mb-3">
+              Want these locations on your phone too?{' '}
+              {hasAccountHint()
+                ? 'Sign in to save them across your devices.'
+                : 'Create a free account to save them across your devices.'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowSyncCta(false); setShowSignIn(true); }}
+                className="flex-1 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold cursor-pointer transition-colors"
+              >
+                {hasAccountHint() ? 'Sign in' : 'Create a free account'}
+              </button>
+              <button
+                onClick={() => setShowSyncCta(false)}
+                className="flex-1 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium cursor-pointer transition-colors"
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
+
+      {/* One-time device → account import (self-hides unless needed) */}
+      <LocationImportPrompt />
     </div>
   );
 }
