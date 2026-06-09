@@ -25,6 +25,7 @@ import { setHomepageMetaTags } from './data/homepageMeta';
 import {
   startSessionTracking,
   stopSessionTracking,
+  trackVisitorType,
   trackLocationCountChanged,
   trackLocationAdded,
   trackAlertTapped,
@@ -357,9 +358,11 @@ export default function App() {
     setHomepageMetaTags();
   }, []);
 
-  // Start session tracking on mount
+  // Start session tracking on mount; classify the visitor (new vs returning)
+  // once per session.
   useEffect(() => {
     startSessionTracking();
+    trackVisitorType();
     return () => stopSessionTracking();
   }, []);
 

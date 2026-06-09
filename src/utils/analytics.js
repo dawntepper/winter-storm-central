@@ -317,6 +317,86 @@ export function stopSessionTracking() {
 }
 
 // ============================================
+// VISITOR RETENTION EVENTS
+// ============================================
+//
+// Plausible is cookieless and has no built-in new-vs-returning dimension. We
+// approximate it with a small localStorage record of the visitor's first-seen
+// timestamp and session count, fired once per browser session as a single
+// 'Visitor' event. A sessionStorage flag gates it to one fire per session, so
+// a multi-page visit counts as one "visit" — matching Plausible's own session
+// model rather than per-pageview.
+//
+// Privacy: stores only two integers (a timestamp + a counter) in the visitor's
+// own browser. No identifier is generated and nothing leaves the device except
+// the aggregate visitor_type + bucketed props below. Clearing site data resets
+// a visitor to "new" — the standard caveat for any cookieless approach.
+
+const VISITOR_KEY = 'st_visitor';               // localStorage: { firstSeen, lastSeen, visits }
+const VISITOR_SESSION_FLAG = 'st_visitor_seen';  // sessionStorage: one fire per session
+
+// Bucket raw counts/recency so the Properties tab stays low-cardinality and
+// readable (raw integers would scatter into dozens of one-off rows).
+function bucketVisitCount(n) {
+  if (n <= 1) return '1';
+  if (n === 2) return '2';
+  if (n <= 5) return '3-5';
+  if (n <= 10) return '6-10';
+  return '11+';
+}
+
+function bucketDaysSince(days) {
+  if (days <= 0) return '0';
+  if (days <= 7) return '1-7';
+  if (days <= 30) return '8-30';
+  if (days <= 90) return '31-90';
+  return '90+';
+}
+
+/**
+ * Classify the current visitor as new or returning and fire one 'Visitor'
+ * event per browser session. Call once on app mount (alongside
+ * startSessionTracking). Safe to call on every mount — the sessionStorage
+ * guard ensures it emits at most once per session.
+ *
+ * Props:
+ *   visitor_type           'new' | 'returning'
+ *   visit_count            bucketed session count ('1', '2', '3-5', '6-10', '11+')
+ *   days_since_first_visit bucketed recency ('0', '1-7', '8-30', '31-90', '90+')
+ */
+export function trackVisitorType() {
+  if (typeof window === 'undefined') return;
+  try {
+    // One Visitor event per session — a multi-page visit is still one visit.
+    if (sessionStorage.getItem(VISITOR_SESSION_FLAG)) return;
+
+    const now = Date.now();
+    let stored = null;
+    try {
+      stored = JSON.parse(localStorage.getItem(VISITOR_KEY));
+    } catch {
+      stored = null;
+    }
+
+    const isReturning = Boolean(stored && stored.firstSeen);
+    const firstSeen = isReturning ? stored.firstSeen : now;
+    const visits = (isReturning ? (stored.visits || 1) : 0) + 1;
+    const daysSinceFirst = Math.floor((now - firstSeen) / 86400000); // ms/day
+
+    track('Visitor', {
+      visitor_type: isReturning ? 'returning' : 'new',
+      visit_count: bucketVisitCount(visits),
+      days_since_first_visit: bucketDaysSince(daysSinceFirst)
+    });
+
+    localStorage.setItem(VISITOR_KEY, JSON.stringify({ firstSeen, lastSeen: now, visits }));
+    sessionStorage.setItem(VISITOR_SESSION_FLAG, '1');
+  } catch {
+    // Silent — analytics never breaks the app
+  }
+}
+
+// ============================================
 // STORM PAGE EVENTS
 // ============================================
 
@@ -975,6 +1055,7 @@ export default {
   trackLocationSearchFailed,
   startSessionTracking,
   stopSessionTracking,
+  trackVisitorType,
   testAllTracking,
   // Storm page events
   trackStormPageView,

@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-06-08.
+Last reviewed: 2026-06-09.
 
 ---
 
@@ -28,6 +28,7 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `First Location Added` | Once per session when user saves their first pin |
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
+| `Visitor` | New-vs-returning classification — fired once per browser session on app mount (`visitor_type`, `visit_count`, `days_since_first_visit`) |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
 
@@ -60,6 +61,23 @@ Neither click navigates today — both just re-center the homepage map. This eve
 For trigger-level analysis, use `Location Added` / `Location Removed`. For aggregate pin counts, use `Location Count Changed`.
 
 See `docs/location-analytics-audit.md` for the full code-path audit and dashboard recommendations.
+
+### New vs returning visitors (the `Visitor` event)
+
+Plausible is cookieless and has **no native new-vs-returning dimension**, so we approximate it ourselves. On app mount, `trackVisitorType()` (in `analytics.js`) reads a small `localStorage` record (`st_visitor`: first-seen timestamp + session count) and fires one `Visitor` event per browser session. A `sessionStorage` flag (`st_visitor_seen`) caps it to one fire per session, so a visitor browsing five pages counts as **one** visit, not five — matching Plausible's session model.
+
+How to read it in the dashboard:
+
+| Filter | Captures |
+|---|---|
+| `Visitor` where `visitor_type = "new"` | First-ever session in this browser |
+| `Visitor` where `visitor_type = "returning"` | Any later session |
+| `visit_count` property | How many sessions this visitor has had (`1`, `2`, `3-5`, `6-10`, `11+`) |
+| `days_since_first_visit` property | Recency of their first visit (`0`, `1-7`, `8-30`, `31-90`, `90+`) — good for seasonal-return analysis |
+
+Numeric props are **bucketed** on purpose, so the Properties tab stays readable instead of scattering into dozens of one-off integer rows.
+
+Caveats (inherent to any cookieless method): clearing site data, a different browser/device, or private-window browsing all read as a **new** visitor. Treat the new/returning split as a directional trend, not a precise person count.
 
 ---
 
