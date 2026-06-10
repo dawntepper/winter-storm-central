@@ -346,8 +346,48 @@ export default function App() {
     navigate(`/alerts/${slug}`);
   }, [navigate]);
 
-  // Combine search and alert locations for the map
-  const userLocations = [...searchLocations, ...alertLocations];
+  // ---- Merge-down: a signed-in user's account locations show up on THIS
+  // device (the other half of cross-device save). We render account locations
+  // that aren't already present locally (deduped by rounded lat/lon), and fetch
+  // their current conditions so they look like any other saved pin. ----
+  const geoKey = (lat, lon) => `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)}`;
+  const [dbConditions, setDbConditions] = useState({}); // userLocationId -> conditions
+
+  const localGeoKeys = new Set(
+    [...searchLocations, ...alertLocations]
+      .filter((l) => l?.lat != null && l?.lon != null)
+      .map((l) => geoKey(l.lat, l.lon))
+  );
+  const accountPins = saved.isAuthenticated
+    ? saved.dbLocations
+        .filter((d) => d.lat != null && d.lon != null && !localGeoKeys.has(geoKey(d.lat, d.lon)))
+        .map((d) => ({
+          id: `db-${d.userLocationId}`,
+          userLocationId: d.userLocationId,
+          name: d.name,
+          lat: d.lat,
+          lon: d.lon,
+          forecast: { snowfall: 0, ice: 0 },
+          hazardType: 'none',
+          conditions: dbConditions[d.userLocationId] || null,
+          fromAccount: true,
+        }))
+    : [];
+
+  // Combine search, alert, and account locations for the map + list.
+  const userLocations = [...searchLocations, ...alertLocations, ...accountPins];
+
+  // Fetch conditions for account pins so they show H/L like other saved pins.
+  useEffect(() => {
+    if (!saved.isAuthenticated) return;
+    saved.dbLocations.forEach((d) => {
+      if (d.lat == null || d.lon == null || dbConditions[d.userLocationId]) return;
+      fetchCurrentConditions(d.lat, d.lon).then((conditions) => {
+        if (conditions) setDbConditions((prev) => ({ ...prev, [d.userLocationId]: conditions }));
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved.isAuthenticated, saved.dbLocations]);
 
   // Persist alert-pin locations whenever they change.
   useEffect(() => {
@@ -392,10 +432,12 @@ export default function App() {
     trackLocationCountChanged(userLocations.length);
   }, [userLocations.length]);
 
-  // Confirmation toast + gentle account nudge when saved-location count grows.
-  // Watches the composed count so it covers both search pins and alert pins.
+  // Confirmation toast + gentle account nudge when the user SAVES a location.
+  // Watches only locally-initiated saves (search + alert pins), NOT account
+  // pins arriving via merge-down — otherwise signing in would falsely toast.
+  const localSavedCount = searchLocations.length + alertLocations.length;
   useEffect(() => {
-    const len = userLocations.length;
+    const len = localSavedCount;
     const prev = prevLocCountRef.current;
     prevLocCountRef.current = len;
     if (prev === null || !toastReadyRef.current) return; // skip initial hydration
@@ -409,7 +451,7 @@ export default function App() {
         setShowSyncCta(true);
       }
     }
-  }, [userLocations.length, saved.isAuthenticated, saved.syncCtaThreshold]);
+  }, [localSavedCount, saved.isAuthenticated, saved.syncCtaThreshold]);
 
   // Auto-dismiss the save toast.
   useEffect(() => {
@@ -550,6 +592,24 @@ export default function App() {
     }
   }, [saved]);
 
+  // Remove an account-backed pin (merge-down) — deletes it from the user's
+  // account; refresh() then drops it from the list/map everywhere.
+  const handleRemoveAccountLocation = (userLocationId) => {
+    saved.removeFromAccount(userLocationId);
+  };
+
+  // When a signed-in user removes a local pin that's ALSO saved to their
+  // account (same rounded geo), delete the account copy too so it doesn't
+  // reappear here on reload or linger on their other devices.
+  const removeAccountByGeo = (lat, lon) => {
+    if (!saved.isAuthenticated || lat == null || lon == null) return;
+    const k = geoKey(lat, lon);
+    const match = saved.dbLocations.find(
+      (d) => d.lat != null && d.lon != null && geoKey(d.lat, d.lon) === k
+    );
+    if (match) saved.removeFromAccount(match.userLocationId);
+  };
+
   // Handle removing an alert location from map
   const handleRemoveAlertLocation = (locationId) => {
     const location = alertLocations.find(loc => loc.id === locationId);
@@ -561,6 +621,7 @@ export default function App() {
       });
     }
     setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
+    removeAccountByGeo(location?.lat, location?.lon);
   };
 
   // Handle removing a search location from map (and localStorage)
@@ -597,7 +658,58 @@ export default function App() {
     // Tell ZipCodeSearch to re-read localStorage so its in-memory copy doesn't
     // go stale and resurrect this location on the next add.
     window.dispatchEvent(new CustomEvent('savedLocationsChanged'));
+
+    // If signed in, also drop the matching account copy so it doesn't sync back.
+    removeAccountByGeo(location?.lat, location?.lon);
   };
+
+  // Render a "Your Locations" row for an account pin (merge-down). Mirrors the
+  // search/alert rows; striping index passed in so it continues the list.
+  const renderAccountRow = (loc, index) => (
+    <div
+      key={loc.id}
+      className={`px-4 py-2.5 hover:bg-slate-600/50 transition-colors border-t border-white/5 ${
+        index % 2 === 1 ? 'bg-slate-700/40' : 'bg-slate-800/30'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <button
+            onClick={() => handleViewedLocationClick(loc)}
+            className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
+          >
+            <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+            <span className="truncate">{loc.name}</span>
+          </button>
+          <span className="text-slate-500 flex-shrink-0">•</span>
+          <span className="text-xs text-emerald-400 truncate flex-shrink-0">✓ Saved</span>
+        </div>
+        <button
+          onClick={() => handleRemoveAccountLocation(loc.userLocationId)}
+          className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer flex-shrink-0"
+          title="Remove from your account"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="mt-1 text-xs text-slate-400 pl-6">
+        {loc.conditions?.highTemp != null || loc.conditions?.lowTemp != null ? (
+          <span>
+            {loc.conditions.highTemp != null && <span>H: {loc.conditions.highTemp}°</span>}
+            {loc.conditions.highTemp != null && loc.conditions.lowTemp != null && ' / '}
+            {loc.conditions.lowTemp != null && <span>L: {loc.conditions.lowTemp}°</span>}
+            {' · '}{loc.conditions.shortForecast || 'No data'}
+          </span>
+        ) : loc.conditions?.temperature ? (
+          <span>{loc.conditions.temperature}°{loc.conditions.temperatureUnit || 'F'} · {loc.conditions.shortForecast || 'No data'}</span>
+        ) : (
+          <span>Loading weather data…</span>
+        )}
+      </div>
+    </div>
+  );
 
   // Handle clicking a viewed location to re-center map and show marker
   const handleViewedLocationClick = (location) => {
@@ -870,6 +982,7 @@ export default function App() {
                         </div>
                       </div>
                     ))}
+                    {accountPins.map((loc, index) => renderAccountRow(loc, searchLocations.length + alertLocations.length + index))}
                   </div>
                   <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                     <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
@@ -1125,6 +1238,7 @@ export default function App() {
                           </div>
                         </div>
                       ))}
+                      {accountPins.map((loc, index) => renderAccountRow(loc, searchLocations.length + alertLocations.length + index))}
                     </div>
                     <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                       <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
@@ -1261,8 +1375,8 @@ export default function App() {
             <p className="text-sm text-slate-200 mb-3">
               Want these locations on your phone too?{' '}
               {hasAccountHint()
-                ? 'Sign in to save them across your devices.'
-                : 'Create a free account to save them across your devices.'}
+                ? 'Sign in to save your locations across devices.'
+                : 'Create a free account to save your locations across devices.'}
             </p>
             <div className="flex gap-2">
               <button

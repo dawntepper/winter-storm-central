@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
+import { useAuth } from '../hooks/useAuth';
+import { hasAccountHint } from '../lib/accountHint';
+import SignInModal from './auth/SignInModal';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -718,6 +721,10 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
   // Store all saved locations with their map visibility
   const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
 
+  // Auth state for the device-storage note (offers cross-device save, never gates).
+  const { isConfigured, isAuthenticated } = useAuth();
+  const [showSignIn, setShowSignIn] = useState(false);
+
   // Track window resize for mobile detection
   useEffect(() => {
     const handleResize = () => {
@@ -1122,10 +1129,30 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
 
-        {/* Device storage note */}
-        <p className="text-slate-500 text-[10px] mt-2">
-          Locations saved on this device only
-        </p>
+        {/* Device storage note — offers optional cross-device save when signed
+            out; confirms sync when signed in. Hidden entirely if Supabase isn't
+            configured (degrades to the original device-only behavior). */}
+        {!isConfigured ? (
+          <p className="text-slate-500 text-[10px] mt-2">
+            Locations saved on this device only
+          </p>
+        ) : isAuthenticated ? (
+          <p className="text-emerald-400 text-[10px] mt-2">
+            Saved to your account ✓
+          </p>
+        ) : (
+          <p className="text-slate-500 text-[10px] mt-2">
+            Saved on this device only ·{' '}
+            <button
+              onClick={() => setShowSignIn(true)}
+              className="text-sky-400 hover:text-sky-300 cursor-pointer underline-offset-2 hover:underline"
+            >
+              {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
+            </button>
+          </p>
+        )}
+
+        {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
         {/* Result inline - at bottom of card */}
         {currentLocationData && !isCardDismissed && (

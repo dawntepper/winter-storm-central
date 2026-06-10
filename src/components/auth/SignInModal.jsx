@@ -19,7 +19,7 @@ export default function SignInModal({ onClose }) {
   const title = returning ? 'Sign in' : 'Create a free account';
   const intro = returning
     ? "Welcome back. We'll email you a one-tap link to sign in — no password needed."
-    : "Save your locations so you can get to them on all your devices. No password to create — we'll email you a one-tap link to finish.";
+    : "Save your locations across devices. No password to create — we'll email you a one-tap link to finish.";
   const submitLabel = returning ? 'Email me a sign-in link' : 'Create my free account';
 
   const handleSubmit = async (e) => {
