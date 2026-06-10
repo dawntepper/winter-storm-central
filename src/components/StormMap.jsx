@@ -125,10 +125,11 @@ function AlertModal({ alert, onClose }) {
 const ZoomContext = createContext(5.5);
 
 // Center of the storm coverage area - responsive defaults
-// Adjusted to include Alaska in default view
-const CENTER_DESKTOP = [45.0, -115]; // Shifted north and west to show Alaska
+// Desktop default frames the lower-48 closeup (Alaska/Hawaii still on the map,
+// just outside the initial viewport — users can pan/zoom to them).
+const CENTER_DESKTOP = [39.5, -96]; // Geographic center of the contiguous US
 const CENTER_MOBILE = [42.0, -100];  // Centered for mobile
-const ZOOM_DESKTOP = 3.2;  // Zoomed out to show Alaska + continental US
+const ZOOM_DESKTOP = 4.2;  // One step tighter — CONUS closeup, no Alaska in frame
 const ZOOM_MOBILE = 2.8;   // Zoomed out more on mobile to see full coverage
 
 // Atmospheric color palette - more vibrant
