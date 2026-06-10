@@ -20,7 +20,6 @@ import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
 import { useSavedLocations } from './hooks/useSavedLocations';
-import { hasAccountHint } from './lib/accountHint';
 import LocationImportPrompt from './components/auth/LocationImportPrompt';
 import SignInModal from './components/auth/SignInModal';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
@@ -987,14 +986,17 @@ export default function App() {
                   <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                     <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                     {!saved.isAuthenticated ? (
-                      <button
-                        onClick={() => setShowSignIn(true)}
-                        className="mt-1 w-full text-center text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
-                      >
-                        {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
-                      </button>
+                      <div className="mt-1 text-center">
+                        <p className="text-[11px] text-slate-500">Save your locations across devices.</p>
+                        <button
+                          onClick={() => setShowSignIn(true)}
+                          className="text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
+                        >
+                          Sign in with email
+                        </button>
+                      </div>
                     ) : (
-                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved to your account ✓</p>
+                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved across your devices ✓</p>
                     )}
                   </div>
                 </>
@@ -1243,14 +1245,17 @@ export default function App() {
                     <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
                       <p className="text-xs text-slate-500 text-center">Tap location to view on map · Tap × to remove</p>
                     {!saved.isAuthenticated ? (
-                      <button
-                        onClick={() => setShowSignIn(true)}
-                        className="mt-1 w-full text-center text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
-                      >
-                        {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
-                      </button>
+                      <div className="mt-1 text-center">
+                        <p className="text-[11px] text-slate-500">Save your locations across devices.</p>
+                        <button
+                          onClick={() => setShowSignIn(true)}
+                          className="text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
+                        >
+                          Sign in with email
+                        </button>
+                      </div>
                     ) : (
-                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved to your account ✓</p>
+                      <p className="mt-1 text-center text-[11px] text-emerald-400">Saved across your devices ✓</p>
                     )}
                     </div>
                   </>
@@ -1366,24 +1371,19 @@ export default function App() {
         </div>
       )}
 
-      {/* Gentle, dismissible "sync across devices" CTA. Saving is never capped
-          or blocked; this is pure convenience and easy to dismiss. Copy adapts
-          to newcomer ("Create a free account") vs returning ("Sign in"). */}
+      {/* Gentle, dismissible cross-device save CTA. Saving is never capped or
+          blocked; this is pure convenience and easy to dismiss. */}
       {showSyncCta && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1600] w-[min(92vw,26rem)]">
           <div className="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl p-4">
-            <p className="text-sm text-slate-200 mb-3">
-              Want these locations on your phone too?{' '}
-              {hasAccountHint()
-                ? 'Sign in to save your locations across devices.'
-                : 'Create a free account to save your locations across devices.'}
-            </p>
+            <p className="text-sm font-semibold text-white mb-1">Want these locations on your phone too?</p>
+            <p className="text-sm text-slate-300 mb-3">Save your locations across devices.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => { setShowSyncCta(false); setShowSignIn(true); }}
                 className="flex-1 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold cursor-pointer transition-colors"
               >
-                {hasAccountHint() ? 'Sign in' : 'Create a free account'}
+                Sign in with email
               </button>
               <button
                 onClick={() => setShowSyncCta(false)}

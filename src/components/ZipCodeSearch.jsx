@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
 import { useAuth } from '../hooks/useAuth';
-import { hasAccountHint } from '../lib/accountHint';
 import SignInModal from './auth/SignInModal';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
@@ -1129,27 +1128,26 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
 
-        {/* Device storage note — offers optional cross-device save when signed
-            out; confirms sync when signed in. Hidden entirely if Supabase isn't
-            configured (degrades to the original device-only behavior). */}
-        {!isConfigured ? (
-          <p className="text-slate-500 text-[10px] mt-2">
-            Locations saved on this device only
-          </p>
-        ) : isAuthenticated ? (
-          <p className="text-emerald-400 text-[10px] mt-2">
-            Saved to your account ✓
-          </p>
-        ) : (
-          <p className="text-slate-500 text-[10px] mt-2">
-            Saved on this device only ·{' '}
-            <button
-              onClick={() => setShowSignIn(true)}
-              className="text-sky-400 hover:text-sky-300 cursor-pointer underline-offset-2 hover:underline"
-            >
-              {hasAccountHint() ? 'Sign in' : 'Create a free account'} to save your locations across devices
-            </button>
-          </p>
+        {/* Device-storage note — shown only once at least one location has been
+            saved, so it never claims "Saved…" with nothing saved. Offers an
+            optional sign-in when signed out; confirms when signed in; hidden if
+            Supabase isn't configured (degrades to device-only behavior). */}
+        {Object.keys(savedLocations).length > 0 && (
+          isConfigured && isAuthenticated ? (
+            <p className="text-emerald-400 text-[10px] mt-2">Saved across your devices ✓</p>
+          ) : isConfigured ? (
+            <p className="text-slate-500 text-[10px] mt-2">
+              Save your locations across devices.{' '}
+              <button
+                onClick={() => setShowSignIn(true)}
+                className="text-sky-400 hover:text-sky-300 cursor-pointer underline-offset-2 hover:underline"
+              >
+                Sign in with email
+              </button>
+            </p>
+          ) : (
+            <p className="text-slate-500 text-[10px] mt-2">Saved on this device only</p>
+          )
         )}
 
         {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}

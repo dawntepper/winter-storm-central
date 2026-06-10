@@ -1,26 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { hasAccountHint } from '../../lib/accountHint';
 
 /**
- * Magic-link sign-in / account-creation modal (v1 = passwordless email only).
- * Calm and dismissible — never blocks weather; only opened on user intent.
+ * Magic-link sign-in modal (v1 = passwordless email only). Calm and
+ * dismissible — never blocks weather; only opened on user intent.
  *
- * Copy adapts: newcomers see "Create a free account", returning visitors see
- * "Sign in". With magic links the action is identical (we email a link); only
- * the wording differs so it feels right for each.
+ * Sign-in is framed as pure convenience: weather is always free and no account
+ * is required. The single action is "Sign in with email" (the magic link both
+ * creates and signs in, so one honest label fits everyone).
  */
 export default function SignInModal({ onClose }) {
   const { signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [message, setMessage] = useState('');
-  const returning = hasAccountHint();
-  const title = returning ? 'Sign in' : 'Create a free account';
-  const intro = returning
-    ? "Welcome back. We'll email you a one-tap link to sign in — no password needed."
-    : "Save your locations across devices. No password to create — we'll email you a one-tap link to finish.";
-  const submitLabel = returning ? 'Email me a sign-in link' : 'Create my free account';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +40,7 @@ export default function SignInModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-2">
-          <h2 className="text-lg font-bold text-white">{title}</h2>
+          <h2 className="text-lg font-bold text-white">Save locations across devices</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-200 cursor-pointer text-lg leading-none"
@@ -57,7 +50,10 @@ export default function SignInModal({ onClose }) {
           </button>
         </div>
 
-        <p className="text-sm text-slate-400 mb-4">{intro}</p>
+        <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
+        <p className="text-sm text-slate-400 mb-4">
+          Sign in with email to save your locations across devices.
+        </p>
 
         {status === 'sent' ? (
           <div className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
@@ -81,14 +77,10 @@ export default function SignInModal({ onClose }) {
               disabled={status === 'sending'}
               className="w-full py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white text-sm font-semibold cursor-pointer transition-colors"
             >
-              {status === 'sending' ? 'Sending…' : submitLabel}
+              {status === 'sending' ? 'Sending…' : 'Sign in with email'}
             </button>
           </form>
         )}
-
-        <p className="text-[11px] text-slate-500 mt-3 text-center">
-          Weather is always free — no account required.
-        </p>
       </div>
     </div>
   );
