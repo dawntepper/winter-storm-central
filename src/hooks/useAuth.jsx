@@ -43,13 +43,14 @@ export function useAuth() {
 function useAuthState() {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Initialize auth state
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setLoading(false);
+      setInitializing(false);
       return;
     }
 
@@ -57,7 +58,7 @@ function useAuthState() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      setInitializing(false);
     });
 
     // Listen for auth changes
@@ -67,6 +68,7 @@ function useAuthState() {
         console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!session);
         setSession(session);
         setUser(session?.user ?? null);
+        setInitializing(false);
         setLoading(false);
 
         // Handle specific events
@@ -149,7 +151,6 @@ function useAuthState() {
     }
 
     setError(null);
-    setLoading(true);
 
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
@@ -157,8 +158,6 @@ function useAuthState() {
         emailRedirectTo: `${window.location.origin}/auth/callback`
       }
     });
-
-    setLoading(false);
 
     if (error) {
       setError(error.message);
@@ -235,6 +234,7 @@ function useAuthState() {
   return {
     user,
     session,
+    initializing,
     loading,
     error,
     isAuthenticated: !!user,

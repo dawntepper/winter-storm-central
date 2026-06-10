@@ -12,11 +12,11 @@ import SignInModal from './SignInModal';
  * Never gates content — it's a convenience entry point only.
  */
 export default function AccountMenu() {
-  const { isConfigured, isAuthenticated, user, signOut, loading } = useAuth();
+  const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [open, setOpen] = useState(false);
 
-  if (!isConfigured || loading) return null;
+  if (!isConfigured || initializing) return null;
 
   if (!isAuthenticated) {
     return (
