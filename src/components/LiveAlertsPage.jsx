@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import PageBackNav from './PageBackNav';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { US_STATES } from '../data/stateConfig';
@@ -123,12 +124,7 @@ export default function LiveAlertsPage() {
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="hidden sm:inline text-sm">Home</span>
-            </Link>
+            <PageBackNav />
             <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
               <span className="text-xl">📡</span>
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>

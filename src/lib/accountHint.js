@@ -12,6 +12,7 @@
  * to reset the copy during testing.
  */
 const KEY = 'st_account_known';
+const EMAIL_KEY = 'st_last_signin_email';
 
 export function markAccountKnown() {
   try {
@@ -26,6 +27,25 @@ export function hasAccountHint() {
     return localStorage.getItem(KEY) === '1';
   } catch {
     return false;
+  }
+}
+
+/** Remember the last email used for magic-link sign-in (device-local UX hint). */
+export function rememberSignInEmail(email) {
+  const trimmed = String(email || '').trim();
+  if (!trimmed) return;
+  try {
+    localStorage.setItem(EMAIL_KEY, trimmed);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getRememberedSignInEmail() {
+  try {
+    return localStorage.getItem(EMAIL_KEY) || '';
+  } catch {
+    return '';
   }
 }
 

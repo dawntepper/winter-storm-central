@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { hasAccountHint } from '../../lib/accountHint';
+import { hasAccountHint, getRememberedSignInEmail, rememberSignInEmail } from '../../lib/accountHint';
 import { trackSignUpFormSubmitted, setNavSource, NAV_SOURCES } from '../../utils/analytics';
 
 /**
@@ -13,7 +13,7 @@ import { trackSignUpFormSubmitted, setNavSource, NAV_SOURCES } from '../../utils
  */
 export default function SignInModal({ onClose }) {
   const { signInWithMagicLink } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => getRememberedSignInEmail());
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [message, setMessage] = useState('');
   const [isMobile, setIsMobile] = useState(
@@ -31,6 +31,7 @@ export default function SignInModal({ onClose }) {
     const trimmed = email.trim();
     if (!trimmed) return;
     setStatus('sending');
+    rememberSignInEmail(trimmed);
     const { error, message: msg } = await signInWithMagicLink(trimmed);
     if (error) {
       setStatus('error');

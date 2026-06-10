@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { markAccountKnown } from '../lib/accountHint';
+import { finalizeAuthFromUrl } from '../lib/finalizeAuthFromUrl';
 
 // Auth context for app-wide access
 const AuthContext = createContext(null);
@@ -54,13 +55,24 @@ function useAuthState() {
       return;
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) markAccountKnown();
-      setInitializing(false);
-    });
+    let cancelled = false;
+
+    // Finalize magic-link / OAuth tokens on any route, then hydrate session.
+    (async () => {
+      const { session: urlSession, error: urlError } = await finalizeAuthFromUrl();
+      if (urlError) {
+        console.error('[Auth] finalizeAuthFromUrl:', urlError);
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const active = urlSession || session;
+      if (!cancelled) {
+        setSession(active);
+        setUser(active?.user ?? null);
+        if (active?.user) markAccountKnown();
+        setInitializing(false);
+      }
+    })();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -82,7 +94,10 @@ function useAuthState() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   /**
