@@ -88,6 +88,44 @@ export function trackLocationAdded({ trigger, locationName, previousCount }) {
 }
 
 /**
+ * User saved a map pin from an alert hover popup (Save Location).
+ * Dedicated Plausible goal — replaces Location Added for the map_alert_popup path.
+ *
+ * @param {{ locationName: string, category: string, previousCount: number }} params
+ */
+export function trackLocationAddedFromAlert({ locationName, category, previousCount }) {
+  const { city, state } = parseLocationCityState(locationName);
+  const isFirstLocation = previousCount === 0;
+  const totalCount = previousCount + 1;
+
+  const props = {
+    category: category || 'unknown',
+    state: state || 'unknown',
+    is_first_location: isFirstLocation
+  };
+  if (city) props.city = city;
+
+  track('Location Added from Alert', props);
+
+  if (isFirstLocation && !firstLocationAddedThisSession) {
+    firstLocationAddedThisSession = true;
+    const firstProps = {
+      trigger: SAVE_TRIGGERS.MAP_ALERT_POPUP,
+      state: state || 'unknown'
+    };
+    if (city) firstProps.city = city;
+    track('First Location Added', firstProps);
+  }
+
+  for (const milestone of [2, 3, 5]) {
+    if (previousCount < milestone && totalCount >= milestone && !locationMilestonesReached.has(milestone)) {
+      locationMilestonesReached.add(milestone);
+      track('Multiple Locations Reached', { location_count: milestone });
+    }
+  }
+}
+
+/**
  * User intentionally removed a saved map location.
  *
  * @param {{ trigger: string, locationName: string, remainingCount: number }} params
@@ -758,6 +796,7 @@ export const SAVE_TRIGGERS = {
   YOUR_LOCATIONS_WIDGET: 'your_locations_widget',
   YOUR_LOCATIONS_REMOVE: 'your_locations_remove',
   ALERT_ADD_TO_MAP: 'alert_add_to_map',
+  MAP_ALERT_POPUP: 'map_alert_popup',
   MAP_LOCATION_PIN_CLICK: 'map_location_pin_click',
   AUTO_GEOLOCATE: 'auto_geolocate',
 };
@@ -990,6 +1029,11 @@ export function testAllTracking() {
   trackCategoryCollapsed('Winter Weather', 45);
   trackAlertTapped('winter', 'Winter Storm Warning');
   trackAlertAddedToMap('winter');
+  trackLocationAddedFromAlert({
+    locationName: 'Denver, CO',
+    category: 'winter',
+    previousCount: 0
+  });
 
   // Map events
   console.log('\n3. Map Interaction Events:');
@@ -1061,6 +1105,7 @@ export default {
   track,
   trackLocationSaved,
   trackLocationAdded,
+  trackLocationAddedFromAlert,
   trackLocationRemoved,
   trackLocationViewedOnMap,
   trackLocationCountChanged,

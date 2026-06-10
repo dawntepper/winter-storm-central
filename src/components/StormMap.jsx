@@ -15,7 +15,8 @@ import {
   trackAlertDetailView,
   trackGeolocationUsed,
   setNavSource,
-  NAV_SOURCES
+  NAV_SOURCES,
+  SAVE_TRIGGERS
 } from '../utils/analytics';
 
 /**
@@ -1110,7 +1111,16 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
+function isAlertLocationSaved(alert, userLocations) {
+  if (!alert?.lat || !alert?.lon) return false;
+  return userLocations.some(
+    (loc) =>
+      loc.name === alert.location ||
+      (Math.abs(loc.lat - alert.lat) < 0.01 && Math.abs(loc.lon - alert.lon) < 0.01)
+  );
+}
+
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
@@ -1249,8 +1259,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
   };
 
+  // Pin alert popup while interacting with Save Location (prevents marker mouseout / map pan from dismissing)
+  const pinHoveredAlert = () => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    pinnedAlertRef.current = true;
+  };
+
   // Handle user location marker hover
   const handleUserLocationHover = (location, event) => {
+    if (pinnedAlertRef.current) return;
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
@@ -1633,19 +1652,48 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <p className="text-xs text-slate-600 mb-2 line-clamp-3">{hoveredAlert.headline}</p>
             )}
 
-            {/* Severity & Urgency */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {hoveredAlert.severity && (
-                <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
-                  {hoveredAlert.severity}
-                </span>
-              )}
-              {hoveredAlert.urgency && (
-                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                  {hoveredAlert.urgency}
-                </span>
-              )}
-            </div>
+            {/* Severity, Urgency & Save Location */}
+            {(hoveredAlert.severity || hoveredAlert.urgency || (onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon)) && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                  {hoveredAlert.severity && (
+                    <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                      {hoveredAlert.severity}
+                    </span>
+                  )}
+                  {hoveredAlert.urgency && (
+                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                      {hoveredAlert.urgency}
+                    </span>
+                  )}
+                </div>
+                {onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon && (
+                  <label
+                    className="group flex items-center gap-1.5 cursor-pointer shrink-0 ml-auto"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      pinHoveredAlert();
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isAlertLocationSaved(hoveredAlert, userLocations)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        pinHoveredAlert();
+                        if (e.target.checked) {
+                          onAddAlertToMap(hoveredAlert, SAVE_TRIGGERS.MAP_ALERT_POPUP);
+                        } else if (onRemoveAlertFromMap) {
+                          onRemoveAlertFromMap(hoveredAlert, SAVE_TRIGGERS.MAP_ALERT_POPUP);
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-slate-300 bg-white text-emerald-600 accent-emerald-500 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 cursor-pointer transition-transform duration-150 ease-out group-hover:scale-110 active:scale-95"
+                    />
+                    <span className="text-xs text-slate-600 group-hover:text-emerald-700 transition-colors">Save Location</span>
+                  </label>
+                )}
+              </div>
+            )}
 
             {/* View Alert Details Button */}
             <button

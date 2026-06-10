@@ -20,8 +20,9 @@ export default function PageBackNav({ showHomeLabel = true, className = '' }) {
       <button
         type="button"
         onClick={() => goBackOrHome(navigate)}
-        aria-label="Go back"
-        className="hover:text-white transition-colors"
+        aria-label="Back"
+        title="Back"
+        className="hover:text-white transition-colors cursor-pointer"
       >
         <BackArrow />
       </button>

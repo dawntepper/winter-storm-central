@@ -31,6 +31,7 @@ import {
   trackVisitorType,
   trackLocationCountChanged,
   trackLocationAdded,
+  trackLocationAddedFromAlert,
   trackAlertTapped,
   trackAlertAddedToMap,
   trackLocationViewedOnMap,
@@ -507,7 +508,7 @@ export default function App() {
   };
 
   // Handle adding alert location to map (separate from search locations)
-  const handleAddAlertToMap = (alert) => {
+  const handleAddAlertToMap = (alert, trigger = SAVE_TRIGGERS.ALERT_ADD_TO_MAP) => {
     if (!alert.lat || !alert.lon) return;
 
     // Create a user location object from the alert.
@@ -545,11 +546,19 @@ export default function App() {
     // Fetch forecast in the background. When it lands, patch the pin's
     // conditions so the card switches from the headline to H/L · forecast.
     if (wasAdded) {
-      trackLocationAdded({
-        trigger: SAVE_TRIGGERS.ALERT_ADD_TO_MAP,
-        locationName: alert.location,
-        previousCount
-      });
+      if (trigger === SAVE_TRIGGERS.MAP_ALERT_POPUP) {
+        trackLocationAddedFromAlert({
+          locationName: alert.location,
+          category: alert.category,
+          previousCount
+        });
+      } else {
+        trackLocationAdded({
+          trigger,
+          locationName: alert.location,
+          previousCount
+        });
+      }
       // Sync to the account so it's available on the user's other devices.
       if (saved.isAuthenticated) {
         saved.addToAccount({ name: alert.location, lat: alert.lat, lon: alert.lon });
@@ -562,8 +571,11 @@ export default function App() {
       });
     }
 
-    // Center map on the added location
-    setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+    // Center map on the added location (skip when toggling from the alert popup —
+    // panning fires marker mouseout and dismisses the hover card)
+    if (trigger !== SAVE_TRIGGERS.MAP_ALERT_POPUP) {
+      setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+    }
 
     // On mobile, scroll to the map so user can see the added location
     const isMobile = window.innerWidth < 1024; // lg breakpoint
@@ -575,6 +587,39 @@ export default function App() {
 
     // Track
     trackAlertAddedToMap(alert.category);
+  };
+
+  const matchesAlertLocation = (alert, loc) =>
+    loc.name === alert.location ||
+    (alert.lat != null && alert.lon != null && loc.lat != null && loc.lon != null &&
+      Math.abs(loc.lat - alert.lat) < 0.01 && Math.abs(loc.lon - alert.lon) < 0.01);
+
+  const handleRemoveAlertFromMap = (alert, trigger = SAVE_TRIGGERS.MAP_ALERT_POPUP) => {
+    const alertLoc = alertLocations.find((loc) => matchesAlertLocation(alert, loc));
+    if (alertLoc) {
+      handleRemoveAlertLocation(alertLoc.id, trigger);
+      return;
+    }
+
+    const searchLoc = searchLocations.find((loc) => matchesAlertLocation(alert, loc));
+    if (searchLoc) {
+      handleRemoveSearchLocation(searchLoc.id, trigger);
+      return;
+    }
+
+    if (saved.isAuthenticated) {
+      const accountLoc = saved.dbLocations.find(
+        (d) => d.lat != null && d.lon != null && matchesAlertLocation(alert, d)
+      );
+      if (accountLoc) {
+        trackLocationRemoved({
+          trigger,
+          locationName: accountLoc.name,
+          remainingCount: userLocations.length - 1
+        });
+        saved.removeFromAccount(accountLoc.userLocationId);
+      }
+    }
   };
 
   // Receive search-pin changes from ZipCodeSearch. For signed-in users, mirror
@@ -610,11 +655,11 @@ export default function App() {
   };
 
   // Handle removing an alert location from map
-  const handleRemoveAlertLocation = (locationId) => {
+  const handleRemoveAlertLocation = (locationId, trigger = SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE) => {
     const location = alertLocations.find(loc => loc.id === locationId);
     if (location) {
       trackLocationRemoved({
-        trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+        trigger,
         locationName: location.name,
         remainingCount: userLocations.length - 1
       });
@@ -624,12 +669,12 @@ export default function App() {
   };
 
   // Handle removing a search location from map (and localStorage)
-  const handleRemoveSearchLocation = (locationId) => {
+  const handleRemoveSearchLocation = (locationId, trigger = SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE) => {
     // Find location name for tracking before removing
     const location = searchLocations.find(loc => loc.id === locationId);
     if (location) {
       trackLocationRemoved({
-        trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+        trigger,
         locationName: location.name,
         remainingCount: userLocations.length - 1
       });
@@ -853,7 +898,7 @@ export default function App() {
             <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 
-          {/* 2. Your Locations (if any) - Below Check Location - COLLAPSIBLE */}
+          {/* 2. Saved Locations (if any) - Below Check Location - COLLAPSIBLE */}
           {userLocations.length > 0 && (
             <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
               {/* Collapsible Header - dark gray background */}
@@ -863,7 +908,7 @@ export default function App() {
                 style={{ minHeight: '48px' }}
               >
                 <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'antiquewhite' }}>
-                  <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
+                  <span className="text-emerald-400">&#9733;</span> Saved Locations ({userLocations.length})
                 </h3>
                 <svg
                   className={`w-5 h-5 text-white transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}
@@ -1024,6 +1069,8 @@ export default function App() {
               highlightArea={userArea}
               onAreaClick={handleAreaClick}
               onResetView={handleMapResetView}
+              onAddAlertToMap={handleAddAlertToMap}
+              onRemoveAlertFromMap={handleRemoveAlertFromMap}
             />
           </div>
 
@@ -1089,6 +1136,8 @@ export default function App() {
                   highlightArea={userArea}
                   onAreaClick={handleAreaClick}
                   onResetView={handleMapResetView}
+                  onAddAlertToMap={handleAddAlertToMap}
+                  onRemoveAlertFromMap={handleRemoveAlertFromMap}
                 />
               </div>
 
@@ -1110,14 +1159,14 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Column: Search + Your Locations + Alerts */}
+          {/* Right Column: Search + Saved Locations + Alerts */}
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location */}
             <div id="location-search">
               <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
             </div>
 
-            {/* Your Locations (if any) - COLLAPSIBLE */}
+            {/* Saved Locations (if any) - COLLAPSIBLE */}
             {userLocations.length > 0 && (
               <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
                 {/* Collapsible Header - dark gray background */}
@@ -1126,7 +1175,7 @@ export default function App() {
                   className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'antiquewhite' }}>
-                    <span className="text-emerald-400">&#9733;</span> Your Locations ({userLocations.length})
+                    <span className="text-emerald-400">&#9733;</span> Saved Locations ({userLocations.length})
                   </h3>
                   <svg
                     className={`w-5 h-5 text-white transition-transform ${yourLocationsExpanded ? 'rotate-180' : ''}`}

@@ -24,6 +24,7 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Storm Radar Click` | "View Full Radar Map" CTA on storm pages |
 | `Location Count Changed` | High-level saved-location count snapshot (`location_count`, `has_locations`) |
 | `Location Added` | User intentionally saved a map pin (trigger, state, city, is_first_location) |
+| `Location Added from Alert` | Save Location on map alert hover popup (`category`, state, city, is_first_location) |
 | `Location Removed` | User intentionally removed a map pin (trigger, state, city, remaining_location_count) |
 | `First Location Added` | Once per session when user saves their first pin |
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
@@ -56,11 +57,11 @@ Neither click navigates today — both just re-center the homepage map. This eve
 
 ### Location intent vs count snapshots
 
-**Intent events** (`Location Added`, `Location Removed`, `First Location Added`, `Multiple Locations Reached`) fire only from explicit UI handlers — never on localStorage hydration.
+**Intent events** (`Location Added`, `Location Added from Alert`, `Location Removed`, `First Location Added`, `Multiple Locations Reached`) fire only from explicit UI handlers — never on localStorage hydration.
 
 **Count snapshots** (`Location Count Changed`) fire from a `useEffect` in `App.jsx` on every `userLocations.length` change, including page load when saved pins are restored.
 
-For trigger-level analysis, use `Location Added` / `Location Removed`. For aggregate pin counts, use `Location Count Changed`.
+For trigger-level analysis, use `Location Added` / `Location Removed`. Map alert popup saves use the dedicated `Location Added from Alert` goal (not `Location Added` with `trigger = map_alert_popup`). For aggregate pin counts, use `Location Count Changed`.
 
 See `docs/location-analytics-audit.md` for the full code-path audit and dashboard recommendations.
 
@@ -144,6 +145,12 @@ Location Count Changed
 
 Location Added
   trigger            a value from SAVE_TRIGGERS
+  state              normalized state slug
+  city               present when parseable from "City, ST"
+  is_first_location  boolean
+
+Location Added from Alert
+  category           alert category id (winter, flood, etc.)
   state              normalized state slug
   city               present when parseable from "City, ST"
   is_first_location  boolean
@@ -372,6 +379,7 @@ CHECK_LOCATION_BUTTON       "check_location_button"   — ZIP/city search Add to
 YOUR_LOCATIONS_WIDGET       "your_locations_widget"   — reserved
 YOUR_LOCATIONS_REMOVE       "your_locations_remove"   — × in Your Locations list
 ALERT_ADD_TO_MAP            "alert_add_to_map"        — Live Alert card Add to Map
+MAP_ALERT_POPUP             "map_alert_popup"         — Save Location on map alert hover popup (fires Location Added from Alert, not Location Added)
 MAP_LOCATION_PIN_CLICK      "map_location_pin_click"  — reserved
 AUTO_GEOLOCATE              "auto_geolocate"          — reserved
 ```
