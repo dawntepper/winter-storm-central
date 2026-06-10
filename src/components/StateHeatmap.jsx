@@ -98,10 +98,10 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
   }
 
   return (
-    <div id="alert-heatmap" className="jump-scroll-target bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
       {/* Header */}
       <div className="px-4 py-2.5 bg-sky-500/10 border-b border-sky-500/20 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-sky-400">Alert Heatmap</h3>
+        <h3 id="alert-heatmap" className="jump-scroll-target text-sm font-semibold text-sky-400">Alert Heatmap</h3>
         <span className="text-xs text-slate-400 bg-slate-700/50 px-1.5 py-0.5 rounded">
           {totalAlerts} active
         </span>

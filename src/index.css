@@ -13,7 +13,8 @@ body {
 /* Offset anchor scroll targets below the sticky mobile map (~40vh). */
 @media (max-width: 1023px) {
   .jump-scroll-target {
-    scroll-margin-top: calc(40vh + env(safe-area-inset-top, 0px) + 12px);
+    scroll-margin-top: calc(40vh + env(safe-area-inset-top, 0px) + 16px);
+    scroll-margin-bottom: 5rem;
   }
 }
 

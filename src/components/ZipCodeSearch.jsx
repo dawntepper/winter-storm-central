@@ -1168,7 +1168,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
                 </svg>
               </button>
             </div>
-            {/* Line 2: Add to Map checkbox */}
+            {/* Line 2: Save Location checkbox */}
             <div className="mt-2">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -1177,7 +1177,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
                   onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
                 />
-                <span className="text-xs text-slate-300">Add to Map</span>
+                <span className="text-xs text-slate-300">Save Location</span>
               </label>
             </div>
           </div>

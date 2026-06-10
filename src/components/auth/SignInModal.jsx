@@ -76,6 +76,9 @@ export default function SignInModal({ onClose }) {
             <p className="text-slate-400 mt-2 text-xs">
               Open the link on this device and browser to finish signing in.
             </p>
+            <p className="text-slate-500 mt-1.5 text-xs">
+              Not in your inbox? Check spam or junk.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

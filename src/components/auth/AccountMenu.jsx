@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import SignInModal from './SignInModal';
 
@@ -15,6 +15,18 @@ export default function AccountMenu() {
   const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (e) => {
+      if (menuRef.current?.contains(e.target) || triggerRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open]);
 
   if (!isConfigured || initializing) return null;
 
@@ -43,37 +55,44 @@ export default function AccountMenu() {
 
   const email = user?.email || 'Account';
 
+  const handleSignOut = () => {
+    setOpen(false);
+    void signOut();
+  };
+
   return (
-    <div className="relative">
+    <div className={`relative ${open ? 'z-[1100]' : ''}`}>
       <button
+        ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
         className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 cursor-pointer"
         title="My Account"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         <span className="text-base">👤</span>
         <span className="hidden sm:inline">My Account</span>
       </button>
 
       {open && (
-        <>
-          {/* click-away */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 w-60 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-2">
-            <div className="px-2 py-1.5 text-xs text-slate-400 truncate">{email}</div>
-            <div className="text-[11px] text-emerald-400 px-2 pb-2">
-              Saved across your devices ✓
-            </div>
-            <button
-              onClick={async () => {
-                setOpen(false);
-                await signOut();
-              }}
-              className="w-full text-left px-2 py-1.5 rounded text-sm text-slate-200 hover:bg-slate-700 cursor-pointer"
-            >
-              Sign out
-            </button>
+        <div
+          ref={menuRef}
+          role="menu"
+          className="absolute right-0 top-full mt-1 w-60 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-2"
+        >
+          <div className="px-2 py-1.5 text-xs text-slate-400 truncate">{email}</div>
+          <div className="text-[11px] text-emerald-400 px-2 pb-2">
+            Saved across your devices ✓
           </div>
-        </>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleSignOut}
+            className="w-full text-left px-2 py-1.5 rounded text-sm text-slate-200 hover:bg-slate-700 cursor-pointer"
+          >
+            Sign out
+          </button>
+        </div>
       )}
     </div>
   );

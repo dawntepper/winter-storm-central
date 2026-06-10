@@ -1035,9 +1035,7 @@ export default function App() {
               <div className="h-px flex-1 bg-slate-700" />
             </div>
             <div className="grid grid-cols-1 gap-3">
-              <div id="live-alerts" className="jump-scroll-target">
-                <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
-              </div>
+              <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
               <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
               <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             </div>

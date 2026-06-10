@@ -64,16 +64,16 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
   if (states.length === 0) {
     return (
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 border-l-4 border-l-amber-500 p-4">
-        <h3 className="text-sm font-semibold text-slate-300 mb-2">Most Impacted States</h3>
+        <h3 id="top-states" className="jump-scroll-target text-sm font-semibold text-slate-300 mb-2">Most Impacted States</h3>
         <p className="text-xs text-slate-500 text-center py-3">No active alerts</p>
       </div>
     );
   }
 
   return (
-    <div id="top-states" className="jump-scroll-target bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
       <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20">
-        <h3 className="text-sm font-semibold text-amber-400">Most Impacted States</h3>
+        <h3 id="top-states" className="jump-scroll-target text-sm font-semibold text-amber-400">Most Impacted States</h3>
       </div>
       <div className="p-4">
 
