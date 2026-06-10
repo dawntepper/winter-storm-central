@@ -160,6 +160,18 @@ export function trackLocationCountChanged(count) {
   });
 }
 
+/**
+ * Local device locations merged into the signed-in account on sign-in.
+ *
+ * @param {{ syncedCount: number, localCount: number }} params
+ */
+export function trackLocationsSynced({ syncedCount, localCount }) {
+  track('Locations Synced', {
+    synced_count: syncedCount,
+    local_count: localCount
+  });
+}
+
 // ============================================
 // ALERT INTERACTION EVENTS
 // ============================================

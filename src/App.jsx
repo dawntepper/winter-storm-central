@@ -20,7 +20,6 @@ import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
 import { useSavedLocations } from './hooks/useSavedLocations';
-import LocationImportPrompt from './components/auth/LocationImportPrompt';
 import SignInModal from './components/auth/SignInModal';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
@@ -452,6 +451,20 @@ export default function App() {
       }
     }
   }, [localSavedCount, saved.isAuthenticated, saved.syncCtaThreshold]);
+
+  // Toast when local pins are merged into the account on sign-in.
+  const prevSyncedCountRef = useRef(null);
+  useEffect(() => {
+    if (!saved.isAuthenticated) {
+      prevSyncedCountRef.current = null;
+      return;
+    }
+    const n = saved.syncedCount;
+    if (n == null || n === prevSyncedCountRef.current) return;
+    prevSyncedCountRef.current = n;
+    const noun = n === 1 ? 'location' : 'locations';
+    setSaveToast(`☁️ Synced ${n} saved ${noun} to your account`);
+  }, [saved.isAuthenticated, saved.syncedCount]);
 
   // Auto-dismiss the save toast.
   useEffect(() => {
@@ -1447,8 +1460,6 @@ export default function App() {
 
       {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
-      {/* One-time device → account import (self-hides unless needed) */}
-      <LocationImportPrompt />
     </div>
   );
 }

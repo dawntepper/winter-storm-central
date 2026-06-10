@@ -32,6 +32,27 @@ export function parseStateFromName(name) {
   return m ? m[1].toUpperCase() : null;
 }
 
+/** Rounded lat/lon key — mirrors DB geo dedupe and App.jsx merge-down. */
+export function locationGeoKey(lat, lon) {
+  return `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)}`;
+}
+
+/**
+ * Local candidates that are not already saved on the account (by geo key).
+ * @param {{ lat: number, lon: number }[]} localCandidates
+ * @param {SavedLocation[]} dbLocations
+ */
+export function filterLocalOnlyCandidates(localCandidates, dbLocations) {
+  const accountKeys = new Set(
+    (dbLocations || [])
+      .filter((d) => d.lat != null && d.lon != null)
+      .map((d) => locationGeoKey(d.lat, d.lon))
+  );
+  return (localCandidates || []).filter(
+    (l) => l.lat != null && l.lon != null && !accountKeys.has(locationGeoKey(l.lat, l.lon))
+  );
+}
+
 /** Map a joined user_locations + locations row to a SavedLocation. */
 function mapRow(row) {
   const loc = row.locations || {};
