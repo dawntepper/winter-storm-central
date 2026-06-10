@@ -1342,8 +1342,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-3 sm:justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div>
             <h2 className={`font-bold truncate ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
               Live Weather Map
@@ -1351,11 +1351,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {stateNavSource && (
               <StateAlertsDropdown
                 source={stateNavSource}
-                className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0"
+                className="hidden sm:block appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0"
               />
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            {stateNavSource && (
+              <StateAlertsDropdown
+                source={stateNavSource}
+                className="sm:hidden appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0"
+              />
+            )}
             {/* Reset view button */}
             <button
               onClick={handleResetView}
