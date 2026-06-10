@@ -1,106 +1,30 @@
 /**
  * Storm Events Service
  *
- * Storm events are static JSON files committed to the repo at src/content/storms/.
- * Vite eagerly imports all of them at build time, so the entire catalog is bundled
- * into the client. There is no database and no network call.
- *
- * JSON schema (snake_case, nested seo/map_center) → normalized to camelCase here so
- * existing components (StormEventPage, AdminStorms, etc.) keep working unchanged.
+ * Loads storms from Supabase (live/preview) with fallback to static JSON
+ * files in src/content/storms/. JSON storms remain supported for SEO
+ * prerender and legacy workflow.
  */
+
+import {
+  normalizeJsonStorm,
+  normalizeDbStorm
+} from '../lib/stormNormalize';
+import {
+  isStormsDbEnabled,
+  listLiveStormsFromDb,
+  getLiveStormBySlugFromDb,
+  getPreviewStormBySlug,
+  getStormFromAdminApi
+} from '../lib/stormsRepo';
 
 const stormModules = import.meta.glob('/src/content/storms/*.json', { eager: true });
 
-function toArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'string' && value.trim()) {
-    return value.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  return fallback;
-}
-
-function normalizeEmergencySummary(raw) {
-  if (!raw) return null;
-  return {
-    title: raw.title || '',
-    items: toArray(raw.items),
-    updatedAt: raw.updated_at || raw.updatedAt || null
-  };
-}
-
-function normalizeEmergencyEntry(raw) {
-  if (!raw) return null;
-  return {
-    id: raw.id,
-    title: raw.title || '',
-    category: raw.category || 'Other',
-    location: raw.location || '',
-    description: raw.description || '',
-    sourceName: raw.source_name || raw.sourceName || '',
-    sourceUrl: raw.source_url || raw.sourceUrl || '',
-    socialUrl: raw.social_url || raw.socialUrl || '',
-    isOfficial: Boolean(raw.is_official ?? raw.isOfficial),
-    status: raw.status || 'active',
-    createdAt: raw.created_at || raw.createdAt || null,
-    updatedAt: raw.updated_at || raw.updatedAt || null,
-    expiresAt: raw.expires_at ?? raw.expiresAt ?? null,
-    stormSlug: raw.storm_slug || raw.stormSlug || ''
-  };
-}
-
-function normalizeEmergencyEntries(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.map(normalizeEmergencyEntry).filter(Boolean);
-}
-
-function normalize(raw) {
-  if (!raw) return null;
-
-  const mapCenter = raw.map_center || {};
-  const seo = raw.seo || {};
-
-  return {
-    id: raw.slug,
-    slug: raw.slug,
-    title: raw.title,
-    type: raw.type,
-    typeLabel: raw.type_label || raw.typeLabel || raw.type,
-    status: raw.status,
-    startDate: raw.start_date,
-    endDate: raw.end_date,
-    description: raw.description,
-    impacts: toArray(raw.impacts),
-    affectedStates: toArray(raw.affected_states),
-    alertCategories: toArray(raw.alert_categories),
-    mapCenter: {
-      lat: mapCenter.latitude ?? mapCenter.lat ?? 39.0,
-      lon: mapCenter.longitude ?? mapCenter.lon ?? -98.0
-    },
-    mapZoom: mapCenter.zoom ?? raw.map_zoom ?? 5,
-    seoTitle: seo.title || raw.seo_title || '',
-    seoDescription: seo.description || raw.seo_description || '',
-    ogImageUrl: seo.og_image_url || raw.og_image_url || '',
-    keywords: toArray(seo.keywords ?? raw.keywords),
-    peakAlertCount: raw.peak_alert_count ?? null,
-    totalAlertsIssued: raw.total_alerts_issued ?? null,
-    showEmergencyInfoPanel: Boolean(
-      raw.show_emergency_info_panel ?? raw.showEmergencyInfoPanel ?? false
-    ),
-    emergencySummary: normalizeEmergencySummary(
-      raw.emergency_summary ?? raw.emergencySummary
-    ),
-    emergencyEntries: normalizeEmergencyEntries(
-      raw.emergency_entries ?? raw.emergencyEntries
-    )
-  };
-}
-
-// Build the catalog once at module load.
-const ALL_STORMS = Object.values(stormModules)
-  .map(mod => normalize(mod.default || mod))
+const JSON_STORMS = Object.values(stormModules)
+  .map(mod => normalizeJsonStorm(mod.default || mod))
   .filter(Boolean);
 
-const BY_SLUG = new Map(ALL_STORMS.map(storm => [storm.slug, storm]));
+const JSON_BY_SLUG = new Map(JSON_STORMS.map(storm => [storm.slug, storm]));
 
 function sortByStartDateDesc(a, b) {
   return (b.startDate || '').localeCompare(a.startDate || '');
@@ -110,25 +34,102 @@ function sortByStartDateAsc(a, b) {
   return (a.startDate || '').localeCompare(b.startDate || '');
 }
 
+function mergeStorms(dbStorms, jsonStorms) {
+  const bySlug = new Map();
+  for (const storm of jsonStorms) {
+    bySlug.set(storm.slug, storm);
+  }
+  // DB live storms override JSON when slug collides
+  for (const storm of dbStorms) {
+    bySlug.set(storm.slug, storm);
+  }
+  return [...bySlug.values()];
+}
+
+async function loadDbStormsIfEnabled() {
+  if (!isStormsDbEnabled()) return [];
+  const { data, error } = await listLiveStormsFromDb();
+  if (error) {
+    console.warn('Supabase storms fetch failed, using JSON fallback:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
 export async function getAllStormEvents() {
-  const data = [...ALL_STORMS].sort(sortByStartDateDesc);
-  return { data, error: null };
+  const dbStorms = await loadDbStormsIfEnabled();
+  const merged = mergeStorms(dbStorms, JSON_STORMS);
+  return { data: merged.sort(sortByStartDateDesc), error: null };
 }
 
 export async function getActiveStormEvents() {
-  const data = ALL_STORMS
+  const dbStorms = await loadDbStormsIfEnabled();
+  const merged = mergeStorms(dbStorms, JSON_STORMS);
+  const data = merged
     .filter(s => s.status === 'active' || s.status === 'forecasted')
     .sort(sortByStartDateAsc);
   return { data, error: null };
 }
 
-export async function getStormEventBySlug(slug) {
-  const data = BY_SLUG.get(slug) || null;
-  return { data, error: data ? null : 'Event not found' };
+/**
+ * Fetch storm by slug. Options:
+ * - previewToken: access draft/preview DB storms
+ * - allowAdminPreview: sessionStorage admin_authenticated + previewToken from event
+ */
+export async function getStormEventBySlug(slug, options = {}) {
+  const { previewToken, isAdminSession = false } = options;
+
+  // 1. Live DB storm (overrides JSON)
+  if (isStormsDbEnabled()) {
+    const { data: liveStorm, error: liveError } = await getLiveStormBySlugFromDb(slug);
+    if (liveError) {
+      console.warn('Supabase live storm fetch error:', liveError.message);
+    }
+    if (liveStorm) {
+      return { data: liveStorm, error: null };
+    }
+
+    // 2. Preview/draft via token
+    if (previewToken) {
+      const { data: previewStorm, error: previewError } = await getPreviewStormBySlug(slug, previewToken);
+      if (previewError) {
+        return { data: null, error: previewError };
+      }
+      if (previewStorm) {
+        return { data: previewStorm, error: null };
+      }
+    }
+
+    // 3. Admin session on preview route (no token required)
+    if (isAdminSession) {
+      try {
+        const { data: adminStorm } = await getStormFromAdminApi(slug);
+        if (adminStorm && ['draft', 'preview'].includes(adminStorm.adminStatus)) {
+          return { data: adminStorm, error: null };
+        }
+      } catch (err) {
+        console.warn('Admin preview fetch failed:', err.message);
+      }
+    }
+  }
+
+  // 4. Static JSON fallback (unchanged /storm/:slug behavior)
+  const jsonStorm = JSON_BY_SLUG.get(slug) || null;
+  if (jsonStorm) {
+    return { data: jsonStorm, error: null };
+  }
+
+  return { data: null, error: 'Event not found' };
+}
+
+/** Export JSON catalog for build scripts / debugging. */
+export function getJsonStormCatalog() {
+  return JSON_STORMS;
 }
 
 export default {
   getAllStormEvents,
   getActiveStormEvents,
-  getStormEventBySlug
+  getStormEventBySlug,
+  getJsonStormCatalog
 };

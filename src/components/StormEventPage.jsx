@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useRef, lazy, Suspense } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import PageBackNav from './PageBackNav';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
@@ -986,6 +986,11 @@ function EventNotFound({ slug }) {
 export default function StormEventPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isPreviewRoute = location.pathname.startsWith('/storm/preview/');
+  const previewToken = searchParams.get('token');
+  const isAdminSession = sessionStorage.getItem('admin_authenticated') === 'true';
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);  // For the detail modal
@@ -1002,11 +1007,14 @@ export default function StormEventPage() {
     getAlertsByCategory
   } = useExtremeWeather(true);
 
-  // Fetch the event by slug from Supabase
+  // Fetch storm: Supabase (live/preview) with JSON fallback
   useEffect(() => {
     async function fetchEvent() {
       setLoading(true);
-      const { data, error } = await getStormEventBySlug(slug);
+      const { data, error } = await getStormEventBySlug(slug, {
+        previewToken: isPreviewRoute ? previewToken : undefined,
+        isAdminSession
+      });
 
       if (error) {
         console.error('Error fetching storm event:', error);
@@ -1016,7 +1024,11 @@ export default function StormEventPage() {
       setLoading(false);
 
       if (data) {
-        updateMetaTags(data);
+        if (isPreviewRoute && data.adminStatus) {
+          document.title = `[Preview] ${data.title} | StormTracking`;
+        } else {
+          updateMetaTags(data);
+        }
 
         // Track storm page view with full details
         trackStormPageView({
@@ -1039,7 +1051,7 @@ export default function StormEventPage() {
 
     // Cleanup: reset meta tags when leaving
     return () => resetMetaTags();
-  }, [slug]);
+  }, [slug, isPreviewRoute, previewToken, isAdminSession]);
 
   // Filter alerts for this event's affected states and categories
   const filteredAlerts = alertsData?.allAlerts?.filter(alert => {
@@ -1141,9 +1153,18 @@ export default function StormEventPage() {
   const statusLabel = statusLabels[event.status] || event.status;
 
   const showEmergencyPanel = Boolean(event.showEmergencyInfoPanel);
+  const isPreviewStorm = isPreviewRoute || event.adminStatus === 'preview' || event.adminStatus === 'draft';
 
   return (
     <div className="min-h-screen bg-slate-900 overflow-x-hidden">
+      {isPreviewStorm && (
+        <div className="bg-amber-900/40 border-b border-amber-500/40 px-4 py-2 text-center text-sm text-amber-100">
+          Preview mode — this storm is not public.{' '}
+          {event.source === 'db' && (
+            <span className="text-amber-200/80">Admin status: {event.adminStatus || 'preview'}</span>
+          )}
+        </div>
+      )}
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">

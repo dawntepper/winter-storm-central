@@ -1,7 +1,8 @@
 /**
- * Supabase database types — Phase 1 (accounts + saved locations).
+ * Supabase database types — Phase 1 (accounts + saved locations) + storms admin.
  *
- * Hand-written to match supabase/migrations/002_phase1_accounts_locations.sql.
+ * Hand-written to match supabase/migrations/002_phase1_accounts_locations.sql
+ * and supabase/migrations/003_storms_admin.sql.
  * This project is currently plain JavaScript, so this file is for editor/IDE
  * reference and a future TypeScript migration — it is not imported at runtime.
  *
@@ -120,6 +121,173 @@ export interface Database {
           }
         ];
       };
+      storm_admins: {
+        Row: {
+          id: string;
+          email: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      storms: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          storm_type: string;
+          status: 'draft' | 'preview' | 'live' | 'archived';
+          summary: string;
+          location_label: string | null;
+          start_date: string;
+          end_date: string;
+          seo_title: string | null;
+          seo_description: string | null;
+          published_at: string | null;
+          preview_token: string;
+          content: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          storm_type: string;
+          status?: 'draft' | 'preview' | 'live' | 'archived';
+          summary?: string;
+          location_label?: string | null;
+          start_date: string;
+          end_date: string;
+          seo_title?: string | null;
+          seo_description?: string | null;
+          published_at?: string | null;
+          preview_token?: string;
+          content?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          title?: string;
+          storm_type?: string;
+          status?: 'draft' | 'preview' | 'live' | 'archived';
+          summary?: string;
+          location_label?: string | null;
+          start_date?: string;
+          end_date?: string;
+          seo_title?: string | null;
+          seo_description?: string | null;
+          published_at?: string | null;
+          preview_token?: string;
+          content?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      storm_emergency_summary: {
+        Row: {
+          id: string;
+          storm_id: string;
+          title: string;
+          items: Json;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          storm_id: string;
+          title?: string;
+          items?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          storm_id?: string;
+          title?: string;
+          items?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'storm_emergency_summary_storm_id_fkey';
+            columns: ['storm_id'];
+            referencedRelation: 'storms';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      storm_emergency_info: {
+        Row: {
+          id: string;
+          storm_id: string;
+          title: string;
+          category: string;
+          location: string | null;
+          description: string | null;
+          source_name: string | null;
+          source_url: string | null;
+          social_url: string | null;
+          is_official: boolean;
+          status: 'active' | 'resolved' | 'archived';
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+          expires_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          storm_id: string;
+          title?: string;
+          category?: string;
+          location?: string | null;
+          description?: string | null;
+          source_name?: string | null;
+          source_url?: string | null;
+          social_url?: string | null;
+          is_official?: boolean;
+          status?: 'active' | 'resolved' | 'archived';
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+          expires_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          storm_id?: string;
+          title?: string;
+          category?: string;
+          location?: string | null;
+          description?: string | null;
+          source_name?: string | null;
+          source_url?: string | null;
+          social_url?: string | null;
+          is_official?: boolean;
+          status?: 'active' | 'resolved' | 'archived';
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+          expires_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'storm_emergency_info_storm_id_fkey';
+            columns: ['storm_id'];
+            referencedRelation: 'storms';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
       alert_subscriptions: {
         Row: {
           id: string;
@@ -172,6 +340,13 @@ export interface Database {
     };
     Views: { [key: string]: never };
     Functions: {
+      get_storm_preview_by_token: {
+        Args: {
+          p_slug: string;
+          p_token: string;
+        };
+        Returns: Json;
+      };
       get_or_create_location: {
         Args: {
           p_name: string;
@@ -193,3 +368,6 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type LocationRow = Database['public']['Tables']['locations']['Row'];
 export type UserLocationRow = Database['public']['Tables']['user_locations']['Row'];
 export type AlertSubscriptionRow = Database['public']['Tables']['alert_subscriptions']['Row'];
+export type StormRow = Database['public']['Tables']['storms']['Row'];
+export type StormEmergencyInfoRow = Database['public']['Tables']['storm_emergency_info']['Row'];
+export type StormEmergencySummaryRow = Database['public']['Tables']['storm_emergency_summary']['Row'];

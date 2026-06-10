@@ -10,9 +10,22 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getAllStormEvents } from '../services/stormEventsService';
 import {
+  isStormsDbEnabled,
+  listAllStormsFromAdminApi,
+  saveStormToDb,
+  publishStormToDb,
+  archiveStormInDb
+} from '../lib/stormsRepo';
+import { dbStormToFormData } from '../lib/stormNormalize';
+import {
   EMERGENCY_ENTRY_CATEGORIES,
   EMERGENCY_ENTRY_STATUSES
 } from '../data/emergencyInfoCategories';
+import {
+  trackStormPreviewed,
+  trackStormPublished,
+  trackEmergencyInfoAdded
+} from '../utils/analytics';
 
 /**
  * Convert the admin form's internal camelCase state into the snake_case
@@ -295,8 +308,24 @@ function PasswordGate({ onAuthenticate }) {
 
 const LOCALSTORAGE_KEY = 'storm_admin_draft';
 
+const DB_STATUS_OPTIONS = [
+  { value: 'draft', label: 'Draft', color: 'bg-purple-500/20 text-purple-400' },
+  { value: 'preview', label: 'Preview', color: 'bg-sky-500/20 text-sky-400' },
+  { value: 'live', label: 'Live', color: 'bg-emerald-500/20 text-emerald-400' },
+  { value: 'archived', label: 'Archived', color: 'bg-slate-500/20 text-slate-400' }
+];
+
 // Storm form component
-function StormForm({ event, onSave, onCancel }) {
+function StormForm({
+  event,
+  onSave,
+  onCancel,
+  onSaveDraftDb,
+  onSavePreviewDb,
+  onPublishDb,
+  dbSaving,
+  dbEnabled
+}) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -1213,26 +1242,66 @@ function StormForm({ event, onSave, onCancel }) {
           </div>
         )}
 
-        {/* How to publish */}
-        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-3 text-xs text-sky-100 leading-relaxed">
-          <strong className="text-sky-300">How to publish:</strong> Click{' '}
-          <span className="font-medium">{event ? 'Update Storm' : 'Create Storm'}</span> to
-          download the JSON file. Save it to{' '}
-          <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">src/content/storms/</code>{' '}
-          in the repo, commit, and push. Netlify will rebuild and the storm page will be
-          live at <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">/storm/{formData.slug || '[slug]'}</code>.
-        </div>
+        {dbEnabled ? (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-100 leading-relaxed space-y-1">
+            <p>
+              <strong className="text-emerald-300">Supabase workflow:</strong> Save Draft stores the storm in the database.
+              Preview makes it visible at{' '}
+              <code className="px-1 py-0.5 bg-slate-900/60 rounded">/storm/preview/{formData.slug || '[slug]'}?token=…</code>.
+              Launch sets status to live and triggers the Netlify build hook for SEO prerender.
+            </p>
+            <p className="text-emerald-200/70">
+              JSON download remains available below for the legacy commit → push workflow.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-3 text-xs text-sky-100 leading-relaxed">
+            <strong className="text-sky-300">JSON workflow:</strong> Configure{' '}
+            <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">VITE_SUPABASE_URL</code>{' '}
+            to enable database saves. Until then, download JSON and commit to{' '}
+            <code className="px-1 py-0.5 bg-slate-900/60 rounded text-sky-300">src/content/storms/</code>.
+          </div>
+        )}
 
-        {/* Main action buttons */}
+        {dbEnabled && (
+          <div className="grid sm:grid-cols-3 gap-2">
+            <button
+              type="button"
+              disabled={dbSaving}
+              onClick={() => onSaveDraftDb?.(formData)}
+              className="py-2 bg-purple-600/80 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg cursor-pointer"
+            >
+              {dbSaving ? 'Saving…' : 'Save Draft (DB)'}
+            </button>
+            <button
+              type="button"
+              disabled={dbSaving}
+              onClick={() => onSavePreviewDb?.(formData)}
+              className="py-2 bg-sky-600/80 hover:bg-sky-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg cursor-pointer"
+            >
+              Save & Preview
+            </button>
+            <button
+              type="button"
+              disabled={dbSaving}
+              onClick={() => onPublishDb?.(formData)}
+              className="py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg cursor-pointer"
+            >
+              Launch / Publish
+            </button>
+          </div>
+        )}
+
+        {/* JSON export (legacy workflow) */}
         <div className="flex gap-3">
           <button
             type="submit"
-            className="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 py-2 bg-slate-600 hover:bg-slate-500 text-white font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            {event ? 'Update Storm (download JSON)' : 'Create Storm (download JSON)'}
+            {event ? 'Download JSON' : 'Download JSON'}
           </button>
           <button
             type="button"
@@ -1247,28 +1316,44 @@ function StormForm({ event, onSave, onCancel }) {
   );
 }
 
-// Storm list item — static mode: shows storms from src/content/storms/.
-// Status/delete are managed by editing or removing the JSON file in the repo.
-function StormListItem({ event, onEdit, onRemove }) {
+function StormListItem({ event, onEdit, onRemove, onArchiveDb, dbEnabled }) {
   const statusOption = STATUS_OPTIONS.find(s => s.value === event.status);
+  const dbStatusOption = DB_STATUS_OPTIONS.find(s => s.value === event.adminStatus);
   const canRemoveBanner = event.status === 'active' || event.status === 'forecasted';
+  const isDbStorm = event.source === 'db';
+  const previewUrl = event.previewToken
+    ? `/storm/preview/${event.slug}?token=${event.previewToken}`
+    : `/storm/preview/${event.slug}`;
+  const publicUrl = event.adminStatus === 'live' || !isDbStorm
+    ? `/storm/${event.slug}`
+    : previewUrl;
 
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className="font-semibold text-white truncate">{event.title}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusOption?.color}`}>
               {statusOption?.label || event.status}
             </span>
+            {isDbStorm && dbStatusOption && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${dbStatusOption.color}`}>
+                DB: {dbStatusOption.label}
+              </span>
+            )}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDbStorm ? 'bg-emerald-900/40 text-emerald-300' : 'bg-slate-700 text-slate-400'}`}>
+              {isDbStorm ? 'Supabase' : 'JSON'}
+            </span>
           </div>
           <p className="text-sm text-slate-400 mb-2">/{event.slug}</p>
           <p className="text-sm text-slate-300 line-clamp-2">{event.description}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 flex-wrap">
             <span>{event.startDate} → {event.endDate}</span>
             <span>{event.affectedStates?.length || 0} states</span>
-            <span className="text-slate-600">src/content/storms/{event.slug}.json</span>
+            <span className="text-slate-600">
+              {isDbStorm ? `storms.id=${event.dbId?.slice(0, 8)}…` : `src/content/storms/${event.slug}.json`}
+            </span>
           </div>
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0">
@@ -1276,15 +1361,23 @@ function StormListItem({ event, onEdit, onRemove }) {
             onClick={() => onEdit(event)}
             className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded cursor-pointer"
           >
-            Edit & re-export
+            {isDbStorm ? 'Edit' : 'Edit & re-export'}
           </button>
           <Link
-            to={`/storm/${event.slug}`}
+            to={publicUrl}
             className="px-3 py-1.5 text-xs text-center bg-slate-700 hover:bg-slate-600 text-white rounded"
           >
-            View
+            {isDbStorm && event.adminStatus !== 'live' ? 'Preview' : 'View'}
           </Link>
-          {canRemoveBanner && (
+          {dbEnabled && isDbStorm && event.adminStatus === 'live' && (
+            <button
+              onClick={() => onArchiveDb?.(event)}
+              className="px-3 py-1.5 text-xs bg-red-900/40 hover:bg-red-800/50 text-red-300 rounded cursor-pointer"
+            >
+              Archive
+            </button>
+          )}
+          {!isDbStorm && canRemoveBanner && (
             <button
               onClick={() => onRemove(event)}
               title="Mark this storm as completed and remove its banner from the site"
@@ -1365,6 +1458,9 @@ export default function AdminStorms() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [downloadedSlug, setDownloadedSlug] = useState(null);
+  const [dbMessage, setDbMessage] = useState(null);
+  const [dbSaving, setDbSaving] = useState(false);
+  const dbEnabled = isStormsDbEnabled();
 
   useEffect(() => {
     if (authenticated) {
@@ -1374,11 +1470,29 @@ export default function AdminStorms() {
 
   const loadEvents = async () => {
     setLoading(true);
-    const { data, error } = await getAllStormEvents();
-    if (error) {
-      setError(error.message || 'Failed to load events');
-    } else {
-      setEvents(data || []);
+    setError(null);
+    try {
+      const jsonResult = await getAllStormEvents();
+      let merged = jsonResult.data || [];
+
+      if (dbEnabled) {
+        try {
+          const dbResult = await listAllStormsFromAdminApi();
+          const bySlug = new Map(merged.map((e) => [e.slug, e]));
+          for (const storm of dbResult.data || []) {
+            bySlug.set(storm.slug, storm);
+          }
+          merged = [...bySlug.values()].sort((a, b) =>
+            (b.startDate || '').localeCompare(a.startDate || '')
+          );
+        } catch (dbErr) {
+          console.warn('DB storm list unavailable:', dbErr.message);
+        }
+      }
+
+      setEvents(merged);
+    } catch (err) {
+      setError(err.message || 'Failed to load events');
     }
     setLoading(false);
   };
@@ -1396,8 +1510,121 @@ export default function AdminStorms() {
   };
 
   const handleEdit = (event) => {
-    setEditingEvent(event);
+    setEditingEvent(dbStormToFormData(event) || event);
     setShowForm(true);
+  };
+
+  const cleanFormData = (formData) => ({
+    ...formData,
+    impacts: (formData.impacts || []).filter(i => i.trim()),
+    keywords: (formData.keywords || []).filter(k => k.trim())
+  });
+
+  const trackEmergencyEntries = (formData) => {
+    const added = (formData.emergencyEntries || []).filter(e => e.title?.trim());
+    for (const entry of added) {
+      trackEmergencyInfoAdded({
+        stormSlug: formData.slug,
+        stormType: formData.type,
+        category: entry.category,
+        isOfficial: entry.isOfficial
+      });
+    }
+  };
+
+  const handleSaveDraftDb = async (formData) => {
+    if (!dbEnabled) return;
+    setDbSaving(true);
+    setError(null);
+    try {
+      const cleaned = cleanFormData(formData);
+      const result = await saveStormToDb(cleaned, undefined, 'draft');
+      trackEmergencyEntries(cleaned);
+      const bundle = result.data;
+      setDbMessage({
+        type: 'success',
+        text: `Saved draft "${cleaned.slug}" to Supabase. Preview: /storm/preview/${cleaned.slug}?token=${bundle?.storm?.preview_token || '…'}`
+      });
+      setShowForm(false);
+      setEditingEvent(null);
+      await loadEvents();
+    } catch (err) {
+      setError(err.message || 'Failed to save draft');
+    }
+    setDbSaving(false);
+  };
+
+  const handleSavePreviewDb = async (formData) => {
+    if (!dbEnabled) return;
+    setDbSaving(true);
+    setError(null);
+    try {
+      const cleaned = cleanFormData(formData);
+      const result = await saveStormToDb(cleaned, undefined, 'preview');
+      trackEmergencyEntries(cleaned);
+      const token = result.data?.storm?.preview_token;
+      trackStormPreviewed({
+        stormSlug: cleaned.slug,
+        stormType: cleaned.type,
+        adminStatus: 'preview'
+      });
+      setDbMessage({
+        type: 'success',
+        text: `Preview ready: /storm/preview/${cleaned.slug}${token ? `?token=${token}` : ''}`
+      });
+      setShowForm(false);
+      setEditingEvent(null);
+      await loadEvents();
+    } catch (err) {
+      setError(err.message || 'Failed to save preview');
+    }
+    setDbSaving(false);
+  };
+
+  const handlePublishDb = async (formData) => {
+    if (!dbEnabled) return;
+    if (!window.confirm(`Publish "${formData.title}" to /storm/${formData.slug}? This triggers a Netlify rebuild.`)) {
+      return;
+    }
+    setDbSaving(true);
+    setError(null);
+    try {
+      const cleaned = cleanFormData(formData);
+      await saveStormToDb(cleaned, undefined, 'live');
+      const result = await publishStormToDb(cleaned.slug);
+      trackEmergencyEntries(cleaned);
+      trackStormPublished({
+        stormSlug: cleaned.slug,
+        stormType: cleaned.type,
+        source: 'admin'
+      });
+      const hookNote = result.buildHook?.triggered
+        ? 'Build hook triggered.'
+        : 'Build hook not configured — set NETLIFY_BUILD_HOOK_URL.';
+      setDbMessage({
+        type: 'success',
+        text: `Published "${cleaned.slug}" — live at /storm/${cleaned.slug}. ${hookNote}`
+      });
+      setShowForm(false);
+      setEditingEvent(null);
+      await loadEvents();
+    } catch (err) {
+      setError(err.message || 'Failed to publish');
+    }
+    setDbSaving(false);
+  };
+
+  const handleArchiveDb = async (event) => {
+    if (!dbEnabled || !event?.slug) return;
+    if (!window.confirm(`Archive "${event.title}"? It will no longer appear publicly.`)) return;
+    setError(null);
+    try {
+      await archiveStormInDb(event.slug);
+      setDbMessage({ type: 'success', text: `Archived "${event.slug}".` });
+      await loadEvents();
+    } catch (err) {
+      setError(err.message || 'Failed to archive');
+    }
   };
 
   const handleRemove = (event) => {
@@ -1468,6 +1695,19 @@ export default function AdminStorms() {
           </div>
         )}
 
+        {dbMessage && (
+          <div className={`mb-4 p-3 rounded-lg text-sm flex items-start justify-between gap-3 ${
+            dbMessage.type === 'success'
+              ? 'bg-emerald-900/30 border border-emerald-500/50 text-emerald-200'
+              : 'bg-red-900/30 border border-red-500/50 text-red-200'
+          }`}>
+            <div>{dbMessage.text}</div>
+            <button onClick={() => setDbMessage(null)} className="hover:text-white cursor-pointer flex-shrink-0">
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Site Settings - always visible */}
         <SiteSettingsPanel />
 
@@ -1480,6 +1720,11 @@ export default function AdminStorms() {
               event={editingEvent}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingEvent(null); }}
+              onSaveDraftDb={handleSaveDraftDb}
+              onSavePreviewDb={handleSavePreviewDb}
+              onPublishDb={handlePublishDb}
+              dbSaving={dbSaving}
+              dbEnabled={dbEnabled}
             />
           </div>
         ) : (
@@ -1495,9 +1740,9 @@ export default function AdminStorms() {
             </div>
 
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Storms are stored as JSON files in <code className="px-1 py-0.5 bg-slate-800 rounded text-slate-400">src/content/storms/</code>.
-              To <strong>delete</strong> a storm or <strong>change its status</strong>, edit (or remove) the JSON file in the repo and commit.
-              Use <em>Edit & re-export</em> below to download an updated version after changes.
+              {dbEnabled
+                ? 'Storms can be saved to Supabase (draft / preview / live) or exported as JSON for the legacy commit workflow. DB storms override JSON when slugs collide on the public site.'
+                : 'Storms are stored as JSON files in src/content/storms/. Configure Supabase env vars to enable database saves.'}
             </p>
 
             {loading ? (
@@ -1519,10 +1764,12 @@ export default function AdminStorms() {
               <div className="space-y-3">
                 {events.map(event => (
                   <StormListItem
-                    key={event.id}
+                    key={`${event.source || 'json'}-${event.slug}`}
                     event={event}
                     onEdit={handleEdit}
                     onRemove={handleRemove}
+                    onArchiveDb={handleArchiveDb}
+                    dbEnabled={dbEnabled}
                   />
                 ))}
               </div>

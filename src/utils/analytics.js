@@ -573,6 +573,40 @@ export function trackEmergencyInfoLinkClicked({
   });
 }
 
+/**
+ * Admin opened a draft/preview storm page.
+ */
+export function trackStormPreviewed({ stormSlug, stormType, adminStatus }) {
+  track('Storm Previewed', {
+    storm_slug: stormSlug,
+    storm_type: stormType,
+    admin_status: adminStatus
+  });
+}
+
+/**
+ * Admin published a storm (status → live, build hook triggered).
+ */
+export function trackStormPublished({ stormSlug, stormType, source }) {
+  track('Storm Published', {
+    storm_slug: stormSlug,
+    storm_type: stormType,
+    source: source || 'admin'
+  });
+}
+
+/**
+ * Admin added or saved an emergency info entry for a storm.
+ */
+export function trackEmergencyInfoAdded({ stormSlug, stormType, category, isOfficial }) {
+  track('Emergency Info Added', {
+    storm_slug: stormSlug,
+    storm_type: stormType,
+    category,
+    is_official: isOfficial
+  });
+}
+
 // ============================================
 // RADAR PAGE NAVIGATION EVENTS
 // ============================================
@@ -1156,6 +1190,9 @@ export default {
   trackStormPageEntry,
   trackEmergencyInfoPanelViewed,
   trackEmergencyInfoLinkClicked,
+  trackStormPreviewed,
+  trackStormPublished,
+  trackEmergencyInfoAdded,
   trackRadarLinkClick,
   trackStormRadarClick,
   trackRadarTypeChange,

@@ -26,6 +26,7 @@ createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/" element={<App />} />
         <Route path="/radar" element={<RadarPage />} />
+        <Route path="/storm/preview/:slug" element={<StormEventPage />} />
         <Route path="/storm/:slug" element={<StormEventPage />} />
         <Route path="/alerts" element={<LiveAlertsPage />} />
         <Route path="/alerts/:slug" element={<AlertsRouteDispatch />} />
