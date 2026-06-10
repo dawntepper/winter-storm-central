@@ -12,7 +12,8 @@ import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { fetchCountyGeoJSON } from '../services/geoLocationService';
-import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
+import { ABBR_TO_SLUG } from '../data/stateConfig';
+import StateAlertsDropdown from './StateAlertsDropdown';
 import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
@@ -220,26 +221,10 @@ export default function RadarPage() {
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>
             </Link>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN });
-                  setNavSource(NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN);
-                  navigate(`/alerts/${e.target.value}`);
-                  e.target.value = '';
-                }
-              }}
-              className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
-            >
-              <option value="" disabled>State Alerts/Radar ▾</option>
-              {Object.entries(US_STATES).map(([slug, s]) => (
-                <option key={slug} value={slug}>{s.name}</option>
-              ))}
-            </select>
-          </div>
+          <StateAlertsDropdown
+            source={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN}
+            className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+          />
         </div>
       </header>
 
@@ -339,7 +324,7 @@ export default function RadarPage() {
             <div className="sm:w-56">
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Color Scheme</label>
               <select
-                value={colorScheme}
+                value={String(colorScheme)}
                 onChange={(e) => { const val = Number(e.target.value); setColorScheme(val); trackRadarColorSchemeChange(RADAR_COLOR_SCHEMES[val]); }}
                 className="w-full px-3 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
               >
@@ -361,6 +346,7 @@ export default function RadarPage() {
             isHero
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
+            stateNavSource={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN}
             centerOn={gpsCenter || centerOn}
             selectedStateCode={gpsStateCode}
             highlightArea={userArea}

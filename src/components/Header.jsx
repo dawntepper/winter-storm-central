@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, trackBrowseByStateClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
-import { US_STATES } from '../data/stateConfig';
+import { trackShare, trackSupportClick, trackManualRefresh, trackRadarLinkClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import StateAlertsDropdown from './StateAlertsDropdown';
 import ContactLink from './ContactLink';
 import AccountMenu from './auth/AccountMenu';
 
@@ -18,7 +18,6 @@ function getSiteSettings() {
 }
 
 export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, loading, stormPhase, isStale }) {
-  const navigate = useNavigate();
   const [shareMessage, setShareMessage] = useState('');
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showBetaTooltip, setShowBetaTooltip] = useState(false);
@@ -168,26 +167,7 @@ export default function Header({ lastRefresh, lastSuccessfulUpdate, onRefresh, l
             <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
               <Link to="/alerts" className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
               <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
-              <span className="relative inline-flex items-center">
-                <select
-                  defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      const abbr = US_STATES[e.target.value]?.abbr;
-                      if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN });
-                      setNavSource(NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN);
-                      navigate(`/alerts/${e.target.value}`);
-                      e.target.value = '';
-                    }
-                  }}
-                  className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2.5 pr-2 py-1 rounded focus:outline-none text-xs sm:text-sm font-medium border border-sky-500/30 transition-colors"
-                >
-                  <option value="" disabled>State Alerts/Radar ▾</option>
-                  {Object.entries(US_STATES).map(([slug, s]) => (
-                    <option key={slug} value={slug}>{s.name}</option>
-                  ))}
-                </select>
-              </span>
+              <StateAlertsDropdown source={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN} />
             </div>
           </div>
         </div>

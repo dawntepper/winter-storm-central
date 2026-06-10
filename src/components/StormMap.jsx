@@ -6,6 +6,7 @@ import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { getCitySlugForLocation } from '../utils/cityLookup';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
+import StateAlertsDropdown from './StateAlertsDropdown';
 import {
   trackRadarToggle,
   trackAlertsToggle,
@@ -438,12 +439,9 @@ export const RADAR_COLOR_SCHEMES = {
   8: 'Dark Sky',
 };
 
-// Get a GIBS-compatible timestamp (rounded down to nearest 10 min, offset 30 min for availability)
-function getGibsTimestamp() {
-  const now = new Date(Date.now() - 30 * 60 * 1000); // 30 min ago for data availability
-  now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
-  return now.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
+// GIBS WMTS time dimension. Computed timestamps often 404 when the frame
+// isn't published yet; "default" resolves to the latest available imagery.
+const GIBS_TIME = 'default';
 
 // Radar/satellite layer component
 // - precipitation: RainViewer (past radar with color scheme support)
@@ -503,11 +501,12 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
       layerRef.current = layer;
     };
 
+    let cancelled = false;
+
     if (layerType === 'satellite') {
       // NASA GIBS GOES-East GeoColor — true color (day) / blended IR (night)
-      const time = getGibsTimestamp();
       addLayer(
-        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${time}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`,
+        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${GIBS_TIME}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`,
         {
           subdomains: 'abc',
           maxNativeZoom: 7,
@@ -517,9 +516,8 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
       );
     } else if (layerType === 'infrared') {
       // NASA GIBS GOES-East Clean Infrared — cloud top temperatures
-      const time = getGibsTimestamp();
       addLayer(
-        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+        `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${GIBS_TIME}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
         {
           subdomains: 'abc',
           maxNativeZoom: 6,
@@ -533,6 +531,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
         try {
           const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
           const data = await response.json();
+          if (cancelled) return;
           const host = data.host || 'https://tilecache.rainviewer.com';
           const latest = data.radar?.past?.slice(-1)[0];
           if (latest && show) {
@@ -557,11 +556,11 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
 
     // Refresh every 5 minutes
     const interval = setInterval(() => {
+      if (cancelled) return;
       if (layerType === 'satellite' || layerType === 'infrared') {
-        const time = getGibsTimestamp();
         const url = layerType === 'satellite'
-          ? `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${time}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`
-          : `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${time}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
+          ? `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${GIBS_TIME}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`
+          : `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/${GIBS_TIME}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`;
         addLayer(url, {
           subdomains: 'abc',
           maxNativeZoom: layerType === 'satellite' ? 7 : 6,
@@ -573,6 +572,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
           try {
             const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
             const data = await response.json();
+            if (cancelled) return;
             const host = data.host || 'https://tilecache.rainviewer.com';
             const latest = data.radar?.past?.slice(-1)[0];
             if (latest) {
@@ -593,6 +593,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
     }, 5 * 60 * 1000);
 
     return () => {
+      cancelled = true;
       clearInterval(interval);
       onLoadingChange?.(false);
       if (layerRef.current) {
@@ -1109,7 +1110,7 @@ function PreviewMarker({ location }) {
   return <Marker position={position} icon={labelIcon} />;
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4 }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
@@ -1342,11 +1343,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <h2 className={`font-bold ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div>
+            <h2 className={`font-bold truncate ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
               Live Weather Map
             </h2>
+            {stateNavSource && (
+              <StateAlertsDropdown
+                source={stateNavSource}
+                className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0"
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {/* Reset view button */}
