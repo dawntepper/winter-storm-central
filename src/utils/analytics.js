@@ -630,6 +630,23 @@ export function trackAlertSignupError(error) {
 }
 
 // ============================================
+// AUTH EVENTS
+// ============================================
+
+/**
+ * Track successful magic-link sign-in form submission (OTP sent).
+ * Distinct from Alert Signup — use as a separate Plausible custom goal.
+ *
+ * @param {{ accountHint?: 'new' | 'returning', authMethod?: string }} params
+ */
+export function trackSignInFormSubmitted({ accountHint = 'new', authMethod = 'magic_link' } = {}) {
+  track('Sign In Form Submitted', {
+    account_hint: accountHint,
+    auth_method: authMethod
+  });
+}
+
+// ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
 
@@ -1051,6 +1068,7 @@ export default {
   trackGeolocationUsed,
   trackAlertSignup,
   trackAlertSignupError,
+  trackSignInFormSubmitted,
   trackLocationSearch,
   trackLocationSearchFailed,
   startSessionTracking,

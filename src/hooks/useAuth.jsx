@@ -58,6 +58,7 @@ function useAuthState() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) markAccountKnown();
       setInitializing(false);
     });
 
@@ -71,9 +72,9 @@ function useAuthState() {
         setInitializing(false);
         setLoading(false);
 
-        // Handle specific events
-        if (event === 'SIGNED_IN') {
-          markAccountKnown(); // returning visitors see "Sign in" copy next time
+        // Only mark after a completed sign-in — not on magic-link request alone.
+        if (event === 'SIGNED_IN' && session?.user) {
+          markAccountKnown();
           console.log('User signed in:', session?.user?.email);
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
@@ -164,7 +165,6 @@ function useAuthState() {
       return { error };
     }
 
-    markAccountKnown(); // they've started an account → "Sign in" copy next time
     return { data, message: 'Check your email for the login link!' };
   }, []);
 

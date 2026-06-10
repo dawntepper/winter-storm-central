@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { hasAccountHint } from '../../lib/accountHint';
+import { trackSignInFormSubmitted } from '../../utils/analytics';
 
 /**
  * Magic-link sign-in modal (v1 = passwordless email only). Calm and
@@ -8,8 +9,9 @@ import { hasAccountHint } from '../../lib/accountHint';
  *
  * Benefit-focused, not account-focused: weather is always free; signing in just
  * lets your saved locations follow you across devices. Copy softens to a
- * "Welcome back" variant for anyone who's signed in before on this device. The
- * action is "Continue with email" (the magic link both creates and signs in).
+ * "Welcome back" only after a completed sign-in on this device; newcomers see
+ * "Create account". The action is "Continue with email" (the magic link both
+ * creates and signs in).
  */
 export default function SignInModal({ onClose }) {
   const { signInWithMagicLink } = useAuth();
@@ -30,6 +32,7 @@ export default function SignInModal({ onClose }) {
     } else {
       setStatus('sent');
       setMessage(msg || 'Check your email for the login link!');
+      trackSignInFormSubmitted({ accountHint: returning ? 'returning' : 'new' });
     }
   };
 
@@ -44,7 +47,7 @@ export default function SignInModal({ onClose }) {
       >
         <div className="flex items-start justify-between mb-2">
           <h2 className="text-lg font-bold text-white">
-            {returning ? 'Welcome back' : 'Save locations across devices'}
+            {returning ? 'Welcome back' : 'Create account'}
           </h2>
           <button
             onClick={onClose}
@@ -63,7 +66,7 @@ export default function SignInModal({ onClose }) {
           <>
             <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
             <p className="text-sm text-slate-400 mb-4">
-              Sign in with email to access your saved locations on any device.
+              Create a free account with email to save your locations across devices.
             </p>
           </>
         )}

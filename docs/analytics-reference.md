@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-06-09.
+Last reviewed: 2026-06-10.
 
 ---
 
@@ -29,6 +29,7 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
 | `Visitor` | New-vs-returning classification — fired once per browser session on app mount (`visitor_type`, `visit_count`, `days_since_first_visit`) |
+| `Sign In Form Submitted` | Magic-link sign-in modal — email submitted and OTP sent successfully (`account_hint`, `auth_method`) |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
 
@@ -270,6 +271,26 @@ Fires from `/admin/seo` bulk-submit buttons and (Session 2) the build-time
 hook in `scripts/generate-sitemap.js`. Use it to track how often submissions
 happen and what the success rate looks like — failures usually mean the
 verification file isn't accessible or the IndexNow API is rate-limiting.
+
+### Auth events
+
+```
+Sign In Form Submitted
+  account_hint   "new" | "returning" — from local account-known hint (hasAccountHint),
+                   not whether the email exists server-side
+  auth_method    "magic_link" (default — v1 is passwordless email only)
+
+Alert Signup
+  signup_type    "new" | "update"
+  zip_code       5-digit ZIP (no email — PII avoided)
+
+Alert Signup Error
+  error          error message string
+```
+
+`Sign In Form Submitted` fires from `SignInModal` only after Supabase accepts the
+OTP request — not on validation errors or API failures. Distinct from alert signup
+goals so sign-in funnel can be tracked separately.
 
 ### Affiliate events (gated)
 
