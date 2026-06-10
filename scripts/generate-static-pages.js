@@ -43,6 +43,15 @@ const PAGES = [
     schemaName: 'Storm Preparedness Guide',
     schemaDescription: 'Recommended gear for hurricane season, severe weather, and extended outages',
   },
+  {
+    route: 'add-to-home',
+    title: 'Add StormTracking to Your Home Screen | StormTracking',
+    description: 'Install stormtracking.io on your iPhone or Android home screen for quick access to live weather radar and NWS alerts.',
+    ogTitle: 'Add StormTracking to Your Home Screen',
+    ogDescription: 'Pin StormTracking to your phone for one-tap access to live radar and severe weather alerts.',
+    schemaName: 'Add to Home Screen Guide',
+    schemaDescription: 'How to add StormTracking to your mobile home screen on iOS and Android',
+  },
 ];
 
 function generateStaticHTML(baseHTML, page) {

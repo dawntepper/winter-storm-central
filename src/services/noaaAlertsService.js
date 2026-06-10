@@ -197,25 +197,34 @@ async function fetchAlertsFromAPI() {
 }
 
 /**
+ * Read the localStorage cache entry without TTL filtering.
+ */
+function readAlertsCacheEntry() {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const { data, timestamp } = JSON.parse(cached);
+    return { data, age: Date.now() - timestamp, fromCache: true };
+  } catch (e) {
+    console.error('Error reading alerts cache:', e);
+    return null;
+  }
+}
+
+/**
  * Get cached alerts if still valid. TTL is dynamic: 2 min when the cached
  * payload contains an urgent warning (Tornado / Flash Flood), 10 min
  * otherwise. This pairs with the hook's adaptive polling so fast cycles
  * don't get swallowed by a stale long-lived cache.
  */
 function getCachedAlerts() {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (!cached) return null;
+  const entry = readAlertsCacheEntry();
+  if (!entry) return null;
 
-    const { data, timestamp } = JSON.parse(cached);
-    const age = Date.now() - timestamp;
-    const ttl = hasUrgentAlert(data?.allAlerts) ? CACHE_TTL_FAST : CACHE_TTL_NORMAL;
-
-    if (age < ttl) {
-      return { data, age, fromCache: true };
-    }
-  } catch (e) {
-    console.error('Error reading alerts cache:', e);
+  const ttl = hasUrgentAlert(entry.data?.allAlerts) ? CACHE_TTL_FAST : CACHE_TTL_NORMAL;
+  if (entry.age < ttl) {
+    return entry;
   }
   return null;
 }
@@ -338,13 +347,15 @@ export async function fetchExtremeWeather(forceRefresh = false) {
   } catch (error) {
     console.error('Error fetching NOAA alerts:', error);
 
-    // Try to return stale cache on error
-    const staleCache = getCachedAlerts();
+    // Try to return any cached payload on error, even past TTL — better than
+    // leaving the UI on React state that may be hours old with no stale flag.
+    const staleCache = readAlertsCacheEntry();
     if (staleCache) {
       return {
         ...staleCache.data,
         fromCache: true,
         stale: true,
+        cacheAge: staleCache.age,
         error: error.message
       };
     }

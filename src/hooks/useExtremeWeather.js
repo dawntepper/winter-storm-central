@@ -26,6 +26,14 @@ import {
   CATEGORY_ORDER,
 } from '../services/noaaAlertsService';
 
+// Short interval to detect overdue data when the long poll timer was missed
+// (background-tab throttling, laptop sleep with tab still "visible", etc.).
+const STALENESS_WATCHDOG_MS = 60 * 1000;
+
+function getRefreshThreshold(allAlerts) {
+  return hasUrgentAlert(allAlerts) ? REFRESH_INTERVAL_FAST : REFRESH_INTERVAL_NORMAL;
+}
+
 export function useExtremeWeather(enabled = true) {
   const [alerts, setAlerts] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,10 +44,22 @@ export function useExtremeWeather(enabled = true) {
   // Track the active polling interval so we only swap setInterval when the
   // mode actually changes — not on every fetch tick.
   const intervalRef = useRef({ id: null, ms: null });
+  const inFlightRef = useRef(false);
+  const lastUpdatedRef = useRef(null);
+  const alertsRef = useRef(null);
+
+  useEffect(() => {
+    lastUpdatedRef.current = lastUpdated;
+  }, [lastUpdated]);
+
+  useEffect(() => {
+    alertsRef.current = alerts;
+  }, [alerts]);
 
   const fetchAlerts = useCallback(async (forceRefresh = false) => {
-    if (!enabled) return;
+    if (!enabled || inFlightRef.current) return;
 
+    inFlightRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -60,9 +80,24 @@ export function useExtremeWeather(enabled = true) {
       // Intentionally leave the active interval untouched on fetch failure —
       // retry happens on the next tick at the existing cadence.
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
   }, [enabled]);
+
+  const maybeRefreshIfStale = useCallback(() => {
+    if (!enabled || document.visibilityState !== 'visible') return;
+
+    const updatedAt = lastUpdatedRef.current;
+    if (!updatedAt) return;
+
+    const age = Date.now() - updatedAt.getTime();
+    const threshold = getRefreshThreshold(alertsRef.current?.allAlerts);
+    if (age >= threshold) {
+      console.log('Alert data overdue, refreshing...');
+      fetchAlerts(true);
+    }
+  }, [enabled, fetchAlerts]);
 
   // Initial fetch
   useEffect(() => {
@@ -116,28 +151,34 @@ export function useExtremeWeather(enabled = true) {
     };
   }, []);
 
-  // Refresh when tab becomes visible AND data is older than the current
-  // cache TTL. Threshold matches the active cadence so a returning user
-  // during fast mode gets fresh data after just 2 min idle.
+  // Catch stale data when the tab returns, the window regains focus, or the
+  // page is restored from bfcache. Also run a short watchdog while visible —
+  // long setInterval timers are throttled in background tabs and don't fire
+  // during system sleep, so a pinned "visible" tab can show hours-old watches.
   useEffect(() => {
     if (!enabled) return;
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && lastUpdated) {
-        const age = Date.now() - lastUpdated.getTime();
-        const threshold = hasUrgentAlert(alerts?.allAlerts)
-          ? REFRESH_INTERVAL_FAST
-          : REFRESH_INTERVAL_NORMAL;
-        if (age > threshold) {
-          console.log('Tab visible, refreshing alerts...');
-          fetchAlerts(true);
-        }
+      if (document.visibilityState === 'visible') {
+        maybeRefreshIfStale();
       }
     };
 
+    const watchdogId = setInterval(maybeRefreshIfStale, STALENESS_WATCHDOG_MS);
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [enabled, lastUpdated, alerts, fetchAlerts]);
+    window.addEventListener('focus', maybeRefreshIfStale);
+    window.addEventListener('pageshow', maybeRefreshIfStale);
+    window.addEventListener('online', maybeRefreshIfStale);
+
+    return () => {
+      clearInterval(watchdogId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', maybeRefreshIfStale);
+      window.removeEventListener('pageshow', maybeRefreshIfStale);
+      window.removeEventListener('online', maybeRefreshIfStale);
+    };
+  }, [enabled, maybeRefreshIfStale]);
 
   // Manual refresh
   const refresh = useCallback(() => {

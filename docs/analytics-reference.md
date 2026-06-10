@@ -29,7 +29,8 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
 | `Visitor` | New-vs-returning classification — fired once per browser session on app mount (`visitor_type`, `visit_count`, `days_since_first_visit`) |
-| `Sign Up Form Submitted` | First-time signup intent — magic link requested from "Create account" path only (`auth_method`); not fired for returning users |
+| `Sign Up Form Submitted` | First-time signup intent — magic link requested when `!hasAccountHint()` (`auth_method`); UI is unified "Sign In" but event still gates on per-device account hint |
+| `Add To Home Page View` | `/add-to-home` mount — mobile install instructions (`source`; `sign_in_modal` when linked from SignInModal) |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
 
@@ -278,6 +279,11 @@ verification file isn't accessible or the IndexNow API is rate-limiting.
 Sign Up Form Submitted
   auth_method    "magic_link" (default — v1 is passwordless email only)
 
+Add To Home Page View
+  source         a value from NAV_SOURCES (sign_in_modal when linked from
+                 SignInModal on mobile; direct_url / internal_link / etc.
+                 otherwise via resolveSource)
+
 Alert Signup
   signup_type    "new" | "update"
   zip_code       5-digit ZIP (no email — PII avoided)
@@ -287,10 +293,10 @@ Alert Signup Error
 ```
 
 `Sign Up Form Submitted` fires from `SignInModal` only when `!hasAccountHint()` —
-the newcomer / "Create account" copy path — and only after Supabase accepts the
-OTP request (not on validation errors or API failures). Returning users who see
-"Welcome back" and request another magic link do **not** fire this event. Distinct
-from alert signup goals so the new-account funnel can be tracked separately.
+and only after Supabase accepts the OTP request (not on validation errors or API
+failures). Users who have completed sign-in on this device before (`st_account_known`)
+do **not** fire this event when requesting another magic link. Distinct from alert
+signup goals so the new-account funnel can be tracked separately.
 
 ### Affiliate events (gated)
 
@@ -344,6 +350,9 @@ RADAR_PAGE_LINK             "radar_page_link"
 // "Weather Near Me" feature → state alerts page
 NEAR_ME_HEADER              "near_me_header"            "{State} alerts & city forecasts" chip
 MAP_COUNTY_CLICK            "map_county_click"          Highlighted "your area" county polygon
+
+// Auth / onboarding
+SIGN_IN_MODAL               "sign_in_modal"             Add-to-home link in SignInModal (mobile)
 
 // Generic
 HEADER_NAVIGATION           "header_navigation"

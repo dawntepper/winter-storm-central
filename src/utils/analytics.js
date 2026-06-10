@@ -644,6 +644,17 @@ export function trackSignUpFormSubmitted({ authMethod = 'magic_link' } = {}) {
   track('Sign Up Form Submitted', { auth_method: authMethod });
 }
 
+/**
+ * Track /add-to-home page view on mount. Pass `source` explicitly when
+ * called from a known handler, or omit to resolve from stashed nav source /
+ * referrer (e.g. sign-in modal link vs direct URL).
+ */
+export function trackAddToHomePageView(source) {
+  track('Add To Home Page View', {
+    source: resolveSource(source)
+  });
+}
+
 // ============================================
 // ZIP CODE SEARCH EVENTS
 // ============================================
@@ -724,6 +735,9 @@ export const NAV_SOURCES = {
   // "Weather Near Me" feature → state alerts page
   NEAR_ME_HEADER: 'near_me_header',        // "{State} alerts & city forecasts" chip in NearMeHeader
   MAP_COUNTY_CLICK: 'map_county_click',    // clicking the highlighted "your area" county polygon
+
+  // Auth / onboarding
+  SIGN_IN_MODAL: 'sign_in_modal',
 
   // Generic
   HEADER_NAVIGATION: 'header_navigation',
@@ -1067,6 +1081,7 @@ export default {
   trackAlertSignup,
   trackAlertSignupError,
   trackSignUpFormSubmitted,
+  trackAddToHomePageView,
   trackLocationSearch,
   trackLocationSearchFailed,
   startSessionTracking,

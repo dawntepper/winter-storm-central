@@ -1,24 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { hasAccountHint } from '../../lib/accountHint';
-import { trackSignUpFormSubmitted } from '../../utils/analytics';
+import { trackSignUpFormSubmitted, setNavSource, NAV_SOURCES } from '../../utils/analytics';
 
 /**
  * Magic-link sign-in modal (v1 = passwordless email only). Calm and
  * dismissible — never blocks weather; only opened on user intent.
  *
- * Benefit-focused, not account-focused: weather is always free; signing in just
- * lets your saved locations follow you across devices. Copy softens to a
- * "Welcome back" only after a completed sign-in on this device; newcomers see
- * "Create account". The action is "Continue with email" (the magic link both
- * creates and signs in).
+ * Unified "Sign In" copy — the magic link both creates and signs in. Analytics
+ * still gates Sign Up Form Submitted on !hasAccountHint() for first-time intent.
  */
 export default function SignInModal({ onClose }) {
   const { signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [message, setMessage] = useState('');
-  const returning = hasAccountHint();
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 768
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +38,7 @@ export default function SignInModal({ onClose }) {
     } else {
       setStatus('sent');
       setMessage(msg || 'Check your email for the login link!');
-      if (!returning) trackSignUpFormSubmitted();
+      if (!hasAccountHint()) trackSignUpFormSubmitted();
     }
   };
 
@@ -46,9 +52,7 @@ export default function SignInModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-2">
-          <h2 className="text-lg font-bold text-white">
-            {returning ? 'Welcome back' : 'Create account'}
-          </h2>
+          <h2 className="text-lg font-bold text-white">Sign In</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-200 cursor-pointer text-lg leading-none"
@@ -58,18 +62,10 @@ export default function SignInModal({ onClose }) {
           </button>
         </div>
 
-        {returning ? (
-          <p className="text-sm text-slate-400 mb-4">
-            Sign in to access your saved locations on any device.
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
-            <p className="text-sm text-slate-400 mb-4">
-              Create a free account with email to save your locations across devices.
-            </p>
-          </>
-        )}
+        <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
+        <p className="text-sm text-slate-400 mb-4">
+          Sign in with email to save your locations across devices.
+        </p>
 
         {status === 'sent' ? (
           <div className="text-sm bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
@@ -100,6 +96,20 @@ export default function SignInModal({ onClose }) {
             >
               {status === 'sending' ? 'Sending…' : 'Continue with email'}
             </button>
+            {isMobile && (
+              <p className="mt-3 text-center text-xs text-slate-500">
+                <Link
+                  to="/add-to-home"
+                  onClick={() => {
+                    setNavSource(NAV_SOURCES.SIGN_IN_MODAL);
+                    onClose();
+                  }}
+                  className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline"
+                >
+                  Add StormTracking to your home screen
+                </Link>
+              </p>
+            )}
           </form>
         )}
       </div>

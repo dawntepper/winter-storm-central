@@ -304,7 +304,7 @@ export default function App() {
   // Saved-locations abstraction (anon localStorage vs authed Supabase).
   // Weather access never depends on this — accounts are pure convenience.
   const saved = useSavedLocations();
-  const [saveToast, setSaveToast] = useState(null);       // "Location saved" confirmation
+  const [saveToast, setSaveToast] = useState(null);       // "Added to map" confirmation
   const [showSyncCta, setShowSyncCta] = useState(false);  // gentle, dismissible "sign in to sync" CTA
   const [showSignIn, setShowSignIn] = useState(false);
   const prevLocCountRef = useRef(null);
@@ -441,7 +441,7 @@ export default function App() {
     prevLocCountRef.current = len;
     if (prev === null || !toastReadyRef.current) return; // skip initial hydration
     if (len > prev) {
-      setSaveToast('📍 Location saved');
+      setSaveToast('📍 Added to map');
       // Anonymous saving is unlimited. Once a guest has a few locations, show a
       // one-time, dismissible "sign in to sync" CTA — never a block, and never
       // framed as required to use StormTracking.
@@ -1035,7 +1035,9 @@ export default function App() {
               <div className="h-px flex-1 bg-slate-700" />
             </div>
             <div className="grid grid-cols-1 gap-3">
-              <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
+              <div id="live-alerts" className="jump-scroll-target">
+                <LiveAlertsWidget alerts={alertsData} loading={alertsLoading} onAlertTap={handleAlertTap} onAddToMap={handleAddAlertToMap} />
+              </div>
               <MostImpactedStates alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
               <StateHeatmap alerts={alertsData} loading={alertsLoading} onStateZoom={handleStateZoom} />
             </div>
@@ -1362,7 +1364,7 @@ export default function App() {
       <AlertSignupBar />
       <PushNotificationCard />
 
-      {/* "Location saved" confirmation toast */}
+      {/* Map-add confirmation toast (not shown in Check Location card) */}
       {saveToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1500] pointer-events-none">
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/95 border border-slate-600 shadow-lg text-sm font-medium text-slate-100">

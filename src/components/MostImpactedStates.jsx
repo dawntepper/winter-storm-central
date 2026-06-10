@@ -71,7 +71,7 @@ export default function MostImpactedStates({ alerts, loading, onStateZoom }) {
   }
 
   return (
-    <div id="top-states" className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+    <div id="top-states" className="jump-scroll-target bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
       <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20">
         <h3 className="text-sm font-semibold text-amber-400">Most Impacted States</h3>
       </div>

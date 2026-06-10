@@ -10,6 +10,13 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Offset anchor scroll targets below the sticky mobile map (~40vh). */
+@media (max-width: 1023px) {
+  .jump-scroll-target {
+    scroll-margin-top: calc(40vh + env(safe-area-inset-top, 0px) + 12px);
+  }
+}
+
 /* Two-finger gesture hint for maps on touch devices */
 .leaflet-container.show-gesture-hint::after {
   content: 'Use two fingers to move the map';

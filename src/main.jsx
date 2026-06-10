@@ -10,6 +10,7 @@ import AdminHome from './pages/AdminHome.jsx'
 import AdminWeatherSummary from './pages/AdminWeatherSummary.jsx'
 import AdminSeo from './pages/AdminSeo.jsx'
 import PrepPage from './pages/PrepPage.jsx'
+import AddToHomePage from './pages/AddToHomePage.jsx'
 import ForecastPage from './pages/ForecastPage.jsx'
 import LiveAlertsPage from './components/LiveAlertsPage.jsx'
 import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/alerts" element={<LiveAlertsPage />} />
         <Route path="/alerts/:slug" element={<AlertsRouteDispatch />} />
         <Route path="/prep" element={<PrepPage />} />
+        <Route path="/add-to-home" element={<AddToHomePage />} />
         <Route path="/hurricane-prep" element={<Navigate to="/prep" replace />} />
         <Route path="/storm-prep" element={<Navigate to="/prep" replace />} />
         <Route path="/forecast/:slug" element={<ForecastPage />} />

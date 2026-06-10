@@ -36,14 +36,14 @@ export default function StickyMiniMap({ selectedStateCode, mainMapId = 'storm-ma
   return (
     <div className="fixed bottom-4 left-3 right-3 z-[1000] flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-600/95 border border-slate-500 backdrop-blur-sm shadow-lg shadow-black/40">
       <span className="text-[11px] text-slate-300 font-medium flex-shrink-0">Jump to:</span>
+      <a href="#live-alerts" className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors">
+        Live Alerts
+      </a>
       <a href="#top-states" className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors">
-        Top States
+        Impacted States
       </a>
       <a href="#alert-heatmap" className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 transition-colors">
-        Heatmap
-      </a>
-      <a href="#extreme-weather" className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 transition-colors">
-        Alerts
+        Heat Map
       </a>
     </div>
   );

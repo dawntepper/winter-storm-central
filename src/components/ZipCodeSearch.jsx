@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
-import { useAuth } from '../hooks/useAuth';
-import SignInModal from './auth/SignInModal';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -720,10 +718,6 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
   // Store all saved locations with their map visibility
   const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
 
-  // Auth state for the device-storage note (offers cross-device save, never gates).
-  const { isConfigured, isAuthenticated } = useAuth();
-  const [showSignIn, setShowSignIn] = useState(false);
-
   // Track window resize for mobile detection
   useEffect(() => {
     const handleResize = () => {
@@ -1127,30 +1121,6 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
         {error && (
           <p className="text-red-400 text-xs mt-2">{error}</p>
         )}
-
-        {/* Device-storage note — shown only once at least one location has been
-            saved, so it never claims "Saved…" with nothing saved. Offers an
-            optional sign-in when signed out; confirms when signed in; hidden if
-            Supabase isn't configured (degrades to device-only behavior). */}
-        {Object.keys(savedLocations).length > 0 && (
-          isConfigured && isAuthenticated ? (
-            <p className="text-emerald-400 text-[10px] mt-2">Saved across your devices ✓</p>
-          ) : isConfigured ? (
-            <p className="text-slate-500 text-[10px] mt-2">
-              Save your locations across devices.{' '}
-              <button
-                onClick={() => setShowSignIn(true)}
-                className="text-sky-400 hover:text-sky-300 cursor-pointer underline-offset-2 hover:underline"
-              >
-                Sign in with email
-              </button>
-            </p>
-          ) : (
-            <p className="text-slate-500 text-[10px] mt-2">Saved on this device only</p>
-          )
-        )}
-
-        {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
         {/* Result inline - at bottom of card */}
         {currentLocationData && !isCardDismissed && (
