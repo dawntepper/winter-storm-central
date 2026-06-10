@@ -1652,24 +1652,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <p className="text-xs text-slate-600 mb-2 line-clamp-3">{hoveredAlert.headline}</p>
             )}
 
-            {/* Severity, Urgency & Save */}
+            {/* Save, Severity & Urgency */}
             {(hoveredAlert.severity || hoveredAlert.urgency || (onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon)) && (
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-                  {hoveredAlert.severity && (
-                    <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
-                      {hoveredAlert.severity}
-                    </span>
-                  )}
-                  {hoveredAlert.urgency && (
-                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                      {hoveredAlert.urgency}
-                    </span>
-                  )}
-                </div>
+              <div className="flex flex-wrap items-center gap-2 mb-3 w-full">
                 {onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon && (
                   <label
-                    className={`group flex items-center gap-1 cursor-pointer shrink-0 ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                    className={`group flex items-center gap-1 cursor-pointer shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
                       isAlertLocationSaved(hoveredAlert, userLocations)
                         ? 'bg-emerald-600 text-white hover:bg-emerald-500'
                         : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
@@ -1700,6 +1688,18 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                     Save
                   </label>
                 )}
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 ml-auto justify-end">
+                  {hoveredAlert.severity && (
+                    <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                      {hoveredAlert.severity}
+                    </span>
+                  )}
+                  {hoveredAlert.urgency && (
+                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                      {hoveredAlert.urgency}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
