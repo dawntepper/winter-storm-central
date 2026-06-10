@@ -140,7 +140,9 @@ function useAuthState() {
   }, []);
 
   /**
-   * Sign in with magic link (passwordless)
+   * Send a passwordless email sign-in (the email contains a 6-digit code; it
+   * may also contain a magic link if the template includes one). Kept under the
+   * old name so existing callers keep working.
    */
   const signInWithMagicLink = useCallback(async (email) => {
     if (!isSupabaseConfigured) {
@@ -154,6 +156,8 @@ function useAuthState() {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
+        // Harmless for the code flow; lets a magic link also work if the email
+        // template still includes one.
         emailRedirectTo: `${window.location.origin}/auth/callback`
       }
     });
@@ -166,7 +170,34 @@ function useAuthState() {
     }
 
     markAccountKnown(); // they've started an account → "Sign in" copy next time
-    return { data, message: 'Check your email for the login link!' };
+    return { data, message: 'Check your email for your sign-in code.' };
+  }, []);
+
+  /**
+   * Verify the 6-digit email code (entered in the SAME browser that requested
+   * it, so the session lands here — this is what makes mobile reliable, unlike
+   * a magic link that may open in a different in-app browser).
+   */
+  const verifyEmailOtp = useCallback(async (email, token) => {
+    if (!isSupabaseConfigured) {
+      setError('Authentication not configured');
+      return { error: { message: 'Authentication not configured' } };
+    }
+
+    setError(null);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: (email || '').trim(),
+      token: (token || '').trim(),
+      type: 'email',
+    });
+
+    if (error) {
+      setError(error.message);
+      return { error };
+    }
+
+    markAccountKnown();
+    return { data };
   }, []);
 
   /**
@@ -242,6 +273,7 @@ function useAuthState() {
     signUp,
     signIn,
     signInWithMagicLink,
+    verifyEmailOtp,
     signInWithProvider,
     signOut,
     resetPassword
