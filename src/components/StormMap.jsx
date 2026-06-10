@@ -1652,7 +1652,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <p className="text-xs text-slate-600 mb-2 line-clamp-3">{hoveredAlert.headline}</p>
             )}
 
-            {/* Severity, Urgency & Save Location */}
+            {/* Severity, Urgency & Save */}
             {(hoveredAlert.severity || hoveredAlert.urgency || (onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon)) && (
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
@@ -1669,7 +1669,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 </div>
                 {onAddAlertToMap && hoveredAlert.lat && hoveredAlert.lon && (
                   <label
-                    className="group flex items-center gap-1.5 cursor-pointer shrink-0 ml-auto"
+                    className={`group flex items-center gap-1 cursor-pointer shrink-0 ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                      isAlertLocationSaved(hoveredAlert, userLocations)
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                        : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                    }`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       pinHoveredAlert();
@@ -1687,9 +1691,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                           onRemoveAlertFromMap(hoveredAlert, SAVE_TRIGGERS.MAP_ALERT_POPUP);
                         }
                       }}
-                      className="w-4 h-4 rounded border-slate-300 bg-white text-emerald-600 accent-emerald-500 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 cursor-pointer transition-transform duration-150 ease-out group-hover:scale-110 active:scale-95"
+                      className={`w-3 h-3 rounded cursor-pointer focus:ring-2 focus:ring-offset-0 ${
+                        isAlertLocationSaved(hoveredAlert, userLocations)
+                          ? 'border-white/60 bg-white/20 accent-white focus:ring-white/50'
+                          : 'border-emerald-300 bg-white accent-emerald-600 focus:ring-emerald-500'
+                      }`}
                     />
-                    <span className="text-xs text-slate-600 group-hover:text-emerald-700 transition-colors">Save Location</span>
+                    Save
                   </label>
                 )}
               </div>
