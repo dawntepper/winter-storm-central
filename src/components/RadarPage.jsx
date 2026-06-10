@@ -35,7 +35,7 @@ const statusColors = {
 // SEO helper - set meta tags for radar page
 function setRadarMetaTags() {
   const title = 'NWS Live Radar Map — NOAA Precipitation & Storms';
-  const desc = 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.';
+  const desc = 'Interactive US weather radar with precipitation, satellite, and forecast layers. Radar refreshes every 5 minutes; NWS alert overlays every 10 minutes (2 min during urgent warnings).';
 
   document.title = title;
 
@@ -277,9 +277,10 @@ export default function RadarPage() {
               </button>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-2">
-              Our live weather radar map displays real-time precipitation, storm movements,
-              and severe weather alerts across the United States. The interactive radar
-              updates every 30 minutes with the latest data from the National Weather Service.
+              Our live weather radar map displays precipitation, storm movement, and NWS
+              severe weather alerts across the United States. Radar imagery refreshes about
+              every 5 minutes; NWS alerts refresh every 10 minutes (every 2 minutes during
+              active tornado or flash flood warnings).
             </p>
             <p className="text-xs text-slate-400 leading-relaxed">
               Toggle the radar overlay to view current weather conditions, zoom in to see
@@ -382,8 +383,8 @@ export default function RadarPage() {
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
               <h3 className="text-sm font-semibold text-white mb-2">Track Storms</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Monitor storm systems in real-time. The radar updates automatically,
-                showing storm movement and intensity across the country.
+                Monitor storm systems in real time. Radar imagery refreshes about every
+                5 minutes, showing storm movement and intensity across the country.
               </p>
             </div>
           </div>
@@ -398,16 +399,16 @@ export default function RadarPage() {
               <p className="text-xs text-slate-400 leading-relaxed">
                 Our live weather radar displays precipitation intensity across the United States.
                 Green indicates light rain or snow, yellow shows moderate precipitation, and
-                red represents heavy rain or intense storms. The radar updates every 30 minutes
-                with data from NOAA weather stations.
+                red represents heavy rain or intense storms. Radar imagery refreshes about every
+                5 minutes using NOAA-based precipitation data.
               </p>
             </div>
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
               <h3 className="text-sm font-semibold text-white mb-2">How often does the radar update?</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                The weather radar map updates automatically every 30 minutes with the latest
-                data from the National Weather Service. Severe weather alerts update in
-                real-time as they are issued.
+                Radar imagery refreshes about every 5 minutes. NWS severe weather alerts
+                refresh every 10 minutes, or every 2 minutes when tornado or flash flood
+                warnings are active.
               </p>
             </div>
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">

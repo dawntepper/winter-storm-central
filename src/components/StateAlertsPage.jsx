@@ -719,8 +719,9 @@ export default function StateAlertsPage() {
                 How often are {stateData.name} weather alerts updated?
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Weather alerts for {stateData.name} are refreshed every 30 minutes from the National Weather Service.
-                New alerts appear as soon as they are issued by the NWS. The radar map also updates automatically.
+                Weather alerts for {stateData.name} refresh every 10 minutes from the National Weather Service
+                (every 2 minutes during active tornado or flash flood warnings). New alerts appear as soon
+                as they are issued. Radar imagery refreshes about every 5 minutes.
               </p>
             </div>
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">

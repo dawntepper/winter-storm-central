@@ -28,9 +28,9 @@ const PAGES = [
   {
     route: 'radar',
     title: 'NWS Live Radar Map — NOAA Precipitation & Storms',
-    description: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.',
+    description: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Radar refreshes every 5 minutes; NWS alert overlays every 10 minutes (2 min during urgent warnings).',
     ogTitle: 'NWS Live Radar Map — NOAA Precipitation & Storms',
-    ogDescription: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Track storms in real time with NWS alert overlays.',
+    ogDescription: 'Interactive US weather radar with precipitation, satellite, and forecast layers. Radar refreshes every 5 minutes; NWS alert overlays every 10 minutes (2 min during urgent warnings).',
     schemaName: 'NWS Live Radar Map',
     schemaDescription: 'Interactive US weather radar with precipitation, satellite, and forecast layers',
   },
