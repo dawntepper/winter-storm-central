@@ -23,7 +23,15 @@ export const supabase = isSupabaseConfigured
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        // We finalize the session manually in AuthCallback (handles both the
+        // implicit #hash and PKCE ?code formats), so disable auto-detect to
+        // avoid a double-exchange race with our own handling.
+        detectSessionInUrl: false,
+        // Implicit flow returns tokens in the URL hash. Magic links opened on
+        // mobile frequently land in a DIFFERENT browser/webview than the one
+        // that requested them; PKCE would fail there (its code verifier lives
+        // in the original browser's storage), whereas hash tokens work anywhere.
+        flowType: 'implicit',
       }
     })
   : null;

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { hasAccountHint } from '../../lib/accountHint';
 
 /**
  * Magic-link sign-in modal (v1 = passwordless email only). Calm and
  * dismissible — never blocks weather; only opened on user intent.
  *
- * Sign-in is framed as pure convenience: weather is always free and no account
- * is required. The single action is "Sign in with email" (the magic link both
- * creates and signs in, so one honest label fits everyone).
+ * Benefit-focused, not account-focused: weather is always free; signing in just
+ * lets your saved locations follow you across devices. Copy softens to a
+ * "Welcome back" variant for anyone who's signed in before on this device. The
+ * action is "Continue with email" (the magic link both creates and signs in).
  */
 export default function SignInModal({ onClose }) {
   const { signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [message, setMessage] = useState('');
+  const returning = hasAccountHint();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +43,9 @@ export default function SignInModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-2">
-          <h2 className="text-lg font-bold text-white">Save locations across devices</h2>
+          <h2 className="text-lg font-bold text-white">
+            {returning ? 'Welcome back' : 'Save locations across devices'}
+          </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-200 cursor-pointer text-lg leading-none"
@@ -50,15 +55,28 @@ export default function SignInModal({ onClose }) {
           </button>
         </div>
 
-        <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
-        <p className="text-sm text-slate-400 mb-4">
-          Sign in with email to save your locations across devices.
-        </p>
+        {returning ? (
+          <p className="text-sm text-slate-400 mb-4">
+            Sign in to access your saved locations on any device.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-300 mb-1">Weather is always free — no account required.</p>
+            <p className="text-sm text-slate-400 mb-4">
+              Sign in with email to access your saved locations on any device.
+            </p>
+          </>
+        )}
 
         {status === 'sent' ? (
-          <div className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
-            📬 {message}
-            <div className="text-slate-400 mt-1">You can close this window.</div>
+          <div className="text-sm bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+            <p className="text-emerald-400 font-medium">📬 Check your email</p>
+            <p className="text-slate-300 mt-1">
+              We sent a sign-in link{email ? <> to <span className="text-slate-100">{email}</span></> : ''}.
+            </p>
+            <p className="text-slate-400 mt-2 text-xs">
+              Open the link on this device and browser to finish signing in.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -77,7 +95,7 @@ export default function SignInModal({ onClose }) {
               disabled={status === 'sending'}
               className="w-full py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white text-sm font-semibold cursor-pointer transition-colors"
             >
-              {status === 'sending' ? 'Sending…' : 'Sign in with email'}
+              {status === 'sending' ? 'Sending…' : 'Continue with email'}
             </button>
           </form>
         )}
