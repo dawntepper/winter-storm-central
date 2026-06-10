@@ -29,7 +29,7 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
 | `Visitor` | New-vs-returning classification — fired once per browser session on app mount (`visitor_type`, `visit_count`, `days_since_first_visit`) |
-| `Sign In Form Submitted` | Magic-link sign-in modal — email submitted and OTP sent successfully (`account_hint`, `auth_method`) |
+| `Sign Up Form Submitted` | First-time signup intent — magic link requested from "Create account" path only (`auth_method`); not fired for returning users |
 
 ### Gated behind `AFFILIATE_LINKS_ENABLED` (register now, will start firing post-launch)
 
@@ -275,9 +275,7 @@ verification file isn't accessible or the IndexNow API is rate-limiting.
 ### Auth events
 
 ```
-Sign In Form Submitted
-  account_hint   "new" | "returning" — from local account-known hint (hasAccountHint),
-                   not whether the email exists server-side
+Sign Up Form Submitted
   auth_method    "magic_link" (default — v1 is passwordless email only)
 
 Alert Signup
@@ -288,9 +286,11 @@ Alert Signup Error
   error          error message string
 ```
 
-`Sign In Form Submitted` fires from `SignInModal` only after Supabase accepts the
-OTP request — not on validation errors or API failures. Distinct from alert signup
-goals so sign-in funnel can be tracked separately.
+`Sign Up Form Submitted` fires from `SignInModal` only when `!hasAccountHint()` —
+the newcomer / "Create account" copy path — and only after Supabase accepts the
+OTP request (not on validation errors or API failures). Returning users who see
+"Welcome back" and request another magic link do **not** fire this event. Distinct
+from alert signup goals so the new-account funnel can be tracked separately.
 
 ### Affiliate events (gated)
 

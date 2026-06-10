@@ -634,16 +634,14 @@ export function trackAlertSignupError(error) {
 // ============================================
 
 /**
- * Track successful magic-link sign-in form submission (OTP sent).
- * Distinct from Alert Signup — use as a separate Plausible custom goal.
+ * Track first-time signup intent: magic link requested from the "Create account"
+ * path (no prior completed sign-in on this device). Does not fire for returning
+ * users requesting another magic link. Distinct from Alert Signup.
  *
- * @param {{ accountHint?: 'new' | 'returning', authMethod?: string }} params
+ * @param {{ authMethod?: string }} params
  */
-export function trackSignInFormSubmitted({ accountHint = 'new', authMethod = 'magic_link' } = {}) {
-  track('Sign In Form Submitted', {
-    account_hint: accountHint,
-    auth_method: authMethod
-  });
+export function trackSignUpFormSubmitted({ authMethod = 'magic_link' } = {}) {
+  track('Sign Up Form Submitted', { auth_method: authMethod });
 }
 
 // ============================================
@@ -1068,7 +1066,7 @@ export default {
   trackGeolocationUsed,
   trackAlertSignup,
   trackAlertSignupError,
-  trackSignInFormSubmitted,
+  trackSignUpFormSubmitted,
   trackLocationSearch,
   trackLocationSearchFailed,
   startSessionTracking,

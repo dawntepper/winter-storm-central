@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { hasAccountHint } from '../../lib/accountHint';
-import { trackSignInFormSubmitted } from '../../utils/analytics';
+import { trackSignUpFormSubmitted } from '../../utils/analytics';
 
 /**
  * Magic-link sign-in modal (v1 = passwordless email only). Calm and
@@ -32,7 +32,7 @@ export default function SignInModal({ onClose }) {
     } else {
       setStatus('sent');
       setMessage(msg || 'Check your email for the login link!');
-      trackSignInFormSubmitted({ accountHint: returning ? 'returning' : 'new' });
+      if (!returning) trackSignUpFormSubmitted();
     }
   };
 
