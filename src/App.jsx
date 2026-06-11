@@ -20,6 +20,7 @@ import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
 import { useSavedLocations } from './hooks/useSavedLocations';
 import SignInModal from './components/auth/SignInModal';
+import { Skeleton } from './components/Skeletons';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
 import { setHomepageMetaTags } from './data/homepageMeta';
@@ -869,12 +870,7 @@ export default function App() {
         isStale={alertsIsStale}
       />
 
-      {/* Inline loading/error banners (non-blocking — page still renders) */}
-      {alertsLoading && !alertsData && (
-        <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 text-center">
-          <p className="text-sm text-slate-400">Loading weather alerts from NOAA...</p>
-        </div>
-      )}
+      {/* Inline error banner (non-blocking — page still renders) */}
       {alertsError && !alertsData && (
         <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 text-center">
           <p className="text-sm text-slate-400">
@@ -1358,7 +1354,12 @@ export default function App() {
           <h2 className="text-lg font-semibold text-white mb-1">State Alerts/Radar</h2>
           <p className="text-sm text-slate-400 mb-4">Track weather alerts and live radar for your state</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {Object.entries(US_STATES).map(([slug, state]) => {
+            {alertsLoading && !alertsData ? (
+              [...Array(10)].map((_, i) => (
+                <Skeleton key={i} className="h-10 rounded-lg" />
+              ))
+            ) : (
+            Object.entries(US_STATES).map(([slug, state]) => {
               const count = alertsData?.allAlerts
                 ? alertsData.allAlerts.filter(a => a.state === state.abbr).length
                 : 0;
@@ -1377,7 +1378,8 @@ export default function App() {
                   )}
                 </Link>
               );
-            })}
+            })
+            )}
           </div>
         </section>
 

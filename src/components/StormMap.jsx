@@ -7,6 +7,7 @@ import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService'
 import { getCitySlugForLocation } from '../utils/cityLookup';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
+import { MapSkeleton } from './Skeletons';
 import {
   trackRadarToggle,
   trackRadarOpened,
@@ -1156,6 +1157,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
+  const [mapReady, setMapReady] = useState(false);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
   // Only surfaces if the radar genuinely takes a beat; otherwise the tiles just
@@ -1564,12 +1566,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
       {/* Map Container - fills available height in sidebar mode */}
       <div ref={mapContainerRef} className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+        {!mapReady && <MapSkeleton />}
         <MapContainer
           center={initialCenter}
           zoom={initialZoom}
           style={{ height: isSidebar ? '100%' : (isHero ? '500px' : '350px'), width: '100%' }}
           className={`z-0 ${!isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]' : ''} ${!isSidebar && !isHero ? 'sm:!h-[450px]' : ''}`}
           zoomControl={true}
+          whenReady={() => setMapReady(true)}
         >
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />

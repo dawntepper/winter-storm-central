@@ -20,6 +20,7 @@ import AlertDetailModal from './AlertDetailModal';
 import AlertsByCategory from './AlertsByCategory';
 import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
+import { AlertListSkeleton, Skeleton } from './Skeletons';
 
 // Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
 // states get the tornado variant. TX gets its own variant. All other states
@@ -432,7 +433,9 @@ export default function StateAlertsPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {!alertsLoading && (
+              {alertsLoading ? (
+                <Skeleton className="h-7 w-20 rounded-lg" />
+              ) : (
                 <a
                   href="#state-alerts"
                   className={`text-xs sm:text-sm font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors ${
@@ -500,10 +503,7 @@ export default function StateAlertsPage() {
               </h2>
 
               {alertsLoading ? (
-                <div className="text-center py-12">
-                  <div className="w-8 h-8 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">Loading alerts...</p>
-                </div>
+                <AlertListSkeleton count={4} showHeader={false} />
               ) : stateAlerts.length === 0 ? (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-5 py-8 text-center">
                   <p className="text-lg font-medium text-emerald-400 mb-1">

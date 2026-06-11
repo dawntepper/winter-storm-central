@@ -11,6 +11,7 @@ import {
   trackAlertDetailView
 } from '../utils/analytics';
 import { STATE_NAMES } from '../data/stateConfig';
+import { AlertListSkeleton } from './Skeletons';
 
 /**
  * Full Alert Modal - shows complete alert details
@@ -510,12 +511,7 @@ function EmptyState({ onAddLocation }) {
  * Loading state
  */
 function LoadingState() {
-  return (
-    <div className="py-8 text-center">
-      <div className="w-8 h-8 border-2 border-slate-600 border-t-sky-400 rounded-full animate-spin mx-auto mb-3" />
-      <p className="text-sm text-slate-400">Loading weather information...</p>
-    </div>
-  );
+  return <AlertListSkeleton count={5} showHeader={false} />;
 }
 
 /**
