@@ -182,12 +182,13 @@ export function trackLocationCountChanged(count) {
  * @param {{ syncedCount: number, localCount: number }} params
  */
 export function trackLocationsSynced({ syncedCount, localCount }) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.LOCATIONS_SYNCED, {
+    metadata: { synced_count: syncedCount, local_count: localCount },
+  });
+  if (!recorded) return;
   track('Locations Synced', {
     synced_count: syncedCount,
     local_count: localCount
-  });
-  recordProductEvent(PRODUCT_EVENTS.LOCATIONS_SYNCED, {
-    metadata: { synced_count: syncedCount, local_count: localCount },
   });
 }
 
@@ -254,9 +255,6 @@ export function trackAlertAddedToMap(category) {
  * Track radar toggle
  */
 export function trackRadarToggle(isEnabled, { stateCode, radarType } = {}) {
-  track('Radar Toggled', {
-    state: isEnabled ? 'on' : 'off'
-  });
   recordRadarEvent(RADAR_EVENTS.TOGGLED, {
     stateCode,
     radarType,
@@ -264,6 +262,9 @@ export function trackRadarToggle(isEnabled, { stateCode, radarType } = {}) {
   if (isEnabled) {
     recordRadarEvent(RADAR_EVENTS.OPENED, { stateCode, radarType });
   }
+  track('Radar Toggled', {
+    state: isEnabled ? 'on' : 'off'
+  });
 }
 
 /**
@@ -729,15 +730,17 @@ export function trackRadarStormEventClick({ stormSlug, stormName }) {
  * before navigation) or the referrer.
  */
 export function trackStateAlertsPageView({ stateCode, stateName, alertCount, source }) {
+  const resolvedSource = resolveSource(source);
+  const recorded = recordProductEvent(PRODUCT_EVENTS.STATE_ALERT_PAGE_VIEW, {
+    stateCode,
+    metadata: { state_name: stateName, alert_count: alertCount, source: resolvedSource },
+  });
+  if (!recorded) return;
   track('State Alerts Page View', {
     stateCode,
     stateName,
     alertCount,
-    source: resolveSource(source)
-  });
-  recordProductEvent(PRODUCT_EVENTS.STATE_ALERT_PAGE_VIEW, {
-    stateCode,
-    metadata: { state_name: stateName, alert_count: alertCount, source: resolveSource(source) },
+    source: resolvedSource
   });
 }
 
@@ -842,14 +845,15 @@ export function trackLocationSearchFailed(searchTerm, error) {
  * Track successful location catalog search (ZIP / city / county on state alert pages).
  */
 export function trackLocationSearchSuccess({ query, stateCode, resolvedType }) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.LOCATION_SEARCH_SUCCESS, {
+    stateCode,
+    metadata: { query, resolved_type: resolvedType || 'unknown' },
+  });
+  if (!recorded) return;
   track('Location Search Success', {
     query: query || '',
     state: stateCode || 'unknown',
     resolved_type: resolvedType || 'unknown',
-  });
-  recordProductEvent(PRODUCT_EVENTS.LOCATION_SEARCH_SUCCESS, {
-    stateCode,
-    metadata: { query, resolved_type: resolvedType || 'unknown' },
   });
 }
 
@@ -868,14 +872,7 @@ export function trackAlertLocationSearch({ query, matchType, stateCode, hasCount
  * Track county alert result view (search module or county page).
  */
 export function trackCountyAlertView({ countyId, stateCode, alertCount, source, countyName }) {
-  track('County Alert View', {
-    county_id: countyId || 'unknown',
-    state_code: stateCode || 'unknown',
-    alert_count: alertCount ?? 0,
-    source: source || 'unknown',
-    county_name: countyName || '',
-  });
-  recordProductEvent(PRODUCT_EVENTS.COUNTY_ALERT_VIEW, {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.COUNTY_ALERT_VIEW, {
     stateCode,
     metadata: {
       county_id: countyId,
@@ -884,6 +881,15 @@ export function trackCountyAlertView({ countyId, stateCode, alertCount, source, 
       source: source || 'unknown',
     },
   });
+  if (!recorded) return false;
+  track('County Alert View', {
+    county_id: countyId || 'unknown',
+    state_code: stateCode || 'unknown',
+    alert_count: alertCount ?? 0,
+    source: source || 'unknown',
+    county_name: countyName || '',
+  });
+  return true;
 }
 
 /**
@@ -1102,16 +1108,17 @@ function normalizeSlug(value) {
  */
 export function trackRadarPageView(source, stateContext = 'national') {
   const resolvedSource = resolveSource(source);
-  track('Radar Page View', {
-    source: resolvedSource,
-    state_context: normalizeSlug(stateContext)
-  });
   const stateCode = stateContext && stateContext !== 'national'
     ? String(stateContext).toUpperCase().slice(0, 2)
     : null;
-  recordProductEvent(PRODUCT_EVENTS.RADAR_VIEW, {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.RADAR_VIEW, {
     stateCode: /^[A-Z]{2}$/.test(stateCode || '') ? stateCode : null,
     metadata: { source: resolvedSource, state_context: normalizeSlug(stateContext) },
+  });
+  if (!recorded) return;
+  track('Radar Page View', {
+    source: resolvedSource,
+    state_context: normalizeSlug(stateContext)
   });
 }
 
@@ -1119,21 +1126,23 @@ export function trackRadarPageView(source, stateContext = 'national') {
  * Fire 'Homepage View' once per homepage mount.
  */
 export function trackHomepageView() {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.HOMEPAGE_VIEW);
+  if (!recorded) return;
   track('Homepage View');
-  recordProductEvent(PRODUCT_EVENTS.HOMEPAGE_VIEW);
 }
 
 /**
  * Map or forecast location changed (distinct from save_location).
  */
 export function trackLocationChange({ source, stateCode, metadata } = {}) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.LOCATION_CHANGE, {
+    stateCode,
+    metadata: { source, ...metadata },
+  });
+  if (!recorded) return;
   track('Location Change', {
     source: source || 'unknown',
     state: stateCode || 'unknown',
-  });
-  recordProductEvent(PRODUCT_EVENTS.LOCATION_CHANGE, {
-    stateCode,
-    metadata: { source, ...metadata },
   });
 }
 
@@ -1141,10 +1150,11 @@ export function trackLocationChange({ source, stateCode, metadata } = {}) {
  * Completed sign-in (magic link, OAuth, or password).
  */
 export function trackSignIn({ method } = {}) {
-  track('Sign In', { auth_method: method || 'unknown' });
-  recordProductEvent(PRODUCT_EVENTS.SIGN_IN, {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.SIGN_IN, {
     metadata: { auth_method: method || 'unknown' },
   });
+  if (!recorded) return;
+  track('Sign In', { auth_method: method || 'unknown' });
 }
 
 /**
@@ -1214,12 +1224,13 @@ export function trackIndexNowSubmission(source, urlsCount, success) {
  * locationSource: 'state-default' | 'city' | 'zip' | 'geolocation'
  */
 export function trackForecastPageView(stateSlug, locationSource) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_VIEW, {
+    metadata: { state_slug: stateSlug, location_source: locationSource },
+  });
+  if (!recorded) return;
   track('Forecast Page View', {
     state: stateSlug,
     location_source: locationSource
-  });
-  recordProductEvent(PRODUCT_EVENTS.FORECAST_VIEW, {
-    metadata: { state_slug: stateSlug, location_source: locationSource },
   });
 }
 

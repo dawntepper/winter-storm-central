@@ -85,7 +85,7 @@ function useAuthState() {
         setInitializing(false);
         setLoading(false);
 
-        // Only mark after a completed sign-in — not on magic-link request alone.
+        // Completed sign-in only (dedupe in productAnalyticsService covers token refresh).
         if (event === 'SIGNED_IN' && session?.user) {
           markAccountKnown();
           trackSignIn({ method: session.app_metadata?.provider || 'magic_link' });

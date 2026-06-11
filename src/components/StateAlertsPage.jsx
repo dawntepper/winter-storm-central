@@ -357,14 +357,11 @@ export default function StateAlertsPage() {
     return () => resetMetaTags();
   }, [stateSlug, stateData]);
 
-  // Track page view once per state navigation. Source resolves from the
-  // sessionStorage flag stashed by the originating button click, or falls
-  // back to detectSourceFromReferrer() for direct URL loads.
-  // (alertCount is captured at the time of the first non-loading render —
-  // we intentionally don't keep stateAlerts.length in deps to avoid re-firing
-  // on every NWS update.)
+  // Track page view once per state navigation (not on alert polling refreshes).
+  const statePageViewTrackedRef = useRef(null);
   useEffect(() => {
-    if (stateData && !alertsLoading) {
+    if (stateData && !alertsLoading && statePageViewTrackedRef.current !== stateAbbr) {
+      statePageViewTrackedRef.current = stateAbbr;
       trackStateAlertsPageView({
         stateCode: stateAbbr,
         stateName: stateData.name,

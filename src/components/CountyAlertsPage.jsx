@@ -3,7 +3,7 @@
  * Full-page layout with map + alerts sidebar (mirrors state alerts page).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import {
@@ -79,8 +79,10 @@ export default function CountyAlertsPage() {
     };
   }, [countySlug]);
 
+  const countyPageViewTrackedRef = useRef(null);
   useEffect(() => {
-    if (county && !alertsLoading) {
+    if (county && !alertsLoading && countyPageViewTrackedRef.current !== county.id) {
+      countyPageViewTrackedRef.current = county.id;
       trackCountyAlertView({
         countyId: county.id,
         stateCode: county.stateCode,

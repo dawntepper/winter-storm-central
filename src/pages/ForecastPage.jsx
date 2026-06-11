@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { US_STATES, ABBR_TO_SLUG } from '../data/stateConfig';
 import { getStateCentroid } from '../data/stateCentroids';
@@ -77,15 +77,17 @@ export default function ForecastPage() {
     )[0];
   }, [mapAlerts, forecast?.location?.state]);
 
-  // One-time Plausible page view on mount.
+  // One-time page view per state slug (not on coords/search param churn).
+  const forecastPageViewTrackedRef = useRef(null);
   useEffect(() => {
-    if (!stateData) return;
+    if (!stateData || forecastPageViewTrackedRef.current === slug) return;
+    forecastPageViewTrackedRef.current = slug;
     const initialSource = searchParams.get('city') ? 'city'
       : searchParams.get('zip') ? 'zip'
       : 'state-default';
     trackForecastPageView(slug, initialSource);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, stateData]);
 
   // Resolve initial location. Precedence:
   //   1. sessionStorage pending-geolocation (set by a cross-state redirect)

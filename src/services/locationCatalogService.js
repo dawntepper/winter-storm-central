@@ -689,7 +689,7 @@ export async function trackLocationSearchNotFound({ query, stateCode, pageContex
 export async function trackCountyAlertView(event) {
   const { countyId, stateCode, alertCount, source, countyName } = event || {};
 
-  trackCountyAlertViewEvent({
+  const recorded = trackCountyAlertViewEvent({
     countyId,
     stateCode,
     alertCount: alertCount ?? 0,
@@ -697,7 +697,7 @@ export async function trackCountyAlertView(event) {
     countyName,
   });
 
-  if (!supabase || !countyId) return;
+  if (!recorded || !supabase || !countyId) return;
   const { error } = await supabase.from('county_alert_views').insert({
     county_id: countyId,
     state_code: stateCode || null,

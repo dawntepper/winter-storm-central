@@ -3,7 +3,7 @@
  * For cities in the Supabase catalog (rich /alerts/:slug pages redirect here).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import {
@@ -103,8 +103,10 @@ export default function CatalogCityAlertsPage() {
     return () => setHomepageMetaTags();
   }, [citySlug, redirectToRichPage]);
 
+  const countyPageViewTrackedRef = useRef(null);
   useEffect(() => {
-    if (county && !alertsLoading) {
+    if (county && !alertsLoading && countyPageViewTrackedRef.current !== county.id) {
+      countyPageViewTrackedRef.current = county.id;
       trackCountyAlertView({
         countyId: county.id,
         stateCode: county.stateCode,
