@@ -194,6 +194,7 @@ export default function CatalogCityAlertsPage() {
             }]}
             alerts={mapAlerts}
             isHero
+            selectedStateCode={city.stateCode}
             showResetView={false}
             centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 9 }}
           />

@@ -51,6 +51,7 @@ export default function NearMeHeader({
     fetchApproxLocation().then((loc) => {
       if (cancelled || !loc?.city) return;
       setResolved({ city: loc.city, region: loc.region || null });
+      if (loc.region) onResolveState?.(loc.region);
     });
     return () => {
       cancelled = true;

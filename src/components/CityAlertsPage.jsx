@@ -816,6 +816,7 @@ export default function CityAlertsPage() {
             }]}
             alerts={mapAlerts}
             isHero
+            selectedStateCode={city.state_abbr}
             showResetView={false}
             centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
           />

@@ -59,6 +59,15 @@ export const RADAR_EVENTS = {
   LOCATION_CHANGED: 'radar_location_changed',
 };
 
+/** Sentinel for national / no-state radar context (stored in DB, not null). */
+export const RADAR_STATE_NATIONAL = 'US';
+
+/** Normalize radar state_code: valid 2-letter abbr, else national sentinel. */
+export function normalizeRadarStateCode(stateCode) {
+  const normalized = String(stateCode || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(normalized) ? normalized : RADAR_STATE_NATIONAL;
+}
+
 /** @type {Map<string, number>} */
 const debounceMemory = new Map();
 
@@ -270,7 +279,7 @@ export function recordRadarEvent(eventType, { stateCode, radarType } = {}) {
 
   return insertRow('radar_events', {
     event_type: eventType,
-    state_code: stateCode || null,
+    state_code: normalizeRadarStateCode(stateCode),
     radar_type: radarType || null,
   });
 }

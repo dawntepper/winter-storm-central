@@ -395,7 +395,15 @@ function AdminAnalysisInner() {
               <h3 className="text-sm font-semibold text-slate-300 mb-3">Opens by state</h3>
               <DataTable
                 columns={[
-                  { key: 'state_code', label: 'State' },
+                  {
+                    key: 'state_code',
+                    label: 'State',
+                    render: (r) => {
+                      const code = r.state_code;
+                      if (!code || code === 'unknown' || code === 'US') return 'National';
+                      return code;
+                    },
+                  },
                   {
                     key: 'open_count',
                     label: 'Opens',
@@ -421,7 +429,15 @@ function AdminAnalysisInner() {
               <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most viewed radar locations</h3>
               <DataTable
                 columns={[
-                  { key: 'state_code', label: 'State' },
+                  {
+                    key: 'state_code',
+                    label: 'State',
+                    render: (r) => {
+                      const code = r.state_code;
+                      if (!code || code === 'unknown' || code === 'US') return 'National';
+                      return code;
+                    },
+                  },
                   {
                     key: 'view_count',
                     label: 'Location changes',

@@ -1169,11 +1169,19 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setRadarSpinnerVisible(false);
   }, [showRadar, radarLoading]);
 
+  // Defer briefly when state is unknown so async parent resolution (GPS, IP geo)
+  // can populate selectedStateCode before the one-shot radar_opened fires.
   useEffect(() => {
-    if (showRadar && !radarOpenedTracked.current) {
+    if (!showRadar || radarOpenedTracked.current) return;
+
+    const delayMs = selectedStateCode ? 0 : 500;
+    const t = setTimeout(() => {
+      if (radarOpenedTracked.current) return;
       radarOpenedTracked.current = true;
       trackRadarOpened({ stateCode: selectedStateCode, radarType: radarLayerType });
-    }
+    }, delayMs);
+
+    return () => clearTimeout(t);
   }, [showRadar, selectedStateCode, radarLayerType]);
 
   useEffect(() => {

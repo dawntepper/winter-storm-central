@@ -323,6 +323,7 @@ export default function ForecastPage() {
               }
               alerts={mapAlerts}
               isHero
+              selectedStateCode={stateData.abbr}
               centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
             />
           </section>
