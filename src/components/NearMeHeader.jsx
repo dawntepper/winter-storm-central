@@ -125,8 +125,10 @@ export default function NearMeHeader({
     resolved?.city && region ? getCitySlugForLocation(`${resolved.city}, ${region}`) : null;
   const hasJumpLinks = Boolean(stateSlug || citySlug);
 
-  const linkClass =
-    'text-[11px] sm:text-xs text-slate-500 hover:text-sky-400 transition-colors';
+  const cityLinkClass =
+    'inline-flex items-center px-2 py-0.5 rounded-md text-xs sm:text-sm font-medium text-sky-300/90 hover:text-sky-200 border border-sky-500/25 hover:border-sky-500/45 bg-sky-950/25 hover:bg-sky-950/40 transition-colors';
+  const stateLinkClass =
+    'inline-flex items-center px-2 py-0.5 rounded-md text-xs sm:text-sm font-medium text-emerald-300/90 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-950/25 hover:bg-emerald-950/40 transition-colors';
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -161,19 +163,18 @@ export default function NearMeHeader({
       </div>
 
       {hasJumpLinks && (
-        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-[11px] text-slate-600">Jump to:</span>
+        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <span className="text-xs text-slate-500 font-medium">Jump to:</span>
           {citySlug && (
-            <Link to={`/alerts/${citySlug}`} className={linkClass}>
+            <Link to={`/alerts/${citySlug}`} className={cityLinkClass}>
               {resolved.city} alerts
             </Link>
           )}
-          {citySlug && stateSlug && <span aria-hidden="true" className="text-slate-700">·</span>}
           {stateSlug && (
             <Link
               to={`/alerts/${stateSlug}`}
               onClick={() => trackBrowseByStateClick({ stateCode: region, source: NAV_SOURCES.NEAR_ME_HEADER })}
-              className={linkClass}
+              className={stateLinkClass}
             >
               {stateName} alerts &amp; city forecasts
             </Link>
