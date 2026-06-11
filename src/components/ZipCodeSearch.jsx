@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { trackLocationAdded, trackLocationRemoved, trackGeolocationUsed, SAVE_TRIGGERS } from '../utils/analytics';
 import { STATE_NAMES } from '../data/stateConfig';
 import { getCitiesForState, resolveCityByName } from '../services/locationCatalogService';
+import { reverseGeocode } from '../services/geoLocationService';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -255,7 +256,16 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
   );
 }
 
-export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLocationsChange, onLocationClick, initialLocation }) {
+export default function ZipCodeSearch({
+  stormPhase,
+  totalLocationCount = 0,
+  onLocationsChange,
+  onLocationClick,
+  initialLocation,
+  onLocate,
+  onResolveState,
+  onLocationResolved,
+}) {
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -278,6 +288,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
 
   // Track whether we've processed the initial location
   const [initialProcessed, setInitialProcessed] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState('idle'); // idle | locating | denied | unsupported | error
 
   // Store all saved locations with their map visibility
   const [savedLocations, setSavedLocations] = useState({}); // { id: { data, onMap } }
@@ -625,6 +636,38 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     }
   };
 
+  const handleUseMyLocation = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGpsStatus('unsupported');
+      return;
+    }
+    setGpsStatus('locating');
+    setIsExpanded(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        trackGeolocationUsed();
+        onLocate?.({
+          lat: latitude,
+          lon: longitude,
+          zoom: 9,
+          id: `nearme-${latitude.toFixed(4)}-${longitude.toFixed(4)}`,
+        });
+        const place = await reverseGeocode(latitude, longitude);
+        if (place?.city) {
+          const resolved = { city: place.city, region: place.region || null };
+          onLocationResolved?.(resolved);
+          if (place.region) onResolveState?.(place.region);
+        }
+        setGpsStatus('idle');
+      },
+      (err) => {
+        setGpsStatus(err.code === 1 ? 'denied' : 'error');
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }, [onLocate, onResolveState, onLocationResolved]);
+
   return (
     <div className="space-y-4">
       {/* Input Section - Enhanced contrast */}
@@ -659,9 +702,28 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
         {/* Collapsible Content - solid background */}
         {isExpanded && (
           <div className="px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible">
-            <div className="flex items-center gap-3 pt-3 mb-3">
+            <div className="flex flex-wrap items-center gap-3 pt-3 mb-3">
+              <button
+                type="button"
+                onClick={handleUseMyLocation}
+                disabled={gpsStatus === 'locating'}
+                aria-label="Use my device location"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <span aria-hidden="true">🎯</span>
+                {gpsStatus === 'locating' ? 'Locating…' : 'Use My Location'}
+              </button>
+              {gpsStatus === 'unsupported' && (
+                <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
+              )}
+              {gpsStatus === 'error' && (
+                <span className="text-[11px] text-amber-400">Couldn&apos;t get your location — try again.</span>
+              )}
+              {gpsStatus === 'denied' && (
+                <span className="text-[11px] text-amber-400">Location access blocked in browser settings.</span>
+              )}
               {/* Search mode toggle */}
-              <div className="flex items-center gap-1 text-xs">
+              <div className="flex items-center gap-1 text-xs ml-auto">
                 <button
                   type="button"
                   onClick={() => setSearchMode('city')}

@@ -18,6 +18,7 @@ import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
+import HomeUtilityBar from './components/HomeUtilityBar';
 import { useSavedLocations } from './hooks/useSavedLocations';
 import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
@@ -301,6 +302,7 @@ export default function App() {
   const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
   const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
   const [alertFilter, setAlertFilter] = useState(null); // null = national, "PA" = state filter
+  const [heroLocation, setHeroLocation] = useState(null); // IP/GPS label for NearMeHeader
 
   // Saved-locations abstraction (anon localStorage vs authed Supabase).
   // Weather access never depends on this — accounts are pure convenience.
@@ -863,10 +865,8 @@ export default function App() {
     <div className="min-h-screen">
       <Header
         lastRefresh={alertsLastUpdated}
-        lastSuccessfulUpdate={alertsLastUpdated}
         onRefresh={refreshAlerts}
         loading={alertsLoading}
-        stormPhase="active"
         isStale={alertsIsStale}
       />
 
@@ -884,15 +884,19 @@ export default function App() {
       <StormEventBanner />
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Localized SEO headline + dual-layer "near me" location detection.
-            Rendered as <h2> because the shared <Header> already owns the page's
-            <h1> (the "StormTracking" brand) — keeps a single top-level heading.
-            Layer 1 (silent IP) only personalizes this text; the 🎯 button uses
-            GPS to re-center the map (setMapCenterOn) and refine the label. */}
+        {/* Localized hero headline + jump-to links (GPS lives in Check Location). */}
         <NearMeHeader
           as="h2"
-          onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
+          resolvedLocation={heroLocation}
+          onResolved={setHeroLocation}
           onResolveState={setSelectedStateCode}
+        />
+
+        <HomeUtilityBar
+          lastRefresh={alertsLastUpdated}
+          onRefresh={refreshAlerts}
+          loading={alertsLoading}
+          isStale={alertsIsStale}
         />
 
         {/* Stale Data Warning */}
@@ -900,12 +904,46 @@ export default function App() {
 
         {/* ========== MOBILE LAYOUT ========== */}
         <div className="lg:hidden space-y-4">
-          {/* 1. Check Location - TOP on mobile */}
-          <div id="location-search-mobile" className="rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-            <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+          {/* 1. Storm Coverage Map — primary focus after hero */}
+          <div
+            id="storm-map-mobile"
+            className="sticky z-10 -mx-3 sm:-mx-4 [&_.leaflet-container]:!h-[40vh] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
+          >
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={userLocations}
+              alerts={mapAlerts}
+              isHero
+              centerOn={mapCenterOn}
+              previewLocation={previewCity}
+              highlightedAlertId={highlightedAlertId}
+              selectedAlertId={selectedAlertId}
+              selectedStateCode={selectedStateCode}
+              highlightArea={userArea}
+              onAreaClick={handleAreaClick}
+              onResetView={handleMapResetView}
+              onAddAlertToMap={handleAddAlertToMap}
+              onRemoveAlertFromMap={handleRemoveAlertFromMap}
+            />
           </div>
 
-          {/* 2. Saved Locations (if any) - Below Check Location - COLLAPSIBLE */}
+          {/* 2. Check Location */}
+          <div id="location-search-mobile" className="jump-scroll-target rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
+            <ZipCodeSearch
+              stormPhase="active"
+              totalLocationCount={userLocations.length}
+              onLocationsChange={handleSearchLocationsChange}
+              onLocationClick={handleSearchLocationClick}
+              initialLocation={initialLocation}
+              onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
+              onResolveState={setSelectedStateCode}
+              onLocationResolved={setHeroLocation}
+            />
+          </div>
+
+          {/* 3. Saved Locations (if any) - COLLAPSIBLE */}
           {userLocations.length > 0 && (
             <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
               {/* Collapsible Header - dark gray background */}
@@ -1056,31 +1094,6 @@ export default function App() {
             </div>
           )}
 
-          {/* 3. Storm Coverage Map on mobile - Sticky so it stays visible while scrolling */}
-          <div
-            id="storm-map-mobile"
-            className="sticky z-10 -mx-3 sm:-mx-4 [&_.leaflet-container]:!h-[40vh] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
-          >
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={userLocations}
-              alerts={mapAlerts}
-              isHero
-              centerOn={mapCenterOn}
-              previewLocation={previewCity}
-              highlightedAlertId={highlightedAlertId}
-              selectedAlertId={selectedAlertId}
-              selectedStateCode={selectedStateCode}
-              highlightArea={userArea}
-              onAreaClick={handleAreaClick}
-              onResetView={handleMapResetView}
-              onAddAlertToMap={handleAddAlertToMap}
-              onRemoveAlertFromMap={handleRemoveAlertFromMap}
-            />
-          </div>
-
           {/* Section: Alert Overview */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
@@ -1170,7 +1183,16 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:gap-5">
             {/* Check Your Location */}
             <div id="location-search">
-              <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
+              <ZipCodeSearch
+                stormPhase="active"
+                totalLocationCount={userLocations.length}
+                onLocationsChange={handleSearchLocationsChange}
+                onLocationClick={handleSearchLocationClick}
+                initialLocation={initialLocation}
+                onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
+                onResolveState={setSelectedStateCode}
+                onLocationResolved={setHeroLocation}
+              />
             </div>
 
             {/* Saved Locations (if any) - COLLAPSIBLE */}
