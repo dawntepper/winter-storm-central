@@ -71,10 +71,36 @@ async function fetchReturningVisitors(supabase, since) {
   };
 }
 
+function groupSearchEvents(rows, { successFilter } = {}) {
+  const grouped = new Map();
+  for (const row of rows || []) {
+    if (successFilter != null && row.success !== successFilter) continue;
+
+    const key = `${row.query}::${row.state_code || ''}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.search_count += 1;
+      if (row.created_at && row.created_at > existing.last_searched) {
+        existing.last_searched = row.created_at;
+      }
+    } else {
+      grouped.set(key, {
+        query: row.query,
+        state_context: row.state_code,
+        state_code: row.state_code,
+        search_count: 1,
+        last_searched: row.created_at,
+      });
+    }
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => b.search_count - a.search_count);
+}
+
 async function fetchMissingLocationSearches(supabase, since) {
   let query = supabase
     .from('location_search_events')
-    .select('query, state_code, created_at')
+    .select('query, state_code, created_at, success')
     .eq('success', false)
     .limit(5000);
 
@@ -83,28 +109,7 @@ async function fetchMissingLocationSearches(supabase, since) {
   const { data, error } = await query;
   if (error) throw error;
 
-  const grouped = new Map();
-  for (const row of data || []) {
-    const key = `${row.query}::${row.state_code || ''}`;
-    const existing = grouped.get(key);
-    if (existing) {
-      existing.search_count += 1;
-      if (row.created_at > existing.last_searched) {
-        existing.last_searched = row.created_at;
-      }
-    } else {
-      grouped.set(key, {
-        query: row.query,
-        state_context: row.state_code,
-        search_count: 1,
-        last_searched: row.created_at,
-      });
-    }
-  }
-
-  return Array.from(grouped.values())
-    .sort((a, b) => b.search_count - a.search_count)
-    .slice(0, 50);
+  return groupSearchEvents(data).slice(0, 50);
 }
 
 async function fetchLocationSearchPerformance(supabase, since) {
@@ -116,7 +121,7 @@ async function fetchLocationSearchPerformance(supabase, since) {
 
   let query = supabase
     .from('location_search_events')
-    .select('query, state_code')
+    .select('query, state_code, success, created_at')
     .limit(5000);
 
   query = applySince(query, 'created_at', since);
@@ -124,24 +129,8 @@ async function fetchLocationSearchPerformance(supabase, since) {
   const { data, error } = await query;
   if (error) throw error;
 
-  const topMap = new Map();
-  for (const row of data || []) {
-    const key = `${row.query}::${row.state_code || ''}`;
-    const existing = topMap.get(key);
-    if (existing) {
-      existing.search_count += 1;
-    } else {
-      topMap.set(key, {
-        query: row.query,
-        state_code: row.state_code,
-        search_count: 1,
-      });
-    }
-  }
-
-  const topLocations = Array.from(topMap.values())
-    .sort((a, b) => b.search_count - a.search_count)
-    .slice(0, 20);
+  const topLocations = groupSearchEvents(data, { successFilter: true }).slice(0, 20);
+  const topMissing = groupSearchEvents(data, { successFilter: false }).slice(0, 20);
 
   return {
     totalSearches: stats?.total_searches ?? 0,
@@ -149,6 +138,7 @@ async function fetchLocationSearchPerformance(supabase, since) {
     failedSearches: stats?.failed_searches ?? 0,
     successRate: stats?.success_rate ?? 0,
     topLocations,
+    topMissing,
   };
 }
 

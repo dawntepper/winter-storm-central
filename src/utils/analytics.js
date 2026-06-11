@@ -794,16 +794,24 @@ export function trackLocationSearchFailed(searchTerm, error) {
 // ============================================
 
 /**
- * Track alert location search on state alert pages (ZIP / city / county).
+ * Track successful location catalog search (ZIP / city / county on state alert pages).
+ */
+export function trackLocationSearchSuccess({ query, stateCode, resolvedType }) {
+  track('Location Search Success', {
+    query: query || '',
+    state: stateCode || 'unknown',
+    resolved_type: resolvedType || 'unknown',
+  });
+}
+
+/**
+ * @deprecated Use trackLocationSearchSuccess — kept for backward-compatible imports.
  */
 export function trackAlertLocationSearch({ query, matchType, stateCode, hasCounty, hasCity, resultCount }) {
-  track('Alert Location Search', {
-    query: query || '',
-    match_type: matchType || 'none',
-    state_code: stateCode || 'unknown',
-    has_county: !!hasCounty,
-    has_city: !!hasCity,
-    result_count: resultCount ?? 0,
+  trackLocationSearchSuccess({
+    query,
+    stateCode,
+    resolvedType: matchType || 'unknown',
   });
 }
 
@@ -1207,6 +1215,8 @@ export function testAllTracking() {
   console.log('\n6. Search Events:');
   trackLocationSearch('80301');
   trackLocationSearchFailed('xyz123', 'Location not found');
+  trackLocationSearchSuccess({ query: 'Denver', stateCode: 'CO', resolvedType: 'city' });
+  trackLocationSearchNotFound({ query: 'Smallville', stateCode: 'KS' });
 
   // Radar navigation events
   console.log('\n6. Radar Navigation Events:');
@@ -1277,6 +1287,7 @@ export default {
   trackAddToHomePageView,
   trackLocationSearch,
   trackLocationSearchFailed,
+  trackLocationSearchSuccess,
   trackAlertLocationSearch,
   trackCountyAlertView,
   trackCityAlertView,

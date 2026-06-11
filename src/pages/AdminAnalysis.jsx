@@ -239,7 +239,21 @@ function AdminAnalysisInner() {
                   },
                 ]}
                 rows={ls?.topLocations || []}
-                emptyMessage="No location searches in this period."
+                emptyMessage="No successful location searches in this period."
+              />
+              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most requested missing</h3>
+              <DataTable
+                columns={[
+                  { key: 'query', label: 'Query' },
+                  { key: 'state_code', label: 'State', render: (r) => r.state_code || '—' },
+                  {
+                    key: 'search_count',
+                    label: 'Failed searches',
+                    render: (r) => formatNumber(r.search_count),
+                  },
+                ]}
+                rows={ls?.topMissing || []}
+                emptyMessage="No failed location searches in this period."
               />
             </section>
 

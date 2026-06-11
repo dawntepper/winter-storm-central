@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { citySlug, countySlug } from '../lib/locationSlug';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import {
-  trackAlertLocationSearch,
+  trackLocationSearchSuccess,
   trackCountyAlertView as trackCountyAlertViewEvent,
   trackLocationSearchNotFound as trackLocationSearchNotFoundEvent,
 } from '../utils/analytics';
@@ -640,14 +640,13 @@ export async function trackLocationSearch(event) {
 
   const resolved = resolvedType || matchType || (success ? 'none' : 'not_found');
 
-  trackAlertLocationSearch({
-    query,
-    matchType: matchType || 'none',
-    stateCode: stateCode || null,
-    hasCounty: !!countyId,
-    hasCity: !!cityId,
-    resultCount: resultCount ?? 0,
-  });
+  if (success) {
+    trackLocationSearchSuccess({
+      query,
+      stateCode: stateCode || null,
+      resolvedType: resolved,
+    });
+  }
 
   if (!supabase) return;
   const { error } = await supabase.from('location_search_events').insert({

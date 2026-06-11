@@ -29,6 +29,8 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `First Location Added` | Once per session when user saves their first pin |
 | `Multiple Locations Reached` | User crosses 2, 3, or 5 saved pins in a session (multi-location demand signal) |
 | `Geolocation Used` | "Find Weather Near Me" / "Use my location" GPS button — fired on permission grant (no props) |
+| `Location Search Success` | State-page catalog search resolved (ZIP / city / county) — `query`, `state`, `resolved_type` |
+| `Location Search Not Found` | State-page catalog search failed to resolve — `query`, `state` |
 | `Visitor` | New-vs-returning classification — fired once per browser session on app mount (`visitor_type`, `visit_count`, `days_since_first_visit`) |
 | `Sign Up Form Submitted` | First-time signup intent — magic link requested when `!hasAccountHint()` (`auth_method`); UI is unified "Sign In" but event still gates on per-device account hint |
 | `Add To Home Page View` | `/add-to-home` mount — mobile install instructions (`source`; `sign_in_modal` when linked from SignInModal) |
@@ -175,6 +177,15 @@ Location Saved (legacy — not wired in UI)
 
 Location Viewed on Map
   location_name
+
+Location Search Success
+  query              search string (ZIP, city name, or county name)
+  state              state abbr ("CO", "TX", etc.)
+  resolved_type      "zip" | "city" | "county"
+
+Location Search Not Found
+  query              search string that did not resolve
+  state              state abbr
 ```
 
 ### Alert events
