@@ -14,7 +14,6 @@ import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
 import LiveAlertsWidget from './components/LiveAlertsWidget';
 import ContactLink from './components/ContactLink';
-import StickyMiniMap from './components/StickyMiniMap';
 import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
@@ -885,9 +884,6 @@ export default function App() {
 
       {/* Active Storm Event Banner — reads from src/content/storms/ JSON files */}
       <StormEventBanner />
-
-      {/* Floating nav bar for mobile — appears when main map scrolls out of view */}
-      <StickyMiniMap selectedStateCode={selectedStateCode} />
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Localized SEO headline + dual-layer "near me" location detection.
