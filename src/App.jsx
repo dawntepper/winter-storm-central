@@ -907,7 +907,7 @@ export default function App() {
         {/* ========== MOBILE LAYOUT ========== */}
         <div className="lg:hidden space-y-4">
           {/* 1. Check Location - TOP on mobile */}
-          <div id="location-search-mobile" className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
+          <div id="location-search-mobile" className="rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
             <ZipCodeSearch stormPhase="active" totalLocationCount={userLocations.length} onLocationsChange={handleSearchLocationsChange} onLocationClick={handleSearchLocationClick} initialLocation={initialLocation} />
           </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
 import { STATE_NAMES } from '../data/stateConfig';
 import { getCitiesForState, resolveCityByName } from '../services/locationCatalogService';
@@ -266,6 +266,11 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
   const [error, setError] = useState(null);
   const [currentLocationData, setCurrentLocationData] = useState(null);
   const [isCardDismissed, setIsCardDismissed] = useState(false);
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [cityDropdownShowAll, setCityDropdownShowAll] = useState(false);
+  const cityInputRef = useRef(null);
+  const cityDropdownRef = useRef(null);
+  const suppressCityDropdownOpenRef = useRef(false);
 
   // Mobile collapse state - collapsed by default on mobile
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -344,6 +349,18 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     };
   }, [selectedState]);
 
+  // Close city dropdown when clicking outside
+  useEffect(() => {
+    if (!cityDropdownOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (cityDropdownRef.current?.contains(e.target)) return;
+      setCityDropdownOpen(false);
+      setCityDropdownShowAll(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [cityDropdownOpen]);
+
   const resolveStateCode = (stateInput) => {
     const upper = String(stateInput || '').trim().toUpperCase();
     if (STATE_NAMES[upper]) return upper;
@@ -375,9 +392,12 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
           setSelectedState(stateCode);
           setCityQuery(cityName);
 
-          resolveCityByName(cityName, stateCode, []).then((resolved) => {
+          resolveCityByName(cityName, stateCode, []).then(async (resolved) => {
             if (resolved.city) {
-              fetchCityWeather(stateCode, resolved.city);
+              const weather = await fetchCityWeather(stateCode, resolved.city);
+              if (weather && onLocationClick) {
+                onLocationClick(weather);
+              }
             }
           });
         }
@@ -458,10 +478,13 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
         };
         updateSavedLocations(newLocations);
       }
+
+      return weather;
     } catch (err) {
       console.error('City search error:', err);
       setError(err.message || 'Failed to fetch weather data');
       setCurrentLocationData(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -555,7 +578,12 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
         return;
       }
       setCityQuery(resolved.city.name);
-      await fetchCityWeather(selectedState, resolved.city);
+      suppressCityDropdownOpenRef.current = true;
+      closeCityDropdown();
+      const weather = await fetchCityWeather(selectedState, resolved.city);
+      if (weather && onLocationClick) {
+        onLocationClick(weather);
+      }
     } catch (err) {
       console.error('City search error:', err);
       setError('Failed to look up city');
@@ -567,17 +595,45 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     ? savedLocations[currentLocationId]?.onMap || false
     : false;
 
-  const cityListId = 'homepage-city-options';
+  const filteredCities = cityDropdownShowAll || !cityQuery.trim()
+    ? catalogCities
+    : catalogCities.filter((city) =>
+        city.name.toLowerCase().includes(cityQuery.trim().toLowerCase())
+      );
+
+  const closeCityDropdown = () => {
+    setCityDropdownOpen(false);
+    setCityDropdownShowAll(false);
+  };
+
+  const handleCityPick = (cityName) => {
+    setCityQuery(cityName);
+    suppressCityDropdownOpenRef.current = true;
+    closeCityDropdown();
+    setError(null);
+  };
+
+  const toggleCityDropdown = () => {
+    if (!selectedState || catalogLoading) return;
+    if (cityDropdownOpen) {
+      suppressCityDropdownOpenRef.current = true;
+      closeCityDropdown();
+    } else {
+      setCityDropdownShowAll(true);
+      setCityDropdownOpen(true);
+      cityInputRef.current?.focus();
+    }
+  };
 
   return (
     <div className="space-y-4">
       {/* Input Section - Enhanced contrast */}
-      <div className="rounded-lg border border-slate-600 shadow-lg overflow-hidden">
+      <div className="rounded-lg border border-slate-600 shadow-lg">
         {/* Collapsible Header - darker for better contrast */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all"
+          className={`w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
         >
           <div className="flex items-center gap-2">
             <span className="text-sm" role="img" aria-label="location">📍</span>
@@ -602,7 +658,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
 
         {/* Collapsible Content - solid background */}
         {isExpanded && (
-          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600">
+          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible">
             <div className="flex items-center gap-3 pt-3 mb-3">
               {/* Search mode toggle */}
               <div className="flex items-center gap-1 text-xs">
@@ -637,8 +693,11 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
             <select
               value={selectedState}
               onChange={(e) => {
-                setSelectedState(e.target.value);
+                const nextState = e.target.value;
+                if (nextState === selectedState) return;
+                setSelectedState(nextState);
                 setCityQuery('');
+                closeCityDropdown();
                 setError(null);
               }}
               className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors"
@@ -648,24 +707,87 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
                 <option key={code} value={code}>{name}</option>
               ))}
             </select>
-            <input
-              type="text"
-              list={cityListId}
-              value={cityQuery}
-              onChange={(e) => {
-                setCityQuery(e.target.value);
-                setError(null);
-              }}
-              disabled={!selectedState || catalogLoading}
-              placeholder={catalogLoading ? 'Loading cities…' : 'Search city…'}
-              aria-label="City name"
-              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors disabled:opacity-50"
-            />
-            <datalist id={cityListId}>
-              {catalogCities.map((city) => (
-                <option key={city.id} value={city.name} />
-              ))}
-            </datalist>
+            <div className="relative flex-1 min-w-0 overflow-visible" ref={cityDropdownRef}>
+              <div
+                className={`flex items-center gap-1 w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus-within:border-sky-500 transition-colors ${
+                  !selectedState || catalogLoading ? 'opacity-50' : ''
+                }`}
+              >
+                <input
+                  ref={cityInputRef}
+                  type="text"
+                  role="combobox"
+                  aria-expanded={cityDropdownOpen}
+                  aria-autocomplete="list"
+                  aria-controls="homepage-city-listbox"
+                  value={cityQuery}
+                  onChange={(e) => {
+                    setCityQuery(e.target.value);
+                    setCityDropdownShowAll(false);
+                    setError(null);
+                    if (selectedState && !catalogLoading) setCityDropdownOpen(true);
+                  }}
+                  onFocus={() => {
+                    if (suppressCityDropdownOpenRef.current) {
+                      suppressCityDropdownOpenRef.current = false;
+                      return;
+                    }
+                    if (selectedState && !catalogLoading && catalogCities.length > 0) {
+                      setCityDropdownShowAll(!cityQuery.trim());
+                      setCityDropdownOpen(true);
+                    }
+                  }}
+                  disabled={!selectedState || catalogLoading}
+                  placeholder={catalogLoading ? 'Loading cities…' : 'Search city…'}
+                  aria-label="City name"
+                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none disabled:cursor-not-allowed"
+                />
+                <button
+                  type="button"
+                  onClick={toggleCityDropdown}
+                  disabled={!selectedState || catalogLoading}
+                  aria-label={cityDropdownOpen ? 'Close city list' : 'Show all cities in state'}
+                  aria-expanded={cityDropdownOpen}
+                  className="shrink-0 p-0 text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <svg
+                    className={`w-4 h-4 transition-transform ${cityDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {cityDropdownOpen && selectedState && !catalogLoading && (
+                <ul
+                  id="homepage-city-listbox"
+                  role="listbox"
+                  className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto overscroll-contain rounded-lg border border-slate-600 bg-slate-900 shadow-lg"
+                >
+                  {filteredCities.length === 0 ? (
+                    <li className="px-3 py-2 text-sm text-slate-500">No matching cities</li>
+                  ) : (
+                    filteredCities.map((city) => (
+                      <li key={city.id} role="option" aria-selected={cityQuery === city.name}>
+                        <button
+                          type="button"
+                          onClick={() => handleCityPick(city.name)}
+                          className={`w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer ${
+                            cityQuery === city.name
+                              ? 'bg-sky-600/30 text-white'
+                              : 'text-slate-200 hover:bg-slate-700'
+                          }`}
+                        >
+                          {city.name}
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
             <button
               type="submit"
               disabled={loading || catalogLoading || !selectedState || !cityQuery.trim()}
