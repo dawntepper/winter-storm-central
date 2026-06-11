@@ -251,8 +251,13 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     assertAdmin(body.password);
 
-    const supabase = getSupabaseAdmin();
     const { action } = body;
+
+    if (action === 'validate') {
+      return jsonResponse(200, { ok: true });
+    }
+
+    const supabase = getSupabaseAdmin();
 
     switch (action) {
       case 'list': {

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
-const SESSION_KEY = 'admin_authenticated';
+import { authenticateAdminPassword, isAdminSessionActive } from '../lib/stormsRepo';
 
 /**
  * Wraps an admin page with a password gate. Auth persists in sessionStorage
@@ -10,9 +8,7 @@ const SESSION_KEY = 'admin_authenticated';
  * re-prompt within a session.
  */
 export default function AdminGate({ children }) {
-  const [authenticated, setAuthenticated] = useState(
-    sessionStorage.getItem(SESSION_KEY) === 'true'
-  );
+  const [authenticated, setAuthenticated] = useState(() => isAdminSessionActive());
 
   if (authenticated) return children;
   return <PasswordGate onAuthenticate={() => setAuthenticated(true)} />;
@@ -21,15 +17,19 @@ export default function AdminGate({ children }) {
 function PasswordGate({ onAuthenticate }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
+    setSubmitting(true);
+    setError('');
+    try {
+      await authenticateAdminPassword(password);
       onAuthenticate();
-    } else {
+    } catch {
       setError('Incorrect password');
     }
+    setSubmitting(false);
   };
 
   return (
@@ -48,9 +48,10 @@ function PasswordGate({ onAuthenticate }) {
           {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
           <button
             type="submit"
-            className="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg transition-colors cursor-pointer"
+            disabled={submitting}
+            className="w-full py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors cursor-pointer"
           >
-            Login
+            {submitting ? 'Checking…' : 'Login'}
           </button>
         </form>
         <Link to="/" className="block text-center mt-4 text-slate-400 text-sm hover:text-white">

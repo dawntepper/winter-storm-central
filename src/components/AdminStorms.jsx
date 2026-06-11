@@ -14,7 +14,10 @@ import {
   listAllStormsFromAdminApi,
   saveStormToDb,
   publishStormToDb,
-  archiveStormInDb
+  archiveStormInDb,
+  authenticateAdminPassword,
+  clearAdminSession,
+  isAdminSessionActive
 } from '../lib/stormsRepo';
 import { dbStormToFormData } from '../lib/stormNormalize';
 import {
@@ -117,9 +120,6 @@ function downloadStormJSON(formData) {
   URL.revokeObjectURL(url);
 }
 
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
-
-// US State options for affected states
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
@@ -267,15 +267,19 @@ function MapPicker({ currentLat, currentLon, onSelect, onClose }) {
 function PasswordGate({ onAuthenticate }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem('admin_authenticated', 'true');
+    setSubmitting(true);
+    setError('');
+    try {
+      await authenticateAdminPassword(password);
       onAuthenticate();
-    } else {
+    } catch {
       setError('Incorrect password');
     }
+    setSubmitting(false);
   };
 
   return (
@@ -293,9 +297,10 @@ function PasswordGate({ onAuthenticate }) {
           {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
           <button
             type="submit"
-            className="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg transition-colors cursor-pointer"
+            disabled={submitting}
+            className="w-full py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors cursor-pointer"
           >
-            Login
+            {submitting ? 'Checking…' : 'Login'}
           </button>
         </form>
         <Link to="/" className="block text-center mt-4 text-slate-400 text-sm hover:text-white">
@@ -1449,9 +1454,7 @@ function SiteSettingsPanel() {
 
 // Main admin component
 export default function AdminStorms() {
-  const [authenticated, setAuthenticated] = useState(
-    sessionStorage.getItem('admin_authenticated') === 'true'
-  );
+  const [authenticated, setAuthenticated] = useState(() => isAdminSessionActive());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1645,7 +1648,7 @@ export default function AdminStorms() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_authenticated');
+    clearAdminSession();
     setAuthenticated(false);
   };
 

@@ -116,17 +116,61 @@ export async function getPreviewStormBySlug(slug, previewToken) {
   return { data: normalized, error: null };
 }
 
+const ADMIN_SESSION_KEY = 'admin_authenticated';
+const ADMIN_PASSWORD_KEY = 'admin_password';
+
 /**
- * Call the Netlify admin API (password-gated server-side writes).
+ * Password for storm-admin-api: explicit arg, then session (post-login), then build env.
  */
 function getAdminPassword(explicit) {
-  return explicit || import.meta.env.VITE_ADMIN_PASSWORD;
+  if (explicit) return explicit;
+  try {
+    const stored = sessionStorage.getItem(ADMIN_PASSWORD_KEY);
+    if (stored) return stored;
+  } catch {
+    /* sessionStorage unavailable */
+  }
+  return import.meta.env.VITE_ADMIN_PASSWORD;
+}
+
+/**
+ * Validate password against storm-admin-api and persist for subsequent API calls.
+ * Falls back to VITE_ADMIN_PASSWORD when functions are unavailable (vite-only dev).
+ */
+export async function authenticateAdminPassword(password) {
+  try {
+    await callStormAdminApi('validate', { password });
+  } catch (err) {
+    const vitePwd = import.meta.env.VITE_ADMIN_PASSWORD;
+    if (vitePwd && password === vitePwd) {
+      sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+      return;
+    }
+    throw err;
+  }
+  sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+  sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+}
+
+export function clearAdminSession() {
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+}
+
+export function isAdminSessionActive() {
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) !== 'true') return false;
+  if (!sessionStorage.getItem(ADMIN_PASSWORD_KEY)) {
+    clearAdminSession();
+    return false;
+  }
+  return true;
 }
 
 export async function callStormAdminApi(action, payload = {}) {
   const body = {
-    action,
     ...payload,
+    action,
     password: getAdminPassword(payload.password)
   };
 
