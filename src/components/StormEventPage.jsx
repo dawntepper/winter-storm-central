@@ -10,6 +10,7 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import { getStormEventBySlug } from '../services/stormEventsService';
+import { isAdminSessionActive } from '../lib/adminAuth';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { STATE_CENTROIDS } from '../data/stateCentroids';
 import { STATE_NAMES, US_STATES } from '../data/stateConfig';
@@ -990,7 +991,7 @@ export default function StormEventPage() {
   const [searchParams] = useSearchParams();
   const isPreviewRoute = location.pathname.startsWith('/storm/preview/');
   const previewToken = searchParams.get('token');
-  const isAdminSession = sessionStorage.getItem('admin_authenticated') === 'true';
+  const isAdminSession = isAdminSessionActive();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);  // For the detail modal

@@ -1,13 +1,9 @@
-const ADMIN_PASSWORD_KEY = 'admin_password';
-const ADMIN_ANALYSIS_API_URL = '/api/admin-analysis-api';
+import {
+  clearAdminSession,
+  getAdminPassword,
+} from './adminAuth';
 
-function getAdminPassword() {
-  try {
-    return sessionStorage.getItem(ADMIN_PASSWORD_KEY) || null;
-  } catch {
-    return null;
-  }
-}
+const ADMIN_ANALYSIS_API_URL = '/api/admin-analysis-api';
 
 async function parseResponse(res) {
   const contentType = res.headers.get('content-type') || '';
@@ -30,6 +26,12 @@ async function parseResponse(res) {
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAdminSession();
+      throw new Error(
+        json.error || 'Session expired or incorrect password — please log in again.'
+      );
+    }
     throw new Error(json.error || `Admin analysis API failed (HTTP ${res.status})`);
   }
 

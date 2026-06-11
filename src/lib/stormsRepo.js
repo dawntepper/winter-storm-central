@@ -5,10 +5,23 @@
 
 import { supabase, isSupabaseConfigured } from './supabase';
 import {
+  clearAdminSession,
+  getAdminPassword,
+  isAdminSessionActive,
+  isSessionValidated,
+  markSessionValidated,
+  persistAdminSession,
+} from './adminAuth';
+import {
   normalizeDbStorm,
   normalizeEmergencySummary,
   normalizeEmergencyEntries
 } from './stormNormalize';
+
+export {
+  clearAdminSession,
+  isAdminSessionActive,
+} from './adminAuth';
 
 async function fetchEmergencyData(stormId) {
   if (!supabase || !stormId) {
@@ -116,24 +129,12 @@ export async function getPreviewStormBySlug(slug, previewToken) {
   return { data: normalized, error: null };
 }
 
-const ADMIN_SESSION_KEY = 'admin_authenticated';
-const ADMIN_PASSWORD_KEY = 'admin_password';
-
 /** Netlify redirect: /api/* → /.netlify/functions/* (see netlify.toml). */
 const STORM_ADMIN_API_URL = '/api/storm-admin-api';
 
-/**
- * Password for storm-admin-api: explicit arg or session from login only.
- * Never fall back to build-time VITE_ADMIN_PASSWORD — it may differ from
- * Netlify ADMIN_PASSWORD and causes 401 on save after a "successful" login.
- */
-function getAdminPassword(explicit) {
+function resolveAdminPassword(explicit) {
   if (explicit) return explicit;
-  try {
-    return sessionStorage.getItem(ADMIN_PASSWORD_KEY) || null;
-  } catch {
-    return null;
-  }
+  return getAdminPassword();
 }
 
 async function parseAdminApiResponse(res, action) {
@@ -178,26 +179,30 @@ async function parseAdminApiResponse(res, action) {
  */
 export async function authenticateAdminPassword(password) {
   await callStormAdminApi('validate', { password });
-  sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
-  sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+  persistAdminSession(password);
+  markSessionValidated();
 }
 
-export function clearAdminSession() {
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
-}
+/**
+ * Re-use a stored password within the tab session. Validates against the API
+ * once per session; subsequent admin routes trust sessionStorage until logout.
+ */
+export async function tryRestoreAdminSession() {
+  if (!isAdminSessionActive()) return false;
+  if (isSessionValidated()) return true;
 
-export function isAdminSessionActive() {
-  if (sessionStorage.getItem(ADMIN_SESSION_KEY) !== 'true') return false;
-  if (!sessionStorage.getItem(ADMIN_PASSWORD_KEY)) {
+  try {
+    await callStormAdminApi('validate');
+    markSessionValidated();
+    return true;
+  } catch {
     clearAdminSession();
     return false;
   }
-  return true;
 }
 
 export async function callStormAdminApi(action, payload = {}) {
-  const password = getAdminPassword(payload.password);
+  const password = resolveAdminPassword(payload.password);
   if (!password) {
     throw new Error('Admin password required — please log in again.');
   }

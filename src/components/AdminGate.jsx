@@ -1,17 +1,70 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { authenticateAdminPassword, isAdminSessionActive } from '../lib/stormsRepo';
+import {
+  isAdminSessionActive,
+  isSessionValidated,
+} from '../lib/adminAuth';
+import {
+  authenticateAdminPassword,
+  tryRestoreAdminSession,
+} from '../lib/stormsRepo';
 
 /**
  * Wraps an admin page with a password gate. Auth persists in sessionStorage
- * so navigating between /admin, /admin/storms, /admin/weather-summary doesn't
- * re-prompt within a session.
+ * so navigating between /admin, /admin/storms, /admin/seo, /admin/analysis,
+ * and /admin/weather-summary does not re-prompt within a browser tab session.
  */
 export default function AdminGate({ children }) {
-  const [authenticated, setAuthenticated] = useState(() => isAdminSessionActive());
+  const [authenticated, setAuthenticated] = useState(
+    () => isAdminSessionActive() && isSessionValidated()
+  );
+  const [checking, setChecking] = useState(
+    () => isAdminSessionActive() && !isSessionValidated()
+  );
+
+  useEffect(() => {
+    const onLogout = () => {
+      setAuthenticated(false);
+      setChecking(false);
+    };
+    window.addEventListener('admin-logout', onLogout);
+    return () => window.removeEventListener('admin-logout', onLogout);
+  }, []);
+
+  useEffect(() => {
+    if (!checking) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      const ok = await tryRestoreAdminSession();
+      if (!cancelled) {
+        setAuthenticated(ok);
+        setChecking(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checking]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="text-slate-400 text-sm">Checking admin session…</div>
+      </div>
+    );
+  }
 
   if (authenticated) return children;
-  return <PasswordGate onAuthenticate={() => setAuthenticated(true)} />;
+  return (
+    <PasswordGate
+      onAuthenticate={() => {
+        setAuthenticated(true);
+        setChecking(false);
+      }}
+    />
+  );
 }
 
 function PasswordGate({ onAuthenticate }) {
