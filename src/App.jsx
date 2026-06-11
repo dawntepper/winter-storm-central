@@ -803,6 +803,17 @@ export default function App() {
     document.querySelector('#location-search')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleChangeLocation = () => {
+    const isMobile = window.innerWidth < 1024;
+    const target = document.querySelector(isMobile ? '#location-search-mobile' : '#location-search');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleHeroLocate = (c) => {
+    setMapCenterOn(c);
+    focusCounty(c.lat, c.lon);
+  };
+
   // Handle hovering over an alert in the sidebar (highlight on map)
   const handleHoverAlert = (alertId) => {
     setHighlightedAlertId(alertId);
@@ -884,11 +895,13 @@ export default function App() {
       <StormEventBanner />
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Localized hero headline + jump-to links (GPS lives in Check Location). */}
+        {/* Localized hero headline + primary location action + jump-to links. */}
         <NearMeHeader
           as="h2"
           resolvedLocation={heroLocation}
           onResolved={setHeroLocation}
+          onLocate={handleHeroLocate}
+          onChangeLocation={handleChangeLocation}
           onResolveState={setSelectedStateCode}
         />
 

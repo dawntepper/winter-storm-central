@@ -10,12 +10,13 @@ import { trackGeolocationUsed, trackBrowseByStateClick, NAV_SOURCES } from '../u
  *
  * SEO: static fallback copy renders on first paint; location suffix is UX-only.
  * Layer 1 (silent IP geo) personalizes the title — header text only, no map move.
- * GPS "Use My Location" lives in ZipCodeSearch; parent passes resolved updates
- * via onResolved / resolvedLocation props.
+ * Layer 2 (hero CTA): GPS "Find Weather Near Me" or "Change Location" when a
+ * place is already known. Check Location card below offers detailed search.
  */
 export default function NearMeHeader({
   as = 'h1',
   onLocate,
+  onChangeLocation,
   onResolveState,
   resolvedLocation = null,
   onResolved,
@@ -102,7 +103,21 @@ export default function NearMeHeader({
 
   const region = resolved?.region || null;
   const label = resolved ? (region ? `${resolved.city}, ${region}` : resolved.city) : null;
-  const heading = label ? `Live Weather & Alerts — ${label}` : FALLBACK_HEADING;
+  const heading = label ? `Weather Near ${label}` : FALLBACK_HEADING;
+
+  const showLocationAction = Boolean(onLocate || onChangeLocation);
+  const useChangeLocation = Boolean(resolved && onChangeLocation);
+
+  const handlePrimaryAction = () => {
+    if (useChangeLocation) onChangeLocation();
+    else handleFindNearMe();
+  };
+
+  const primaryLabel = useChangeLocation
+    ? 'Change Location'
+    : gpsStatus === 'locating'
+      ? 'Locating…'
+      : 'Find Weather Near Me';
 
   const stateSlug = region ? ABBR_TO_SLUG[region] : null;
   const stateName = stateSlug ? US_STATES[stateSlug]?.name : null;
@@ -114,28 +129,32 @@ export default function NearMeHeader({
     'text-[11px] sm:text-xs text-slate-500 hover:text-sky-400 transition-colors';
 
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <div className={onLocate ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined}>
+    <div className={`space-y-2 ${className}`}>
+      <div className={showLocationAction ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined}>
         <HeadingTag className={headingClassName || 'text-xl sm:text-2xl font-bold text-white'}>
           {heading}
         </HeadingTag>
-        {onLocate && (
-          <div className="flex flex-col items-start gap-1 sm:items-end flex-shrink-0">
+        {showLocationAction && (
+          <div className="flex flex-col items-stretch sm:items-end gap-1 flex-shrink-0">
             <button
               type="button"
-              onClick={handleFindNearMe}
-              disabled={gpsStatus === 'locating'}
-              aria-label="Find weather near me using your device location"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 disabled:opacity-50 border border-sky-500/40 text-sky-300 text-xs sm:text-sm font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+              onClick={handlePrimaryAction}
+              disabled={!useChangeLocation && gpsStatus === 'locating'}
+              aria-label={
+                useChangeLocation
+                  ? 'Change your location'
+                  : 'Find weather near me using your device location'
+              }
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white text-sm font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap"
             >
-              <span aria-hidden="true">🎯</span>
-              {gpsStatus === 'locating' ? 'Locating…' : 'Find Weather Near Me'}
+              <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>
+              {primaryLabel}
             </button>
-            {gpsStatus === 'unsupported' && (
-              <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
+            {!useChangeLocation && gpsStatus === 'unsupported' && (
+              <span className="text-[11px] text-amber-400 sm:text-right">Geolocation unavailable on this device.</span>
             )}
-            {gpsStatus === 'error' && (
-              <span className="text-[11px] text-amber-400">Couldn&apos;t get your location — try again.</span>
+            {!useChangeLocation && gpsStatus === 'error' && (
+              <span className="text-[11px] text-amber-400 sm:text-right">Couldn&apos;t get your location — try again.</span>
             )}
           </div>
         )}

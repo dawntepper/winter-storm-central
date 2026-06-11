@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { trackShare, trackManualRefresh } from '../utils/analytics';
+import ContactLink from './ContactLink';
 
 /**
- * Compact homepage utility row: updated timestamp, refresh, share.
+ * Compact homepage utility row: updated timestamp, refresh, share, support.
  * Placed below the hero title / above the map — not in the main site header.
  */
 export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStale }) {
@@ -77,6 +78,10 @@ export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStal
           </span>
         )}
       </span>
+      <span aria-hidden="true" className="text-slate-600">•</span>
+      <ContactLink className="text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">
+        Support
+      </ContactLink>
     </div>
   );
 }
