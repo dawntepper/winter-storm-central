@@ -144,7 +144,7 @@ create or replace function public.admin_product_funnel_stats(
 )
 returns json
 language plpgsql
-stable
+volatile
 security definer
 set search_path = public
 as $$
