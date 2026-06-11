@@ -1,0 +1,412 @@
+{
+  "albany-ny": {
+    "zip_code": "12207",
+    "lat": 42.656,
+    "lon": -73.7508
+  },
+  "atlanta-ga": {
+    "zip_code": "30383",
+    "lat": 33.7487,
+    "lon": -84.3879
+  },
+  "austin-tx": {
+    "zip_code": "78701",
+    "lat": 30.2713,
+    "lon": -97.7426
+  },
+  "birmingham-al": {
+    "zip_code": "35203",
+    "lat": 33.521,
+    "lon": -86.8066
+  },
+  "boston-ma": {
+    "zip_code": "02117",
+    "lat": 42.3585,
+    "lon": -71.058
+  },
+  "buffalo-ny": {
+    "zip_code": "14202",
+    "lat": 42.887,
+    "lon": -78.8779
+  },
+  "burlington-vt": {
+    "zip_code": "05401",
+    "lat": 44.484,
+    "lon": -73.2199
+  },
+  "charleston-sc": {
+    "zip_code": "29408",
+    "lat": 32.7762,
+    "lon": -79.931
+  },
+  "charlotte-nc": {
+    "zip_code": "28245",
+    "lat": 35.2268,
+    "lon": -80.8432
+  },
+  "chicago-il": {
+    "zip_code": "60603",
+    "lat": 41.8798,
+    "lon": -87.6285
+  },
+  "cincinnati-oh": {
+    "zip_code": "45202",
+    "lat": 39.1072,
+    "lon": -84.502
+  },
+  "cleveland-oh": {
+    "zip_code": "44114",
+    "lat": 41.5064,
+    "lon": -81.6742
+  },
+  "columbus-oh": {
+    "zip_code": "43215",
+    "lat": 39.9671,
+    "lon": -83.0044
+  },
+  "dallas-tx": {
+    "zip_code": "75344",
+    "lat": 32.7825,
+    "lon": -96.7986
+  },
+  "des-moines-ia": {
+    "zip_code": "50392",
+    "lat": 41.5878,
+    "lon": -93.6274
+  },
+  "detroit-mi": {
+    "zip_code": "48226",
+    "lat": 42.3333,
+    "lon": -83.0484
+  },
+  "fort-myers-fl": {
+    "zip_code": "33902",
+    "lat": 26.6239,
+    "lon": -81.8836
+  },
+  "fort-worth-tx": {
+    "zip_code": "76102",
+    "lat": 32.7589,
+    "lon": -97.328
+  },
+  "grand-rapids-mi": {
+    "zip_code": "49503",
+    "lat": 42.9659,
+    "lon": -85.6527
+  },
+  "hartford-ct": {
+    "zip_code": "06161",
+    "lat": 41.766,
+    "lon": -72.6718
+  },
+  "houston-tx": {
+    "zip_code": "77276",
+    "lat": 29.7575,
+    "lon": -95.3668
+  },
+  "indianapolis-in": {
+    "zip_code": "46207",
+    "lat": 39.7673,
+    "lon": -86.1606
+  },
+  "jacksonville-fl": {
+    "zip_code": "32202",
+    "lat": 30.3299,
+    "lon": -81.6517
+  },
+  "joplin-mo": {
+    "zip_code": "64801",
+    "lat": 37.0969,
+    "lon": -94.5051
+  },
+  "kansas-city-mo": {
+    "zip_code": "64106",
+    "lat": 39.1052,
+    "lon": -94.5699
+  },
+  "lincoln-ne": {
+    "zip_code": "68508",
+    "lat": 40.8145,
+    "lon": -96.7009
+  },
+  "little-rock-ar": {
+    "zip_code": "72201",
+    "lat": 34.7483,
+    "lon": -92.2819
+  },
+  "memphis-tn": {
+    "zip_code": "37544",
+    "lat": 35.1496,
+    "lon": -90.0487
+  },
+  "miami-fl": {
+    "zip_code": "33131",
+    "lat": 25.7629,
+    "lon": -80.1895
+  },
+  "milwaukee-wi": {
+    "zip_code": "53270",
+    "lat": 43.0388,
+    "lon": -87.9036
+  },
+  "minneapolis-mn": {
+    "zip_code": "55415",
+    "lat": 44.9742,
+    "lon": -93.2585
+  },
+  "mobile-al": {
+    "zip_code": "36624",
+    "lat": 30.6958,
+    "lon": -88.0433
+  },
+  "nashville-tn": {
+    "zip_code": "37243",
+    "lat": 36.165,
+    "lon": -86.7821
+  },
+  "new-orleans-la": {
+    "zip_code": "70163",
+    "lat": 29.95,
+    "lon": -90.0755
+  },
+  "new-york-ny": {
+    "zip_code": "10007",
+    "lat": 40.7139,
+    "lon": -74.007
+  },
+  "oklahoma-city-ok": {
+    "zip_code": "73125",
+    "lat": 35.4654,
+    "lon": -97.5218
+  },
+  "omaha-ne": {
+    "zip_code": "68102",
+    "lat": 41.259,
+    "lon": -95.9409
+  },
+  "orlando-fl": {
+    "zip_code": "32896",
+    "lat": 28.5419,
+    "lon": -81.3791
+  },
+  "pensacola-fl": {
+    "zip_code": "32501",
+    "lat": 30.4223,
+    "lon": -87.2248
+  },
+  "philadelphia-pa": {
+    "zip_code": "19195",
+    "lat": 39.9525,
+    "lon": -75.1645
+  },
+  "pittsburgh-pa": {
+    "zip_code": "15222",
+    "lat": 40.4477,
+    "lon": -79.9933
+  },
+  "portland-me": {
+    "zip_code": "04101",
+    "lat": 43.6606,
+    "lon": -70.2589
+  },
+  "providence-ri": {
+    "zip_code": "02901",
+    "lat": 41.8228,
+    "lon": -71.4145
+  },
+  "raleigh-nc": {
+    "zip_code": "27601",
+    "lat": 35.7727,
+    "lon": -78.6324
+  },
+  "rochester-ny": {
+    "zip_code": "14604",
+    "lat": 43.1577,
+    "lon": -77.608
+  },
+  "san-antonio-tx": {
+    "zip_code": "78205",
+    "lat": 29.4237,
+    "lon": -98.4925
+  },
+  "savannah-ga": {
+    "zip_code": "31401",
+    "lat": 32.0749,
+    "lon": -81.0883
+  },
+  "springfield-mo": {
+    "zip_code": "65802",
+    "lat": 37.2117,
+    "lon": -93.299
+  },
+  "st-louis-mo": {
+    "zip_code": "63101",
+    "lat": 38.627,
+    "lon": -90.1994
+  },
+  "syracuse-ny": {
+    "zip_code": "13202",
+    "lat": 43.041,
+    "lon": -76.1489
+  },
+  "tampa-fl": {
+    "zip_code": "33695",
+    "lat": 27.9471,
+    "lon": -82.4585
+  },
+  "tulsa-ok": {
+    "zip_code": "74172",
+    "lat": 36.1543,
+    "lon": -95.9923
+  },
+  "virginia-beach-va": {
+    "zip_code": "23451",
+    "lat": 36.8585,
+    "lon": -76.0019
+  },
+  "wichita-ks": {
+    "zip_code": "67202",
+    "lat": 37.6899,
+    "lon": -97.3355
+  },
+  "wilmington-nc": {
+    "zip_code": "28403",
+    "lat": 34.2237,
+    "lon": -77.8862
+  },
+  "anchorage-ak": {
+    "zip_code": "99513",
+    "lat": 61.2149,
+    "lon": -149.8862
+  },
+  "phoenix-az": {
+    "zip_code": "85003",
+    "lat": 33.4511,
+    "lon": -112.0774
+  },
+  "los-angeles-ca": {
+    "zip_code": "90013",
+    "lat": 34.0448,
+    "lon": -118.2434
+  },
+  "san-francisco-ca": {
+    "zip_code": "94199",
+    "lat": 37.775,
+    "lon": -122.4183
+  },
+  "denver-co": {
+    "zip_code": "80261",
+    "lat": 39.7379,
+    "lon": -104.985
+  },
+  "wilmington-de": {
+    "zip_code": "19801",
+    "lat": 39.7378,
+    "lon": -75.5497
+  },
+  "honolulu-hi": {
+    "zip_code": "96812",
+    "lat": 21.3061,
+    "lon": -157.8585
+  },
+  "boise-id": {
+    "zip_code": "83724",
+    "lat": 43.6195,
+    "lon": -116.1952
+  },
+  "louisville-ky": {
+    "zip_code": "40202",
+    "lat": 38.2507,
+    "lon": -85.7476
+  },
+  "baltimore-md": {
+    "zip_code": "21276",
+    "lat": 39.291,
+    "lon": -76.6054
+  },
+  "jackson-ms": {
+    "zip_code": "39269",
+    "lat": 32.3003,
+    "lon": -90.1886
+  },
+  "billings-mt": {
+    "zip_code": "59101",
+    "lat": 45.7745,
+    "lon": -108.5005
+  },
+  "las-vegas-nv": {
+    "zip_code": "89162",
+    "lat": 36.1725,
+    "lon": -115.1414
+  },
+  "manchester-nh": {
+    "zip_code": "03101",
+    "lat": 42.9929,
+    "lon": -71.4633
+  },
+  "newark-nj": {
+    "zip_code": "07102",
+    "lat": 40.732,
+    "lon": -74.1765
+  },
+  "albuquerque-nm": {
+    "zip_code": "87102",
+    "lat": 35.0818,
+    "lon": -106.6482
+  },
+  "fargo-nd": {
+    "zip_code": "58105",
+    "lat": 46.8954,
+    "lon": -96.8078
+  },
+  "portland-or": {
+    "zip_code": "97204",
+    "lat": 45.5181,
+    "lon": -122.6745
+  },
+  "sioux-falls-sd": {
+    "zip_code": "57186",
+    "lat": 43.5424,
+    "lon": -96.7312
+  },
+  "salt-lake-city-ut": {
+    "zip_code": "84101",
+    "lat": 40.7559,
+    "lon": -111.8967
+  },
+  "seattle-wa": {
+    "zip_code": "98164",
+    "lat": 47.606,
+    "lon": -122.332
+  },
+  "charleston-wv": {
+    "zip_code": "25301",
+    "lat": 38.349,
+    "lon": -81.6306
+  },
+  "cheyenne-wy": {
+    "zip_code": "82001",
+    "lat": 41.1437,
+    "lon": -104.7962
+  },
+  "washington-dc": {
+    "zip_code": "20036",
+    "lat": 38.9087,
+    "lon": -77.0414
+  },
+  "san-juan-pr": {
+    "zip_code": "00901",
+    "lat": 18.4655,
+    "lon": -66.1057
+  },
+  "charlotte-amalie-vi": {
+    "zip_code": "00802",
+    "lat": 18.3419,
+    "lon": -64.9307
+  },
+  "hagatna-gu": {
+    "zip_code": "96910",
+    "lat": 13.4745,
+    "lon": 144.7504
+  }
+}

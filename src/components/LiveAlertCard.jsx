@@ -42,14 +42,15 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
     setExpanded(!expanded);
   };
 
-  const stateName = alert.state ? (STATE_NAMES[alert.state] || alert.state) : '';
-  const stateSlug = alert.state ? ABBR_TO_SLUG[alert.state] : null;
-  const citySlug = alert.state ? findCitySlugInText(alert.location || '', alert.state) : null;
-
   // Split "Parmer, TX" → ["Parmer", "TX"] so each segment can be linked independently.
   const locMatch = (alert.location || '').match(/^(.*?),\s*([A-Z]{2})$/);
   const locCityPart = locMatch ? locMatch[1] : (alert.location || '');
   const locStateAbbr = locMatch ? locMatch[2] : null;
+
+  const stateAbbr = alert.state || locStateAbbr;
+  const stateName = stateAbbr ? (STATE_NAMES[stateAbbr] || stateAbbr) : '';
+  const stateSlug = stateAbbr ? ABBR_TO_SLUG[stateAbbr] : null;
+  const citySlug = stateAbbr ? findCitySlugInText(alert.location || '', stateAbbr) : null;
 
   const stopProp = (e) => e.stopPropagation();
   const inlineLinkClass = 'text-sky-400 hover:text-sky-300 hover:underline transition-colors';
@@ -129,7 +130,18 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
                   )}
                 </>
               )}
-              {locStateAbbr && <>{', '}{locStateAbbr}</>}
+              {locStateAbbr && (
+                <>
+                  {', '}
+                  {stateSlug ? (
+                    <Link to={`/alerts/${stateSlug}`} onClick={stopProp} className={inlineLinkClass}>
+                      {locStateAbbr}
+                    </Link>
+                  ) : (
+                    locStateAbbr
+                  )}
+                </>
+              )}
               <svg
                 aria-label={expanded ? 'Collapse' : 'Expand'}
                 className={`inline-block w-3 h-3 ml-1.5 -mt-0.5 text-slate-500 group-hover:text-slate-300 transition-transform ${expanded ? 'rotate-180' : ''}`}
@@ -256,7 +268,18 @@ export default function LiveAlertCard({ alert, mode = 'full', tick, onAlertTap, 
                 )}
               </>
             )}
-            {locStateAbbr && <>{', '}{locStateAbbr}</>}
+            {locStateAbbr && (
+              <>
+                {', '}
+                {stateSlug ? (
+                  <Link to={`/alerts/${stateSlug}`} onClick={stopProp} className={inlineLinkClass}>
+                    {locStateAbbr}
+                  </Link>
+                ) : (
+                  locStateAbbr
+                )}
+              </>
+            )}
           </h3>
         </div>
 

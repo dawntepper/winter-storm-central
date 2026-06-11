@@ -1738,11 +1738,45 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 <span className="text-lg">{getWeatherIcon(hoveredUserLocation.conditions?.shortForecast)}</span>
                 <div>
                   {(() => {
+                    const m = (hoveredUserLocation.name || '').match(/^(.*?),\s*([A-Z]{2})$/);
+                    const linkClass = 'text-sky-600 hover:text-sky-700 hover:underline';
+                    if (m) {
+                      const cityPart = m[1];
+                      const abbr = m[2];
+                      const stateSlug = ABBR_TO_SLUG[abbr];
+                      const citySlug = getCitySlugForLocation(hoveredUserLocation.name);
+                      return (
+                        <h4 className="font-semibold text-slate-800 text-sm">
+                          {citySlug ? (
+                            <Link to={`/alerts/${citySlug}`} className={linkClass} onClick={(e) => e.stopPropagation()}>
+                              {cityPart}
+                            </Link>
+                          ) : (
+                            cityPart
+                          )}
+                          {', '}
+                          {stateSlug ? (
+                            <Link
+                              to={`/alerts/${stateSlug}`}
+                              className={linkClass}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
+                              }}
+                            >
+                              {abbr}
+                            </Link>
+                          ) : (
+                            abbr
+                          )}
+                        </h4>
+                      );
+                    }
                     const slug = getCitySlugForLocation(hoveredUserLocation.name);
                     return slug ? (
                       <Link
                         to={`/alerts/${slug}`}
-                        className="font-semibold text-sky-600 hover:text-sky-700 hover:underline text-sm"
+                        className={`font-semibold ${linkClass} text-sm`}
                       >
                         {hoveredUserLocation.name} &rarr;
                       </Link>
