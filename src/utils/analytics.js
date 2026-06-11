@@ -1,7 +1,15 @@
 /**
  * Analytics Utility for StormTracking
- * Uses Plausible Analytics for privacy-friendly event tracking
+ * Uses Plausible Analytics for privacy-friendly event tracking.
+ * Product + radar funnel events are also persisted to Supabase.
  */
+
+import {
+  recordProductEvent,
+  recordRadarEvent,
+  PRODUCT_EVENTS,
+  RADAR_EVENTS,
+} from '../services/productAnalyticsService';
 
 // Session tracking state
 let sessionStartTime = Date.now();
@@ -71,6 +79,10 @@ export function trackLocationAdded({ trigger, locationName, previousCount }) {
   if (city) props.city = city;
 
   track('Location Added', props);
+  recordProductEvent(PRODUCT_EVENTS.SAVE_LOCATION, {
+    stateCode: state,
+    metadata: { trigger, city, is_first_location: isFirstLocation },
+  });
 
   if (isFirstLocation && !firstLocationAddedThisSession) {
     firstLocationAddedThisSession = true;
@@ -106,6 +118,10 @@ export function trackLocationAddedFromAlert({ locationName, category, previousCo
   if (city) props.city = city;
 
   track('Location Added from Alert', props);
+  recordProductEvent(PRODUCT_EVENTS.SAVE_LOCATION, {
+    stateCode: state,
+    metadata: { trigger: SAVE_TRIGGERS.MAP_ALERT_POPUP, category, city, is_first_location: isFirstLocation },
+  });
 
   if (isFirstLocation && !firstLocationAddedThisSession) {
     firstLocationAddedThisSession = true;
@@ -169,6 +185,9 @@ export function trackLocationsSynced({ syncedCount, localCount }) {
   track('Locations Synced', {
     synced_count: syncedCount,
     local_count: localCount
+  });
+  recordProductEvent(PRODUCT_EVENTS.LOCATIONS_SYNCED, {
+    metadata: { synced_count: syncedCount, local_count: localCount },
   });
 }
 
@@ -234,10 +253,31 @@ export function trackAlertAddedToMap(category) {
 /**
  * Track radar toggle
  */
-export function trackRadarToggle(isEnabled) {
+export function trackRadarToggle(isEnabled, { stateCode, radarType } = {}) {
   track('Radar Toggled', {
     state: isEnabled ? 'on' : 'off'
   });
+  recordRadarEvent(RADAR_EVENTS.TOGGLED, {
+    stateCode,
+    radarType,
+  });
+  if (isEnabled) {
+    recordRadarEvent(RADAR_EVENTS.OPENED, { stateCode, radarType });
+  }
+}
+
+/**
+ * Radar overlay first shown (map mount or toggle on).
+ */
+export function trackRadarOpened({ stateCode, radarType } = {}) {
+  recordRadarEvent(RADAR_EVENTS.OPENED, { stateCode, radarType });
+}
+
+/**
+ * Radar map recentered to a new location.
+ */
+export function trackRadarLocationChanged({ stateCode, radarType } = {}) {
+  recordRadarEvent(RADAR_EVENTS.LOCATION_CHANGED, { stateCode, radarType });
 }
 
 /**
@@ -659,8 +699,9 @@ export function trackStormRadarClick({ stormSlug, source }) {
 /**
  * Track radar type change on /radar page
  */
-export function trackRadarTypeChange(radarType) {
+export function trackRadarTypeChange(radarType, { stateCode } = {}) {
   track('Radar Type Change', { radar_type: radarType });
+  recordRadarEvent(RADAR_EVENTS.TYPE_CHANGED, { radarType, stateCode });
 }
 
 /**
@@ -693,6 +734,10 @@ export function trackStateAlertsPageView({ stateCode, stateName, alertCount, sou
     stateName,
     alertCount,
     source: resolveSource(source)
+  });
+  recordProductEvent(PRODUCT_EVENTS.STATE_ALERT_PAGE_VIEW, {
+    stateCode,
+    metadata: { state_name: stateName, alert_count: alertCount, source: resolveSource(source) },
   });
 }
 
@@ -802,6 +847,10 @@ export function trackLocationSearchSuccess({ query, stateCode, resolvedType }) {
     state: stateCode || 'unknown',
     resolved_type: resolvedType || 'unknown',
   });
+  recordProductEvent(PRODUCT_EVENTS.LOCATION_SEARCH_SUCCESS, {
+    stateCode,
+    metadata: { query, resolved_type: resolvedType || 'unknown' },
+  });
 }
 
 /**
@@ -825,6 +874,15 @@ export function trackCountyAlertView({ countyId, stateCode, alertCount, source, 
     alert_count: alertCount ?? 0,
     source: source || 'unknown',
     county_name: countyName || '',
+  });
+  recordProductEvent(PRODUCT_EVENTS.COUNTY_ALERT_VIEW, {
+    stateCode,
+    metadata: {
+      county_id: countyId,
+      county_name: countyName,
+      alert_count: alertCount ?? 0,
+      source: source || 'unknown',
+    },
   });
 }
 
@@ -1043,9 +1101,49 @@ function normalizeSlug(value) {
  * stateContext defaults to 'national'; supports a future state-scoped radar.
  */
 export function trackRadarPageView(source, stateContext = 'national') {
+  const resolvedSource = resolveSource(source);
   track('Radar Page View', {
-    source: resolveSource(source),
+    source: resolvedSource,
     state_context: normalizeSlug(stateContext)
+  });
+  const stateCode = stateContext && stateContext !== 'national'
+    ? String(stateContext).toUpperCase().slice(0, 2)
+    : null;
+  recordProductEvent(PRODUCT_EVENTS.RADAR_VIEW, {
+    stateCode: /^[A-Z]{2}$/.test(stateCode || '') ? stateCode : null,
+    metadata: { source: resolvedSource, state_context: normalizeSlug(stateContext) },
+  });
+}
+
+/**
+ * Fire 'Homepage View' once per homepage mount.
+ */
+export function trackHomepageView() {
+  track('Homepage View');
+  recordProductEvent(PRODUCT_EVENTS.HOMEPAGE_VIEW);
+}
+
+/**
+ * Map or forecast location changed (distinct from save_location).
+ */
+export function trackLocationChange({ source, stateCode, metadata } = {}) {
+  track('Location Change', {
+    source: source || 'unknown',
+    state: stateCode || 'unknown',
+  });
+  recordProductEvent(PRODUCT_EVENTS.LOCATION_CHANGE, {
+    stateCode,
+    metadata: { source, ...metadata },
+  });
+}
+
+/**
+ * Completed sign-in (magic link, OAuth, or password).
+ */
+export function trackSignIn({ method } = {}) {
+  track('Sign In', { auth_method: method || 'unknown' });
+  recordProductEvent(PRODUCT_EVENTS.SIGN_IN, {
+    metadata: { auth_method: method || 'unknown' },
   });
 }
 
@@ -1120,6 +1218,9 @@ export function trackForecastPageView(stateSlug, locationSource) {
     state: stateSlug,
     location_source: locationSource
   });
+  recordProductEvent(PRODUCT_EVENTS.FORECAST_VIEW, {
+    metadata: { state_slug: stateSlug, location_source: locationSource },
+  });
 }
 
 /**
@@ -1129,8 +1230,9 @@ export function trackForecastPageView(stateSlug, locationSource) {
  *
  * source: 'city' | 'zip' | 'geolocation'
  */
-export function trackForecastLocationChanged(source) {
+export function trackForecastLocationChanged(source, { stateCode } = {}) {
   track('Forecast Location Changed', { source });
+  trackLocationChange({ source, stateCode, metadata: { context: 'forecast' } });
 }
 
 /**
@@ -1273,6 +1375,8 @@ export default {
   trackAlertTapped,
   trackAlertAddedToMap,
   trackRadarToggle,
+  trackRadarOpened,
+  trackRadarLocationChanged,
   trackAlertsToggle,
   trackMapReset,
   trackMapAlertClicked,
@@ -1332,6 +1436,9 @@ export default {
   readNavSource,
   detectSourceFromReferrer,
   trackRadarPageView,
+  trackHomepageView,
+  trackLocationChange,
+  trackSignIn,
   trackMapRegionClick,
   trackAffiliateClick,
   trackEssentialsCardClick,

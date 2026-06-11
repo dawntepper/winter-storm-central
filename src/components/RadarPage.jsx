@@ -302,7 +302,7 @@ export default function RadarPage() {
               {LAYER_TYPES.map(type => (
                 <button
                   key={type.id}
-                  onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id); }}
+                  onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: gpsStateCode }); }}
                   className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
                     radarType === type.id
                       ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'

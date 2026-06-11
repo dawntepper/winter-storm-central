@@ -182,6 +182,65 @@ async function fetchCountyAlertViews(supabase, since) {
     .slice(0, 30);
 }
 
+const FUNNEL_DEFINITIONS = {
+  alerts_to_save: [
+    'homepage_view',
+    'state_alert_page_view',
+    'location_change',
+    'radar_view',
+    'save_location',
+  ],
+  radar_to_forecast: [
+    'homepage_view',
+    'radar_view',
+    'location_change',
+    'forecast_view',
+  ],
+  county_to_radar: [
+    'state_alert_page_view',
+    'location_search_success',
+    'county_alert_view',
+    'radar_view',
+  ],
+};
+
+async function fetchRadarEngagement(supabase, since) {
+  const { data, error } = await supabase.rpc('admin_radar_engagement_stats', {
+    p_since: since,
+  });
+  if (error) throw error;
+  return {
+    totalOpens: data?.totalOpens ?? 0,
+    opensByState: data?.opensByState ?? [],
+    topRadarTypes: data?.topRadarTypes ?? [],
+    topLocations: data?.topLocations ?? [],
+  };
+}
+
+async function fetchUserJourneys(supabase, since) {
+  const funnelEntries = await Promise.all(
+    Object.entries(FUNNEL_DEFINITIONS).map(async ([id, steps]) => {
+      const { data, error } = await supabase.rpc('admin_product_funnel_stats', {
+        p_since: since,
+        p_steps: steps,
+      });
+      if (error) throw error;
+      return [id, { ...data, steps }];
+    })
+  );
+
+  const { data: topPaths, error: pathsError } = await supabase.rpc(
+    'admin_top_journey_paths',
+    { p_since: since, p_limit: 10 }
+  );
+  if (pathsError) throw pathsError;
+
+  return {
+    funnels: Object.fromEntries(funnelEntries),
+    topPaths: topPaths ?? [],
+  };
+}
+
 async function fetchSavedLocations(supabase, since) {
   const { data: stats, error: statsError } = await supabase.rpc(
     'admin_saved_location_stats',
@@ -258,12 +317,16 @@ exports.handler = async (event) => {
       locationSearch,
       countyAlertViews,
       savedLocations,
+      radar,
+      userJourneys,
     ] = await Promise.all([
       fetchReturningVisitors(supabase, since),
       fetchMissingLocationSearches(supabase, since),
       fetchLocationSearchPerformance(supabase, since),
       fetchCountyAlertViews(supabase, since),
       fetchSavedLocations(supabase, since),
+      fetchRadarEngagement(supabase, since),
+      fetchUserJourneys(supabase, since),
     ]);
 
     return jsonResponse(200, {
@@ -274,11 +337,8 @@ exports.handler = async (event) => {
       locationSearch,
       countyAlertViews,
       savedLocations,
-      radar: {
-        available: false,
-        message:
-          'Radar engagement is tracked via client-side analytics (Plausible) and is not stored in Supabase.',
-      },
+      radar,
+      userJourneys,
     });
   } catch (err) {
     console.error('admin-analysis-api error:', err);

@@ -9,6 +9,9 @@ import { ABBR_TO_SLUG } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import {
   trackRadarToggle,
+  trackRadarOpened,
+  trackRadarLocationChanged,
+  trackLocationChange,
   trackAlertsToggle,
   trackMapReset,
   trackMapAlertClicked,
@@ -1151,6 +1154,8 @@ function isAlertLocationSaved(alert, userLocations) {
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
   const [showRadar, setShowRadar] = useState(true);
+  const radarOpenedTracked = useRef(false);
+  const prevCenterOnRef = useRef(undefined);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
   // Only surfaces if the radar genuinely takes a beat; otherwise the tiles just
@@ -1163,6 +1168,29 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     setRadarSpinnerVisible(false);
   }, [showRadar, radarLoading]);
+
+  useEffect(() => {
+    if (showRadar && !radarOpenedTracked.current) {
+      radarOpenedTracked.current = true;
+      trackRadarOpened({ stateCode: selectedStateCode, radarType: radarLayerType });
+    }
+  }, [showRadar, selectedStateCode, radarLayerType]);
+
+  useEffect(() => {
+    if (!centerOn || prevCenterOnRef.current === undefined) {
+      prevCenterOnRef.current = centerOn;
+      return;
+    }
+    if (centerOn.id !== prevCenterOnRef.current?.id) {
+      trackRadarLocationChanged({ stateCode: selectedStateCode, radarType: radarLayerType });
+      trackLocationChange({
+        source: 'map_center',
+        stateCode: selectedStateCode,
+        metadata: { lat: centerOn.lat, lon: centerOn.lon },
+      });
+    }
+    prevCenterOnRef.current = centerOn;
+  }, [centerOn, selectedStateCode, radarLayerType]);
   const [showAlerts, setShowAlerts] = useState(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [hoveredCatTip, setHoveredCatTip] = useState(null); // { label, x } — instant pill tooltip
@@ -1424,7 +1452,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               onClick={() => {
                 const newState = !showRadar;
                 setShowRadar(newState);
-                trackRadarToggle(newState);
+                trackRadarToggle(newState, {
+                  stateCode: selectedStateCode,
+                  radarType: radarLayerType,
+                });
               }}
               className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                 showRadar

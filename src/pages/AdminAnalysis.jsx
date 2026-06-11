@@ -88,6 +88,63 @@ function DataTable({ columns, rows, emptyMessage }) {
   );
 }
 
+const FUNNEL_LABELS = {
+  alerts_to_save: 'Homepage → State Alerts → Location Change → Radar → Save Location',
+  radar_to_forecast: 'Homepage → Radar → Location Change → Forecast',
+  county_to_radar: 'State Alerts → County Search → County Alert → Radar',
+};
+
+function formatEventName(name) {
+  if (!name) return '—';
+  return String(name).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function FunnelCard({ id, funnel }) {
+  const stepStats = Array.isArray(funnel?.stepStats)
+    ? funnel.stepStats
+    : funnel?.stepStats
+      ? Object.values(funnel.stepStats)
+      : [];
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+      <h3 className="text-sm font-semibold text-white mb-1">
+        {FUNNEL_LABELS[id] || id}
+      </h3>
+      <p className="text-xs text-slate-500 mb-4">
+        Overall completion: {formatPct(funnel?.overallCompletionPct)}
+      </p>
+      <DataTable
+        columns={[
+          { key: 'step', label: 'Step', render: (r) => r.step },
+          {
+            key: 'eventName',
+            label: 'Event',
+            render: (r) => formatEventName(r.eventName),
+          },
+          {
+            key: 'sessions',
+            label: 'Sessions',
+            render: (r) => formatNumber(r.sessions),
+          },
+          {
+            key: 'completionPct',
+            label: 'Step completion',
+            render: (r) => formatPct(r.completionPct),
+          },
+          {
+            key: 'dropoffPct',
+            label: 'Drop-off',
+            render: (r) => formatPct(r.dropoffPct),
+          },
+        ]}
+        rows={stepStats}
+        emptyMessage="No funnel data in this period."
+      />
+    </div>
+  );
+}
+
 function DateRangePicker({ value, onChange, disabled }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -137,6 +194,8 @@ function AdminAnalysisInner() {
   const rv = data?.returningVisitors;
   const ls = data?.locationSearch;
   const sl = data?.savedLocations;
+  const radar = data?.radar;
+  const journeys = data?.userJourneys;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -324,16 +383,88 @@ function AdminAnalysisInner() {
               />
             </section>
 
-            {/* 6. Radar Engagement (placeholder) */}
+            {/* 6. Radar Engagement */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
               <h2 className="text-xl font-bold text-white mb-1">Radar Engagement</h2>
-              <div className="bg-slate-900/60 border border-slate-700 border-dashed rounded-lg p-6 text-center">
-                <div className="text-3xl mb-2">📡</div>
-                <p className="text-slate-400 text-sm max-w-md mx-auto">
-                  {data.radar?.message ||
-                    'Radar engagement is tracked via client-side analytics and is not stored in Supabase.'}
-                </p>
+              <p className="text-sm text-slate-400 mb-5">
+                Radar opens, types, and location views from radar_events.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <StatCard label="Total radar opens" value={formatNumber(radar?.totalOpens)} />
               </div>
+              <h3 className="text-sm font-semibold text-slate-300 mb-3">Opens by state</h3>
+              <DataTable
+                columns={[
+                  { key: 'state_code', label: 'State' },
+                  {
+                    key: 'open_count',
+                    label: 'Opens',
+                    render: (r) => formatNumber(r.open_count),
+                  },
+                ]}
+                rows={radar?.opensByState || []}
+                emptyMessage="No radar opens in this period."
+              />
+              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most used radar types</h3>
+              <DataTable
+                columns={[
+                  { key: 'radar_type', label: 'Type' },
+                  {
+                    key: 'event_count',
+                    label: 'Events',
+                    render: (r) => formatNumber(r.event_count),
+                  },
+                ]}
+                rows={radar?.topRadarTypes || []}
+                emptyMessage="No radar type changes in this period."
+              />
+              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most viewed radar locations</h3>
+              <DataTable
+                columns={[
+                  { key: 'state_code', label: 'State' },
+                  {
+                    key: 'view_count',
+                    label: 'Location changes',
+                    render: (r) => formatNumber(r.view_count),
+                  },
+                ]}
+                rows={radar?.topLocations || []}
+                emptyMessage="No radar location changes in this period."
+              />
+            </section>
+
+            {/* 7. User Journeys */}
+            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
+              <h2 className="text-xl font-bold text-white mb-1">User Journeys</h2>
+              <p className="text-sm text-slate-400 mb-5">
+                Sequential funnels and top paths from product_events.
+              </p>
+              <div className="space-y-6 mb-8">
+                {Object.entries(journeys?.funnels || {}).map(([id, funnel]) => (
+                  <FunnelCard key={id} id={id} funnel={funnel} />
+                ))}
+              </div>
+              <h3 className="text-sm font-semibold text-slate-300 mb-3">Top paths</h3>
+              <DataTable
+                columns={[
+                  {
+                    key: 'path',
+                    label: 'Path',
+                    render: (r) => (
+                      <span className="text-xs leading-relaxed">
+                        {(r.path || '').split(' → ').map(formatEventName).join(' → ')}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'session_count',
+                    label: 'Sessions',
+                    render: (r) => formatNumber(r.session_count),
+                  },
+                ]}
+                rows={journeys?.topPaths || []}
+                emptyMessage="No journey paths in this period."
+              />
             </section>
           </>
         )}

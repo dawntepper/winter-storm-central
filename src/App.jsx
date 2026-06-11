@@ -37,6 +37,7 @@ import {
   trackStormBannerClick,
   trackRadarLinkClick,
   trackBrowseByStateClick,
+  trackHomepageView,
   setNavSource,
   NAV_SOURCES,
   SAVE_TRIGGERS
@@ -422,6 +423,7 @@ export default function App() {
   useEffect(() => {
     startSessionTracking();
     trackVisitorType();
+    trackHomepageView();
     return () => stopSessionTracking();
   }, []);
 

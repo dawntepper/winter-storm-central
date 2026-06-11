@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { markAccountKnown } from '../lib/accountHint';
 import { finalizeAuthFromUrl } from '../lib/finalizeAuthFromUrl';
+import { trackSignIn } from '../utils/analytics';
 
 // Auth context for app-wide access
 const AuthContext = createContext(null);
@@ -87,6 +88,7 @@ function useAuthState() {
         // Only mark after a completed sign-in — not on magic-link request alone.
         if (event === 'SIGNED_IN' && session?.user) {
           markAccountKnown();
+          trackSignIn({ method: session.app_metadata?.provider || 'magic_link' });
           console.log('User signed in:', session?.user?.email);
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
