@@ -26,8 +26,8 @@ function PasswordGate({ onAuthenticate }) {
     try {
       await authenticateAdminPassword(password);
       onAuthenticate();
-    } catch {
-      setError('Incorrect password');
+    } catch (err) {
+      setError(err.message || 'Incorrect password');
     }
     setSubmitting(false);
   };

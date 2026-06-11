@@ -35,6 +35,31 @@ function assertAdmin(password) {
   }
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function formatDbError(err) {
+  if (!err) return 'Database error';
+  const parts = [err.message];
+  if (err.details) parts.push(err.details);
+  if (err.hint) parts.push(err.hint);
+  return parts.filter(Boolean).join(' — ');
+}
+
+function validateSaveFormData(formData) {
+  const missing = [];
+  if (!formData?.title?.trim()) missing.push('title');
+  if (!formData?.slug?.trim()) missing.push('slug');
+  if (!formData?.type) missing.push('type');
+  if (!formData?.startDate) missing.push('startDate');
+  if (!formData?.endDate) missing.push('endDate');
+  if (missing.length) {
+    const err = new Error(`Missing required fields: ${missing.join(', ')}`);
+    err.statusCode = 400;
+    throw err;
+  }
+}
+
 function formDataToDbPayload(formData, adminStatus = 'draft') {
   const publicStatus = formData.status || 'draft';
   return {
@@ -109,21 +134,26 @@ async function upsertEmergencyData(supabase, stormId, payload) {
   await supabase.from('storm_emergency_info').delete().eq('storm_id', stormId);
 
   if (payload.emergency_entries?.length) {
-    const rows = payload.emergency_entries.map((entry) => ({
-      id: entry.id,
-      storm_id: stormId,
-      title: entry.title,
-      category: entry.category,
-      location: entry.location,
-      description: entry.description,
-      source_name: entry.source_name,
-      source_url: entry.source_url,
-      social_url: entry.social_url,
-      is_official: entry.is_official,
-      status: entry.status,
-      sort_order: entry.sort_order,
-      expires_at: entry.expires_at
-    }));
+    const rows = payload.emergency_entries.map((entry) => {
+      const row = {
+        storm_id: stormId,
+        title: entry.title,
+        category: entry.category,
+        location: entry.location,
+        description: entry.description,
+        source_name: entry.source_name,
+        source_url: entry.source_url,
+        social_url: entry.social_url,
+        is_official: entry.is_official,
+        status: entry.status,
+        sort_order: entry.sort_order,
+        expires_at: entry.expires_at
+      };
+      if (entry.id && UUID_RE.test(String(entry.id))) {
+        row.id = entry.id;
+      }
+      return row;
+    });
     const { error } = await supabase.from('storm_emergency_info').insert(rows);
     if (error) throw error;
   }
@@ -163,6 +193,7 @@ async function handleList(supabase) {
 }
 
 async function handleSave(supabase, formData, adminStatus, existingId) {
+  validateSaveFormData(formData);
   const payload = formDataToDbPayload(formData, adminStatus);
   const now = new Date().toISOString();
 
@@ -303,7 +334,11 @@ exports.handler = async (event) => {
     }
   } catch (err) {
     console.error('storm-admin-api error:', err);
-    const status = err.statusCode || 500;
-    return jsonResponse(status, { error: err.message || 'Internal error' });
+    const status = err.statusCode || (err.code === '23505' ? 409 : 500);
+    const message =
+      err.statusCode === 400 || err.statusCode === 401
+        ? err.message
+        : formatDbError(err);
+    return jsonResponse(status, { error: message || 'Internal error' });
   }
 };

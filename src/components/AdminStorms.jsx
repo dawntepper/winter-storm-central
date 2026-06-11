@@ -276,8 +276,8 @@ function PasswordGate({ onAuthenticate }) {
     try {
       await authenticateAdminPassword(password);
       onAuthenticate();
-    } catch {
-      setError('Incorrect password');
+    } catch (err) {
+      setError(err.message || 'Incorrect password');
     }
     setSubmitting(false);
   };
@@ -1489,7 +1489,7 @@ export default function AdminStorms() {
             (b.startDate || '').localeCompare(a.startDate || '')
           );
         } catch (dbErr) {
-          console.warn('DB storm list unavailable:', dbErr.message);
+          setError(`Could not load storms from database: ${dbErr.message}`);
         }
       }
 
@@ -1523,6 +1523,25 @@ export default function AdminStorms() {
     keywords: (formData.keywords || []).filter(k => k.trim())
   });
 
+  const getDbFormValidationError = (formData) => {
+    const missing = [];
+    if (!formData.title?.trim()) missing.push('title');
+    if (!formData.slug?.trim()) missing.push('slug');
+    if (!formData.type) missing.push('type');
+    if (!formData.startDate) missing.push('startDate');
+    if (!formData.endDate) missing.push('endDate');
+    if (missing.length === 0) return null;
+    return `Missing required fields: ${missing.join(', ')}`;
+  };
+
+  const handleAdminApiError = (err, fallbackMessage) => {
+    const message = err.message || fallbackMessage;
+    if (message.includes('log in again')) {
+      setAuthenticated(false);
+    }
+    setError(message);
+  };
+
   const trackEmergencyEntries = (formData) => {
     const added = (formData.emergencyEntries || []).filter(e => e.title?.trim());
     for (const entry of added) {
@@ -1537,35 +1556,53 @@ export default function AdminStorms() {
 
   const handleSaveDraftDb = async (formData) => {
     if (!dbEnabled) return;
+    const validationError = getDbFormValidationError(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setDbSaving(true);
     setError(null);
+    setDbMessage(null);
     try {
       const cleaned = cleanFormData(formData);
       const result = await saveStormToDb(cleaned, undefined, 'draft');
       trackEmergencyEntries(cleaned);
       const bundle = result.data;
+      if (!bundle?.storm?.id) {
+        throw new Error('Save succeeded but no storm record was returned — try again.');
+      }
       setDbMessage({
         type: 'success',
-        text: `Saved draft "${cleaned.slug}" to Supabase. Preview: /storm/preview/${cleaned.slug}?token=${bundle?.storm?.preview_token || '…'}`
+        text: `Saved draft "${cleaned.slug}" to Supabase. Preview: /storm/preview/${cleaned.slug}?token=${bundle.storm.preview_token || '…'}`
       });
       setShowForm(false);
       setEditingEvent(null);
       await loadEvents();
     } catch (err) {
-      setError(err.message || 'Failed to save draft');
+      handleAdminApiError(err, 'Failed to save draft');
     }
     setDbSaving(false);
   };
 
   const handleSavePreviewDb = async (formData) => {
     if (!dbEnabled) return;
+    const validationError = getDbFormValidationError(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setDbSaving(true);
     setError(null);
+    setDbMessage(null);
     try {
       const cleaned = cleanFormData(formData);
       const result = await saveStormToDb(cleaned, undefined, 'preview');
       trackEmergencyEntries(cleaned);
       const token = result.data?.storm?.preview_token;
+      if (!result.data?.storm?.id) {
+        throw new Error('Save succeeded but no storm record was returned — try again.');
+      }
       trackStormPreviewed({
         stormSlug: cleaned.slug,
         stormType: cleaned.type,
@@ -1579,18 +1616,24 @@ export default function AdminStorms() {
       setEditingEvent(null);
       await loadEvents();
     } catch (err) {
-      setError(err.message || 'Failed to save preview');
+      handleAdminApiError(err, 'Failed to save preview');
     }
     setDbSaving(false);
   };
 
   const handlePublishDb = async (formData) => {
     if (!dbEnabled) return;
+    const validationError = getDbFormValidationError(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     if (!window.confirm(`Publish "${formData.title}" to /storm/${formData.slug}? This triggers a Netlify rebuild.`)) {
       return;
     }
     setDbSaving(true);
     setError(null);
+    setDbMessage(null);
     try {
       const cleaned = cleanFormData(formData);
       await saveStormToDb(cleaned, undefined, 'live');
@@ -1612,7 +1655,7 @@ export default function AdminStorms() {
       setEditingEvent(null);
       await loadEvents();
     } catch (err) {
-      setError(err.message || 'Failed to publish');
+      handleAdminApiError(err, 'Failed to publish');
     }
     setDbSaving(false);
   };
@@ -1626,7 +1669,7 @@ export default function AdminStorms() {
       setDbMessage({ type: 'success', text: `Archived "${event.slug}".` });
       await loadEvents();
     } catch (err) {
-      setError(err.message || 'Failed to archive');
+      handleAdminApiError(err, 'Failed to archive');
     }
   };
 

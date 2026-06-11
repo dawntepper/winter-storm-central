@@ -119,36 +119,65 @@ export async function getPreviewStormBySlug(slug, previewToken) {
 const ADMIN_SESSION_KEY = 'admin_authenticated';
 const ADMIN_PASSWORD_KEY = 'admin_password';
 
+/** Netlify redirect: /api/* → /.netlify/functions/* (see netlify.toml). */
+const STORM_ADMIN_API_URL = '/api/storm-admin-api';
+
 /**
- * Password for storm-admin-api: explicit arg, then session (post-login), then build env.
+ * Password for storm-admin-api: explicit arg or session from login only.
+ * Never fall back to build-time VITE_ADMIN_PASSWORD — it may differ from
+ * Netlify ADMIN_PASSWORD and causes 401 on save after a "successful" login.
  */
 function getAdminPassword(explicit) {
   if (explicit) return explicit;
   try {
-    const stored = sessionStorage.getItem(ADMIN_PASSWORD_KEY);
-    if (stored) return stored;
+    return sessionStorage.getItem(ADMIN_PASSWORD_KEY) || null;
   } catch {
-    /* sessionStorage unavailable */
+    return null;
   }
-  return import.meta.env.VITE_ADMIN_PASSWORD;
+}
+
+async function parseAdminApiResponse(res, action) {
+  const contentType = res.headers.get('content-type') || '';
+  const raw = await res.text();
+
+  if (!contentType.includes('application/json')) {
+    const hint = import.meta.env.DEV
+      ? ' Run `netlify dev` (not `npm run dev` alone) so storm-admin-api is available.'
+      : '';
+    throw new Error(
+      `Storm admin API returned non-JSON (HTTP ${res.status}).${hint}`
+    );
+  }
+
+  let json;
+  try {
+    json = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(`Storm admin API returned invalid JSON (HTTP ${res.status}).`);
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAdminSession();
+      throw new Error(
+        json.error || 'Session expired or incorrect password — please log in again.'
+      );
+    }
+    throw new Error(json.error || `Admin API failed (HTTP ${res.status})`);
+  }
+
+  if (action === 'validate' && json.ok !== true) {
+    throw new Error('Admin password validation failed — please log in again.');
+  }
+
+  return json;
 }
 
 /**
  * Validate password against storm-admin-api and persist for subsequent API calls.
- * Falls back to VITE_ADMIN_PASSWORD when functions are unavailable (vite-only dev).
  */
 export async function authenticateAdminPassword(password) {
-  try {
-    await callStormAdminApi('validate', { password });
-  } catch (err) {
-    const vitePwd = import.meta.env.VITE_ADMIN_PASSWORD;
-    if (vitePwd && password === vitePwd) {
-      sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      return;
-    }
-    throw err;
-  }
+  await callStormAdminApi('validate', { password });
   sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
   sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
 }
@@ -168,23 +197,32 @@ export function isAdminSessionActive() {
 }
 
 export async function callStormAdminApi(action, payload = {}) {
+  const password = getAdminPassword(payload.password);
+  if (!password) {
+    throw new Error('Admin password required — please log in again.');
+  }
+
   const body = {
     ...payload,
     action,
-    password: getAdminPassword(payload.password)
+    password
   };
 
-  const res = await fetch('/.netlify/functions/storm-admin-api', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(json.error || `Admin API failed (${res.status})`);
+  let res;
+  try {
+    res = await fetch(STORM_ADMIN_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    const hint = import.meta.env.DEV
+      ? ' Start the functions server with `netlify dev`.'
+      : '';
+    throw new Error(`Could not reach storm admin API.${hint} (${err.message})`);
   }
-  return json;
+
+  return parseAdminApiResponse(res, action);
 }
 
 export async function listAllStormsFromAdminApi(adminPassword) {
