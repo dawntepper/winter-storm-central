@@ -21,6 +21,8 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 let heartbeatTimer = null;
 let heartbeatInterval = null;
 let listenersBound = false;
+/** Dedupes concurrent init (e.g. React StrictMode double-mount). */
+let initPromise = null;
 
 function createId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -154,18 +156,7 @@ export function startVisitorSessionHeartbeat() {
   scheduleHeartbeat();
 }
 
-/**
- * Register this browser session once: Supabase insert + Plausible events.
- * Safe to call on every route mount — sessionStorage guard prevents duplicates.
- */
-export async function initVisitorSession() {
-  if (typeof window === 'undefined') return;
-
-  if (sessionStorage.getItem(SESSION_REGISTERED_KEY)) {
-    startVisitorSessionHeartbeat();
-    return;
-  }
-
+async function registerVisitorSessionOnce() {
   const visitorId = getOrCreateStorageId(localStorage, VISITOR_ID_KEY);
   const sessionId = getOrCreateStorageId(sessionStorage, SESSION_ID_KEY);
   const landingPage = getLandingPage();
@@ -196,6 +187,31 @@ export async function initVisitorSession() {
 
   if (isReturning) {
     trackReturningVisitor({ source, landingPage });
+  }
+}
+
+/**
+ * Register this browser session once: Supabase insert + Plausible events.
+ * Safe to call on every route mount — sessionStorage guard prevents duplicates.
+ */
+export async function initVisitorSession() {
+  if (typeof window === 'undefined') return;
+
+  if (sessionStorage.getItem(SESSION_REGISTERED_KEY)) {
+    startVisitorSessionHeartbeat();
+    return;
+  }
+
+  if (!initPromise) {
+    initPromise = registerVisitorSessionOnce().finally(() => {
+      initPromise = null;
+    });
+  }
+
+  try {
+    await initPromise;
+  } catch {
+    // Analytics must not break the app; allow retry on next mount.
   }
 
   startVisitorSessionHeartbeat();
