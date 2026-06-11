@@ -21,11 +21,13 @@ for (const script of scripts) {
 }
 
 const { getSupabaseAdmin } = require('./supabase-admin');
-const { printTableCounts } = require('./lib/print-counts');
+const { printTableCounts, printStateBreakdown } = require('./lib/print-counts');
 
 (async () => {
   console.log('\n=== Final counts ===');
-  await printTableCounts(getSupabaseAdmin());
+  const supabase = getSupabaseAdmin();
+  await printTableCounts(supabase);
+  await printStateBreakdown(supabase);
 })().catch((err) => {
   console.error(err.message || err);
   process.exit(1);

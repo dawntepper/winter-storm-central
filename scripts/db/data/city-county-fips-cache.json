@@ -1,0 +1,66 @@
+{
+  "montgomery-al": {
+    "county_fips": "01101",
+    "county": "Montgomery"
+  },
+  "huntsville-al": {
+    "county_fips": "01089",
+    "county": "Madison"
+  },
+  "macon-ga": {
+    "county_fips": "13021",
+    "county": "Bibb"
+  },
+  "honolulu-hi": {
+    "county_fips": "15003",
+    "county": "Honolulu"
+  },
+  "hilo-hi": {
+    "county_fips": "15001",
+    "county": "Hawaii"
+  },
+  "kailua-hi": {
+    "county_fips": "15003",
+    "county": "Honolulu"
+  },
+  "boise-id": {
+    "county_fips": "16001",
+    "county": "Ada"
+  },
+  "pocatello-id": {
+    "county_fips": "16005",
+    "county": "Bannock"
+  },
+  "evansville-in": {
+    "county_fips": "18163",
+    "county": "Vanderburgh"
+  },
+  "st-paul-mn": {
+    "county_fips": "27123",
+    "county": "Ramsey"
+  },
+  "new-york-city-ny": {
+    "county_fips": "36061",
+    "county": "New York"
+  },
+  "park-city-ut": {
+    "county_fips": "49043",
+    "county": "Summit"
+  },
+  "arlington-va": {
+    "county_fips": "51013",
+    "county": "Arlington"
+  },
+  "san-juan-pr": {
+    "county_fips": "72127",
+    "county": "San Juan Municipio"
+  },
+  "charlotte-amalie-vi": {
+    "county_fips": "78030",
+    "county": "data unavailable"
+  },
+  "hagatna-gu": {
+    "county_fips": "66010",
+    "county": "data unavailable"
+  }
+}

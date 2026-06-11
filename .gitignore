@@ -38,3 +38,6 @@ ios/DerivedData
 *.xcodeproj/xcuserdata
 *.xcodeproj/project.xcworkspace/xcuserdata
 .vercel
+
+# Large SimpleMaps source CSV — download via scripts/db/data/README.md
+scripts/db/data/uscities.csv

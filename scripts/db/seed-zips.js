@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSupabaseAdmin } = require('./supabase-admin');
-const { loadAllCities } = require('./lib/load-sources');
+const { loadAllCities, loadCountyCache, resolveCountyForCity } = require('./lib/load-sources');
 const { batchUpsert } = require('./lib/batch-upsert');
 const { printTableCounts } = require('./lib/print-counts');
 
@@ -110,23 +110,38 @@ async function fetchIdMaps(supabase, cities) {
   return cityMap;
 }
 
-async function fetchCountyIdForFips(supabase, fips) {
-  const { data, error } = await supabase
-    .from('counties')
-    .select('id')
-    .eq('fips_code', String(fips).padStart(5, '0'))
-    .maybeSingle();
-  if (error) throw new Error(`county fips lookup failed: ${error.message}`);
-  return data?.id || null;
+async function fetchCountyIdMap(supabase, fipsList) {
+  const map = new Map();
+  const chunk = 200;
+  for (let i = 0; i < fipsList.length; i += chunk) {
+    const slice = fipsList.slice(i, i + chunk);
+    const { data, error } = await supabase.from('counties').select('id, fips_code').in('fips_code', slice);
+    if (error) throw new Error(`county fips lookup failed: ${error.message}`);
+    for (const row of data || []) map.set(row.fips_code, row.id);
+  }
+  return map;
+}
+
+function dedupeZipRows(rows) {
+  const byKey = new Map();
+  for (const row of rows) {
+    const key = `${row.zip_code}:${row.state_code}`;
+    const existing = byKey.get(key);
+    if (!existing || (row.population || 0) > (existing.population || 0)) {
+      byKey.set(key, row);
+    }
+  }
+  return [...byKey.values()].map(({ population, ...row }) => row);
 }
 
 async function seedZips() {
   const supabase = getSupabaseAdmin();
   const cities = loadAllCities();
-  const cache = refresh ? {} : loadCache();
+  const countyFipsCache = loadCountyCache();
+  const zipCache = refresh ? {} : loadCache();
   const cityIdMap = await fetchIdMaps(supabase, cities);
 
-  const rows = [];
+  const pending = [];
   const gaps = [];
 
   console.log(
@@ -137,11 +152,14 @@ async function seedZips() {
 
   for (const city of cities) {
     let zip = null;
-    if (!refresh && cache[city.slug]) {
-      zip = cache[city.slug];
+
+    if (city.primary_zip) {
+      zip = { zip_code: city.primary_zip, lat: city.lat, lon: city.lon };
+    } else if (!refresh && zipCache[city.slug]) {
+      zip = zipCache[city.slug];
     } else if (!offline) {
       zip = await fetchPrimaryZip(city);
-      if (zip) cache[city.slug] = zip;
+      if (zip) zipCache[city.slug] = zip;
       await sleep(FETCH_DELAY_MS);
     }
 
@@ -150,25 +168,32 @@ async function seedZips() {
       continue;
     }
 
-    const cityId = cityIdMap.get(city.slug) || null;
-    let countyId = null;
-    if (city.county_fips) {
-      countyId = await fetchCountyIdForFips(supabase, city.county_fips);
-    }
-
-    rows.push({
+    const resolved = resolveCountyForCity(city, countyFipsCache);
+    pending.push({
       zip_code: zip.zip_code,
       state_code: city.state_code,
       lat: Number(zip.lat.toFixed(6)),
       lon: Number(zip.lon.toFixed(6)),
-      city_id: cityId,
-      county_id: countyId,
+      city_id: cityIdMap.get(city.slug) || null,
+      county_fips: resolved?.county_fips || null,
+      population: city.population || 0,
     });
   }
 
-  if (!offline) saveCache(cache);
+  const fipsList = [...new Set(pending.map((r) => r.county_fips).filter(Boolean))];
+  const countyIdMap = await fetchCountyIdMap(supabase, fipsList);
 
-  console.log(`Upserting ${rows.length} zip_locations…`);
+  const rows = dedupeZipRows(
+    pending.map(({ county_fips, population, ...row }) => ({
+      ...row,
+      county_id: county_fips ? countyIdMap.get(county_fips) || null : null,
+      population,
+    })),
+  );
+
+  if (!offline) saveCache(zipCache);
+
+  console.log(`Upserting ${rows.length} zip_locations (${pending.length} cities, deduped)…`);
   if (gaps.length) {
     console.warn(`ZIP gaps (${gaps.length} cities — no zippopotam match):`);
     for (const slug of gaps.slice(0, 15)) console.warn(`  - ${slug}`);

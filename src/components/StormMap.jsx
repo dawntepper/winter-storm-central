@@ -979,6 +979,34 @@ function StateBorderHighlight({ stateCode }) {
   );
 }
 
+// Fit map to a highlighted county polygon once GeoJSON is available. Runs after
+// CenterOnLocation so the outline fits with padding instead of a tight point zoom.
+function FitBoundsToHighlight({ geojson }) {
+  const map = useMap();
+  const areaKey = geojson?.properties?.name && geojson?.properties?.state
+    ? `${geojson.properties.state}-${geojson.properties.name}`
+    : null;
+
+  useEffect(() => {
+    if (!geojson?.geometry) return;
+    try {
+      const bounds = L.geoJSON(geojson).getBounds();
+      if (!bounds.isValid()) return;
+      const isMobile = window.innerWidth < 768;
+      map.fitBounds(bounds, {
+        padding: isMobile ? [40, 40] : [60, 60],
+        maxZoom: 9,
+        animate: true,
+        duration: 0.5,
+      });
+    } catch {
+      // Non-fatal — CenterOnLocation fallback zoom still applies
+    }
+  }, [areaKey, geojson, map]);
+
+  return null;
+}
+
 // "Your area" county polygon — passed as a GeoJSON Feature (from NWS zone
 // geometry). Emerald, so it reads as distinct from the white state border it
 // sits inside. Re-keyed by county name so react-leaflet swaps layers on change.
@@ -989,6 +1017,7 @@ function AreaHighlight({ geojson, onAreaClick }) {
 
   const county = geojson.properties?.name;
   const stateAbbr = geojson.properties?.state;
+  const areaKey = county && stateAbbr ? `${stateAbbr}-${county}` : county || 'user-area';
   const clickable = Boolean(onAreaClick && stateAbbr);
   const label = county
     ? `${county} County${stateAbbr ? ` · View ${stateAbbr} alerts →` : ''}`
@@ -998,7 +1027,7 @@ function AreaHighlight({ geojson, onAreaClick }) {
 
   return (
     <GeoJSON
-      key={county || 'user-area'}
+      key={areaKey}
       data={geojson}
       interactive={clickable}
       eventHandlers={clickable ? { click: () => onAreaClick(geojson) } : undefined}
@@ -1120,7 +1149,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
@@ -1381,14 +1410,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 className="sm:hidden appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0"
               />
             )}
-            {/* Reset view button */}
-            <button
-              onClick={handleResetView}
-              className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
-              title="Reset to default US view"
-            >
-              Reset View
-            </button>
+            {showResetView && (
+              <button
+                onClick={handleResetView}
+                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
+                title="Reset to default US view"
+              >
+                Reset View
+              </button>
+            )}
             {/* Radar toggle */}
             <button
               onClick={() => {
@@ -1522,6 +1552,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <StateBorderHighlight stateCode={selectedStateCode} />
 
           {/* "Your area" county highlight (drawn over the state outline) */}
+          <FitBoundsToHighlight geojson={highlightArea} />
           <AreaHighlight geojson={highlightArea} onAreaClick={onAreaClick} />
 
           {/* Markers with zoom context */}

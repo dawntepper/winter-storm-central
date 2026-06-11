@@ -763,6 +763,81 @@ export function trackLocationSearchFailed(searchTerm, error) {
 }
 
 // ============================================
+// LOCATION CATALOG / ALERT SEARCH EVENTS
+// ============================================
+
+/**
+ * Track alert location search on state alert pages (ZIP / city / county).
+ */
+export function trackAlertLocationSearch({ query, matchType, stateCode, hasCounty, hasCity, resultCount }) {
+  track('Alert Location Search', {
+    query: query || '',
+    match_type: matchType || 'none',
+    state_code: stateCode || 'unknown',
+    has_county: !!hasCounty,
+    has_city: !!hasCity,
+    result_count: resultCount ?? 0,
+  });
+}
+
+/**
+ * Track county alert result view (search module or county page).
+ */
+export function trackCountyAlertView({ countyId, stateCode, alertCount, source, countyName }) {
+  track('County Alert View', {
+    county_id: countyId || 'unknown',
+    state_code: stateCode || 'unknown',
+    alert_count: alertCount ?? 0,
+    source: source || 'unknown',
+    county_name: countyName || '',
+  });
+}
+
+/**
+ * Track city alert result view.
+ */
+export function trackCityAlertView({ cityId, stateCode, source, cityName }) {
+  track('City Alert View', {
+    city_id: cityId || 'unknown',
+    state_code: stateCode || 'unknown',
+    source: source || 'unknown',
+    city_name: cityName || '',
+  });
+}
+
+/**
+ * Track click on a county result link.
+ */
+export function trackCountyResultClick({ countySlug, stateCode, source }) {
+  track('County Result Click', {
+    county_slug: countySlug || '',
+    state_code: stateCode || 'unknown',
+    source: source || 'unknown',
+  });
+}
+
+/**
+ * Track click on a city result link.
+ */
+export function trackCityResultClick({ citySlug, stateCode, source }) {
+  track('City Result Click', {
+    city_slug: citySlug || '',
+    state_code: stateCode || 'unknown',
+    source: source || 'unknown',
+  });
+}
+
+/**
+ * Track city name search that did not resolve in the location catalog.
+ */
+export function trackLocationSearchNotFound({ query, stateCode }) {
+  track('Location Search Not Found', {
+    query: query || '',
+    state: stateCode || 'unknown',
+  });
+}
+
+// ============================================
 // NAVIGATION SOURCE TRACKING
 // ============================================
 //
@@ -1175,6 +1250,12 @@ export default {
   trackAddToHomePageView,
   trackLocationSearch,
   trackLocationSearchFailed,
+  trackAlertLocationSearch,
+  trackCountyAlertView,
+  trackCityAlertView,
+  trackCountyResultClick,
+  trackCityResultClick,
+  trackLocationSearchNotFound,
   startSessionTracking,
   stopSessionTracking,
   trackVisitorType,

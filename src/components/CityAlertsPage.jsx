@@ -676,14 +676,26 @@ export default function CityAlertsPage() {
   const [conditions, setConditions] = useState(null);
   const [conditionsError, setConditionsError] = useState(false);
 
-  // Pull all active NWS alerts (national feed) so the inline StormMap can
-  // render alert markers + hover popups around the city, matching the
-  // pattern on state/forecast pages. Adaptive refresh cadence (10/2 min)
-  // is handled by the hook.
+  // National feed supplies map coordinates; zone fetch is the source of truth
+  // for which alerts apply to this city (never show statewide markers).
   const { alerts: allAlertsData } = useExtremeWeather(true);
-  const mapAlerts = useMemo(() => (
-    allAlertsData?.byCategory ? Object.values(allAlertsData.byCategory).flat() : []
-  ), [allAlertsData]);
+  const mapAlerts = useMemo(() => {
+    if (!city || !Array.isArray(alerts) || alerts.length === 0) return [];
+    const national = (allAlertsData?.allAlerts || []).filter(
+      (a) => !a.state || a.state === city.state_abbr,
+    );
+    const zoneIds = new Set(alerts.map((a) => a.id));
+    const matched = national.filter((a) => zoneIds.has(a.id));
+    if (matched.length > 0) return matched;
+    // Zone IDs may differ from the national feed — still only show this city's alerts.
+    return alerts.map((a) => ({
+      ...a,
+      lat: city.lat,
+      lon: city.lon,
+      state: city.state_abbr,
+      category: a.category || 'severe',
+    }));
+  }, [city, allAlertsData, alerts]);
 
   useEffect(() => {
     if (!city) return;
@@ -804,12 +816,18 @@ export default function CityAlertsPage() {
             }]}
             alerts={mapAlerts}
             isHero
+            showResetView={false}
             centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
           />
         </section>
 
         <CurrentConditions city={city} conditions={conditions} error={conditionsError} />
-        <ActiveAlerts city={city} alerts={alerts} error={alertsError} />
+        {alertsError && (
+          <ActiveAlerts city={city} alerts={alerts} error />
+        )}
+        {Array.isArray(alerts) && alerts.length > 0 && (
+          <ActiveAlerts city={city} alerts={alerts} error={false} />
+        )}
         <CityForecastSection city={city} />
         <RelatedLinks city={city} />
         <NearbyCities city={city} />

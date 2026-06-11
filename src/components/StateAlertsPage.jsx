@@ -4,18 +4,20 @@
  * with a radar map zoomed to that state and links to nearby states.
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
-import { useMinuteTick } from '../hooks/useMinuteTick';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
-import { formatExpirationBadge } from '../utils/expirationBadge';
+import { ALERT_CATEGORIES } from '../services/noaaAlertsService';
+import { fetchCountyHighlight } from '../services/geoLocationService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
 import StateForecastWidget from './StateForecastWidget';
+import CheckAlertsNearYou from './CheckAlertsNearYou';
+import AlertDetailModal from './AlertDetailModal';
+import AlertsByCategory from './AlertsByCategory';
 import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
 
@@ -44,7 +46,6 @@ import {
 } from '../data/stateConfig';
 import {
   trackStateAlertsPageView,
-  trackStateAlertDetailView,
   trackStateNearbyClick,
   trackBrowseByStateClick,
   trackRadarLinkClick,
@@ -99,206 +100,6 @@ function setStateMetaTags(stateName, stateSlug) {
 
 function resetMetaTags() {
   setHomepageMetaTags();
-}
-
-// =============================================
-// ALERT DETAIL MODAL
-// =============================================
-
-function AlertDetailModal({ alert, onClose }) {
-  if (!alert) return null;
-
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
-      <div
-        className="bg-slate-800 rounded-xl border border-slate-600 max-w-lg w-full max-h-[80vh] overflow-y-auto p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-lg font-bold text-white">{alert.event}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer p-1">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="space-y-3 text-sm">
-          <div className="flex flex-wrap gap-2">
-            <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-xs font-medium">
-              {alert.severity}
-            </span>
-            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-medium">
-              {alert.urgency}
-            </span>
-          </div>
-
-          <p className="text-slate-300">{alert.location}</p>
-
-          {alert.headline && (
-            <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase mb-1">Headline</h4>
-              <p className="text-slate-300 text-xs leading-relaxed">{alert.headline}</p>
-            </div>
-          )}
-
-          {alert.fullDescription && (
-            <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase mb-1">Details</h4>
-              <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">
-                {alert.fullDescription}
-              </p>
-            </div>
-          )}
-
-          {alert.areaDesc && (
-            <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase mb-1">Affected Areas</h4>
-              <p className="text-slate-400 text-xs">{alert.areaDesc}</p>
-            </div>
-          )}
-
-          <div className="flex gap-4 text-xs text-slate-500 pt-2 border-t border-slate-700">
-            {alert.onset && <span>Onset: {new Date(alert.onset).toLocaleString()}</span>}
-            {alert.expires && <span>Expires: {new Date(alert.expires).toLocaleString()}</span>}
-          </div>
-
-          {alert.url && (
-            <a
-              href={alert.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mt-2 text-xs text-sky-400 hover:underline"
-            >
-              View on weather.gov →
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================
-// ALERT LIST BY CATEGORY
-// =============================================
-
-const CATEGORY_COLORS = {
-  tornado:  { bg: '#5c1414', border: '#dc2626', text: 'antiquewhite' },
-  tropical: { bg: '#1e3a8a', border: '#6366f1', text: 'antiquewhite' },
-  severe:   { bg: '#4a3f1f', border: '#f97316', text: 'antiquewhite' },
-  winter:   { bg: '#1e3a5f', border: '#3b82f6', text: 'antiquewhite' },
-  flood:    { bg: '#164e63', border: '#06b6d4', text: 'antiquewhite' },
-  heat:     { bg: '#7c2d12', border: '#ef4444', text: 'antiquewhite' },
-  fire:     { bg: '#78350f', border: '#d97706', text: 'antiquewhite' },
-  default:  { bg: '#334155', border: '#64748b', text: 'antiquewhite' },
-};
-
-function AlertsByCategory({ alerts, stateCode, onViewDetail }) {
-  const [expandedCategories, setExpandedCategories] = useState({});
-  // Ticks every minute so relative-time exp badges ("in 25 min") stay
-  // accurate as the clock advances. Cheap — single setInterval at the
-  // component level, doesn't refetch any data.
-  const nowMs = useMinuteTick();
-
-  // Group alerts by category
-  const grouped = useMemo(() => {
-    const groups = {};
-    for (const alert of alerts) {
-      const cat = alert.category || 'severe';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(alert);
-    }
-    return groups;
-  }, [alerts]);
-
-  const toggleCategory = (catId) => {
-    setExpandedCategories(prev => ({ ...prev, [catId]: prev[catId] === true ? false : true }));
-  };
-
-  return (
-    <div className="space-y-3">
-      {CATEGORY_ORDER.map(categoryId => {
-        const categoryAlerts = grouped[categoryId];
-        if (!categoryAlerts || categoryAlerts.length === 0) return null;
-
-        const category = ALERT_CATEGORIES[categoryId];
-        const colors = CATEGORY_COLORS[categoryId] || CATEGORY_COLORS.default;
-        const isExpanded = expandedCategories[categoryId] === true; // default collapsed
-
-        return (
-          <div key={categoryId} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
-            <button
-              onClick={() => toggleCategory(categoryId)}
-              className="w-full flex items-center justify-between px-3 py-2 cursor-pointer hover:brightness-110 transition-all"
-              style={{ backgroundColor: colors.bg }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{category.icon}</span>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.text }}>{category.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.border, color: colors.text }}>
-                  {categoryAlerts.length}
-                </span>
-              </div>
-              <svg
-                className={`w-4 h-4 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isExpanded && (
-              <div className="bg-slate-800 max-h-[300px] overflow-y-auto">
-                {categoryAlerts.map((alert, idx) => (
-                  <button
-                    key={alert.id || idx}
-                    onClick={() => {
-                      trackStateAlertDetailView({ stateCode, alertType: alert.event });
-                      onViewDetail(alert);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors cursor-pointer border-b border-slate-700/50 last:border-b-0"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white">{alert.event}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{alert.location}</p>
-                        {alert.headline && (
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{alert.headline}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          alert.severity === 'Extreme' ? 'bg-red-500/20 text-red-400' :
-                          alert.severity === 'Severe' ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {alert.severity}
-                        </span>
-                        {alert.expires && (() => {
-                          const { label, urgency } = formatExpirationBadge(alert.expires, nowMs);
-                          if (!label) return null;
-                          const tone =
-                            urgency === 'urgent' ? 'text-red-400 font-semibold' :
-                            urgency === 'expired' ? 'text-slate-600' :
-                            'text-slate-500';
-                          return (
-                            <span className={`text-[10px] ${tone}`}>
-                              Exp: {label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 // =============================================
@@ -467,11 +268,68 @@ export default function StateAlertsPage() {
   // Alert detail modal
   const [selectedAlert, setSelectedAlert] = useState(null);
 
+  // Map focus from "Check Alerts Near You" search
+  const [mapFocus, setMapFocus] = useState(null);
+  const areaReqRef = useRef(0);
+
+  const handleLocationFocus = useCallback(({ lat, lon, zoom = 8, alerts, county }) => {
+    const reqId = ++areaReqRef.current;
+    const interimLat = county?.lat ?? lat;
+    const interimLon = county?.lon ?? lon;
+
+    setMapFocus({
+      centerOn:
+        interimLat != null && interimLon != null
+          ? { lat: interimLat, lon: interimLon, zoom, id: Date.now() }
+          : null,
+      mapAlerts: alerts,
+      highlightArea: null,
+    });
+
+    fetchCountyHighlight(county ?? { lat: interimLat, lon: interimLon }).then(
+      ({ feature, lat: cLat, lon: cLon }) => {
+        if (reqId !== areaReqRef.current) return;
+        setMapFocus((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            ...(cLat != null && cLon != null
+              ? { centerOn: { lat: cLat, lon: cLon, zoom, id: Date.now() } }
+              : {}),
+            highlightArea: feature,
+          };
+        });
+      },
+    );
+
+    const isMobile = window.innerWidth < 1024;
+    if (isMobile) {
+      setTimeout(() => {
+        document.querySelector('#state-alerts-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
+
+  const handleMapResetView = useCallback(() => {
+    areaReqRef.current += 1;
+    setMapFocus(null);
+  }, []);
+
   // Filter alerts for this state
   const stateAlerts = useMemo(() => {
     if (!alertsData?.allAlerts || !stateAbbr) return [];
     return alertsData.allAlerts.filter(a => a.state === stateAbbr);
   }, [alertsData, stateAbbr]);
+
+  // Default: all state alerts on map. After Check Alerts Near You search: scoped only.
+  const displayMapAlerts = mapFocus ? (mapFocus.mapAlerts ?? []) : stateAlerts;
+  const displayMapCenter =
+    mapFocus?.centerOn ?? {
+      lat: stateData?.center[0],
+      lon: stateData?.center[1],
+      zoom: (stateData?.zoom ?? 7) - 1,
+      id: `state-${stateAbbr}`,
+    };
 
   // Cities in this state with dedicated pages — rendered as clickable map markers
   const stateCityMarkers = useMemo(
@@ -606,6 +464,7 @@ export default function StateAlertsPage() {
 
           {/* LEFT COLUMN: Map — sticky on mobile so it stays visible while scrolling alerts */}
           <section
+            id="state-alerts-map"
             className="sticky z-10 -mx-4 sm:-mx-6 lg:mx-0 lg:static lg:z-auto [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
           >
@@ -616,15 +475,12 @@ export default function StateAlertsPage() {
               weatherData={{}}
               stormPhase="active"
               userLocations={[]}
-              alerts={stateAlerts}
+              alerts={displayMapAlerts}
               cityMarkers={stateCityMarkers}
               isHero
-              centerOn={{
-                lat: stateData.center[0],
-                lon: stateData.center[1],
-                zoom: stateData.zoom - 1,
-                id: `state-${stateAbbr}`
-              }}
+              centerOn={displayMapCenter}
+              highlightArea={mapFocus?.highlightArea ?? null}
+              onResetView={handleMapResetView}
               selectedStateCode={stateAbbr}
               radarLayerType="precipitation"
               radarColorScheme={4}
@@ -668,6 +524,17 @@ export default function StateAlertsPage() {
                 />
               )}
             </section>
+
+            <CheckAlertsNearYou
+              stateCode={stateAbbr}
+              stateSlug={stateSlug}
+              stateName={stateData.name}
+              allAlerts={alertsData?.allAlerts || []}
+              alertsLoading={alertsLoading}
+              onLocationFocus={handleLocationFocus}
+              onClearFocus={handleMapResetView}
+              onViewAlert={setSelectedAlert}
+            />
 
             {/* Forecast launcher — quick city links + ZIP entry + state forecast CTA */}
             <StateForecastWidget stateSlug={stateSlug} stateName={stateData.name} />

@@ -1,0 +1,74 @@
+[
+  {
+    "city": "Columbia",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 39.2004,
+    "lon": -76.859,
+    "population": 104681,
+    "county": "Howard",
+    "county_fips": "24027",
+    "primary_zip": "21044",
+    "note": "2020 Census CDP — SimpleMaps lacks population"
+  },
+  {
+    "city": "Germantown",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 39.1755,
+    "lon": -77.2643,
+    "population": 91249,
+    "county": "Montgomery",
+    "county_fips": "24031",
+    "primary_zip": "20876",
+    "note": "2020 Census CDP"
+  },
+  {
+    "city": "Silver Spring",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 39.0028,
+    "lon": -77.0207,
+    "population": 81015,
+    "county": "Montgomery",
+    "county_fips": "24031",
+    "primary_zip": "20910",
+    "note": "2020 Census CDP"
+  },
+  {
+    "city": "Bethesda",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 38.9847,
+    "lon": -77.0947,
+    "population": 68056,
+    "county": "Montgomery",
+    "county_fips": "24031",
+    "primary_zip": "20814",
+    "note": "2020 Census CDP"
+  },
+  {
+    "city": "Waldorf",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 38.6187,
+    "lon": -76.9388,
+    "population": 81966,
+    "county": "Charles",
+    "county_fips": "24017",
+    "primary_zip": "20601",
+    "note": "2020 Census CDP"
+  },
+  {
+    "city": "Dundalk",
+    "state_abbr": "MD",
+    "state": "Maryland",
+    "lat": 39.2701,
+    "lon": -76.4947,
+    "population": 67796,
+    "county": "Baltimore",
+    "county_fips": "24005",
+    "primary_zip": "21222",
+    "note": "2020 Census CDP"
+  }
+]

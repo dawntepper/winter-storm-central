@@ -161,11 +161,14 @@ function parseAlert(alert) {
   // The main alerts page shows all active alerts and is the best user experience
   const alertUrl = 'https://www.weather.gov/alerts';
 
+  const sameCodes = props.geocode?.SAME || [];
+
   return {
     id: alert.id || props.id,
     event: eventType,
     category,
     state, // State code (e.g., "PA", "NY")
+    sameCodes,
     location: extractLocationName(alert),
     lat: coords.lat,
     lon: coords.lon,

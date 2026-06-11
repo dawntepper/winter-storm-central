@@ -14,6 +14,8 @@ import AddToHomePage from './pages/AddToHomePage.jsx'
 import ForecastPage from './pages/ForecastPage.jsx'
 import LiveAlertsPage from './components/LiveAlertsPage.jsx'
 import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
+import CountyAlertsPage from './components/CountyAlertsPage.jsx'
+import CatalogCityAlertsPage from './components/CatalogCityAlertsPage.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import AuthCallback from './components/auth/AuthCallback.jsx'
@@ -29,6 +31,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/storm/preview/:slug" element={<StormEventPage />} />
         <Route path="/storm/:slug" element={<StormEventPage />} />
         <Route path="/alerts" element={<LiveAlertsPage />} />
+        <Route path="/alerts/county/:countySlug" element={<CountyAlertsPage />} />
+        <Route path="/alerts/city/:citySlug" element={<CatalogCityAlertsPage />} />
         <Route path="/alerts/:slug" element={<AlertsRouteDispatch />} />
         <Route path="/prep" element={<PrepPage />} />
         <Route path="/add-to-home" element={<AddToHomePage />} />

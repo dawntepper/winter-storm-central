@@ -4,19 +4,27 @@
  * Counties:  us-atlas/counties-10m.json (3,231 US counties + equivalents)
  * Cities:     src/content/cities/*.json (rich alert pages)
  *             + FORECAST_PICKER_FILL from src/data/cityCatalog.js
- * City↔county: county + county_fips on rich city JSON files
- * ZIP hints:  zippopotam.us at seed time (see seed-zips.js)
+ *             + STATES_AND_CITIES from src/components/ZipCodeSearch.jsx
+ *             + scripts/db/data/us-places-top50.json (top 50 by population / state)
+ * City↔county: county_fips on rich JSON + population dataset + FCC cache fallback
+ * ZIP hints:  primary_zip in population dataset, zip-cache.json, zippopotam.us
  */
 const fs = require('fs');
 const path = require('path');
 const { feature } = require('topojson-client');
 const usCounties = require('us-atlas/counties-10m.json');
-const { countySlug } = require('./slug');
+const { countySlug, citySlug } = require('./slug');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const CITIES_DIR = path.join(ROOT, 'src', 'content', 'cities');
 const STATE_CONFIG_PATH = path.join(ROOT, 'src', 'data', 'stateConfig.js');
 const CITY_CATALOG_PATH = path.join(ROOT, 'src', 'data', 'cityCatalog.js');
+const ZIP_SEARCH_PATH = path.join(ROOT, 'src', 'components', 'ZipCodeSearch.jsx');
+const PLACES_PATH = path.join(__dirname, '..', 'data', 'us-places-top50.json');
+const COUNTY_CACHE_PATH = path.join(__dirname, '..', 'data', 'city-county-fips-cache.json');
+
+/** How many top-population cities per state get is_major=true (beyond explicit lists). */
+const MAJOR_TOP_N = 10;
 
 /** Census state FIPS → 2-letter abbreviation (50 states + DC + territories in us-atlas). */
 const FIPS_TO_STATE = {
@@ -112,13 +120,66 @@ function loadForecastPickerFill() {
   );
 }
 
+/** Major cities per state (3–4 each) — same list as the ZIP search quick-pick UI. */
+function loadStatesAndCitiesFill() {
+  if (!fs.existsSync(ZIP_SEARCH_PATH)) return [];
+  const text = fs.readFileSync(ZIP_SEARCH_PATH, 'utf8');
+  const match = text.match(/const STATES_AND_CITIES = (\{[\s\S]*?\n\};)/);
+  if (!match) return [];
+  const data = new Function(`return ${match[1].replace(/;$/, '')}`)();
+  const rows = [];
+  for (const [stateCode, st] of Object.entries(data)) {
+    if (!st?.cities?.length) continue;
+    for (const c of st.cities) {
+      if (!c?.name || typeof c.lat !== 'number' || typeof c.lon !== 'number') continue;
+      rows.push({
+        slug: citySlug(c.name, stateCode),
+        city: c.name,
+        state: st.name,
+        state_abbr: stateCode,
+        lat: c.lat,
+        lon: c.lon,
+      });
+    }
+  }
+  return rows;
+}
+
+function loadPopulationPlaces() {
+  if (!fs.existsSync(PLACES_PATH)) return [];
+  const { places } = JSON.parse(fs.readFileSync(PLACES_PATH, 'utf8'));
+  return (places || []).filter(
+    (c) => c?.slug && c?.city && c?.state_abbr && typeof c.lat === 'number' && typeof c.lon === 'number',
+  );
+}
+
+function computeMajorSlugs(populationPlaces) {
+  const major = new Set();
+  for (const c of loadRichCities()) major.add(c.slug);
+  for (const c of loadForecastPickerFill()) major.add(c.slug);
+  for (const c of loadStatesAndCitiesFill()) major.add(c.slug);
+
+  const byState = new Map();
+  for (const c of populationPlaces) {
+    if (!byState.has(c.state_abbr)) byState.set(c.state_abbr, []);
+    byState.get(c.state_abbr).push(c);
+  }
+  for (const list of byState.values()) {
+    list.sort((a, b) => (b.population || 0) - (a.population || 0));
+    for (const c of list.slice(0, MAJOR_TOP_N)) major.add(c.slug);
+  }
+  return major;
+}
+
 function loadAllCities() {
   const stateNames = loadStateNames();
   const rich = loadRichCities();
-  const richSlugs = new Set(rich.map((c) => c.slug));
-  const fill = loadForecastPickerFill().filter((c) => !richSlugs.has(c.slug));
+  const fill = loadForecastPickerFill();
+  const catalog = loadStatesAndCitiesFill();
+  const population = loadPopulationPlaces();
+  const majorSlugs = computeMajorSlugs([...rich, ...fill, ...catalog, ...population]);
 
-  const toRow = (c) => ({
+  const toRow = (c, source, flags = {}) => ({
     slug: c.slug,
     name: c.city,
     state_code: c.state_abbr,
@@ -127,25 +188,87 @@ function loadAllCities() {
     lon: Number(c.lon),
     population: typeof c.population === 'number' ? c.population : null,
     county: c.county || null,
-    county_fips: c.county_fips || null,
-    source: c.county_fips ? 'rich' : 'fill',
+    county_fips: c.county_fips ? String(c.county_fips).padStart(5, '0') : null,
+    primary_zip: c.primary_zip || null,
+    has_static_page: flags.has_static_page || false,
+    is_major: flags.is_major ?? majorSlugs.has(c.slug),
+    source,
   });
 
+  const mergeInto = (bySlug, c, source, flags) => {
+    const existing = bySlug.get(c.slug);
+    const row = toRow(c, source, flags);
+    if (existing) {
+      row.population = row.population ?? existing.population;
+      row.county = row.county || existing.county;
+      row.county_fips = row.county_fips || existing.county_fips;
+      row.primary_zip = row.primary_zip || existing.primary_zip;
+      row.has_static_page = row.has_static_page || existing.has_static_page;
+      row.is_major = row.is_major || existing.is_major;
+    }
+    bySlug.set(c.slug, row);
+  };
+
   const bySlug = new Map();
-  for (const c of [...rich.map(toRow), ...fill.map(toRow)]) {
-    bySlug.set(c.slug, c);
-  }
+  for (const c of population) mergeInto(bySlug, c, 'population');
+  for (const c of catalog) mergeInto(bySlug, c, 'catalog', { is_major: true });
+  for (const c of fill) mergeInto(bySlug, c, 'fill', { is_major: true });
+  for (const c of rich) mergeInto(bySlug, c, 'rich', { has_static_page: true, is_major: true });
+
   return [...bySlug.values()];
 }
 
+function countyNameFromFips(fips) {
+  const padded = String(fips).padStart(5, '0');
+  const collection = feature(usCounties, usCounties.objects.counties);
+  const found = collection.features.find((f) => String(f.id).padStart(5, '0') === padded);
+  return found?.properties?.name || null;
+}
+
+function loadCountyCache() {
+  if (!fs.existsSync(COUNTY_CACHE_PATH)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(COUNTY_CACHE_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveCountyCache(cache) {
+  fs.mkdirSync(path.dirname(COUNTY_CACHE_PATH), { recursive: true });
+  fs.writeFileSync(COUNTY_CACHE_PATH, JSON.stringify(cache, null, 2));
+}
+
+function resolveCountyForCity(city, cache) {
+  if (city.county_fips) {
+    const county = city.county || countyNameFromFips(city.county_fips);
+    if (county) {
+      return {
+        county_fips: String(city.county_fips).padStart(5, '0'),
+        county,
+      };
+    }
+  }
+  const cached = cache[city.slug];
+  if (cached?.county_fips) {
+    return {
+      county_fips: String(cached.county_fips).padStart(5, '0'),
+      county: cached.county || countyNameFromFips(cached.county_fips),
+    };
+  }
+  return null;
+}
+
 function loadCityCountyLinks(cities) {
+  const cache = loadCountyCache();
   const links = [];
   for (const city of cities) {
-    if (!city.county_fips || !city.county) continue;
+    const resolved = resolveCountyForCity(city, cache);
+    if (!resolved?.county_fips || !resolved.county) continue;
     links.push({
       city_slug: city.slug,
-      county_slug: countySlug(city.county, city.state_code),
-      county_fips: String(city.county_fips).padStart(5, '0'),
+      county_slug: countySlug(resolved.county, city.state_code),
+      county_fips: resolved.county_fips,
       is_primary: true,
     });
   }
@@ -167,11 +290,18 @@ function fipsToCountySlug(fips) {
 module.exports = {
   ROOT,
   FIPS_TO_STATE,
+  COUNTY_CACHE_PATH,
   loadStateNames,
   loadCountiesFromAtlas,
   loadRichCities,
   loadForecastPickerFill,
+  loadStatesAndCitiesFill,
+  loadPopulationPlaces,
   loadAllCities,
   loadCityCountyLinks,
+  loadCountyCache,
+  saveCountyCache,
+  resolveCountyForCity,
+  countyNameFromFips,
   fipsToCountySlug,
 };

@@ -53,6 +53,70 @@ export async function reverseGeocode(lat, lon) {
   }
 }
 
+function normalizeFips(fips) {
+  if (!fips) return null;
+  const digits = String(fips).replace(/\D/g, '');
+  if (!digits) return null;
+  return digits.padStart(5, '0');
+}
+
+/** NWS county zone id, e.g. FIPS 12057 + FL → FLC057 */
+export function fipsToNwsCountyZone(fips, stateCode) {
+  const normalized = normalizeFips(fips);
+  const st = String(stateCode || '').trim().toUpperCase();
+  if (!normalized || !/^[A-Z]{2}$/.test(st)) return null;
+  return `${st}C${normalized.slice(2)}`;
+}
+
+function geometryBboxCentroid(geometry) {
+  if (!geometry) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const polys = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  for (const poly of polys) {
+    for (const ring of poly) {
+      for (const [x, y] of ring) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  if (!Number.isFinite(minX)) return null;
+  return { lon: (minX + maxX) / 2, lat: (minY + maxY) / 2 };
+}
+
+function zoneToFeature(zoneData) {
+  if (!zoneData?.geometry) return null;
+  return {
+    type: 'Feature',
+    geometry: zoneData.geometry,
+    properties: {
+      name: zoneData.properties?.name || null,
+      state: zoneData.properties?.state || null,
+    },
+  };
+}
+
+/** County polygon by catalog FIPS — avoids reverse-geocode picking the wrong state. */
+export async function fetchCountyGeoJSONByFips(fips, stateCode) {
+  const zoneId = fipsToNwsCountyZone(fips, stateCode);
+  if (!zoneId) return null;
+  try {
+    const zoneRes = await fetch(`https://api.weather.gov/zones/county/${zoneId}`, {
+      headers: { Accept: 'application/geo+json' },
+    });
+    if (!zoneRes.ok) return null;
+    const zoneData = await zoneRes.json();
+    return zoneToFeature(zoneData);
+  } catch {
+    return null;
+  }
+}
+
 // Fetch the user's county polygon as a GeoJSON Feature for "your area"
 // highlighting. NWS issues alerts by county/zone, so the county is the
 // meaningful unit (ZIP/ZCTA boundaries aren't available from NWS).
@@ -73,17 +137,32 @@ export async function fetchCountyGeoJSON(lat, lon) {
     const zoneRes = await fetch(countyUrl, { headers: { Accept: 'application/geo+json' } });
     if (!zoneRes.ok) return null;
     const zoneData = await zoneRes.json();
-    if (!zoneData?.geometry) return null;
-
-    return {
-      type: 'Feature',
-      geometry: zoneData.geometry,
-      properties: {
-        name: zoneData.properties?.name || null, // county name, e.g. "Howard"
-        state: zoneData.properties?.state || null, // state abbr, e.g. "MD" — used for the click-through
-      },
-    };
+    return zoneToFeature(zoneData);
   } catch {
     return null;
   }
+}
+
+/**
+ * County highlight for catalog selections. Prefers FIPS → NWS zone (authoritative);
+ * falls back to lat/lon reverse geocode for GPS / ZIP-only flows.
+ * @returns {Promise<{ feature: object|null, lat: number|null, lon: number|null }>}
+ */
+export async function fetchCountyHighlight({ fipsCode, stateCode, lat, lon } = {}) {
+  if (fipsCode && stateCode) {
+    const feature = await fetchCountyGeoJSONByFips(fipsCode, stateCode);
+    if (feature) {
+      const centroid = geometryBboxCentroid(feature.geometry);
+      return {
+        feature,
+        lat: centroid?.lat ?? (Number.isFinite(lat) ? lat : null),
+        lon: centroid?.lon ?? (Number.isFinite(lon) ? lon : null),
+      };
+    }
+  }
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    const feature = await fetchCountyGeoJSON(lat, lon);
+    return { feature, lat, lon };
+  }
+  return { feature: null, lat: null, lon: null };
 }

@@ -15,7 +15,10 @@
     "db:seed:locations": "node scripts/db/seed-locations.js",
     "db:seed:counties": "node scripts/db/seed-counties.js",
     "db:seed:cities": "node scripts/db/seed-cities.js",
-    "db:seed:zips": "node scripts/db/seed-zips.js"
+    "db:seed:city-counties": "node scripts/db/seed-city-counties.js",
+    "db:seed:zips": "node scripts/db/seed-zips.js",
+    "db:build:places": "node scripts/db/data/build-places-dataset.js",
+    "db:build:county-cache": "node scripts/db/build-county-cache.js"
   },
   "dependencies": {
     "@capacitor/cli": "^8.1.0",

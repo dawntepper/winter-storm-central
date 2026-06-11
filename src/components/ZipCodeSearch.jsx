@@ -1,455 +1,12 @@
 import { useState, useEffect } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackLocationSearch, trackLocationSearchFailed, SAVE_TRIGGERS } from '../utils/analytics';
+import { STATE_NAMES } from '../data/stateConfig';
+import { getCitiesForState, resolveCityByName } from '../services/locationCatalogService';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
-// All 50 US states with major cities
-const STATES_AND_CITIES = {
-  'AL': {
-    name: 'Alabama',
-    cities: [
-      { name: 'Birmingham', lat: 33.5186, lon: -86.8104 },
-      { name: 'Montgomery', lat: 32.3792, lon: -86.3077 },
-      { name: 'Huntsville', lat: 34.7304, lon: -86.5861 },
-      { name: 'Mobile', lat: 30.6954, lon: -88.0399 },
-    ]
-  },
-  'AK': {
-    name: 'Alaska',
-    cities: [
-      { name: 'Anchorage', lat: 61.2181, lon: -149.9003 },
-      { name: 'Fairbanks', lat: 64.8378, lon: -147.7164 },
-      { name: 'Juneau', lat: 58.3019, lon: -134.4197 },
-    ]
-  },
-  'AZ': {
-    name: 'Arizona',
-    cities: [
-      { name: 'Phoenix', lat: 33.4484, lon: -112.0740 },
-      { name: 'Tucson', lat: 32.2226, lon: -110.9747 },
-      { name: 'Mesa', lat: 33.4152, lon: -111.8315 },
-      { name: 'Scottsdale', lat: 33.4942, lon: -111.9261 },
-    ]
-  },
-  'AR': {
-    name: 'Arkansas',
-    cities: [
-      { name: 'Little Rock', lat: 34.7465, lon: -92.2896 },
-      { name: 'Fort Smith', lat: 35.3859, lon: -94.3985 },
-      { name: 'Fayetteville', lat: 36.0822, lon: -94.1719 },
-      { name: 'Jonesboro', lat: 35.8423, lon: -90.7043 },
-    ]
-  },
-  'CA': {
-    name: 'California',
-    cities: [
-      { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
-      { name: 'San Francisco', lat: 37.7749, lon: -122.4194 },
-      { name: 'San Diego', lat: 32.7157, lon: -117.1611 },
-      { name: 'Sacramento', lat: 38.5816, lon: -121.4944 },
-    ]
-  },
-  'CO': {
-    name: 'Colorado',
-    cities: [
-      { name: 'Denver', lat: 39.7392, lon: -104.9903 },
-      { name: 'Colorado Springs', lat: 38.8339, lon: -104.8214 },
-      { name: 'Boulder', lat: 40.0150, lon: -105.2705 },
-      { name: 'Fort Collins', lat: 40.5853, lon: -105.0844 },
-    ]
-  },
-  'CT': {
-    name: 'Connecticut',
-    cities: [
-      { name: 'Hartford', lat: 41.7658, lon: -72.6734 },
-      { name: 'New Haven', lat: 41.3083, lon: -72.9279 },
-      { name: 'Stamford', lat: 41.0534, lon: -73.5387 },
-      { name: 'Bridgeport', lat: 41.1865, lon: -73.1952 },
-    ]
-  },
-  'DE': {
-    name: 'Delaware',
-    cities: [
-      { name: 'Wilmington', lat: 39.7391, lon: -75.5398 },
-      { name: 'Dover', lat: 39.1582, lon: -75.5244 },
-      { name: 'Newark', lat: 39.6837, lon: -75.7497 },
-    ]
-  },
-  'DC': {
-    name: 'Washington DC',
-    cities: [
-      { name: 'Washington', lat: 38.9072, lon: -77.0369 },
-    ]
-  },
-  'FL': {
-    name: 'Florida',
-    cities: [
-      { name: 'Miami', lat: 25.7617, lon: -80.1918 },
-      { name: 'Orlando', lat: 28.5383, lon: -81.3792 },
-      { name: 'Tampa', lat: 27.9506, lon: -82.4572 },
-      { name: 'Jacksonville', lat: 30.3322, lon: -81.6557 },
-    ]
-  },
-  'GA': {
-    name: 'Georgia',
-    cities: [
-      { name: 'Atlanta', lat: 33.7490, lon: -84.3880 },
-      { name: 'Savannah', lat: 32.0809, lon: -81.0912 },
-      { name: 'Augusta', lat: 33.4735, lon: -82.0105 },
-      { name: 'Macon', lat: 32.8407, lon: -83.6324 },
-    ]
-  },
-  'HI': {
-    name: 'Hawaii',
-    cities: [
-      { name: 'Honolulu', lat: 21.3069, lon: -157.8583 },
-      { name: 'Hilo', lat: 19.7074, lon: -155.0885 },
-      { name: 'Kailua', lat: 21.4022, lon: -157.7394 },
-    ]
-  },
-  'ID': {
-    name: 'Idaho',
-    cities: [
-      { name: 'Boise', lat: 43.6150, lon: -116.2023 },
-      { name: 'Idaho Falls', lat: 43.4917, lon: -112.0339 },
-      { name: 'Pocatello', lat: 42.8713, lon: -112.4455 },
-    ]
-  },
-  'IL': {
-    name: 'Illinois',
-    cities: [
-      { name: 'Chicago', lat: 41.8781, lon: -87.6298 },
-      { name: 'Springfield', lat: 39.7817, lon: -89.6501 },
-      { name: 'Peoria', lat: 40.6936, lon: -89.5890 },
-      { name: 'Rockford', lat: 42.2711, lon: -89.0940 },
-    ]
-  },
-  'IN': {
-    name: 'Indiana',
-    cities: [
-      { name: 'Indianapolis', lat: 39.7684, lon: -86.1581 },
-      { name: 'Fort Wayne', lat: 41.0793, lon: -85.1394 },
-      { name: 'Evansville', lat: 37.9716, lon: -87.5711 },
-      { name: 'South Bend', lat: 41.6764, lon: -86.2520 },
-    ]
-  },
-  'IA': {
-    name: 'Iowa',
-    cities: [
-      { name: 'Des Moines', lat: 41.5868, lon: -93.6250 },
-      { name: 'Cedar Rapids', lat: 41.9779, lon: -91.6656 },
-      { name: 'Davenport', lat: 41.5236, lon: -90.5776 },
-      { name: 'Iowa City', lat: 41.6611, lon: -91.5302 },
-    ]
-  },
-  'KS': {
-    name: 'Kansas',
-    cities: [
-      { name: 'Wichita', lat: 37.6872, lon: -97.3301 },
-      { name: 'Topeka', lat: 39.0489, lon: -95.6780 },
-      { name: 'Kansas City', lat: 39.1141, lon: -94.6275 },
-      { name: 'Overland Park', lat: 38.9822, lon: -94.6708 },
-    ]
-  },
-  'KY': {
-    name: 'Kentucky',
-    cities: [
-      { name: 'Louisville', lat: 38.2527, lon: -85.7585 },
-      { name: 'Lexington', lat: 38.0406, lon: -84.5037 },
-      { name: 'Bowling Green', lat: 36.9685, lon: -86.4808 },
-      { name: 'Frankfort', lat: 38.2009, lon: -84.8733 },
-    ]
-  },
-  'LA': {
-    name: 'Louisiana',
-    cities: [
-      { name: 'New Orleans', lat: 29.9511, lon: -90.0715 },
-      { name: 'Baton Rouge', lat: 30.4515, lon: -91.1871 },
-      { name: 'Shreveport', lat: 32.5252, lon: -93.7502 },
-      { name: 'Lafayette', lat: 30.2241, lon: -92.0198 },
-    ]
-  },
-  'ME': {
-    name: 'Maine',
-    cities: [
-      { name: 'Portland', lat: 43.6591, lon: -70.2568 },
-      { name: 'Augusta', lat: 44.3106, lon: -69.7795 },
-      { name: 'Bangor', lat: 44.8016, lon: -68.7712 },
-    ]
-  },
-  'MD': {
-    name: 'Maryland',
-    cities: [
-      { name: 'Baltimore', lat: 39.2904, lon: -76.6122 },
-      { name: 'Bethesda', lat: 38.9847, lon: -77.0947 },
-      { name: 'Rockville', lat: 39.0840, lon: -77.1528 },
-      { name: 'Annapolis', lat: 38.9784, lon: -76.4922 },
-    ]
-  },
-  'MA': {
-    name: 'Massachusetts',
-    cities: [
-      { name: 'Boston', lat: 42.3601, lon: -71.0589 },
-      { name: 'Worcester', lat: 42.2626, lon: -71.8023 },
-      { name: 'Springfield', lat: 42.1015, lon: -72.5898 },
-      { name: 'Cambridge', lat: 42.3736, lon: -71.1097 },
-    ]
-  },
-  'MI': {
-    name: 'Michigan',
-    cities: [
-      { name: 'Detroit', lat: 42.3314, lon: -83.0458 },
-      { name: 'Grand Rapids', lat: 42.9634, lon: -85.6681 },
-      { name: 'Ann Arbor', lat: 42.2808, lon: -83.7430 },
-      { name: 'Lansing', lat: 42.7325, lon: -84.5555 },
-    ]
-  },
-  'MN': {
-    name: 'Minnesota',
-    cities: [
-      { name: 'Minneapolis', lat: 44.9778, lon: -93.2650 },
-      { name: 'St. Paul', lat: 44.9537, lon: -93.0900 },
-      { name: 'Duluth', lat: 46.7867, lon: -92.1005 },
-      { name: 'Rochester', lat: 44.0121, lon: -92.4802 },
-    ]
-  },
-  'MS': {
-    name: 'Mississippi',
-    cities: [
-      { name: 'Jackson', lat: 32.2988, lon: -90.1848 },
-      { name: 'Gulfport', lat: 30.3674, lon: -89.0928 },
-      { name: 'Hattiesburg', lat: 31.3271, lon: -89.2903 },
-      { name: 'Biloxi', lat: 30.3960, lon: -88.8853 },
-    ]
-  },
-  'MO': {
-    name: 'Missouri',
-    cities: [
-      { name: 'St. Louis', lat: 38.6270, lon: -90.1994 },
-      { name: 'Kansas City', lat: 39.0997, lon: -94.5786 },
-      { name: 'Springfield', lat: 37.2090, lon: -93.2923 },
-      { name: 'Columbia', lat: 38.9517, lon: -92.3341 },
-    ]
-  },
-  'MT': {
-    name: 'Montana',
-    cities: [
-      { name: 'Billings', lat: 45.7833, lon: -108.5007 },
-      { name: 'Missoula', lat: 46.8721, lon: -113.9940 },
-      { name: 'Great Falls', lat: 47.5053, lon: -111.3008 },
-      { name: 'Helena', lat: 46.5891, lon: -112.0391 },
-    ]
-  },
-  'NE': {
-    name: 'Nebraska',
-    cities: [
-      { name: 'Omaha', lat: 41.2565, lon: -95.9345 },
-      { name: 'Lincoln', lat: 40.8258, lon: -96.6852 },
-      { name: 'Grand Island', lat: 40.9264, lon: -98.3420 },
-    ]
-  },
-  'NV': {
-    name: 'Nevada',
-    cities: [
-      { name: 'Las Vegas', lat: 36.1699, lon: -115.1398 },
-      { name: 'Reno', lat: 39.5296, lon: -119.8138 },
-      { name: 'Henderson', lat: 36.0395, lon: -114.9817 },
-      { name: 'Carson City', lat: 39.1638, lon: -119.7674 },
-    ]
-  },
-  'NH': {
-    name: 'New Hampshire',
-    cities: [
-      { name: 'Manchester', lat: 42.9956, lon: -71.4548 },
-      { name: 'Concord', lat: 43.2081, lon: -71.5376 },
-      { name: 'Nashua', lat: 42.7654, lon: -71.4676 },
-    ]
-  },
-  'NJ': {
-    name: 'New Jersey',
-    cities: [
-      { name: 'Newark', lat: 40.7357, lon: -74.1724 },
-      { name: 'Jersey City', lat: 40.7178, lon: -74.0431 },
-      { name: 'Trenton', lat: 40.2206, lon: -74.7597 },
-      { name: 'Atlantic City', lat: 39.3643, lon: -74.4229 },
-    ]
-  },
-  'NM': {
-    name: 'New Mexico',
-    cities: [
-      { name: 'Albuquerque', lat: 35.0844, lon: -106.6504 },
-      { name: 'Santa Fe', lat: 35.6870, lon: -105.9378 },
-      { name: 'Las Cruces', lat: 32.3199, lon: -106.7637 },
-    ]
-  },
-  'NY': {
-    name: 'New York',
-    cities: [
-      { name: 'New York City', lat: 40.7128, lon: -74.0060 },
-      { name: 'Buffalo', lat: 42.8864, lon: -78.8784 },
-      { name: 'Albany', lat: 42.6526, lon: -73.7562 },
-      { name: 'Syracuse', lat: 43.0481, lon: -76.1474 },
-      { name: 'Rochester', lat: 43.1566, lon: -77.6088 },
-    ]
-  },
-  'NC': {
-    name: 'North Carolina',
-    cities: [
-      { name: 'Charlotte', lat: 35.2271, lon: -80.8431 },
-      { name: 'Raleigh', lat: 35.7796, lon: -78.6382 },
-      { name: 'Greensboro', lat: 36.0726, lon: -79.7920 },
-      { name: 'Durham', lat: 35.9940, lon: -78.8986 },
-      { name: 'Wilmington', lat: 34.2257, lon: -77.9447 },
-    ]
-  },
-  'ND': {
-    name: 'North Dakota',
-    cities: [
-      { name: 'Fargo', lat: 46.8772, lon: -96.7898 },
-      { name: 'Bismarck', lat: 46.8083, lon: -100.7837 },
-      { name: 'Grand Forks', lat: 47.9253, lon: -97.0329 },
-    ]
-  },
-  'OH': {
-    name: 'Ohio',
-    cities: [
-      { name: 'Columbus', lat: 39.9612, lon: -82.9988 },
-      { name: 'Cleveland', lat: 41.4993, lon: -81.6944 },
-      { name: 'Cincinnati', lat: 39.1031, lon: -84.5120 },
-      { name: 'Toledo', lat: 41.6528, lon: -83.5379 },
-    ]
-  },
-  'OK': {
-    name: 'Oklahoma',
-    cities: [
-      { name: 'Oklahoma City', lat: 35.4676, lon: -97.5164 },
-      { name: 'Tulsa', lat: 36.1540, lon: -95.9928 },
-      { name: 'Norman', lat: 35.2226, lon: -97.4395 },
-    ]
-  },
-  'OR': {
-    name: 'Oregon',
-    cities: [
-      { name: 'Portland', lat: 45.5152, lon: -122.6784 },
-      { name: 'Salem', lat: 44.9429, lon: -123.0351 },
-      { name: 'Eugene', lat: 44.0521, lon: -123.0868 },
-      { name: 'Bend', lat: 44.0582, lon: -121.3153 },
-    ]
-  },
-  'PA': {
-    name: 'Pennsylvania',
-    cities: [
-      { name: 'Philadelphia', lat: 39.9526, lon: -75.1652 },
-      { name: 'Pittsburgh', lat: 40.4406, lon: -79.9959 },
-      { name: 'Harrisburg', lat: 40.2732, lon: -76.8867 },
-      { name: 'Allentown', lat: 40.6084, lon: -75.4902 },
-    ]
-  },
-  'RI': {
-    name: 'Rhode Island',
-    cities: [
-      { name: 'Providence', lat: 41.8240, lon: -71.4128 },
-      { name: 'Warwick', lat: 41.7001, lon: -71.4162 },
-      { name: 'Newport', lat: 41.4901, lon: -71.3128 },
-    ]
-  },
-  'SC': {
-    name: 'South Carolina',
-    cities: [
-      { name: 'Columbia', lat: 34.0007, lon: -81.0348 },
-      { name: 'Charleston', lat: 32.7765, lon: -79.9311 },
-      { name: 'Greenville', lat: 34.8526, lon: -82.3940 },
-      { name: 'Myrtle Beach', lat: 33.6891, lon: -78.8867 },
-    ]
-  },
-  'SD': {
-    name: 'South Dakota',
-    cities: [
-      { name: 'Sioux Falls', lat: 43.5446, lon: -96.7311 },
-      { name: 'Rapid City', lat: 44.0805, lon: -103.2310 },
-      { name: 'Pierre', lat: 44.3683, lon: -100.3510 },
-    ]
-  },
-  'TN': {
-    name: 'Tennessee',
-    cities: [
-      { name: 'Nashville', lat: 36.1627, lon: -86.7816 },
-      { name: 'Memphis', lat: 35.1495, lon: -90.0490 },
-      { name: 'Knoxville', lat: 35.9606, lon: -83.9207 },
-      { name: 'Chattanooga', lat: 35.0456, lon: -85.3097 },
-    ]
-  },
-  'TX': {
-    name: 'Texas',
-    cities: [
-      { name: 'Houston', lat: 29.7604, lon: -95.3698 },
-      { name: 'Dallas', lat: 32.7767, lon: -96.7970 },
-      { name: 'Austin', lat: 30.2672, lon: -97.7431 },
-      { name: 'San Antonio', lat: 29.4241, lon: -98.4936 },
-      { name: 'Fort Worth', lat: 32.7555, lon: -97.3308 },
-    ]
-  },
-  'UT': {
-    name: 'Utah',
-    cities: [
-      { name: 'Salt Lake City', lat: 40.7608, lon: -111.8910 },
-      { name: 'Provo', lat: 40.2338, lon: -111.6585 },
-      { name: 'Ogden', lat: 41.2230, lon: -111.9738 },
-      { name: 'Park City', lat: 40.6461, lon: -111.4980 },
-    ]
-  },
-  'VT': {
-    name: 'Vermont',
-    cities: [
-      { name: 'Burlington', lat: 44.4759, lon: -73.2121 },
-      { name: 'Montpelier', lat: 44.2601, lon: -72.5754 },
-      { name: 'Rutland', lat: 43.6106, lon: -72.9726 },
-    ]
-  },
-  'VA': {
-    name: 'Virginia',
-    cities: [
-      { name: 'Virginia Beach', lat: 36.8529, lon: -75.9780 },
-      { name: 'Richmond', lat: 37.5407, lon: -77.4360 },
-      { name: 'Norfolk', lat: 36.8508, lon: -76.2859 },
-      { name: 'Arlington', lat: 38.8816, lon: -77.0910 },
-    ]
-  },
-  'WA': {
-    name: 'Washington',
-    cities: [
-      { name: 'Seattle', lat: 47.6062, lon: -122.3321 },
-      { name: 'Spokane', lat: 47.6588, lon: -117.4260 },
-      { name: 'Tacoma', lat: 47.2529, lon: -122.4443 },
-      { name: 'Olympia', lat: 47.0379, lon: -122.9007 },
-    ]
-  },
-  'WV': {
-    name: 'West Virginia',
-    cities: [
-      { name: 'Charleston', lat: 38.3498, lon: -81.6326 },
-      { name: 'Huntington', lat: 38.4192, lon: -82.4452 },
-      { name: 'Morgantown', lat: 39.6295, lon: -79.9559 },
-    ]
-  },
-  'WI': {
-    name: 'Wisconsin',
-    cities: [
-      { name: 'Milwaukee', lat: 43.0389, lon: -87.9065 },
-      { name: 'Madison', lat: 43.0731, lon: -89.4012 },
-      { name: 'Green Bay', lat: 44.5133, lon: -88.0133 },
-      { name: 'Eau Claire', lat: 44.8113, lon: -91.4985 },
-    ]
-  },
-  'WY': {
-    name: 'Wyoming',
-    cities: [
-      { name: 'Cheyenne', lat: 41.1400, lon: -104.8202 },
-      { name: 'Casper', lat: 42.8666, lon: -106.3131 },
-      { name: 'Jackson', lat: 43.4799, lon: -110.7624 },
-    ]
-  },
-};
+const STATE_OPTIONS = Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
+
 
 // Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
 async function getCoordinatesFromZip(zip) {
@@ -701,7 +258,9 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
 export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLocationsChange, onLocationClick, initialLocation }) {
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
+  const [cityQuery, setCityQuery] = useState('');
+  const [catalogCities, setCatalogCities] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [searchMode, setSearchMode] = useState('zip'); // 'city' or 'zip' — zip is the default so users can find their location fastest; URL initial location handlers below override based on the incoming type ('zip' / 'search')
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -766,54 +325,61 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     return () => window.removeEventListener('savedLocationsChanged', handler);
   }, []);
 
+  // Load catalog cities when a state is selected (same source as state alert pages).
+  useEffect(() => {
+    if (!selectedState) {
+      setCatalogCities([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setCatalogLoading(true);
+    getCitiesForState(selectedState).then((rows) => {
+      if (!cancelled) {
+        setCatalogCities(rows);
+        setCatalogLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedState]);
+
+  const resolveStateCode = (stateInput) => {
+    const upper = String(stateInput || '').trim().toUpperCase();
+    if (STATE_NAMES[upper]) return upper;
+    const match = STATE_OPTIONS.find(([, name]) => name.toLowerCase() === upper.toLowerCase());
+    return match ? match[0] : null;
+  };
+
   // Handle initial location from URL parameter
   useEffect(() => {
     if (!initialLocation || initialProcessed) return;
     setInitialProcessed(true);
 
     if (initialLocation.type === 'zip') {
-      // Auto-expand and search the zip
       setIsExpanded(true);
       setSearchMode('zip');
       setZip(initialLocation.value);
       fetchLocationWeather(initialLocation.value);
     } else if (initialLocation.type === 'search') {
-      // Try to match city,state from the search term
       const value = initialLocation.value;
-      const parts = value.split(',').map(s => s.trim());
+      const parts = value.split(',').map((s) => s.trim());
 
       if (parts.length === 2) {
         const cityName = parts[0];
-        const stateInput = parts[1].toUpperCase();
-
-        // Find state code
-        let stateCode = null;
-        if (STATES_AND_CITIES[stateInput]) {
-          stateCode = stateInput;
-        } else {
-          // Try matching by full state name
-          for (const [code, stateData] of Object.entries(STATES_AND_CITIES)) {
-            if (stateData.name.toLowerCase() === stateInput.toLowerCase()) {
-              stateCode = code;
-              break;
-            }
-          }
-        }
+        const stateCode = resolveStateCode(parts[1]);
 
         if (stateCode) {
-          const stateData = STATES_AND_CITIES[stateCode];
-          const cityData = stateData.cities.find(
-            c => c.name.toLowerCase() === cityName.toLowerCase()
-          );
-
           setIsExpanded(true);
           setSearchMode('city');
           setSelectedState(stateCode);
-          setSelectedCity(cityData ? cityData.name : '');
+          setCityQuery(cityName);
 
-          if (cityData) {
-            fetchCityWeather(stateCode, cityData);
-          }
+          resolveCityByName(cityName, stateCode, []).then((resolved) => {
+            if (resolved.city) {
+              fetchCityWeather(stateCode, resolved.city);
+            }
+          });
         }
       }
     }
@@ -871,7 +437,8 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     setError(null);
     setIsCardDismissed(false);
 
-    const cityId = `${cityData.name}-${stateCode}`.toLowerCase().replace(/\s+/g, '-');
+    const cityId = cityData.slug
+      || `${cityData.name}-${stateCode}`.toLowerCase().replace(/\s+/g, '-');
     const cityName = `${cityData.name}, ${stateCode}`;
 
     try {
@@ -965,19 +532,33 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     updateSavedLocations(newLocations);
     setCurrentLocationData(null);
     setZip('');
-    setSelectedCity('');
+    setCityQuery('');
   };
 
   const handleDismissCard = () => {
     setIsCardDismissed(true);
   };
 
-  const handleCitySelect = () => {
-    if (!selectedState || !selectedCity) return;
-    const stateData = STATES_AND_CITIES[selectedState];
-    const cityData = stateData?.cities.find(c => c.name === selectedCity);
-    if (cityData) {
-      fetchCityWeather(selectedState, cityData);
+  const handleCitySelect = async (e) => {
+    e?.preventDefault?.();
+    setError(null);
+    const trimmed = cityQuery.trim();
+    if (!selectedState || !trimmed) {
+      setError('Select a state and enter a city name');
+      return;
+    }
+
+    try {
+      const resolved = await resolveCityByName(trimmed, selectedState, []);
+      if (!resolved.city) {
+        setError(`City "${trimmed}" not found in ${STATE_NAMES[selectedState] || selectedState}`);
+        return;
+      }
+      setCityQuery(resolved.city.name);
+      await fetchCityWeather(selectedState, resolved.city);
+    } catch (err) {
+      console.error('City search error:', err);
+      setError('Failed to look up city');
     }
   };
 
@@ -986,7 +567,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
     ? savedLocations[currentLocationId]?.onMap || false
     : false;
 
-  const availableCities = selectedState ? STATES_AND_CITIES[selectedState]?.cities || [] : [];
+  const cityListId = 'homepage-city-options';
 
   return (
     <div className="space-y-4">
@@ -1052,38 +633,42 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
             </div>
 
         {searchMode === 'city' ? (
-          /* City/State dropdowns */
-          <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
+          <form onSubmit={handleCitySelect} className="flex flex-col sm:flex-row gap-2 max-w-lg">
             <select
               value={selectedState}
               onChange={(e) => {
                 setSelectedState(e.target.value);
-                setSelectedCity('');
+                setCityQuery('');
+                setError(null);
               }}
               className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors"
             >
               <option value="">Select State</option>
-              {Object.entries(STATES_AND_CITIES)
-                .sort((a, b) => a[1].name.localeCompare(b[1].name))
-                .map(([code, state]) => (
-                  <option key={code} value={code}>{state.name}</option>
-                ))}
-            </select>
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              disabled={!selectedState}
-              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors disabled:opacity-50"
-            >
-              <option value="">Select City</option>
-              {availableCities.map((city) => (
-                <option key={city.name} value={city.name}>{city.name}</option>
+              {STATE_OPTIONS.map(([code, name]) => (
+                <option key={code} value={code}>{name}</option>
               ))}
             </select>
+            <input
+              type="text"
+              list={cityListId}
+              value={cityQuery}
+              onChange={(e) => {
+                setCityQuery(e.target.value);
+                setError(null);
+              }}
+              disabled={!selectedState || catalogLoading}
+              placeholder={catalogLoading ? 'Loading cities…' : 'Search city…'}
+              aria-label="City name"
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors disabled:opacity-50"
+            />
+            <datalist id={cityListId}>
+              {catalogCities.map((city) => (
+                <option key={city.id} value={city.name} />
+              ))}
+            </datalist>
             <button
-              type="button"
-              onClick={handleCitySelect}
-              disabled={loading || !selectedState || !selectedCity}
+              type="submit"
+              disabled={loading || catalogLoading || !selectedState || !cityQuery.trim()}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {loading ? (
@@ -1092,7 +677,7 @@ export default function ZipCodeSearch({ stormPhase, totalLocationCount = 0, onLo
                 'Check'
               )}
             </button>
-          </div>
+          </form>
         ) : (
           /* Zip code input */
           <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">

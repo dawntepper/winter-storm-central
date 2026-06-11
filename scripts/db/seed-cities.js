@@ -19,6 +19,8 @@ async function seedCities() {
     lat: c.lat,
     lon: c.lon,
     population: c.population,
+    has_static_page: c.has_static_page,
+    is_major: c.is_major,
   }));
 
   console.log(`Upserting ${rows.length} cities…`);
