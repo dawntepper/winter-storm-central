@@ -14,11 +14,20 @@ function getSupabaseAdmin() {
   if (supabaseAdmin) return supabaseAdmin;
 
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!url || !serviceKey) {
+    const missing = [];
+    if (!url) missing.push('SUPABASE_URL (or VITE_SUPABASE_URL)');
+    if (!serviceKey) {
+      missing.push('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)');
+    }
     throw new Error(
-      'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables'
+      `Missing ${missing.join(' and ')}. ` +
+        'In Netlify, set these under Site configuration → Environment variables, ' +
+        'scope them to Functions (or All scopes), then redeploy. ' +
+        'Never use a VITE_ prefix for the service role key.'
     );
   }
 
