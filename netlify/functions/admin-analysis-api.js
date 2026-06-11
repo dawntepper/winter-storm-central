@@ -1,0 +1,300 @@
+/**
+ * Admin Analysis API — password-gated read-only analytics using service role.
+ * Validates ADMIN_PASSWORD against client-supplied password.
+ */
+
+const { getSupabaseAdmin } = require('./lib/supabase-admin');
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD;
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
+function jsonResponse(statusCode, body) {
+  return {
+    statusCode,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+    body: JSON.stringify(body),
+  };
+}
+
+function assertAdmin(password) {
+  if (!ADMIN_PASSWORD) {
+    throw new Error('ADMIN_PASSWORD not configured on server');
+  }
+  if (!password || password !== ADMIN_PASSWORD) {
+    const err = new Error('Unauthorized');
+    err.statusCode = 401;
+    throw err;
+  }
+}
+
+function getSinceDate(dateRange) {
+  const now = new Date();
+  switch (dateRange) {
+    case 'today': {
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      return start.toISOString();
+    }
+    case '7d':
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    case '30d':
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    case 'all':
+    default:
+      return null;
+  }
+}
+
+function applySince(query, column, since) {
+  if (!since) return query;
+  return query.gte(column, since);
+}
+
+async function fetchReturningVisitors(supabase, since) {
+  const { data, error } = await supabase.rpc('admin_returning_visitor_stats', {
+    p_since: since,
+  });
+  if (error) throw error;
+  return {
+    totalSessions: data?.total_sessions ?? 0,
+    uniqueVisitors: data?.unique_visitors ?? 0,
+    newVisitors: data?.new_visitors ?? 0,
+    returningVisitors: data?.returning_visitors ?? 0,
+    returningPct: data?.returning_pct ?? 0,
+  };
+}
+
+async function fetchMissingLocationSearches(supabase, since) {
+  let query = supabase
+    .from('location_search_events')
+    .select('query, state_code, created_at')
+    .eq('success', false)
+    .limit(5000);
+
+  query = applySince(query, 'created_at', since);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const grouped = new Map();
+  for (const row of data || []) {
+    const key = `${row.query}::${row.state_code || ''}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.search_count += 1;
+      if (row.created_at > existing.last_searched) {
+        existing.last_searched = row.created_at;
+      }
+    } else {
+      grouped.set(key, {
+        query: row.query,
+        state_context: row.state_code,
+        search_count: 1,
+        last_searched: row.created_at,
+      });
+    }
+  }
+
+  return Array.from(grouped.values())
+    .sort((a, b) => b.search_count - a.search_count)
+    .slice(0, 50);
+}
+
+async function fetchLocationSearchPerformance(supabase, since) {
+  const { data: stats, error: statsError } = await supabase.rpc(
+    'admin_location_search_stats',
+    { p_since: since }
+  );
+  if (statsError) throw statsError;
+
+  let query = supabase
+    .from('location_search_events')
+    .select('query, state_code')
+    .limit(5000);
+
+  query = applySince(query, 'created_at', since);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const topMap = new Map();
+  for (const row of data || []) {
+    const key = `${row.query}::${row.state_code || ''}`;
+    const existing = topMap.get(key);
+    if (existing) {
+      existing.search_count += 1;
+    } else {
+      topMap.set(key, {
+        query: row.query,
+        state_code: row.state_code,
+        search_count: 1,
+      });
+    }
+  }
+
+  const topLocations = Array.from(topMap.values())
+    .sort((a, b) => b.search_count - a.search_count)
+    .slice(0, 20);
+
+  return {
+    totalSearches: stats?.total_searches ?? 0,
+    successfulSearches: stats?.successful_searches ?? 0,
+    failedSearches: stats?.failed_searches ?? 0,
+    successRate: stats?.success_rate ?? 0,
+    topLocations,
+  };
+}
+
+async function fetchCountyAlertViews(supabase, since) {
+  let query = supabase
+    .from('county_alert_views')
+    .select('county_id, state_code, alert_count, created_at, counties(name, state_code)')
+    .limit(5000);
+
+  query = applySince(query, 'created_at', since);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const grouped = new Map();
+  for (const row of data || []) {
+    const county = row.counties;
+    const key = row.county_id;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.view_count += 1;
+      if (row.alert_count != null && row.alert_count > existing.alert_count) {
+        existing.alert_count = row.alert_count;
+      }
+      if (row.created_at > existing.last_viewed) {
+        existing.last_viewed = row.created_at;
+      }
+    } else {
+      grouped.set(key, {
+        county_name: county?.name || 'Unknown',
+        state_code: county?.state_code || row.state_code,
+        view_count: 1,
+        alert_count: row.alert_count ?? 0,
+        last_viewed: row.created_at,
+      });
+    }
+  }
+
+  return Array.from(grouped.values())
+    .sort((a, b) => b.view_count - a.view_count)
+    .slice(0, 30);
+}
+
+async function fetchSavedLocations(supabase, since) {
+  const { data: stats, error: statsError } = await supabase.rpc(
+    'admin_saved_location_stats',
+    { p_since: since }
+  );
+  if (statsError) throw statsError;
+
+  let query = supabase
+    .from('user_locations')
+    .select('created_at, locations(name, state)')
+    .limit(5000);
+
+  query = applySince(query, 'created_at', since);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const topMap = new Map();
+  for (const row of data || []) {
+    const loc = row.locations;
+    const key = `${loc?.name || 'Unknown'}::${loc?.state || ''}`;
+    const existing = topMap.get(key);
+    if (existing) {
+      existing.save_count += 1;
+      if (row.created_at > existing.last_saved) {
+        existing.last_saved = row.created_at;
+      }
+    } else {
+      topMap.set(key, {
+        location_name: loc?.name || 'Unknown',
+        state: loc?.state,
+        save_count: 1,
+        last_saved: row.created_at,
+      });
+    }
+  }
+
+  const topLocations = Array.from(topMap.values())
+    .sort((a, b) => b.save_count - a.save_count)
+    .slice(0, 20);
+
+  return {
+    totalSaved: stats?.total_saved ?? 0,
+    signedInUsers: stats?.signed_in_users ?? 0,
+    topLocations,
+    note: 'Saved locations are stored for signed-in users only. Anonymous localStorage saves are not tracked in Supabase.',
+  };
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: corsHeaders(), body: '' };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return jsonResponse(405, { error: 'Method not allowed' });
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}');
+    assertAdmin(body.password);
+
+    if (body.action === 'validate') {
+      return jsonResponse(200, { ok: true });
+    }
+
+    const dateRange = body.dateRange || '7d';
+    const since = getSinceDate(dateRange);
+    const supabase = getSupabaseAdmin();
+
+    const [
+      returningVisitors,
+      missingLocationSearches,
+      locationSearch,
+      countyAlertViews,
+      savedLocations,
+    ] = await Promise.all([
+      fetchReturningVisitors(supabase, since),
+      fetchMissingLocationSearches(supabase, since),
+      fetchLocationSearchPerformance(supabase, since),
+      fetchCountyAlertViews(supabase, since),
+      fetchSavedLocations(supabase, since),
+    ]);
+
+    return jsonResponse(200, {
+      dateRange,
+      since,
+      returningVisitors,
+      missingLocationSearches,
+      locationSearch,
+      countyAlertViews,
+      savedLocations,
+      radar: {
+        available: false,
+        message:
+          'Radar engagement is tracked via client-side analytics (Plausible) and is not stored in Supabase.',
+      },
+    });
+  } catch (err) {
+    console.error('admin-analysis-api error:', err);
+    const status = err.statusCode || 500;
+    const message =
+      err.statusCode === 401 ? err.message : err.message || 'Internal error';
+    return jsonResponse(status, { error: message });
+  }
+};

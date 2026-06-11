@@ -9,6 +9,7 @@ import AdminStorms from './components/AdminStorms.jsx'
 import AdminHome from './pages/AdminHome.jsx'
 import AdminWeatherSummary from './pages/AdminWeatherSummary.jsx'
 import AdminSeo from './pages/AdminSeo.jsx'
+import AdminAnalysis from './pages/AdminAnalysis.jsx'
 import PrepPage from './pages/PrepPage.jsx'
 import AddToHomePage from './pages/AddToHomePage.jsx'
 import ForecastPage from './pages/ForecastPage.jsx'
@@ -17,6 +18,7 @@ import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
 import CountyAlertsPage from './components/CountyAlertsPage.jsx'
 import CatalogCityAlertsPage from './components/CatalogCityAlertsPage.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import VisitorSessionTracker from './components/VisitorSessionTracker.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import AuthCallback from './components/auth/AuthCallback.jsx'
 
@@ -25,6 +27,7 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <VisitorSessionTracker />
         <Routes>
           <Route path="/" element={<App />} />
         <Route path="/radar" element={<RadarPage />} />
@@ -43,6 +46,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin/storms" element={<AdminStorms />} />
         <Route path="/admin/weather-summary" element={<AdminWeatherSummary />} />
         <Route path="/admin/seo" element={<AdminSeo />} />
+        <Route path="/admin/analysis" element={<AdminAnalysis />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </AuthProvider>

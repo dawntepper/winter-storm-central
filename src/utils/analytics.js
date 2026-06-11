@@ -446,6 +446,33 @@ export function trackVisitorType() {
   }
 }
 
+/**
+ * Supabase-backed session start (one event per browser session).
+ * Fired from visitorSessionService after durable visitor_sessions insert.
+ *
+ * @param {{ visitorType: 'new' | 'returning', source?: string | null, landingPage: string }} params
+ */
+export function trackVisitorSessionStarted({ visitorType, source, landingPage }) {
+  const props = {
+    visitor_type: visitorType,
+    landing_page: landingPage || '/',
+  };
+  if (source) props.source = source;
+  track('Visitor Session Started', props);
+}
+
+/**
+ * Optional follow-up when Supabase marks the visitor as returning.
+ *
+ * @param {{ source?: string | null, landingPage?: string }} params
+ */
+export function trackReturningVisitor({ source, landingPage } = {}) {
+  const props = {};
+  if (source) props.source = source;
+  if (landingPage) props.landing_page = landingPage;
+  track('Returning Visitor', props);
+}
+
 // ============================================
 // STORM PAGE EVENTS
 // ============================================
@@ -1259,6 +1286,8 @@ export default {
   startSessionTracking,
   stopSessionTracking,
   trackVisitorType,
+  trackVisitorSessionStarted,
+  trackReturningVisitor,
   testAllTracking,
   // Storm page events
   trackStormPageView,

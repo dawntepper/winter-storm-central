@@ -19,6 +19,12 @@ const SECTIONS = [
     title: 'SEO & Indexing',
     icon: '🔎',
     description: 'Submit URLs to Bing IndexNow for accelerated indexing. Bulk + custom submission.'
+  },
+  {
+    href: '/admin/analysis',
+    title: 'Product Analysis',
+    icon: '📊',
+    description: 'Read-only analytics: visitors, location searches, county views, and saved locations.'
   }
 ];
 
