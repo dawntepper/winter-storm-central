@@ -480,6 +480,8 @@ export default function StateAlertsPage() {
               centerOn={displayMapCenter}
               highlightArea={mapFocus?.highlightArea ?? null}
               onResetView={handleMapResetView}
+              resetViewLabel="State View"
+              resetViewTitle={`Show all of ${stateData.name} on the map`}
               selectedStateCode={stateAbbr}
               radarLayerType="precipitation"
               radarColorScheme={4}

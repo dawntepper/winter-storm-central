@@ -180,6 +180,7 @@ export default function CountyAlertsPage() {
                 isHero
                 centerOn={mapCenter}
                 highlightArea={highlightArea}
+                showResetView={false}
                 selectedStateCode={county.stateCode}
                 radarLayerType="precipitation"
                 radarColorScheme={4}

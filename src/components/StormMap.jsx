@@ -1153,7 +1153,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1452,9 +1452,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <button
                 onClick={handleResetView}
                 className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
-                title="Reset to default US view"
+                title={resetViewTitle ?? (resetViewLabel === 'Reset View' ? 'Reset to default US view' : `Return to ${resetViewLabel.toLowerCase()}`)}
               >
-                Reset View
+                {resetViewLabel}
               </button>
             )}
             {/* Radar toggle */}
