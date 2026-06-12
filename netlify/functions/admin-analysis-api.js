@@ -115,6 +115,7 @@ async function fetchMissingLocationSearches(supabase, since) {
 const LOCATION_SOURCE_BUCKETS = {
   useMyLocation: ['gps', 'use_my_location', 'geolocation'],
   citySearch: ['city'],
+  countySearch: ['county'],
   zipSearch: ['zip'],
   savedLocationTap: ['saved_location'],
 };
@@ -145,6 +146,7 @@ async function fetchLocationSources(supabase, since) {
   const counts = {
     useMyLocation: 0,
     citySearch: 0,
+    countySearch: 0,
     zipSearch: 0,
     savedLocationTap: 0,
   };

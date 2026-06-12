@@ -6,6 +6,7 @@
 import { supabase } from '../lib/supabase';
 import { citySlug, countySlug } from '../lib/locationSlug';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
+import { getOrCreateVisitorIds } from '../utils/visitorIds';
 import {
   trackLocationSearchSuccess,
   trackCountyAlertView as trackCountyAlertViewEvent,
@@ -649,17 +650,34 @@ export async function trackLocationSearch(event) {
   }
 
   if (!supabase) return;
-  const { error } = await supabase.from('location_search_events').insert({
+  // No .select() — anon has INSERT but not SELECT RLS; RETURNING would fail.
+  const ids = getOrCreateVisitorIds();
+  const payload = {
     query: query || '',
     state_code: stateCode || null,
-    city_id: cityId || null,
-    county_id: countyId || null,
-    zip_code: zipCode || null,
-    page_context: pageContext || null,
+    source_page: pageContext || null,
+    resolved_city_id: cityId || null,
+    resolved_county_id: countyId || null,
+    resolved_zip: zipCode || null,
     success,
     resolved_type: resolved,
-  });
-  if (error) console.warn('trackLocationSearch insert:', error.message);
+  };
+  if (ids?.visitorId) payload.visitor_id = ids.visitorId;
+
+  const { error } = await supabase.from('location_search_events').insert(payload);
+  if (error) {
+    console.warn('trackLocationSearch insert:', error.message);
+    return;
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[locationSearch] inserted', {
+      query: (query || '').slice(0, 40),
+      stateCode: stateCode || null,
+      searchType: resolved,
+      success,
+    });
+  }
 }
 
 /**

@@ -146,8 +146,9 @@ function FunnelCard({ id, funnel }) {
 }
 
 const LOCATION_SOURCE_ROWS = [
-  { key: 'useMyLocation', label: 'Use My Location' },
+  { key: 'useMyLocation', label: 'Use My Location (GPS)' },
   { key: 'citySearch', label: 'City Search' },
+  { key: 'countySearch', label: 'County Search' },
   { key: 'zipSearch', label: 'ZIP Search' },
   { key: 'savedLocationTap', label: 'Saved Location Tap' },
 ];
