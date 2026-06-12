@@ -5,7 +5,7 @@ export const ANALYSIS_SECTIONS = [
   { id: 'returning-visitors', label: 'Visitors' },
   { id: 'location-searches', label: 'Searches' },
   { id: 'county-alert-views', label: 'Counties' },
-  { id: 'saved-locations', label: 'Saved Locations' },
+  { id: 'saved-locations', label: 'Saved' },
   { id: 'radar-engagement', label: 'Radar' },
   { id: 'user-journeys', label: 'Journeys' },
 ];

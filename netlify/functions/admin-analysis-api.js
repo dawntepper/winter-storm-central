@@ -247,7 +247,7 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
     .select('*', { count: 'exact', head: true });
   countyQuery = applyPeriod(countyQuery, 'created_at', since, until);
 
-  const [visitorsRes, searchesRes, savesRes, countiesRes, radarRes, returningRes] =
+  const [visitorsRes, searchesRes, savesRes, countiesRes, radarRes, returningRes, searchStatsRes] =
     await Promise.all([
       visitorQuery,
       searchQuery,
@@ -255,6 +255,7 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
       countyQuery,
       supabase.rpc('admin_radar_engagement_stats', { p_since: since }),
       supabase.rpc('admin_returning_visitor_stats', { p_since: since }),
+      supabase.rpc('admin_location_search_stats', { p_since: since }),
     ]);
 
   if (visitorsRes.error) throw visitorsRes.error;
@@ -263,6 +264,7 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
   if (countiesRes.error) throw countiesRes.error;
   if (radarRes.error) throw radarRes.error;
   if (returningRes.error) throw returningRes.error;
+  if (searchStatsRes.error) throw searchStatsRes.error;
 
   // Filter radar to previous period only (RPC uses p_since only)
   let radarOpens = radarRes.data?.totalOpens ?? 0;
@@ -284,6 +286,9 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
     savedLocations: savesRes.count ?? 0,
     countyAlertViews: countiesRes.count ?? 0,
     totalSessions: visitorsRes.count ?? 0,
+    uniqueVisitors: returningRes.data?.unique_visitors ?? 0,
+    returningPct: returningRes.data?.returning_pct ?? 0,
+    searchSuccessRate: searchStatsRes.data?.success_rate ?? 0,
   };
 }
 
@@ -295,6 +300,10 @@ function buildMetricTrends(current, previous) {
       locationSearches: null,
       savedLocations: null,
       countyAlertViews: null,
+      totalSessions: null,
+      uniqueVisitors: null,
+      returningPct: null,
+      searchSuccessRate: null,
     };
   }
 
@@ -315,6 +324,13 @@ function buildMetricTrends(current, previous) {
     countyAlertViews: computeTrend(
       current.countyAlertViews,
       previous.countyAlertViews
+    ),
+    totalSessions: computeTrend(current.totalSessions, previous.totalSessions),
+    uniqueVisitors: computeTrend(current.uniqueVisitors, previous.uniqueVisitors),
+    returningPct: computeTrend(current.returningPct, previous.returningPct),
+    searchSuccessRate: computeTrend(
+      current.searchSuccessRate,
+      previous.searchSuccessRate
     ),
   };
 }
@@ -969,21 +985,26 @@ function pageViewLabel(eventName, stateCode) {
   }
 }
 
-async function fetchMostVisitedPages(supabase) {
-  const since30d = getSinceDate('30d');
+async function fetchMostVisitedPages(supabase, dateRange = '7d') {
+  const since60d = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   let query = supabase
     .from('product_events')
     .select('event_name, state_code, created_at')
     .in('event_name', PAGE_VIEW_EVENTS)
     .order('created_at', { ascending: false })
     .limit(10000);
-  query = applySince(query, 'created_at', since30d);
+  query = applySince(query, 'created_at', since60d);
 
   const { data, error } = await query;
   if (error) throw error;
 
-  const since7dMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
   const sinceTodayMs = new Date().setHours(0, 0, 0, 0);
+  const sinceYesterdayMs = sinceTodayMs - 24 * 60 * 60 * 1000;
+  const since7dMs = now - 7 * 24 * 60 * 60 * 1000;
+  const since14dMs = now - 14 * 24 * 60 * 60 * 1000;
+  const since30dMs = now - 30 * 24 * 60 * 60 * 1000;
+  const since60dMs = now - 60 * 24 * 60 * 60 * 1000;
 
   const map = new Map();
   for (const row of data || []) {
@@ -994,18 +1015,37 @@ async function fetchMostVisitedPages(supabase) {
       eventName: row.event_name,
       stateCode: row.state_code || null,
       viewsToday: 0,
+      viewsYesterday: 0,
       views7d: 0,
+      viewsPrev7d: 0,
       views30d: 0,
+      viewsPrev30d: 0,
     };
     const ts = new Date(row.created_at).getTime();
-    existing.views30d += 1;
+    if (ts >= since30dMs) existing.views30d += 1;
+    if (ts >= since60dMs && ts < since30dMs) existing.viewsPrev30d += 1;
     if (ts >= since7dMs) existing.views7d += 1;
+    if (ts >= since14dMs && ts < since7dMs) existing.viewsPrev7d += 1;
     if (ts >= sinceTodayMs) existing.viewsToday += 1;
+    if (ts >= sinceYesterdayMs && ts < sinceTodayMs) existing.viewsYesterday += 1;
     map.set(key, existing);
   }
 
+  const trendPairs = {
+    today: ['viewsToday', 'viewsYesterday'],
+    yesterday: ['viewsToday', 'viewsYesterday'],
+    '7d': ['views7d', 'viewsPrev7d'],
+    '30d': ['views30d', 'viewsPrev30d'],
+    all: ['views30d', 'viewsPrev30d'],
+  };
+  const [currentKey, prevKey] = trendPairs[dateRange] || trendPairs['7d'];
+
   const pages = Array.from(map.values())
-    .sort((a, b) => b.views30d - a.views30d)
+    .map((row) => ({
+      ...row,
+      trend: computeTrend(row[currentKey] ?? 0, row[prevKey] ?? 0),
+    }))
+    .sort((a, b) => (b[currentKey] ?? 0) - (a[currentKey] ?? 0))
     .slice(0, 20);
 
   return { pages };
@@ -1148,131 +1188,133 @@ Return ONLY JSON: { "blurb": string } — one sentence under 120 chars linking s
   return { blurb: fallback, generatedBy: 'rule-based' };
 }
 
+function generateNeedsAttention({
+  countyAlertViews,
+  returningVisitors,
+  locationSearch,
+  metricTrends,
+  radar,
+}) {
+  const items = [];
+
+  if (
+    (countyAlertViews?.totalViews ?? 0) < 10 &&
+    (returningVisitors?.totalSessions ?? 0) > 20
+  ) {
+    items.push({
+      id: 'county-low-traffic',
+      priority: 'medium',
+      text: `County alert pages have low traffic (${countyAlertViews.totalViews} views vs ${returningVisitors.totalSessions} sessions).`,
+    });
+  }
+
+  const searchTrend = metricTrends?.searchSuccessRate;
+  if (
+    searchTrend?.direction === 'down' &&
+    Math.abs(searchTrend.changePct) >= 15
+  ) {
+    items.push({
+      id: 'search-failures',
+      priority: 'high',
+      text: `Search success rate dropped ${Math.abs(searchTrend.changePct)}% vs prior period (now ${locationSearch?.successRate ?? '—'}%).`,
+    });
+  } else if (
+    (locationSearch?.failedSearches ?? 0) > 0 &&
+    locationSearch?.successRate != null &&
+    locationSearch.successRate < 80
+  ) {
+    items.push({
+      id: 'search-failures',
+      priority: 'medium',
+      text: `Search success rate is ${locationSearch.successRate}% with ${locationSearch.failedSearches} failed searches.`,
+    });
+  }
+
+  const returningTrend = metricTrends?.returningVisitors;
+  if (
+    returningTrend?.direction === 'down' &&
+    Math.abs(returningTrend.changePct) >= 15
+  ) {
+    items.push({
+      id: 'returning-decline',
+      priority: 'high',
+      text: `Returning visitors down ${Math.abs(returningTrend.changePct)}% vs prior period.`,
+    });
+  }
+
+  const topState = radar?.opensByState?.[0];
+  const secondState = radar?.opensByState?.[1];
+  if (
+    topState &&
+    secondState &&
+    topState.open_count > Math.max(secondState.open_count * 2, 5)
+  ) {
+    items.push({
+      id: 'state-spike',
+      priority: 'medium',
+      text: `${formatRadarStateLabel(topState.state_code)} has unusually high radar engagement (${topState.open_count} opens, 2×+ next state).`,
+    });
+  }
+
+  return items.slice(0, 4);
+}
+
 function generateExecutiveSummary({
   returningVisitors,
   radar,
   locationSearch,
-  savedLocations,
-  userJourneys,
-  missingLocationSearches,
-  countyAlertViews,
   countyAlertOpportunities,
-  recommendedActions,
   metricTrends,
 }) {
   const metrics = [];
 
   metrics.push({
-    id: 'radar-opens',
-    label: 'Radar Opens',
-    value: (radar?.totalOpens ?? 0).toLocaleString(),
-    detail: radar?.insights?.avgOpensPerSession
-      ? `${radar.insights.avgOpensPerSession} avg per session`
-      : undefined,
-    trend: metricTrends?.radarOpens ?? null,
+    id: 'sessions',
+    label: 'Sessions',
+    value: (returningVisitors?.totalSessions ?? 0).toLocaleString(),
+    trend: metricTrends?.totalSessions ?? null,
   });
 
   metrics.push({
-    id: 'returning-visitors',
-    label: 'Returning Visitors',
-    value: (returningVisitors?.returningVisitors ?? 0).toLocaleString(),
-    detail: `${returningVisitors?.returningPct ?? 0}% of sessions`,
-    trend: metricTrends?.returningVisitors ?? null,
+    id: 'visitors',
+    label: 'Visitors',
+    value: (returningVisitors?.uniqueVisitors ?? 0).toLocaleString(),
+    trend: metricTrends?.uniqueVisitors ?? null,
+  });
+
+  metrics.push({
+    id: 'returning-pct',
+    label: 'Returning %',
+    value: `${returningVisitors?.returningPct ?? 0}%`,
+    trend: metricTrends?.returningPct ?? null,
   });
 
   metrics.push({
     id: 'search-success',
-    label: 'Search Success Rate',
+    label: 'Search Success',
     value:
       locationSearch?.totalSearches > 0
         ? `${locationSearch.successRate}%`
         : '—',
-    detail:
-      locationSearch?.totalSearches > 0
-        ? `${locationSearch.totalSearches.toLocaleString()} searches`
-        : 'No searches in period',
-    trend: metricTrends?.locationSearches ?? null,
+    trend: metricTrends?.searchSuccessRate ?? null,
   });
 
-  const topState = radar?.insights?.topState;
   metrics.push({
-    id: 'top-state',
-    label: 'Top State',
-    value: topState ? formatRadarStateLabel(topState.stateCode) : '—',
-    detail: topState ? `${topState.openCount.toLocaleString()} radar opens` : undefined,
+    id: 'radar-opens',
+    label: 'Radar Opens',
+    value: (radar?.totalOpens ?? 0).toLocaleString(),
+    trend: metricTrends?.radarOpens ?? null,
   });
 
-  const topLocation =
-    locationSearch?.topLocations?.[0] ||
-    savedLocations?.topLocations?.[0] ||
-    countyAlertViews?.topViewed?.[0];
-  let locationValue = '—';
-  let locationDetail;
-  if (topLocation?.query) {
-    locationValue = topLocation.state_code
-      ? `${topLocation.query}, ${topLocation.state_code}`
-      : topLocation.query;
-    locationDetail = `${topLocation.search_count} searches`;
-  } else if (topLocation?.location_name) {
-    locationValue = topLocation.state
-      ? `${topLocation.location_name}, ${topLocation.state}`
-      : topLocation.location_name;
-    locationDetail = `${topLocation.save_count} saves`;
-  } else if (topLocation?.county_name) {
-    locationValue = `${topLocation.county_name}, ${topLocation.state_code}`;
-    locationDetail = `${topLocation.view_count} county views`;
-  }
+  const topOpp = countyAlertOpportunities?.opportunities?.[0];
   metrics.push({
-    id: 'most-viewed-location',
-    label: 'Most Viewed Location',
-    value: locationValue,
-    detail: locationDetail,
+    id: 'opportunity-score',
+    label: 'Opportunity Score',
+    value: topOpp ? String(topOpp.opportunityScore) : '—',
+    detail: topOpp ? `${topOpp.stateCode} county gap` : undefined,
   });
 
-  const topCountyOpp = countyAlertOpportunities?.opportunities?.[0];
-  const topCityOpp = missingLocationSearches?.recommendedCities?.[0];
-  let oppValue = '—';
-  let oppDetail;
-  if (topCountyOpp) {
-    oppValue = `${topCountyOpp.stateCode} counties`;
-    oppDetail = `${topCountyOpp.statePageViews} state views vs ${topCountyOpp.countyPageViews} county views (score ${topCountyOpp.opportunityScore})`;
-  } else if (topCityOpp) {
-    oppValue = topCityOpp.label;
-    oppDetail = `${topCityOpp.searchCount} failed searches — add city coverage`;
-  }
-  metrics.push({
-    id: 'biggest-opportunity',
-    label: 'Biggest Opportunity',
-    value: oppValue,
-    detail: oppDetail,
-  });
-
-  const highAction = (recommendedActions || []).find((a) => a.priority === 'high');
-  const mainDrop = userJourneys?.mainJourney?.biggestDropOff;
-  let riskValue = '—';
-  let riskDetail;
-  if (highAction) {
-    riskValue = highAction.title;
-    riskDetail = highAction.description;
-  } else if (mainDrop && mainDrop.dropoffPct >= 15) {
-    riskValue = String(mainDrop.eventName || 'Funnel step').replace(/_/g, ' ');
-    riskDetail = `${mainDrop.dropoffPct}% drop-off in main journey`;
-  } else if ((missingLocationSearches?.totalFailed ?? 0) > 0) {
-    riskValue = 'Failed searches';
-    riskDetail = `${missingLocationSearches.totalFailed} searches without matches`;
-  }
-  metrics.push({
-    id: 'biggest-risk',
-    label: 'Biggest Risk',
-    value: riskValue,
-    detail: riskDetail,
-  });
-
-  const aiSummaries = (recommendedActions || [])
-    .slice(0, 3)
-    .map((a) => ({ title: a.title, text: a.description, priority: a.priority }));
-
-  return { metrics, aiSummaries };
+  return { metrics };
 }
 
 /** @deprecated use executiveSummary */
@@ -1460,7 +1502,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchUserJourneys(supabase, since),
     fetchAnalyticsHealth(supabase),
     fetchPreviousPeriodMetrics(supabase, dateRange),
-    fetchMostVisitedPages(supabase),
+    fetchMostVisitedPages(supabase, dateRange),
     fetchCountyAlertOpportunities(supabase, since),
   ]);
 
@@ -1477,6 +1519,9 @@ async function fetchAllAnalytics(supabase, dateRange) {
     savedLocations: savedLocations.totalSaved ?? 0,
     countyAlertViews: countyAlertViews.totalViews ?? 0,
     totalSessions: returningVisitors.totalSessions ?? 0,
+    uniqueVisitors: returningVisitors.uniqueVisitors ?? 0,
+    returningPct: returningVisitors.returningPct ?? 0,
+    searchSuccessRate: locationSearch.successRate ?? 0,
   };
 
   const metricTrends = buildMetricTrends(currentMetrics, previousMetrics);
@@ -1495,13 +1540,16 @@ async function fetchAllAnalytics(supabase, dateRange) {
     returningVisitors,
     radar,
     locationSearch,
-    savedLocations,
-    userJourneys,
-    missingLocationSearches,
-    countyAlertViews,
     countyAlertOpportunities,
-    recommendedActions,
     metricTrends,
+  });
+
+  const needsAttention = generateNeedsAttention({
+    countyAlertViews,
+    returningVisitors,
+    locationSearch,
+    metricTrends,
+    radar,
   });
 
   const topInsights = executiveSummary.metrics;
@@ -1524,6 +1572,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     recommendedActions,
     mostVisitedPages,
     countyAlertOpportunities,
+    needsAttention,
     returningVisitors: {
       ...returningVisitors,
       trend: metricTrends.returningVisitors,
@@ -1531,7 +1580,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     missingLocationSearches,
     locationSearch: {
       ...locationSearch,
-      trend: metricTrends.locationSearches,
+      trend: metricTrends.searchSuccessRate,
     },
     locationSources,
     countyAlertViews: {
@@ -1566,7 +1615,7 @@ function normalizeOperationsAnalysis(parsed) {
     attention_needed: parsed?.attention_needed || [],
     weather_drivers: parsed?.weather_drivers || [],
     retention_signals: parsed?.retention_signals || [],
-    recommended_actions: (parsed?.recommended_actions || []).slice(0, 3),
+    recommended_actions: (parsed?.recommended_actions || []).slice(0, 1),
     wins: parsed?.wins || [],
   };
 }

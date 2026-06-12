@@ -147,6 +147,7 @@ const DEFAULT_VIEW_MODES = {
   returningVisitors: 'visual',
   radarEngagement: 'visual',
   locationSearch: 'table',
+  locationSources: 'visual',
   savedLocations: 'visual',
   userJourneys: 'table',
 };
@@ -183,6 +184,7 @@ function FunnelCard({ id, funnel, viewMode, isMainJourney = false }) {
       ? Object.values(funnel.stepStats)
       : [];
   const dropOff = funnel?.biggestDropOff;
+  const showTable = viewMode === 'table';
 
   return (
     <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
@@ -194,8 +196,8 @@ function FunnelCard({ id, funnel, viewMode, isMainJourney = false }) {
         {isMainJourney && ' · Main journey path'}
       </p>
       {dropOff && dropOff.dropoffPct > 0 && (
-        <div className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2.5">
-          <div className="text-[10px] uppercase tracking-wide font-semibold text-rose-400 mb-1">
+        <div className="mb-3 rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2">
+          <div className="text-[10px] uppercase tracking-wide font-semibold text-rose-400 mb-0.5">
             Biggest Drop-Off
           </div>
           <div className="text-sm text-rose-100">
@@ -204,44 +206,45 @@ function FunnelCard({ id, funnel, viewMode, isMainJourney = false }) {
           <div className="text-xs text-rose-300/80 mt-0.5">
             {formatPct(dropOff.dropoffPct)} lost
             {dropOff.sessionsLost > 0 && ` (${formatNumber(dropOff.sessionsLost)} sessions)`}
-            {dropOff.fromEvent && ` after ${formatEventName(dropOff.fromEvent)}`}
           </div>
         </div>
       )}
-      {viewMode === 'visual' ? (
-        <AdminFunnel
-          stepStats={stepStats}
-          formatEventName={formatEventName}
-          emptyMessage="No funnel data in this period."
-        />
-      ) : (
-        <DataTable
-          columns={[
-            { key: 'step', label: 'Step', render: (r) => r.step },
-            {
-              key: 'eventName',
-              label: 'Event',
-              render: (r) => formatEventName(r.eventName),
-            },
-            {
-              key: 'sessions',
-              label: 'Sessions',
-              render: (r) => formatNumber(r.sessions),
-            },
-            {
-              key: 'completionPct',
-              label: 'Step completion',
-              render: (r) => formatPct(r.completionPct),
-            },
-            {
-              key: 'dropoffPct',
-              label: 'Drop-off',
-              render: (r) => formatPct(r.dropoffPct),
-            },
-          ]}
-          rows={stepStats}
-          emptyMessage="No funnel data in this period."
-        />
+      <AdminFunnel
+        stepStats={stepStats}
+        formatEventName={formatEventName}
+        emptyMessage="No funnel data in this period."
+        compact
+      />
+      {showTable && (
+        <div className="mt-4 pt-3 border-t border-slate-800">
+          <DataTable
+            columns={[
+              { key: 'step', label: 'Step', render: (r) => r.step },
+              {
+                key: 'eventName',
+                label: 'Event',
+                render: (r) => formatEventName(r.eventName),
+              },
+              {
+                key: 'sessions',
+                label: 'Sessions',
+                render: (r) => formatNumber(r.sessions),
+              },
+              {
+                key: 'completionPct',
+                label: 'Step completion',
+                render: (r) => formatPct(r.completionPct),
+              },
+              {
+                key: 'dropoffPct',
+                label: 'Drop-off',
+                render: (r) => formatPct(r.dropoffPct),
+              },
+            ]}
+            rows={stepStats}
+            emptyMessage="No funnel data in this period."
+          />
+        </div>
       )}
     </div>
   );
@@ -255,9 +258,26 @@ const LOCATION_SOURCE_ROWS = [
   { key: 'savedLocationTap', label: 'Saved Location Tap' },
 ];
 
-function LocationSourcesCard({ sources }) {
+function LocationSourcesCard({ sources, viewMode }) {
+  const chartData = LOCATION_SOURCE_ROWS.map((row) => ({
+    source: row.label,
+    search_count: sources?.[row.key] ?? 0,
+  }));
+
+  if (viewMode === 'visual') {
+    return (
+      <AdminBarChart
+        data={chartData}
+        dataKey="search_count"
+        nameKey="source"
+        compact
+        emptyMessage="No location source data in this period."
+      />
+    );
+  }
+
   return (
-    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+    <div>
       {LOCATION_SOURCE_ROWS.map((row) => (
         <div
           key={row.key}
@@ -356,6 +376,7 @@ function AdminAnalysisInner() {
   const mostVisitedPages = data?.mostVisitedPages;
   const countyAlertOpportunities = data?.countyAlertOpportunities;
   const analyticsHealth = data?.analyticsHealth;
+  const needsAttention = data?.needsAttention;
   const hasMissingSearches = missingSearches.length > 0;
 
   return (
@@ -431,10 +452,15 @@ function AdminAnalysisInner() {
                     />
                     <MorningBriefCard dateRange={dateRange} />
                     <div className="hidden lg:block">
-                      <OperationsCenter dashboardDateRange={dateRange} variant="inline" />
+                      <OperationsCenter
+                        dashboardDateRange={dateRange}
+                        needsAttention={needsAttention}
+                        variant="inline"
+                      />
                     </div>
                     <OperationsCenter
                       dashboardDateRange={dateRange}
+                      needsAttention={needsAttention}
                       variant="mobile-accordion"
                     />
                     <ExpansionOpportunities data={expansionOpportunities} />
@@ -457,15 +483,27 @@ function AdminAnalysisInner() {
               }
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mb-4">
-                <StatCard label="Total sessions" value={formatNumber(rv?.totalSessions)} />
-                <StatCard label="Unique visitors" value={formatNumber(rv?.uniqueVisitors)} />
+                <StatCard
+                  label="Total sessions"
+                  value={formatNumber(rv?.totalSessions)}
+                  trend={metricTrends?.totalSessions}
+                />
+                <StatCard
+                  label="Unique visitors"
+                  value={formatNumber(rv?.uniqueVisitors)}
+                  trend={metricTrends?.uniqueVisitors}
+                />
                 <StatCard label="New visitors" value={formatNumber(rv?.newVisitors)} />
                 <StatCard
                   label="Returning"
                   value={formatNumber(rv?.returningVisitors)}
-                  trend={rv?.trend}
+                  trend={metricTrends?.returningVisitors}
                 />
-                <StatCard label="Returning %" value={formatPct(rv?.returningPct)} />
+                <StatCard
+                  label="Returning %"
+                  value={formatPct(rv?.returningPct)}
+                  trend={metricTrends?.returningPct}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
                 <StatCard
@@ -610,11 +648,15 @@ function AdminAnalysisInner() {
                 <StatCard
                   label="Total searches"
                   value={formatNumber(ls?.totalSearches)}
-                  trend={ls?.trend}
+                  trend={metricTrends?.locationSearches}
                 />
                 <StatCard label="Successful" value={formatNumber(ls?.successfulSearches)} />
                 <StatCard label="Failed" value={formatNumber(ls?.failedSearches)} />
-                <StatCard label="Success rate" value={formatPct(ls?.successRate)} />
+                <StatCard
+                  label="Success rate"
+                  value={formatPct(ls?.successRate)}
+                  trend={metricTrends?.searchSuccessRate}
+                />
               </div>
               <SubsectionTitle>Success rate trend</SubsectionTitle>
               <AdminLineChart
@@ -712,11 +754,19 @@ function AdminAnalysisInner() {
               </div>
 
               <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h3 className="text-lg font-bold text-white mb-1">Location Sources</h3>
-              <p className="text-sm text-slate-400 mb-5">
-                How users change location — successful events from location_search_events by resolved type.
-              </p>
-              <LocationSourcesCard sources={locationSources} />
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Location Sources</h3>
+                  <p className="text-sm text-slate-400">
+                    How users change location — successful events from location_search_events by resolved type.
+                  </p>
+                </div>
+                <AdminChartToggle
+                  value={viewModes.locationSources}
+                  onChange={(mode) => setViewMode('locationSources', mode)}
+                />
+              </div>
+              <LocationSourcesCard sources={locationSources} viewMode={viewModes.locationSources} />
               </div>
             </CollapsibleAnalysisSection>
 
@@ -874,7 +924,7 @@ function AdminAnalysisInner() {
                 <StatCard
                   label="Total radar opens"
                   value={formatNumber(radar?.totalOpens)}
-                  trend={radar?.trend}
+                  trend={metricTrends?.radarOpens}
                 />
                 <StatCard
                   label="Avg opens / session"
@@ -913,6 +963,20 @@ function AdminAnalysisInner() {
                     Weather context
                   </div>
                   <p className="text-sm text-sky-100">{radar.weatherContext.blurb}</p>
+                </div>
+              )}
+              {(radar?.opensByState?.length ?? 0) > 0 && (
+                <div className="mb-4">
+                  <SubsectionTitle>State performance</SubsectionTitle>
+                  <AdminBarChart
+                    data={radar.opensByState}
+                    dataKey="open_count"
+                    nameKey="state_code"
+                    formatLabel={formatRadarState}
+                    maxItems={5}
+                    compact
+                    emptyMessage="No radar opens in this period."
+                  />
                 </div>
               )}
               {viewModes.radarEngagement === 'visual' ? (

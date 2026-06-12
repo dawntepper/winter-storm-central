@@ -168,26 +168,25 @@ COMPACT MODE: Use exactly 3 bullets. Keep headline under 80 characters.`;
 
 const OPERATIONS_CENTER_SYSTEM = `You are an operations analyst for StormTracking.io admin dashboard.
 
-Analyze aggregated product analytics and produce an operations briefing. Use only the data provided — no speculation about weather not implied by traffic patterns. No PII.
+Analyze aggregated product analytics and produce a concise operations briefing. Use only the data provided — no speculation about weather not implied by traffic patterns. No PII.
 
-Focus on actionability over raw statistics. Short bullet items only — no paragraphs.
-Use metricTrends and periodTrend fields to explain what changed vs the prior equivalent period.
+Focus on actionability. Return exactly ONE item per category — the single most important insight in each.
 
 ${JSON_OUTPUT_RULES}
 
 Output valid JSON with these exact keys:
-- what_changed (array of { "text": string } — key metric shifts with % change vs prior period, max 4)
-- opportunities (array of { "text": string } — city/county expansion, forecast links, growth areas, max 3)
-- risks (array of { "priority": "high"|"medium"|"low", "text": string } — funnel drop-offs, tracking gaps, declining metrics, max 3)
-- attention_needed (array of { "priority": "high"|"medium"|"low", "text": string } — issues needing admin attention, max 3)
-- weather_drivers (array of { "text": string } — hypotheses for why traffic is changing, max 3)
-- retention_signals (array of { "text": string } — habit formation, returning visitors, saves, max 3)
-- recommended_actions (array of exactly 3 { "title": string, "detail": string } — top 3 concrete next steps, detail under 80 chars)
-- wins (array of { "text": string } — positive progress to celebrate, max 3)`;
+- opportunities (array of exactly 1 { "text": string } — top expansion or growth opportunity)
+- risks (array of exactly 1 { "priority": "high"|"medium"|"low", "text": string } — top risk or concern)
+- weather_drivers (array of exactly 1 { "text": string } — weather-related traffic hypothesis)
+- recommended_actions (array of exactly 1 { "title": string, "detail": string } — single best next step, detail under 80 chars)
+- what_changed (array of { "text": string } — optional, max 1 if needed for context)
+- attention_needed (array of { "priority": "high"|"medium"|"low", "text": string } — max 1, only if critical)
+- retention_signals (array of { "text": string } — optional, max 1)
+- wins (array of { "text": string } — optional, max 1)`;
 
 const OPERATIONS_CENTER_SYSTEM_COMPACT = `${OPERATIONS_CENTER_SYSTEM}
 
-COMPACT MODE: Max 2 items per array (3 for recommended_actions). Each text under 80 characters.`;
+COMPACT MODE: Strictly one item per required array. Each text under 80 characters.`;
 
 function buildMorningBriefPrompt(payload) {
   return `Period: ${payload.period}
@@ -208,7 +207,7 @@ Use metricTrends and periodTrend to populate what_changed with % shifts. Use exp
 Aggregated analytics (no PII):
 ${JSON.stringify(payload, null, 2)}
 
-Produce the operations center briefing JSON. Prioritize risks and attention_needed by severity. recommended_actions must have exactly 3 items.`;
+Produce the operations center briefing JSON. Return exactly ONE item in opportunities, risks, weather_drivers, and recommended_actions. Use metricTrends for % changes.`;
 }
 
 module.exports = {

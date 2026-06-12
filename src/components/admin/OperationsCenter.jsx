@@ -9,8 +9,6 @@ export const OPS_PERIODS = [
   { id: '7d', label: 'Last 7 Days' },
 ];
 
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
-
 const PRIORITY_BADGE = {
   high: 'bg-rose-950/60 border-rose-600/50 text-rose-300',
   medium: 'bg-amber-950/60 border-amber-600/50 text-amber-300',
@@ -30,116 +28,75 @@ function PriorityBadge({ priority }) {
   );
 }
 
-function sortByPriority(items) {
-  return [...(items || [])].sort(
-    (a, b) =>
-      (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3)
-  );
-}
-
-function OpsGroup({ title, border, bg, titleColor, items, showPriority = false }) {
-  if (!items?.length) return null;
-
+function BriefBullet({ label, text, border, bg, titleColor }) {
+  if (!text) return null;
   return (
-    <div className={`rounded-lg border p-3 ${border} ${bg}`}>
-      <h3 className={`text-xs font-bold uppercase tracking-wide mb-2 ${titleColor}`}>
-        {title}
-      </h3>
-      <ul className="space-y-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="text-sm text-slate-200 flex gap-2">
-            <span className="shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-current opacity-60" />
-            <span>
-              {showPriority && <PriorityBadge priority={item.priority} />}
-              {item.title ? (
-                <>
-                  <span className="font-medium text-white">{item.title}</span>
-                  {item.detail && <span className="text-slate-400"> — {item.detail}</span>}
-                  {!item.detail && item.text && (
-                    <span className="text-slate-400"> — {item.text}</span>
-                  )}
-                </>
-              ) : (
-                item.text
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div className={`rounded-lg border px-3 py-2 ${border} ${bg}`}>
+      <div className={`text-[10px] font-bold uppercase tracking-wide mb-0.5 ${titleColor}`}>
+        {label}
+      </div>
+      <p className="text-sm text-slate-200">{text}</p>
     </div>
   );
 }
 
-function buildGroupedSections(analysis) {
+function firstText(items) {
+  if (!items?.length) return null;
+  const item = items[0];
+  if (typeof item === 'string') return item;
+  return item.title
+    ? item.detail
+      ? `${item.title} — ${item.detail}`
+      : item.text
+        ? `${item.title} — ${item.text}`
+        : item.title
+    : item.text || item.detail || null;
+}
+
+function buildConciseBriefing(analysis) {
   if (!analysis) return [];
 
-  const issues = sortByPriority([
-    ...(analysis.risks || []),
-    ...(analysis.attention_needed || []),
-  ]).slice(0, 5);
-
-  const opportunities = [
-    ...(analysis.opportunities || []),
-    ...(analysis.wins || []).map((w) => ({ text: w.text, priority: 'low' })),
-  ].slice(0, 5);
-
-  const growthSignals = [
-    ...(analysis.what_changed || []),
-    ...(analysis.retention_signals || []),
-  ].slice(0, 5);
-
-  const weatherActivity = (analysis.weather_drivers || []).slice(0, 4);
-
-  const recommended = (analysis.recommended_actions || []).slice(0, 3);
+  const action = analysis.recommended_actions?.[0];
+  const actionText = action
+    ? action.detail
+      ? `${action.title} — ${action.detail}`
+      : action.title
+    : null;
 
   return [
     {
-      key: 'recommended',
-      title: 'Top Actions',
-      border: 'border-slate-600/50',
-      bg: 'bg-slate-900/50',
-      titleColor: 'text-slate-200',
-      items: recommended.map((a) => ({
-        title: a.title,
-        detail: a.detail,
-        priority: 'high',
-      })),
-      showPriority: true,
-    },
-    {
-      key: 'issues',
-      title: 'Issues',
-      border: 'border-rose-700/50',
-      bg: 'bg-rose-950/20',
-      titleColor: 'text-rose-300',
-      items: issues,
-      showPriority: true,
-    },
-    {
-      key: 'opportunities',
-      title: 'Opportunities',
+      key: 'opportunity',
+      label: 'Top Opportunity',
+      text: firstText(analysis.opportunities),
       border: 'border-amber-700/50',
       bg: 'bg-amber-950/20',
       titleColor: 'text-amber-300',
-      items: opportunities,
     },
     {
-      key: 'growth',
-      title: 'Growth Signals',
-      border: 'border-violet-700/50',
-      bg: 'bg-violet-950/20',
-      titleColor: 'text-violet-300',
-      items: growthSignals,
+      key: 'risk',
+      label: 'Top Risk',
+      text: firstText(analysis.risks),
+      border: 'border-rose-700/50',
+      bg: 'bg-rose-950/20',
+      titleColor: 'text-rose-300',
     },
     {
       key: 'weather',
-      title: 'Weather Activity',
+      label: 'Weather Impact',
+      text: firstText(analysis.weather_drivers),
       border: 'border-sky-700/50',
       bg: 'bg-sky-950/20',
       titleColor: 'text-sky-300',
-      items: weatherActivity,
     },
-  ].filter((g) => g.items.length > 0);
+    {
+      key: 'action',
+      label: 'Recommended Action',
+      text: actionText,
+      border: 'border-slate-600/50',
+      bg: 'bg-slate-900/50',
+      titleColor: 'text-slate-200',
+    },
+  ].filter((item) => item.text);
 }
 
 function cacheKey(period) {
@@ -185,16 +142,17 @@ function OperationsContent({
   period,
   onPeriodChange,
   analysis,
+  needsAttention,
   generatedAt,
   loading,
   error,
   onRefresh,
-  compact = false,
 }) {
-  const groups = buildGroupedSections(analysis);
+  const bullets = buildConciseBriefing(analysis);
+  const attentionItems = needsAttention ?? [];
 
   return (
-    <div className={compact ? '' : 'space-y-3'}>
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex flex-wrap gap-1.5">
           {OPS_PERIODS.map((p) => (
@@ -233,21 +191,37 @@ function OperationsContent({
         <div className="text-sm text-slate-400 py-3">Generating operations analysis…</div>
       )}
 
-      {analysis && (
+      {(analysis || attentionItems.length > 0) && (
         <div className={`space-y-2 ${loading ? 'opacity-60' : ''}`}>
-          {groups.map((group) => (
-            <OpsGroup
-              key={group.key}
-              title={group.title}
-              border={group.border}
-              bg={group.bg}
-              titleColor={group.titleColor}
-              items={group.items}
-              showPriority={group.showPriority}
+          {attentionItems.length > 0 && (
+            <div className="rounded-lg border border-amber-600/50 bg-amber-950/25 p-3">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-amber-300 mb-1.5">
+                Needs Attention
+              </h3>
+              <ul className="space-y-1">
+                {attentionItems.map((item, i) => (
+                  <li key={item.id || i} className="text-sm text-amber-100 flex gap-2">
+                    <PriorityBadge priority={item.priority} />
+                    <span>{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {bullets.map((item) => (
+            <BriefBullet
+              key={item.key}
+              label={item.label}
+              text={item.text}
+              border={item.border}
+              bg={item.bg}
+              titleColor={item.titleColor}
             />
           ))}
+
           {generatedAt && (
-            <p className="text-[10px] text-slate-500 pt-1">
+            <p className="text-[10px] text-slate-500 pt-0.5">
               Generated {formatGeneratedAt(generatedAt)}
             </p>
           )}
@@ -265,6 +239,7 @@ export function mapDashboardRangeToOpsPeriod(dateRange) {
 
 export default function OperationsCenter({
   dashboardDateRange,
+  needsAttention,
   variant = 'inline',
 }) {
   const [period, setPeriod] = useState(() => mapDashboardRangeToOpsPeriod(dashboardDateRange));
@@ -328,11 +303,11 @@ export default function OperationsCenter({
               period={period}
               onPeriodChange={setPeriod}
               analysis={analysis}
+              needsAttention={needsAttention}
               generatedAt={generatedAt}
               loading={loading}
               error={error}
               onRefresh={() => load(true)}
-              compact
             />
           </div>
         )}
@@ -347,6 +322,7 @@ export default function OperationsCenter({
         period={period}
         onPeriodChange={setPeriod}
         analysis={analysis}
+        needsAttention={needsAttention}
         generatedAt={generatedAt}
         loading={loading}
         error={error}

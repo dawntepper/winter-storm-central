@@ -26,6 +26,7 @@ export default function AdminBarChart({
   maxItems = 15,
   formatLabel,
   formatValue,
+  compact = false,
 }) {
   const rows = (data || []).slice(0, maxItems).map((row) => ({
     ...row,
@@ -36,7 +37,9 @@ export default function AdminBarChart({
     return <AdminEmptyChart message={emptyMessage} />;
   }
 
-  const height = Math.max(140, rows.length * 30 + 48);
+  const rowHeight = compact ? 22 : 30;
+  const minHeight = compact ? 80 : 140;
+  const height = Math.max(minHeight, rows.length * rowHeight + (compact ? 32 : 48));
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -55,10 +58,10 @@ export default function AdminBarChart({
         <YAxis
           type="category"
           dataKey="displayName"
-          width={120}
+          width={compact ? 96 : 120}
           stroke={CHART_AXIS.stroke}
           tick={CHART_AXIS.tick}
-          fontSize={CHART_AXIS.fontSize}
+          fontSize={compact ? 10 : CHART_AXIS.fontSize}
         />
         <Tooltip
           {...CHART_TOOLTIP_STYLE}
@@ -68,7 +71,7 @@ export default function AdminBarChart({
           ]}
           labelFormatter={(label) => label}
         />
-        <Bar dataKey={dataKey} radius={[0, 4, 4, 0]} maxBarSize={24}>
+        <Bar dataKey={dataKey} radius={[0, 4, 4, 0]} maxBarSize={compact ? 16 : 24}>
           {rows.map((_, index) => (
             <Cell key={index} fill={BAR_PALETTE[index % BAR_PALETTE.length]} />
           ))}

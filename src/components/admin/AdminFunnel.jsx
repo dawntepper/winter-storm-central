@@ -15,6 +15,7 @@ export default function AdminFunnel({
   stepStats,
   formatEventName = (name) => name,
   emptyMessage = 'No funnel data in this period.',
+  compact = false,
 }) {
   const steps = Array.isArray(stepStats)
     ? stepStats
@@ -27,25 +28,34 @@ export default function AdminFunnel({
   }
 
   const maxSessions = steps[0]?.sessions || 1;
+  const barHeight = compact ? 'h-4' : 'h-6';
+  const spacing = compact ? 'space-y-2' : 'space-y-3';
 
   return (
-    <div className="space-y-3">
+    <div className={spacing}>
       {steps.map((step, index) => {
         const widthPct = Math.max(4, (step.sessions / maxSessions) * 100);
         const highDropOff = (step.dropoffPct ?? 0) >= 25;
         return (
           <div key={step.step ?? index}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs mb-1">
+            <div className={`flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 ${compact ? 'text-[11px]' : 'text-xs'} mb-0.5`}>
               <span className={`font-medium ${highDropOff ? 'text-rose-200' : 'text-slate-200'}`}>
                 {step.step}. {formatEventName(step.eventName)}
               </span>
               <span className={`tabular-nums ${highDropOff ? 'text-rose-400 font-semibold' : 'text-slate-400'}`}>
-                {formatNumber(step.sessions)} sessions ·{' '}
-                {formatPct(step.completionPct)} complete · Drop-off{' '}
-                {formatPct(step.dropoffPct)}
+                {formatNumber(step.sessions)}
+                {!compact && (
+                  <>
+                    {' '}sessions · {formatPct(step.completionPct)} complete · Drop-off{' '}
+                    {formatPct(step.dropoffPct)}
+                  </>
+                )}
+                {compact && highDropOff && (
+                  <span className="ml-1 text-rose-400">−{formatPct(step.dropoffPct)}</span>
+                )}
               </span>
             </div>
-            <div className="h-6 bg-slate-800 rounded-md overflow-hidden relative">
+            <div className={`${barHeight} bg-slate-800 rounded-md overflow-hidden relative`}>
               <div
                 className="h-full rounded-md transition-all"
                 style={{
@@ -54,13 +64,6 @@ export default function AdminFunnel({
                   opacity: highDropOff ? 0.9 : 0.85 - index * 0.08,
                 }}
               />
-              {highDropOff && index > 0 && (
-                <div
-                  className="absolute right-0 top-0 h-full border-l-2 border-dashed border-rose-400/60"
-                  style={{ width: `${Math.min(100 - widthPct, 40)}%`, marginLeft: `${widthPct}%` }}
-                  title="Sessions lost at this step"
-                />
-              )}
             </div>
           </div>
         );
