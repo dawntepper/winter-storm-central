@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { US_STATES } from '../data/stateConfig';
 import { getForecastForCoords } from '../services/forecastService';
@@ -58,6 +58,7 @@ export default function ForecastCityLayout({
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mapStateView, setMapStateView] = useState(false);
 
   useEffect(() => {
     setCoords({
@@ -139,6 +140,35 @@ export default function ForecastCityLayout({
     temperatureUnit: forecast.current.temperatureUnit,
     shortForecast: forecast.current.shortForecast,
   } : null;
+
+  useEffect(() => {
+    setMapStateView(false);
+  }, [citySlug, lat, lon]);
+
+  const cityMapCenter = useMemo(() => ({
+    lat: coords.lat,
+    lon: coords.lon,
+    id: `city-${citySlug}`,
+    zoom: 8,
+  }), [coords.lat, coords.lon, citySlug]);
+
+  const stateMapCenter = useMemo(() => ({
+    lat: stateData?.center[0] ?? coords.lat,
+    lon: stateData?.center[1] ?? coords.lon,
+    zoom: (stateData?.zoom ?? 7) - 1,
+    id: `state-${stateCode}`,
+  }), [stateData, stateCode, coords.lat, coords.lon]);
+
+  const displayMapCenter = mapStateView ? stateMapCenter : cityMapCenter;
+
+  const handleMapResetView = useCallback(() => {
+    setMapStateView((prev) => !prev);
+  }, []);
+
+  const mapResetViewLabel = mapStateView ? 'City View' : 'View State';
+  const mapResetViewTitle = mapStateView
+    ? `Zoom to ${cityName} on the map`
+    : `Show all of ${stateName || stateData?.name || stateCode} on the map`;
 
   return (
     <div className={`min-h-screen ${todClass}`}>
@@ -227,7 +257,11 @@ export default function ForecastCityLayout({
                 alerts={mapAlerts}
                 isHero
                 selectedStateCode={stateCode}
-                centerOn={{ lat: coords.lat, lon: coords.lon, id: `city-${citySlug}`, zoom: 8 }}
+                centerOn={displayMapCenter}
+                onResetView={handleMapResetView}
+                resetViewLabel={mapResetViewLabel}
+                resetViewTitle={mapResetViewTitle}
+                resetToDefaultOnClick={false}
               />
             </section>
           </CityRadarSection>
