@@ -247,21 +247,37 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
     .select('*', { count: 'exact', head: true });
   countyQuery = applyPeriod(countyQuery, 'created_at', since, until);
 
-  const [visitorsRes, searchesRes, savesRes, countiesRes, radarRes, returningRes, searchStatsRes] =
-    await Promise.all([
-      visitorQuery,
-      searchQuery,
-      saveQuery,
-      countyQuery,
-      supabase.rpc('admin_radar_engagement_stats', { p_since: since }),
-      supabase.rpc('admin_returning_visitor_stats', { p_since: since }),
-      supabase.rpc('admin_location_search_stats', { p_since: since }),
-    ]);
+  let forecastClicksQuery = supabase
+    .from('product_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'forecast_link_click');
+  forecastClicksQuery = applyPeriod(forecastClicksQuery, 'created_at', since, until);
+
+  const [
+    visitorsRes,
+    searchesRes,
+    savesRes,
+    countiesRes,
+    forecastClicksRes,
+    radarRes,
+    returningRes,
+    searchStatsRes,
+  ] = await Promise.all([
+    visitorQuery,
+    searchQuery,
+    saveQuery,
+    countyQuery,
+    forecastClicksQuery,
+    supabase.rpc('admin_radar_engagement_stats', { p_since: since }),
+    supabase.rpc('admin_returning_visitor_stats', { p_since: since }),
+    supabase.rpc('admin_location_search_stats', { p_since: since }),
+  ]);
 
   if (visitorsRes.error) throw visitorsRes.error;
   if (searchesRes.error) throw searchesRes.error;
   if (savesRes.error) throw savesRes.error;
   if (countiesRes.error) throw countiesRes.error;
+  if (forecastClicksRes.error) throw forecastClicksRes.error;
   if (radarRes.error) throw radarRes.error;
   if (returningRes.error) throw returningRes.error;
   if (searchStatsRes.error) throw searchStatsRes.error;
@@ -281,6 +297,7 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
 
   return {
     radarOpens,
+    forecastClicks: forecastClicksRes.count ?? 0,
     returningVisitors: returningRes.data?.returning_visitors ?? 0,
     locationSearches: searchesRes.count ?? 0,
     savedLocations: savesRes.count ?? 0,
@@ -304,11 +321,13 @@ function buildMetricTrends(current, previous) {
       uniqueVisitors: null,
       returningPct: null,
       searchSuccessRate: null,
+      forecastClicks: null,
     };
   }
 
   return {
     radarOpens: computeTrend(current.radarOpens, previous.radarOpens),
+    forecastClicks: computeTrend(current.forecastClicks, previous.forecastClicks),
     returningVisitors: computeTrend(
       current.returningVisitors,
       previous.returningVisitors
@@ -1171,6 +1190,81 @@ async function fetchRadarEngagement(supabase, since) {
   };
 }
 
+const STATE_PAGE_FORECAST_SOURCES = new Set([
+  'weather_forecast_card',
+  'popular_forecasts_section',
+  'state_alert_page',
+  'state-page-widget',
+  'state-page-search',
+]);
+
+function isStatePageForecastClick(row) {
+  const meta = row?.metadata || {};
+  if (meta.source_page && STATE_PAGE_FORECAST_SOURCES.has(meta.source_page)) {
+    return true;
+  }
+  const legacy = meta.source;
+  return legacy === 'state-page-widget' || legacy === 'state-page-search';
+}
+
+async function fetchForecastEngagement(supabase, since) {
+  let clicksQuery = supabase
+    .from('product_events')
+    .select('metadata, state_code, page_path')
+    .eq('event_name', 'forecast_link_click')
+    .limit(10000);
+  clicksQuery = applySince(clicksQuery, 'created_at', since);
+
+  let stateViewsQuery = supabase
+    .from('product_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'state_alert_page_view');
+  stateViewsQuery = applySince(stateViewsQuery, 'created_at', since);
+
+  const [clicksRes, stateViewsRes] = await Promise.all([clicksQuery, stateViewsQuery]);
+  if (clicksRes.error) throw clicksRes.error;
+  if (stateViewsRes.error) throw stateViewsRes.error;
+
+  const clicks = clicksRes.data || [];
+  const cityCounts = new Map();
+  let statePageClicks = 0;
+
+  for (const row of clicks) {
+    if (isStatePageForecastClick(row)) {
+      statePageClicks += 1;
+    }
+    const city = row.metadata?.city;
+    if (city) {
+      const key = `${city}|${row.state_code || ''}`;
+      const entry = cityCounts.get(key) || {
+        city,
+        state_code: row.state_code || null,
+        click_count: 0,
+      };
+      entry.click_count += 1;
+      cityCounts.set(key, entry);
+    }
+  }
+
+  const statePageViews = stateViewsRes.count ?? 0;
+  const statePageCtr =
+    statePageViews > 0
+      ? Math.round((statePageClicks / statePageViews) * 1000) / 10
+      : null;
+
+  const topCities = Array.from(cityCounts.values())
+    .sort((a, b) => b.click_count - a.click_count)
+    .slice(0, 10);
+
+  return {
+    totalClicks: clicks.length,
+    statePageClicks,
+    statePageViews,
+    statePageCtr,
+    topCities,
+  };
+}
+
 function computeFunnelDropOff(funnel) {
   const stepStats = Array.isArray(funnel?.stepStats)
     ? funnel.stepStats
@@ -1546,6 +1640,7 @@ function generateNeedsAttention({
 function generateExecutiveSummary({
   returningVisitors,
   radar,
+  forecastEngagement,
   locationSearch,
   countyAlertOpportunities,
   metricTrends,
@@ -1588,6 +1683,17 @@ function generateExecutiveSummary({
     label: 'Radar Opens',
     value: (radar?.totalOpens ?? 0).toLocaleString(),
     trend: metricTrends?.radarOpens ?? null,
+  });
+
+  metrics.push({
+    id: 'forecast-clicks',
+    label: 'Forecast Clicks',
+    value: (forecastEngagement?.totalClicks ?? 0).toLocaleString(),
+    trend: metricTrends?.forecastClicks ?? null,
+    detail:
+      forecastEngagement?.statePageCtr != null
+        ? `${forecastEngagement.statePageCtr}% CTR from state pages`
+        : undefined,
   });
 
   const topOpp = countyAlertOpportunities?.opportunities?.[0];
@@ -1777,6 +1883,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     previousMetrics,
     mostVisitedPages,
     countyAlertOpportunities,
+    forecastEngagement,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -1792,6 +1899,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchPreviousPeriodMetrics(supabase, dateRange),
     fetchMostVisitedPages(supabase, dateRange),
     fetchCountyAlertOpportunities(supabase, since),
+    fetchForecastEngagement(supabase, since),
   ]);
 
   const weatherContext = await generateRadarWeatherContext(radarBase);
@@ -1802,6 +1910,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
 
   const currentMetrics = {
     radarOpens: radar.totalOpens ?? 0,
+    forecastClicks: forecastEngagement.totalClicks ?? 0,
     returningVisitors: returningVisitors.returningVisitors ?? 0,
     locationSearches: locationSearch.totalSearches ?? 0,
     savedLocations: savedLocations.totalSaved ?? 0,
@@ -1827,6 +1936,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
   const executiveSummary = generateExecutiveSummary({
     returningVisitors,
     radar,
+    forecastEngagement,
     locationSearch,
     countyAlertOpportunities,
     metricTrends,
@@ -1884,6 +1994,10 @@ async function fetchAllAnalytics(supabase, dateRange) {
     radar: {
       ...radar,
       trend: metricTrends.radarOpens,
+    },
+    forecastEngagement: {
+      ...forecastEngagement,
+      trend: metricTrends.forecastClicks,
     },
     userJourneys,
   };

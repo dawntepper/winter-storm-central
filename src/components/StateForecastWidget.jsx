@@ -1,27 +1,76 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCitiesForStateSlug } from '../data/cityCatalog';
-import { trackForecastLinkClick } from '../utils/analytics';
+import {
+  FORECAST_SOURCE_PAGES,
+  trackForecastCityClick,
+  trackForecastLinkClick,
+  trackForecastStateClick,
+} from '../utils/analytics';
 
-function ForecastRowIcon() {
+const GENERIC_FORECAST_ICON = '☀️';
+
+const forecastCardClassName =
+  'group flex items-center gap-3 w-full px-4 py-3 bg-slate-900/60 hover:bg-sky-500/15 border border-slate-700 hover:border-sky-400/70 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/15 cursor-pointer text-sm text-slate-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60';
+
+/**
+ * Full-width forecast destination card — city or state CTA.
+ */
+export function ForecastDestinationCard({
+  to,
+  label,
+  icon = GENERIC_FORECAST_ICON,
+  onClick,
+}) {
   return (
-    <span
-      className="flex-shrink-0 w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/25 flex items-center justify-center text-sky-400 group-hover:bg-sky-500/20 group-hover:border-sky-400/50 transition-colors"
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M17.5 19H9a7 7 0 1 1 6.71-9.5A5.5 5.5 0 0 1 17.5 19Z"
-        />
-      </svg>
-    </span>
+    <Link to={to} onClick={onClick} className={forecastCardClassName}>
+      <span className="text-xl flex-shrink-0" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="flex-1 min-w-0 font-semibold truncate">{label}</span>
+      <span
+        aria-hidden="true"
+        className="text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors"
+      >
+        →
+      </span>
+    </Link>
   );
 }
 
-const cityLinkClassName =
-  'group flex items-center gap-3 px-3 py-2.5 bg-slate-900/50 hover:bg-sky-500/10 border border-slate-700 hover:border-sky-500/60 rounded-lg transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 cursor-pointer text-sm text-slate-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60';
+/**
+ * Popular city forecast links — shown below the state radar map.
+ */
+export function PopularForecastsSection({ stateSlug, stateName, stateCode, maxCities = 5 }) {
+  const cities = getCitiesForStateSlug(stateSlug).slice(0, maxCities);
+  if (cities.length === 0) return null;
+
+  return (
+    <section className="px-4 sm:px-6 lg:px-0 mt-4">
+      <h2 className="text-lg font-semibold text-white mb-3">
+        Popular Forecasts in {stateName}
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {cities.map((c) => (
+          <ForecastDestinationCard
+            key={c.slug}
+            to={`/forecast/${stateSlug}?city=${c.slug}`}
+            label={`${c.city} Forecast`}
+            onClick={() =>
+              trackForecastCityClick({
+                stateCode,
+                stateSlug,
+                city: c.city,
+                citySlug: c.slug,
+                sourcePage: FORECAST_SOURCE_PAGES.POPULAR_FORECASTS_SECTION,
+              })
+            }
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /**
  * Compact forecast launcher for the right column of state alert pages.
@@ -37,7 +86,7 @@ const cityLinkClassName =
  * which doesn't justify the latency cost. The actual forecast renders
  * after the user clicks through to /forecast.
  */
-export default function StateForecastWidget({ stateSlug, stateName }) {
+export default function StateForecastWidget({ stateSlug, stateName, stateCode }) {
   const navigate = useNavigate();
   const [zipInput, setZipInput] = useState('');
   const [zipError, setZipError] = useState('');
@@ -52,16 +101,10 @@ export default function StateForecastWidget({ stateSlug, stateName }) {
       setZipError('Enter a 5-digit ZIP');
       return;
     }
-    trackForecastLinkClick('state-page-widget', stateSlug, 'zip');
+    trackForecastLinkClick('state-page-widget', stateSlug, 'zip', {
+      sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
+    });
     navigate(`/forecast/${stateSlug}?zip=${zip}`);
-  };
-
-  const handleCityClick = () => {
-    trackForecastLinkClick('state-page-widget', stateSlug, 'city');
-  };
-
-  const handleStateForecastClick = () => {
-    trackForecastLinkClick('state-page-widget', stateSlug, 'state-default');
   };
 
   return (
@@ -72,23 +115,22 @@ export default function StateForecastWidget({ stateSlug, stateName }) {
       </p>
 
       {cities.length > 0 && (
-        <div className="space-y-1.5 mb-4">
+        <div className="space-y-2 mb-4">
           {cities.map((c) => (
-            <Link
+            <ForecastDestinationCard
               key={c.slug}
               to={`/forecast/${stateSlug}?city=${c.slug}`}
-              onClick={handleCityClick}
-              className={cityLinkClassName}
-            >
-              <ForecastRowIcon />
-              <span className="flex-1 min-w-0 truncate font-medium">{c.city}</span>
-              <span
-                aria-hidden="true"
-                className="text-[11px] font-semibold uppercase tracking-wide text-sky-400/80 group-hover:text-sky-300 flex-shrink-0"
-              >
-                Forecast →
-              </span>
-            </Link>
+              label={`${c.city} Forecast`}
+              onClick={() =>
+                trackForecastCityClick({
+                  stateCode,
+                  stateSlug,
+                  city: c.city,
+                  citySlug: c.slug,
+                  sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
+                })
+              }
+            />
           ))}
         </div>
       )}
@@ -121,7 +163,13 @@ export default function StateForecastWidget({ stateSlug, stateName }) {
 
       <Link
         to={`/forecast/${stateSlug}`}
-        onClick={handleStateForecastClick}
+        onClick={() =>
+          trackForecastStateClick({
+            stateCode,
+            stateSlug,
+            sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
+          })
+        }
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 mt-1 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 rounded-lg text-sm text-sky-300 hover:text-sky-200 font-semibold transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
       >
         View {stateName} state forecast

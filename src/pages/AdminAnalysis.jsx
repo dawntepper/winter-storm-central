@@ -371,6 +371,7 @@ function AdminAnalysisInner() {
   const countyDiscovery = data?.countyDiscovery;
   const sl = data?.savedLocations;
   const radar = data?.radar;
+  const forecastEngagement = data?.forecastEngagement;
   const journeys = data?.userJourneys;
   const missing = data?.missingLocationSearches;
   const missingSearches = missing?.searches ?? (Array.isArray(missing) ? missing : []);
@@ -455,6 +456,49 @@ function AdminAnalysisInner() {
                       summary={executiveSummary}
                       metricTrends={metricTrends}
                     />
+                    <ExpandableBlock title="Forecast engagement from state pages" defaultOpen>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+                        <StatCard
+                          label="Forecast clicks"
+                          value={formatNumber(forecastEngagement?.totalClicks)}
+                          trend={metricTrends?.forecastClicks}
+                        />
+                        <StatCard
+                          label="State page forecast CTR"
+                          value={formatPct(forecastEngagement?.statePageCtr)}
+                          hint={
+                            forecastEngagement?.statePageViews
+                              ? `${formatNumber(forecastEngagement.statePageClicks)} clicks / ${formatNumber(forecastEngagement.statePageViews)} state views`
+                              : undefined
+                          }
+                        />
+                        <StatCard
+                          label="State page clicks"
+                          value={formatNumber(forecastEngagement?.statePageClicks)}
+                        />
+                      </div>
+                      <SubsectionTitle>Top forecast cities</SubsectionTitle>
+                      <SortableDataTable
+                        columns={[
+                          { key: 'city', label: 'City' },
+                          {
+                            key: 'state_code',
+                            label: 'State',
+                            render: (r) => r.state_code || '—',
+                          },
+                          {
+                            key: 'click_count',
+                            label: 'Clicks',
+                            render: (r) => formatNumber(r.click_count),
+                          },
+                        ]}
+                        rows={forecastEngagement?.topCities || []}
+                        emptyMessage="No forecast city clicks in this period."
+                        defaultSortKey="click_count"
+                        defaultSortDir="desc"
+                        compact
+                      />
+                    </ExpandableBlock>
                     <MorningBriefCard dateRange={dateRange} />
                     <div className="hidden lg:block">
                       <OperationsCenter

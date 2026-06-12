@@ -14,7 +14,7 @@ import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
-import StateForecastWidget from './StateForecastWidget';
+import StateForecastWidget, { PopularForecastsSection } from './StateForecastWidget';
 import CheckAlertsNearYou from './CheckAlertsNearYou';
 import AlertDetailModal from './AlertDetailModal';
 import AlertsByCategory from './AlertsByCategory';
@@ -494,6 +494,11 @@ export default function StateAlertsPage() {
               radarLayerType="precipitation"
               radarColorScheme={4}
             />
+            <PopularForecastsSection
+              stateSlug={stateSlug}
+              stateName={stateData.name}
+              stateCode={stateAbbr}
+            />
           </section>
 
           {/* RIGHT COLUMN: Storms + Alerts — scrolls with page */}
@@ -531,6 +536,13 @@ export default function StateAlertsPage() {
               )}
             </section>
 
+            {/* Forecast launcher — directly below alert groups */}
+            <StateForecastWidget
+              stateSlug={stateSlug}
+              stateName={stateData.name}
+              stateCode={stateAbbr}
+            />
+
             <CheckAlertsNearYou
               stateCode={stateAbbr}
               stateSlug={stateSlug}
@@ -541,9 +553,6 @@ export default function StateAlertsPage() {
               onClearFocus={handleMapResetView}
               onViewAlert={setSelectedAlert}
             />
-
-            {/* Forecast launcher — quick city links + ZIP entry + state forecast CTA */}
-            <StateForecastWidget stateSlug={stateSlug} stateName={stateData.name} />
 
             {/* Nearby State Alerts Visualization */}
             <NearbyStateAlertsViz

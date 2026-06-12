@@ -1249,6 +1249,13 @@ export function trackForecastLocationChanged(source, { stateCode } = {}) {
   trackLocationChange({ source, stateCode, metadata: { context: 'forecast' } });
 }
 
+/** source_page values for forecast clicks on state alert surfaces. */
+export const FORECAST_SOURCE_PAGES = {
+  WEATHER_FORECAST_CARD: 'weather_forecast_card',
+  POPULAR_FORECASTS_SECTION: 'popular_forecasts_section',
+  STATE_ALERT_PAGE: 'state_alert_page',
+};
+
 /**
  * Fire 'Forecast Link Click' when a user navigates to a forecast page from
  * another surface (CityAlertsPage forecast section CTA, StateAlertsPage
@@ -1259,24 +1266,83 @@ export function trackForecastLocationChanged(source, { stateCode } = {}) {
  *                     'county-page' | 'catalog-city-page'  (where the click came from)
  * destinationState: state slug being navigated to
  * destinationType:  'city' | 'zip' | 'state-default'
+ * options.sourcePage: canonical source_page for state-surface clicks
  */
-export function trackForecastLinkClick(source, destinationState, destinationType) {
+export function trackForecastLinkClick(source, destinationState, destinationType, options = {}) {
   const stateCode = SLUG_TO_ABBR[destinationState] || null;
+  const { sourcePage, city, citySlug } = options;
   const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_LINK_CLICK, {
     stateCode,
     metadata: {
       source,
+      source_page: sourcePage || null,
       destination_state: destinationState,
       destination_type: destinationType,
+      ...(city ? { city } : {}),
+      ...(citySlug ? { city_slug: citySlug } : {}),
     },
   });
   if (!recorded) return;
   track('Forecast Link Click', {
     source,
+    source_page: sourcePage || source,
     destination_state: destinationState,
-    destination_type: destinationType
+    destination_type: destinationType,
+    ...(city ? { city } : {}),
   });
 }
+
+/**
+ * Forecast city destination click — Plausible "Forecast City Click" +
+ * product_events.forecast_link_click (destination_type: city).
+ */
+export function trackForecastCityClick({
+  stateCode,
+  stateSlug,
+  city,
+  citySlug,
+  sourcePage,
+}) {
+  const code = stateCode || SLUG_TO_ABBR[stateSlug] || null;
+  const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_LINK_CLICK, {
+    stateCode: code,
+    metadata: {
+      source_page: sourcePage,
+      destination_state: stateSlug,
+      destination_type: 'city',
+      city,
+      city_slug: citySlug,
+    },
+  });
+  if (!recorded) return;
+  track('Forecast City Click', {
+    state: code || stateSlug,
+    city,
+    source_page: sourcePage,
+  });
+}
+
+/**
+ * Forecast state-default destination click — Plausible "Forecast State Click" +
+ * product_events.forecast_link_click (destination_type: state-default).
+ */
+export function trackForecastStateClick({ stateCode, stateSlug, sourcePage }) {
+  const code = stateCode || SLUG_TO_ABBR[stateSlug] || null;
+  const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_LINK_CLICK, {
+    stateCode: code,
+    metadata: {
+      source_page: sourcePage,
+      destination_state: stateSlug,
+      destination_type: 'state-default',
+    },
+  });
+  if (!recorded) return;
+  track('Forecast State Click', {
+    state: code || stateSlug,
+    source_page: sourcePage,
+  });
+}
+
 
 // ============================================
 // TEST FUNCTION
@@ -1470,5 +1536,8 @@ export default {
   trackIndexNowSubmission,
   trackForecastPageView,
   trackForecastLocationChanged,
-  trackForecastLinkClick
+  trackForecastLinkClick,
+  trackForecastCityClick,
+  trackForecastStateClick,
+  FORECAST_SOURCE_PAGES,
 };
