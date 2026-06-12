@@ -66,8 +66,9 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
 
   return (
     <header className="bg-slate-900 border-b border-slate-700 px-3 sm:px-4 lg:px-6 py-3 sm:py-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
-      <div className="max-w-[1400px] mx-auto space-y-0.5">
-        <div className="flex items-start justify-between gap-3 sm:gap-4">
+      <div className="max-w-[1400px] mx-auto space-y-2 sm:space-y-2.5">
+        {/* Row 1: brand left, sign-in top-right when signed out */}
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate flex items-center gap-2">
               <span className="text-xl sm:text-2xl">📡</span>
@@ -86,7 +87,7 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
                   <div className="absolute top-full left-0 mt-1 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 w-64">
                     <p className="text-xs text-slate-300 leading-relaxed">
                       StormTracking is in active development. For official weather information, please visit{' '}
-                      <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
+                      <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
                     </p>
                   </div>
                 )}
@@ -115,18 +116,22 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
             </div>
           </div>
 
+          <div className="flex-shrink-0">
+            <AccountMenu placement="headerTop" />
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-x-3 gap-y-1 sm:gap-4 flex-wrap">
+        {/* Row 2: primary nav left, utilities right (homepage only) */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
             <Link to="/alerts" className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
             <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
             <StateAlertsDropdown source={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN} />
-            <AccountMenu />
+            <AccountMenu placement="nav" />
           </div>
 
           {showUtilities && (
-            <div className="flex-shrink-0 ml-auto sm:ml-0">
+            <div className="flex justify-end flex-shrink-0">
               <HomeUtilityBar
                 lastRefresh={lastRefresh}
                 onRefresh={onRefresh}

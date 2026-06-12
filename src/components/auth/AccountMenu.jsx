@@ -10,12 +10,16 @@ const NAV_CHIP_CLASS =
  * Header account control. Hidden entirely when Supabase isn't configured, so
  * the app degrades to its current anonymous-only behavior with zero UI noise.
  *
- *  - Signed out → "Sign in with email" button that opens the magic-link modal.
- *  - Signed in  → "Account" + a small dropdown with Sign out.
+ *  - Signed out → "Sign in" on headerTop row (isolated from nav chips).
+ *  - Signed in  → "Account" nav chip on nav row + dropdown with Sign out.
  *
  * Never gates content — it's a convenience entry point only.
+ *
+ * @param {'headerTop' | 'nav'} placement
+ *   headerTop — sign-in link, top-right row 1 (signed out only)
+ *   nav       — account chip, last item in nav row 2 (signed in only)
  */
-export default function AccountMenu() {
+export default function AccountMenu({ placement = 'nav' }) {
   const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [open, setOpen] = useState(false);
@@ -35,11 +39,12 @@ export default function AccountMenu() {
   if (!isConfigured || initializing) return null;
 
   if (!isAuthenticated) {
+    if (placement !== 'headerTop') return null;
     return (
       <>
         <button
           onClick={() => setShowModal(true)}
-          className={`${NAV_CHIP_CLASS} cursor-pointer`}
+          className="text-xs sm:text-sm text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer whitespace-nowrap"
           title="Sign in with email"
         >
           Sign in
@@ -48,6 +53,8 @@ export default function AccountMenu() {
       </>
     );
   }
+
+  if (placement !== 'nav') return null;
 
   const email = user?.email || 'Account';
 
