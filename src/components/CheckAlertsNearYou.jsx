@@ -57,8 +57,12 @@ export default function CheckAlertsNearYou({
   const [result, setResult] = useState(null);
   const [countyAlerts, setCountyAlerts] = useState([]);
   const [nearbyCities, setNearbyCities] = useState([]);
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [cityDropdownShowAll, setCityDropdownShowAll] = useState(false);
   const countySelectRef = useRef(null);
-  const cityListId = `city-options-${stateCode}`;
+  const cityInputRef = useRef(null);
+  const cityDropdownRef = useRef(null);
+  const suppressCityDropdownOpenRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +88,17 @@ export default function CheckAlertsNearYou({
     countySelectRef.current.focus();
     countySelectRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [cityNotFound]);
+
+  useEffect(() => {
+    if (!cityDropdownOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (cityDropdownRef.current?.contains(e.target)) return;
+      setCityDropdownOpen(false);
+      setCityDropdownShowAll(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [cityDropdownOpen]);
 
   const applyResult = async (resolved, matchType, queryLabel) => {
     setResult(resolved);
@@ -147,6 +162,7 @@ export default function CheckAlertsNearYou({
     setSelectedCountyId('');
     setCityQuery('');
     setCityNotFound(false);
+    closeCityDropdown();
 
     const trimmed = zip.trim();
     if (!/^\d{5}$/.test(trimmed)) {
@@ -188,6 +204,7 @@ export default function CheckAlertsNearYou({
     setCityQuery('');
     setError('');
     setCityNotFound(false);
+    closeCityDropdown();
     setResult(null);
     setCountyAlerts([]);
     setNearbyCities([]);
@@ -219,8 +236,25 @@ export default function CheckAlertsNearYou({
     }
   };
 
-  const handleCitySubmit = async (e) => {
-    e.preventDefault();
+  const closeCityDropdown = () => {
+    setCityDropdownOpen(false);
+    setCityDropdownShowAll(false);
+  };
+
+  const filteredCities =
+    cityDropdownShowAll || !cityQuery.trim()
+      ? cities
+      : cities.filter((city) =>
+          city.name.toLowerCase().includes(cityQuery.trim().toLowerCase()),
+        );
+
+  const resolveCityQuery = async (cityName) => {
+    const trimmed = cityName.trim();
+    if (!trimmed) {
+      setError('Enter a city name');
+      return;
+    }
+
     setZip('');
     setSelectedCountyId('');
     setError('');
@@ -228,12 +262,6 @@ export default function CheckAlertsNearYou({
     setCountyAlerts([]);
     setNearbyCities([]);
     setCityNotFound(false);
-
-    const trimmed = cityQuery.trim();
-    if (!trimmed) {
-      setError('Enter a city name');
-      return;
-    }
 
     setSearching(true);
     try {
@@ -247,12 +275,39 @@ export default function CheckAlertsNearYou({
         });
         return;
       }
+      setCityQuery(resolved.city?.name || trimmed);
+      suppressCityDropdownOpenRef.current = true;
+      closeCityDropdown();
       await applyResult(resolved, 'city', trimmed);
     } catch (err) {
       console.warn('CheckAlertsNearYou city search failed:', err);
       setError('Could not load city alerts');
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleCitySubmit = async (e) => {
+    e.preventDefault();
+    await resolveCityQuery(cityQuery);
+  };
+
+  const handleCityPick = (cityName) => {
+    setCityQuery(cityName);
+    suppressCityDropdownOpenRef.current = true;
+    closeCityDropdown();
+    resolveCityQuery(cityName);
+  };
+
+  const toggleCityDropdown = () => {
+    if (catalogLoading || searching) return;
+    if (cityDropdownOpen) {
+      suppressCityDropdownOpenRef.current = true;
+      closeCityDropdown();
+    } else {
+      setCityDropdownShowAll(true);
+      setCityDropdownOpen(true);
+      cityInputRef.current?.focus();
     }
   };
 
@@ -302,40 +357,96 @@ export default function CheckAlertsNearYou({
           <label htmlFor="city-search" className="block text-xs font-medium text-slate-400">
             City
           </label>
-          <div className="flex gap-2">
-            <input
-              id="city-search"
-              type="text"
-              list={cityListId}
-              value={cityQuery}
-              onChange={(e) => {
-                setCityQuery(e.target.value);
-                setCityNotFound(false);
-                if (selectedCountyId) {
-                  setSelectedCountyId('');
-                  setResult(null);
-                  setCountyAlerts([]);
-                  setNearbyCities([]);
-                  setError('');
-                }
-              }}
-              placeholder={catalogLoading ? 'Loading cities…' : 'Search...'}
-              aria-label="City name"
-              disabled={catalogLoading || searching}
-              className="flex-1 min-w-0 px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500"
-            />
-            <datalist id={cityListId}>
-              {cities.map((city) => (
-                <option key={city.id} value={city.name} />
-              ))}
-            </datalist>
-            <button
-              type="submit"
-              disabled={searching || catalogLoading || !cityQuery.trim()}
-              className="px-4 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {searching ? '…' : 'Search'}
-            </button>
+          <div
+            className={`relative overflow-visible${catalogLoading || searching ? ' opacity-50' : ''}`}
+            ref={cityDropdownRef}
+          >
+            <div className="flex items-center gap-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm focus-within:border-sky-500">
+              <input
+                ref={cityInputRef}
+                id="city-search"
+                type="text"
+                role="combobox"
+                aria-expanded={cityDropdownOpen}
+                aria-autocomplete="list"
+                aria-controls={`city-listbox-${stateCode}`}
+                value={cityQuery}
+                onChange={(e) => {
+                  setCityQuery(e.target.value);
+                  setCityDropdownShowAll(false);
+                  setCityNotFound(false);
+                  if (!catalogLoading && !searching) setCityDropdownOpen(true);
+                  if (zip) setZip('');
+                  if (selectedCountyId) {
+                    setSelectedCountyId('');
+                    setResult(null);
+                    setCountyAlerts([]);
+                    setNearbyCities([]);
+                    setError('');
+                    onClearFocus?.();
+                  }
+                }}
+                onFocus={() => {
+                  if (suppressCityDropdownOpenRef.current) {
+                    suppressCityDropdownOpenRef.current = false;
+                    return;
+                  }
+                  if (!catalogLoading && !searching && cities.length > 0) {
+                    setCityDropdownShowAll(!cityQuery.trim());
+                    setCityDropdownOpen(true);
+                  }
+                }}
+                placeholder={catalogLoading ? 'Loading cities…' : 'Search...'}
+                aria-label="City name"
+                disabled={catalogLoading || searching}
+                className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none disabled:cursor-not-allowed"
+              />
+              <button
+                type="button"
+                onClick={toggleCityDropdown}
+                disabled={catalogLoading || searching}
+                aria-label={cityDropdownOpen ? 'Close city list' : 'Show all cities in state'}
+                aria-expanded={cityDropdownOpen}
+                className="shrink-0 p-0 text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <svg
+                  className={`w-4 h-4 transition-transform ${cityDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {cityDropdownOpen && !catalogLoading && !searching && (
+              <ul
+                id={`city-listbox-${stateCode}`}
+                role="listbox"
+                className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto overscroll-contain rounded-lg border border-slate-700 bg-slate-900 shadow-lg"
+              >
+                {filteredCities.length === 0 ? (
+                  <li className="px-3 py-2 text-sm text-slate-500">No matching cities</li>
+                ) : (
+                  filteredCities.map((city) => (
+                    <li key={city.id} role="option" aria-selected={cityQuery === city.name}>
+                      <button
+                        type="button"
+                        onClick={() => handleCityPick(city.name)}
+                        className={`w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer ${
+                          cityQuery === city.name
+                            ? 'bg-sky-600/30 text-white'
+                            : 'text-slate-200 hover:bg-slate-700'
+                        }`}
+                      >
+                        {city.name}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </div>
         </form>
 
@@ -473,6 +584,7 @@ export default function CheckAlertsNearYou({
                 setNearbyCities([]);
                 setError('');
                 setCityNotFound(false);
+                closeCityDropdown();
                 onClearFocus?.();
               }}
               className="text-sm px-3 py-2 bg-slate-900/60 hover:bg-slate-900 border border-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer"
