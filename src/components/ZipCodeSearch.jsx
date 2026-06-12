@@ -265,7 +265,9 @@ export default function ZipCodeSearch({
   onLocate,
   onResolveState,
   onLocationResolved,
+  variant = 'default',
 }) {
+  const isCompact = variant === 'compact';
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -658,7 +660,7 @@ export default function ZipCodeSearch({
       return;
     }
     setGpsStatus('locating');
-    setIsExpanded(true);
+    if (!isCompact) setIsExpanded(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -682,92 +684,128 @@ export default function ZipCodeSearch({
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
-  }, [onLocate, onResolveState, onLocationResolved]);
+  }, [onLocate, onResolveState, onLocationResolved, isCompact]);
 
-  return (
-    <div className="space-y-4">
-      {/* Input Section - Enhanced contrast */}
-      <div className="rounded-lg border border-slate-600 shadow-lg">
-        {/* Collapsible Header - darker for better contrast */}
+  const gpsButton = (
+    <button
+      type="button"
+      onClick={handleUseMyLocation}
+      disabled={gpsStatus === 'locating'}
+      aria-label="Use my device location"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+    >
+      <span aria-hidden="true">🎯</span>
+      {gpsStatus === 'locating' ? 'Locating…' : 'Use My Location'}
+    </button>
+  );
+
+  const gpsStatusMessage = gpsStatus === 'unsupported' ? (
+    <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
+  ) : gpsStatus === 'error' ? (
+    <span className="text-[11px] text-amber-400">Couldn&apos;t get your location — try again.</span>
+  ) : gpsStatus === 'denied' ? (
+    <span className="text-[11px] text-amber-400">Location access blocked in browser settings.</span>
+  ) : null;
+
+  const modeToggle = (
+    <div className={`flex items-center gap-1 text-xs shrink-0 ${isCompact ? '' : 'ml-auto'}`}>
+      <button
+        type="button"
+        onClick={() => setSearchMode('city')}
+        className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+          searchMode === 'city'
+            ? 'bg-sky-600 text-white'
+            : 'text-slate-400 hover:text-slate-300'
+        }`}
+      >
+        By City
+      </button>
+      <span className="text-slate-600">/</span>
+      <button
+        type="button"
+        onClick={() => setSearchMode('zip')}
+        className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+          searchMode === 'zip'
+            ? 'bg-sky-600 text-white'
+            : 'text-slate-400 hover:text-slate-300'
+        }`}
+      >
+        By Zip
+      </button>
+    </div>
+  );
+
+  const cityFormClass = isCompact
+    ? 'flex flex-wrap items-center gap-2 min-w-0'
+    : 'flex flex-col sm:flex-row gap-2 max-w-lg';
+  const zipFormClass = isCompact ? 'flex items-center gap-2 min-w-0' : 'flex gap-2 max-w-md';
+  const submitButtonClass = isCompact
+    ? 'px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shrink-0'
+    : 'px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer';
+  const inputClass = isCompact
+    ? 'bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors'
+    : 'flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors';
+
+  const locationResult = currentLocationData && !isCardDismissed ? (
+    <div className={isCompact ? 'mt-2 pt-2 border-t border-slate-700/50' : 'mt-3 pt-3 border-t border-slate-700/50'}>
+      <div className="flex items-center gap-3 overflow-x-auto">
         <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+          onClick={() => {
+            if (onLocationClick && currentLocationData.lat && currentLocationData.lon) {
+              onLocationClick(currentLocationData);
+            }
+          }}
+          className="font-semibold text-white whitespace-nowrap hover:text-emerald-300 transition-colors cursor-pointer"
         >
-          <div className="flex items-center gap-2">
-            <span className="text-sm" role="img" aria-label="location">📍</span>
-            <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
-              Check Location
-            </label>
-            {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
-                {Object.values(savedLocations).filter(l => l.onMap).length} on map
-              </span>
-            )}
-          </div>
-          <svg
-            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
+        </button>
+        <span className="text-slate-500">•</span>
+        {currentLocationData.alertInfo ? (
+          <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {currentLocationData.alertInfo.event}</span>
+        ) : (
+          <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
+        )}
+        <span className="text-slate-500">•</span>
+        <span className="text-xs text-slate-400 whitespace-nowrap">
+          {currentLocationData.conditions?.highTemp != null || currentLocationData.conditions?.lowTemp != null ? (
+            <>
+              {currentLocationData.conditions.highTemp != null && <span>H: {currentLocationData.conditions.highTemp}°</span>}
+              {currentLocationData.conditions.highTemp != null && currentLocationData.conditions.lowTemp != null && ' / '}
+              {currentLocationData.conditions.lowTemp != null && <span>L: {currentLocationData.conditions.lowTemp}°</span>}
+              {' · '}{currentLocationData.conditions.shortForecast || ''}
+            </>
+          ) : currentLocationData.conditions?.temperature ? (
+            <>{currentLocationData.conditions.temperature}°{currentLocationData.conditions.temperatureUnit || 'F'} · {currentLocationData.conditions.shortForecast || ''}</>
+          ) : (
+            <>Loading...</>
+          )}
+        </span>
+        <button
+          onClick={isCurrentOnMap ? handleDismissCard : handleRemove}
+          className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1 ml-auto flex-shrink-0"
+          title={isCurrentOnMap ? 'Close' : 'Remove'}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+      </div>
+      <div className="mt-2">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isCurrentOnMap}
+            onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
+            className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
+          />
+          <span className="text-xs text-slate-300">Save Location</span>
+        </label>
+      </div>
+    </div>
+  ) : null;
 
-        {/* Collapsible Content - solid background */}
-        {isExpanded && (
-          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible">
-            <div className="flex flex-wrap items-center gap-3 pt-3 mb-3">
-              <button
-                type="button"
-                onClick={handleUseMyLocation}
-                disabled={gpsStatus === 'locating'}
-                aria-label="Use my device location"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                <span aria-hidden="true">🎯</span>
-                {gpsStatus === 'locating' ? 'Locating…' : 'Use My Location'}
-              </button>
-              {gpsStatus === 'unsupported' && (
-                <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
-              )}
-              {gpsStatus === 'error' && (
-                <span className="text-[11px] text-amber-400">Couldn&apos;t get your location — try again.</span>
-              )}
-              {gpsStatus === 'denied' && (
-                <span className="text-[11px] text-amber-400">Location access blocked in browser settings.</span>
-              )}
-              {/* Search mode toggle */}
-              <div className="flex items-center gap-1 text-xs ml-auto">
-                <button
-                  type="button"
-                  onClick={() => setSearchMode('city')}
-                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                    searchMode === 'city'
-                      ? 'bg-sky-600 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  By City
-                </button>
-                <span className="text-slate-600">/</span>
-                <button
-                  type="button"
-                  onClick={() => setSearchMode('zip')}
-                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                    searchMode === 'zip'
-                      ? 'bg-sky-600 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  By Zip
-                </button>
-              </div>
-            </div>
-
-        {searchMode === 'city' ? (
-          <form onSubmit={handleCitySelect} className="flex flex-col sm:flex-row gap-2 max-w-lg">
+  const searchForms = searchMode === 'city' ? (
+          <form onSubmit={handleCitySelect} className={cityFormClass}>
             <select
               value={selectedState}
               onChange={(e) => {
@@ -778,16 +816,16 @@ export default function ZipCodeSearch({
                 closeCityDropdown();
                 setError(null);
               }}
-              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-sky-500 transition-colors"
+              className={`${isCompact ? 'w-36' : 'flex-1'} bg-slate-900 border border-slate-600 rounded-lg ${isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2'} text-white text-sm focus:outline-none focus:border-sky-500 transition-colors`}
             >
               <option value="">Select State</option>
               {STATE_OPTIONS.map(([code, name]) => (
                 <option key={code} value={code}>{name}</option>
               ))}
             </select>
-            <div className="relative flex-1 min-w-0 overflow-visible" ref={cityDropdownRef}>
+            <div className={`relative ${isCompact ? 'w-40 sm:w-48' : 'flex-1'} min-w-0 overflow-visible`} ref={cityDropdownRef}>
               <div
-                className={`flex items-center gap-1 w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus-within:border-sky-500 transition-colors ${
+                className={`flex items-center gap-1 w-full bg-slate-900 border border-slate-600 rounded-lg ${isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2'} text-white text-sm focus-within:border-sky-500 transition-colors ${
                   !selectedState || catalogLoading ? 'opacity-50' : ''
                 }`}
               >
@@ -869,30 +907,29 @@ export default function ZipCodeSearch({
             <button
               type="submit"
               disabled={loading || catalogLoading || !selectedState || !cityQuery.trim()}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+              className={submitButtonClass}
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
               ) : (
-                'Check'
+                isCompact ? 'Search' : 'Check'
               )}
             </button>
           </form>
         ) : (
-          /* Zip code input */
-          <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
+          <form onSubmit={handleSubmit} className={zipFormClass}>
             <input
               type="text"
               value={zip}
               onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
               placeholder="Enter zip code"
-              className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors"
+              className={`${isCompact ? 'w-28 sm:w-32' : 'flex-1'} ${inputClass}`}
               maxLength={5}
             />
             <button
               type="submit"
               disabled={loading || zip.length !== 5}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+              className={submitButtonClass}
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"></span>
@@ -901,72 +938,64 @@ export default function ZipCodeSearch({
               )}
             </button>
           </form>
-        )}
+        );
 
-        {error && (
-          <p className="text-red-400 text-xs mt-2">{error}</p>
-        )}
+  const searchControls = (
+    <>
+      <div className={`flex flex-wrap items-center gap-2 ${isCompact ? 'justify-end' : 'gap-3 pt-3 mb-3'}`}>
+        {gpsButton}
+        {gpsStatusMessage}
+        {modeToggle}
+        {isCompact && searchForms}
+      </div>
+      {!isCompact && searchForms}
+      {error && (
+        <p className={`text-red-400 text-xs ${isCompact ? 'text-right' : ''} mt-2`}>{error}</p>
+      )}
+      {locationResult}
+    </>
+  );
 
-        {/* Result inline - at bottom of card */}
-        {currentLocationData && !isCardDismissed && (
-          <div className="mt-3 pt-3 border-t border-slate-700/50">
-            {/* Line 1: City (clickable), Alert, Forecast with H/L, X button */}
-            <div className="flex items-center gap-3 overflow-x-auto">
-              <button
-                onClick={() => {
-                  if (onLocationClick && currentLocationData.lat && currentLocationData.lon) {
-                    onLocationClick(currentLocationData);
-                  }
-                }}
-                className="font-semibold text-white whitespace-nowrap hover:text-emerald-300 transition-colors cursor-pointer"
-              >
-                {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
-              </button>
-              <span className="text-slate-500">•</span>
-              {currentLocationData.alertInfo ? (
-                <span className="text-xs text-orange-400 whitespace-nowrap">⚠️ {currentLocationData.alertInfo.event}</span>
-              ) : (
-                <span className="text-xs text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
-              )}
-              <span className="text-slate-500">•</span>
-              <span className="text-xs text-slate-400 whitespace-nowrap">
-                {currentLocationData.conditions?.highTemp != null || currentLocationData.conditions?.lowTemp != null ? (
-                  <>
-                    {currentLocationData.conditions.highTemp != null && <span>H: {currentLocationData.conditions.highTemp}°</span>}
-                    {currentLocationData.conditions.highTemp != null && currentLocationData.conditions.lowTemp != null && ' / '}
-                    {currentLocationData.conditions.lowTemp != null && <span>L: {currentLocationData.conditions.lowTemp}°</span>}
-                    {' · '}{currentLocationData.conditions.shortForecast || ''}
-                  </>
-                ) : currentLocationData.conditions?.temperature ? (
-                  <>{currentLocationData.conditions.temperature}°{currentLocationData.conditions.temperatureUnit || 'F'} · {currentLocationData.conditions.shortForecast || ''}</>
-                ) : (
-                  <>Loading...</>
-                )}
+  if (isCompact) {
+    return (
+      <div id="radar-location-search" className="jump-scroll-target space-y-2">
+        {searchControls}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-slate-600 shadow-lg">
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm" role="img" aria-label="location">📍</span>
+            <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
+              Check Location
+            </label>
+            {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full">
+                {Object.values(savedLocations).filter(l => l.onMap).length} on map
               </span>
-              <button
-                onClick={isCurrentOnMap ? handleDismissCard : handleRemove}
-                className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer p-1 ml-auto flex-shrink-0"
-                title={isCurrentOnMap ? "Close" : "Remove"}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            {/* Line 2: Save Location checkbox */}
-            <div className="mt-2">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isCurrentOnMap}
-                  onChange={(e) => handleToggleMap(currentLocationId, e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-800"
-                />
-                <span className="text-xs text-slate-300">Save Location</span>
-              </label>
-            </div>
+            )}
           </div>
-        )}
+          <svg
+            className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {isExpanded && (
+          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible">
+            {searchControls}
           </div>
         )}
       </div>
