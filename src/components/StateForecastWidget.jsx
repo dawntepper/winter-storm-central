@@ -195,7 +195,7 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
         }
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 mt-1 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 rounded-lg text-sm text-sky-300 hover:text-sky-200 font-semibold transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
       >
-        7-Day Forecast
+        7-Day Forecast for {stateName}
         <span aria-hidden="true">→</span>
       </Link>
     </section>
