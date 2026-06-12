@@ -120,7 +120,7 @@ const LOCATION_SOURCE_BUCKETS = {
 };
 
 function normalizeLocationSourceType(row) {
-  return String(row?.resolved_type || row?.match_type || '').toLowerCase();
+  return String(row?.resolved_type || '').toLowerCase();
 }
 
 function bucketLocationSource(type) {
@@ -133,7 +133,7 @@ function bucketLocationSource(type) {
 async function fetchLocationSources(supabase, since) {
   let query = supabase
     .from('location_search_events')
-    .select('resolved_type, match_type')
+    .select('resolved_type')
     .eq('success', true)
     .limit(10000);
 

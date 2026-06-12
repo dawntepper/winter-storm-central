@@ -651,7 +651,6 @@ export async function trackLocationSearch(event) {
   if (!supabase) return;
   const { error } = await supabase.from('location_search_events').insert({
     query: query || '',
-    match_type: matchType || null,
     state_code: stateCode || null,
     city_id: cityId || null,
     county_id: countyId || null,
