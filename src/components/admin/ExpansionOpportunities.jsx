@@ -30,6 +30,7 @@ export default function ExpansionOpportunities({ data }) {
 
   const hasFailed = (data.failedSearches?.length ?? 0) > 0;
   const hasCities = (data.topCities?.length ?? 0) > 0;
+  const hasCityDemand = (data.cityDemand?.length ?? 0) > 0;
 
   return (
     <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6">
@@ -37,7 +38,7 @@ export default function ExpansionOpportunities({ data }) {
         <div>
           <h3 className="text-lg font-bold text-white mb-1">Expansion Opportunities</h3>
           <p className="text-sm text-slate-400">
-            Failed searches, county gaps, and city demand signals from real user behavior.
+            Failed searches, city demand signals, county gaps, and catalog expansion from user behavior.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
@@ -46,6 +47,10 @@ export default function ExpansionOpportunities({ data }) {
             <span className="font-semibold text-amber-300 tabular-nums">
               {formatNumber(data.totalFailed)}
             </span>
+          </span>
+          <span className="text-slate-300">
+            <span className="text-slate-500">City demand:</span>{' '}
+            <span className="font-semibold tabular-nums">{formatNumber(data.totalCityDemandRows)}</span>
           </span>
           <span className="text-slate-300">
             <span className="text-slate-500">City searches:</span>{' '}
@@ -57,6 +62,50 @@ export default function ExpansionOpportunities({ data }) {
           </span>
         </div>
       </div>
+
+      {hasCityDemand && (
+        <div className="mb-5">
+          <h4 className="text-sm font-semibold text-slate-300 mb-3">Most requested cities (city_demand)</h4>
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-400 border-b border-slate-700">
+                  <th className="py-2 pr-4 font-medium">City</th>
+                  <th className="py-2 pr-4 font-medium">Searches</th>
+                  <th className="py-2 pr-4 font-medium">Saves</th>
+                  <th className="py-2 pr-4 font-medium">Catalog</th>
+                  <th className="py-2 pr-4 font-medium">Static page</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-200">
+                {data.cityDemand.slice(0, 10).map((row) => (
+                  <tr key={`${row.cityName}-${row.stateCode}`} className="border-b border-slate-800/80">
+                    <td className="py-2 pr-4 font-medium">{row.label}</td>
+                    <td className="py-2 pr-4 tabular-nums">{formatNumber(row.searchCount)}</td>
+                    <td className="py-2 pr-4 tabular-nums">{formatNumber(row.saveCount)}</td>
+                    <td className="py-2 pr-4">
+                      {row.inCatalog ? (
+                        <span className="text-emerald-400">{row.citySource}</span>
+                      ) : (
+                        <span className="text-amber-300">missing</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {row.hasStaticPage ? 'yes' : 'no'}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <SuggestionBadge
+                        text={row.promotable ? 'Promote candidate' : row.suggestion}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {hasCities && (
         <div className="mb-5">
@@ -127,7 +176,7 @@ export default function ExpansionOpportunities({ data }) {
         </div>
       )}
 
-      {!hasFailed && !hasCities && (data.lowTrafficCounties?.length ?? 0) === 0 && (
+      {!hasFailed && !hasCities && !hasCityDemand && (data.lowTrafficCounties?.length ?? 0) === 0 && (
         <p className="text-sm text-slate-500">No expansion signals in this period.</p>
       )}
     </div>

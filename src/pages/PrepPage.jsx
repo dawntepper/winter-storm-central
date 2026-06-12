@@ -9,6 +9,7 @@ import {
 import ProductCard from '../components/ProductCard';
 import ContactLink from '../components/ContactLink';
 import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
+import { recordAlertRequestDemandFromZip } from '../services/locationCatalogService';
 
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
 
@@ -58,6 +59,7 @@ function InlineNewsletterForm() {
       localStorage.setItem(SUBSCRIBER_KEY, JSON.stringify({ email: cleanEmail, zip: cleanZip }));
       setStatus('success');
       trackAlertSignup({ type: 'new', zipCode: cleanZip });
+      recordAlertRequestDemandFromZip(cleanZip);
     } catch (err) {
       setStatus('error');
       setErrorMsg(err.message || 'Something went wrong. Please try again.');

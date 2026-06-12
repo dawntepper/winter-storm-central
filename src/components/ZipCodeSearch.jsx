@@ -6,6 +6,7 @@ import {
   resolveCityByName,
   trackLocationSearch,
   trackLocationSearchNotFound,
+  recordSaveDemandFromLocationLabel,
 } from '../services/locationCatalogService';
 import { reverseGeocode } from '../services/geoLocationService';
 import { getForecastIcon } from '../utils/getForecastIcon';
@@ -584,6 +585,7 @@ export default function ZipCodeSearch({
         locationName: locationData.name,
         previousCount: totalLocationCount
       });
+      recordSaveDemandFromLocationLabel(locationData.name);
     } else {
       trackLocationRemoved({
         trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,

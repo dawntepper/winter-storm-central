@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import {
-  getCityBySlug,
+  getCityBySlugWithFallback,
   getPrimaryCountyForCity,
   getCitiesForCounty,
   trackCountyAlertView,
@@ -79,7 +79,7 @@ export default function CatalogCityAlertsPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const cityRow = await getCityBySlug(citySlug);
+      const cityRow = await getCityBySlugWithFallback(citySlug);
       if (cancelled) return;
       setCity(cityRow);
 

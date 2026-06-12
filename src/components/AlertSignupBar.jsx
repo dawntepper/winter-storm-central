@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
+import { recordAlertRequestDemandFromZip } from '../services/locationCatalogService';
 
 const DISMISSED_KEY = 'stormtracking_signup_dismissed';
 const SUBSCRIBER_KEY = 'stormtracking_subscriber';
@@ -90,6 +91,7 @@ export default function AlertSignupBar() {
       setStatus('success');
       setIsReturning(true);
       trackAlertSignup({ type: isReturning ? 'update' : 'new', zipCode: cleanZip });
+      recordAlertRequestDemandFromZip(cleanZip);
       // Auto-dismiss after success
       setTimeout(() => {
         handleDismiss();

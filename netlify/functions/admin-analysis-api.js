@@ -371,6 +371,7 @@ function generateExpansionOpportunities({
   locationSearch,
   countyAlertViews,
   locationSources,
+  cityDemand,
 }) {
   const failedSearches = (missingLocationSearches?.searches || []).slice(0, 10).map((row) => ({
     query: row.query,
@@ -414,6 +415,25 @@ function generateExpansionOpportunities({
     citySearchCount: locationSources?.citySearch ?? 0,
     countySearchCount: locationSources?.countySearch ?? 0,
     totalCountyViews: countyAlertViews?.totalViews ?? 0,
+    cityDemand: (cityDemand?.topDemand || []).slice(0, 12).map((row) => ({
+      label: `${row.city_name}, ${row.state_code}`,
+      cityName: row.city_name,
+      stateCode: row.state_code,
+      searchCount: row.search_count ?? 0,
+      saveCount: row.save_count ?? 0,
+      totalDemand: row.total_demand ?? ((row.search_count ?? 0) + (row.save_count ?? 0)),
+      inCatalog: row.in_catalog ?? false,
+      citySource: row.city_source || (row.in_catalog ? 'catalog' : 'missing'),
+      hasStaticPage: row.has_static_page ?? false,
+      slug: row.slug || null,
+      lastSource: row.last_source || null,
+      lastRequestedAt: row.last_requested_at || null,
+      promotable: ((row.search_count ?? 0) + (row.save_count ?? 0)) >= 25,
+      suggestion: row.in_catalog
+        ? (row.has_static_page ? 'Has static page' : 'Promote to static page')
+        : 'Auto-create pending / verify geocode',
+    })),
+    totalCityDemandRows: cityDemand?.total_rows ?? 0,
   };
 }
 
@@ -587,6 +607,17 @@ async function fetchMissingLocationSearches(supabase, since) {
     searches: rows,
     totalFailed: rows.reduce((sum, r) => sum + (r.search_count || 0), 0),
     recommendedCities: buildRecommendedCities(rows),
+  };
+}
+
+async function fetchCityDemand(supabase, since) {
+  const { data, error } = await supabase.rpc('admin_city_demand_stats', {
+    p_since: since,
+  });
+  if (error) throw error;
+  return {
+    total_rows: data?.total_rows ?? 0,
+    topDemand: Array.isArray(data?.topDemand) ? data.topDemand : [],
   };
 }
 
@@ -1897,6 +1928,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     mostVisitedPages,
     countyAlertOpportunities,
     forecastEngagement,
+    cityDemand,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -1913,6 +1945,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchMostVisitedPages(supabase, dateRange),
     fetchCountyAlertOpportunities(supabase, since),
     fetchForecastEngagement(supabase, since),
+    fetchCityDemand(supabase, since),
   ]);
 
   const weatherContext = await generateRadarWeatherContext(radarBase);
@@ -1970,6 +2003,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     locationSearch,
     countyAlertViews,
     locationSources,
+    cityDemand,
   });
 
   return {
@@ -1989,6 +2023,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
       trend: metricTrends.returningVisitors,
     },
     missingLocationSearches,
+    cityDemand,
     locationSearch: {
       ...locationSearch,
       trend: metricTrends.searchSuccessRate,

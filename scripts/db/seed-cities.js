@@ -21,6 +21,7 @@ async function seedCities() {
     population: c.population,
     has_static_page: c.has_static_page,
     is_major: c.is_major,
+    source: 'catalog',
   }));
 
   console.log(`Upserting ${rows.length} cities…`);

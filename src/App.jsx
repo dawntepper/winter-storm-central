@@ -23,7 +23,7 @@ import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
-import { trackLocationSearch } from './services/locationCatalogService';
+import { trackLocationSearch, recordSaveDemandFromLocationLabel } from './services/locationCatalogService';
 import { setHomepageMetaTags } from './data/homepageMeta';
 import { getForecastIcon } from './utils/getForecastIcon';
 import {
@@ -621,6 +621,7 @@ export default function App() {
       locs.forEach((l) => {
         if (l?.lat != null && l?.lon != null) {
           saved.addToAccount({ name: l.name, lat: l.lat, lon: l.lon, zip: l.zip });
+          if (l.name) recordSaveDemandFromLocationLabel(l.name);
         }
       });
     }

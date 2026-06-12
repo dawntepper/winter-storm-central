@@ -5,7 +5,8 @@
 
 import { supabase } from '../lib/supabase';
 import { citySlug, countySlug } from '../lib/locationSlug';
-import { ABBR_TO_SLUG } from '../data/stateConfig';
+import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
+import { reverseGeocode } from './geoLocationService';
 import { getOrCreateVisitorIds } from '../utils/visitorIds';
 import {
   trackLocationSearchSuccess,
@@ -31,8 +32,14 @@ function analyticsIdentityFields(ids, userId) {
   return fields;
 }
 
+/** Combined search+save demand above this → candidate for static SEO page promotion. */
+export const CITY_PROMOTION_THRESHOLD = 25;
+
 const COUNTY_SELECT = 'id, slug, name, state_code, state_name, fips_code, lat, lon';
-const CITY_SELECT = 'id, slug, name, state_code, state_name, lat, lon, population';
+const CITY_SELECT = 'id, slug, name, state_code, state_name, lat, lon, population, source, has_static_page';
+
+const CENSUS_GEOCODE_URL =
+  'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress';
 
 function normalizeStateCode(value) {
   if (!value) return null;
@@ -72,7 +79,174 @@ function mapCity(row) {
     lat: Number(row.lat),
     lon: Number(row.lon),
     population: row.population,
+    source: row.source || 'catalog',
+    hasStaticPage: row.has_static_page ?? false,
   };
+}
+
+/** Parse `/alerts/city/{slug}` slug into city name + state code. */
+export function parseSlugCityState(slug) {
+  if (!slug) return null;
+  const match = String(slug).match(/^(.+)-([a-z]{2})$/i);
+  if (!match) return null;
+  const name = match[1]
+    .split('-')
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ''))
+    .join(' ');
+  return { name, stateCode: match[2].toUpperCase() };
+}
+
+/** Parse "City, ST" labels from saved locations and search results. */
+export function parseCityStateLabel(label) {
+  if (!label || typeof label !== 'string') return null;
+  const match = label.trim().match(/^(.+?),\s*([A-Za-z]{2})\s*$/);
+  if (!match) return null;
+  return { name: match[1].trim(), stateCode: match[2].toUpperCase() };
+}
+
+/** Record save demand from a "City, ST" location label. */
+export async function recordSaveDemandFromLocationLabel(label) {
+  const parsed = parseCityStateLabel(label);
+  if (!parsed) return;
+  await recordCityDemandIfUncataloged({
+    cityName: parsed.name,
+    stateCode: parsed.stateCode,
+    source: 'save',
+  });
+}
+
+/** Record alert signup demand from a ZIP code (resolves city via Zippopotam). */
+export async function recordAlertRequestDemandFromZip(zip) {
+  if (!/^\d{5}$/.test(String(zip || ''))) return;
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const place = data?.places?.[0];
+    const cityName = place?.['place name'];
+    const stateCode = place?.['state abbreviation'];
+    if (!cityName || !stateCode) return;
+    await recordCityDemandIfUncataloged({
+      cityName,
+      stateCode,
+      source: 'alert_request',
+    });
+  } catch (err) {
+    console.warn('recordAlertRequestDemandFromZip:', err.message);
+  }
+}
+
+/**
+ * Record uncataloged city demand (search, save, alert_request).
+ * Uses Supabase RPC — anon client has execute but not SELECT on city_demand.
+ */
+export async function recordCityDemand({ cityName, stateCode, source = 'search' }) {
+  if (!supabase || !cityName || !stateCode) return;
+  const st = normalizeStateCode(stateCode);
+  if (!st) return;
+  const trimmed = String(cityName).trim();
+  if (!trimmed) return;
+
+  const { error } = await supabase.rpc('record_city_demand', {
+    p_city_name: trimmed,
+    p_state_code: st,
+    p_event_source: source,
+  });
+  if (error) {
+    console.warn('recordCityDemand:', error.message);
+  }
+}
+
+/** Record demand only when the city is not already in the catalog. */
+export async function recordCityDemandIfUncataloged({ cityName, stateCode, source = 'search' }) {
+  const existing = await lookupCity(cityName, stateCode);
+  if (existing) return;
+  await recordCityDemand({ cityName, stateCode, source });
+}
+
+/** Forward-geocode a US city via Census geocoder (no API key, CORS-friendly). */
+export async function forwardGeocodeCity(cityName, stateCode) {
+  const st = normalizeStateCode(stateCode);
+  const trimmed = String(cityName || '').trim();
+  if (!trimmed || !st) return null;
+
+  try {
+    const address = encodeURIComponent(`${trimmed}, ${st}`);
+    const url = `${CENSUS_GEOCODE_URL}?address=${address}&benchmark=Public_AR_Current&format=json`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const match = data?.result?.addressMatches?.[0];
+    if (!match?.coordinates) return null;
+
+    const lat = Number(match.coordinates.y);
+    const lon = Number(match.coordinates.x);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+    const matchedState = String(match.addressComponents?.state || '').toUpperCase();
+    if (matchedState && matchedState !== st) return null;
+
+    return { name: trimmed, stateCode: st, lat, lon };
+  } catch (err) {
+    console.warn('forwardGeocodeCity:', err.message);
+    return null;
+  }
+}
+
+/** Insert or fetch a user-generated city row after successful geocode. */
+export async function ensureUserGeneratedCity({ name, stateCode, lat, lon, stateName }) {
+  if (!supabase || !name || !stateCode || lat == null || lon == null) return null;
+  const st = normalizeStateCode(stateCode);
+  if (!st) return null;
+
+  const { data: cityId, error } = await supabase.rpc('ensure_user_generated_city', {
+    p_name: String(name).trim(),
+    p_state_code: st,
+    p_lat: lat,
+    p_lon: lon,
+    p_state_name: stateName || STATE_NAMES[st] || null,
+  });
+  if (error) {
+    console.warn('ensureUserGeneratedCity:', error.message);
+    return null;
+  }
+  if (!cityId) return null;
+  return fetchCityById(cityId);
+}
+
+/**
+ * Geocode + NWS verify + auto-create catalog row for uncataloged cities.
+ * Returns mapped city or null when resolution fails.
+ */
+export async function autoCreateCityFromGeocode(cityName, stateCode) {
+  const geocoded = await forwardGeocodeCity(cityName, stateCode);
+  if (!geocoded) return null;
+
+  const nws = await reverseGeocode(geocoded.lat, geocoded.lon);
+  const resolvedName = nws?.city || geocoded.name;
+  const resolvedState = normalizeStateCode(nws?.region) || geocoded.stateCode;
+
+  if (resolvedState !== geocoded.stateCode) return null;
+
+  const existing = await lookupCity(resolvedName, resolvedState);
+  if (existing) return existing;
+
+  return ensureUserGeneratedCity({
+    name: resolvedName,
+    stateCode: resolvedState,
+    lat: geocoded.lat,
+    lon: geocoded.lon,
+  });
+}
+
+/** Load city by slug, auto-creating from slug parse + geocode when missing. */
+export async function getCityBySlugWithFallback(slug) {
+  const fromDb = await getCityBySlug(slug);
+  if (fromDb) return fromDb;
+
+  const parsed = parseSlugCityState(slug);
+  if (!parsed) return null;
+  return autoCreateCityFromGeocode(parsed.name, parsed.stateCode);
 }
 
 async function fetchCityById(cityId) {
@@ -243,7 +417,18 @@ async function lookupZipExternal(zip, stateContext) {
     }
 
     const cityName = place['place name'];
-    const city = cityName && stateAbbr ? await lookupCity(cityName, stateAbbr) : null;
+    let city = cityName && stateAbbr ? await lookupCity(cityName, stateAbbr) : null;
+    if (!city && cityName && stateAbbr && Number.isFinite(lat) && Number.isFinite(lon)) {
+      city = await ensureUserGeneratedCity({
+        name: cityName,
+        stateCode: stateAbbr,
+        lat,
+        lon,
+      });
+      if (city) {
+        await recordCityDemand({ cityName: city.name, stateCode: city.stateCode, source: 'search' });
+      }
+    }
     const county = await ensureCounty({ city, county: null, lat, lon });
 
     return { zip, city, county, lat, lon, matchType: 'zip' };
@@ -374,7 +559,13 @@ export async function resolveLocationSearch(query, stateContext) {
   // "City, ST"
   const cityStateMatch = trimmed.match(/^(.+?),\s*([A-Za-z]{2})\s*$/);
   if (cityStateMatch) {
-    const city = await lookupCity(cityStateMatch[1], cityStateMatch[2]);
+    let city = await lookupCity(cityStateMatch[1], cityStateMatch[2]);
+    if (!city) {
+      city = await autoCreateCityFromGeocode(cityStateMatch[1], cityStateMatch[2]);
+      if (city) {
+        await recordCityDemand({ cityName: city.name, stateCode: city.stateCode, source: 'search' });
+      }
+    }
     if (city) {
       const county = await ensureCounty({ city, county: null });
       if (county) {
@@ -384,7 +575,13 @@ export async function resolveLocationSearch(query, stateContext) {
   }
 
   // City name (scoped to page state when available)
-  const city = await lookupCity(trimmed, stateCode);
+  let city = await lookupCity(trimmed, stateCode);
+  if (!city && stateCode) {
+    city = await autoCreateCityFromGeocode(trimmed, stateCode);
+    if (city) {
+      await recordCityDemand({ cityName: city.name, stateCode: city.stateCode, source: 'search' });
+    }
+  }
   if (city) {
     const county = await ensureCounty({ city, county: null });
     if (county) {
@@ -550,6 +747,30 @@ export async function resolveCityByName(name, stateCode, allAlerts = []) {
 
   const city = await lookupCity(trimmed, stateCode);
   if (!city) {
+    const created = await autoCreateCityFromGeocode(trimmed, stateCode);
+    if (created) {
+      await recordCityDemand({ cityName: created.name, stateCode: created.stateCode, source: 'search' });
+      const county = await ensureCounty({ city: created, county: null });
+      if (!county) {
+        return {
+          ...empty,
+          city: created,
+          matchType: 'not_found',
+          error: `City "${created.name}" found but county could not be resolved`,
+        };
+      }
+      const { alerts } = await getCountyAlerts(county.id, allAlerts);
+      return {
+        query: trimmed,
+        matchType: 'city',
+        city: created,
+        county,
+        zip: null,
+        alerts,
+        error: null,
+      };
+    }
+
     return {
       ...empty,
       matchType: 'not_found',
@@ -706,6 +927,15 @@ export async function trackLocationSearchNotFound({ query, stateCode, pageContex
     query,
     stateCode,
   });
+
+  const parsed = parseCityStateLabel(query) || (stateCode ? { name: query, stateCode } : null);
+  if (parsed?.name && parsed?.stateCode) {
+    await recordCityDemandIfUncataloged({
+      cityName: parsed.name,
+      stateCode: parsed.stateCode,
+      source: 'search',
+    });
+  }
 
   await trackLocationSearch({
     query,
