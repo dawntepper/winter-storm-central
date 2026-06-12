@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import AdminGate from '../components/AdminGate';
 import AdminBarChart from '../components/admin/AdminBarChart';
 import AdminChartToggle from '../components/admin/AdminChartToggle';
+import AdminDualLineChart from '../components/admin/AdminDualLineChart';
 import AdminFunnel from '../components/admin/AdminFunnel';
+import AdminLineChart from '../components/admin/AdminLineChart';
 import AdminSplitChart from '../components/admin/AdminSplitChart';
-import AdminTimeSeries from '../components/admin/AdminTimeSeries';
 import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
 
 const DATE_RANGES = [
@@ -129,28 +130,143 @@ function formatEventName(name) {
 }
 
 const DEFAULT_VIEW_MODES = {
-  returningVisitors: 'table',
-  radarEngagement: 'table',
+  returningVisitors: 'visual',
+  radarEngagement: 'visual',
   locationSearch: 'table',
   savedLocations: 'table',
   userJourneys: 'table',
 };
 
-function FunnelCard({ id, funnel, viewMode }) {
+function TrendIndicator({ trend }) {
+  if (!trend) return null;
+  const { direction, changePct } = trend;
+  if (direction === 'flat') {
+    return (
+      <span className="text-slate-400 text-sm">
+        → Flat ({changePct >= 0 ? '+' : ''}{changePct}% vs prior period)
+      </span>
+    );
+  }
+  const isUp = direction === 'up';
+  return (
+    <span className={`text-sm font-medium ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+      {isUp ? '↑' : '↓'} {isUp ? 'Up' : 'Down'} {Math.abs(changePct)}% vs prior period
+    </span>
+  );
+}
+
+function TopInsightsCard({ insights }) {
+  if (!insights?.length) return null;
+  return (
+    <section className="bg-gradient-to-br from-sky-950/50 to-slate-800 border border-sky-700/40 rounded-xl p-5 sm:p-6">
+      <h2 className="text-xl font-bold text-white mb-1">Top Insights</h2>
+      <p className="text-sm text-slate-400 mb-5">
+        Key metrics from your selected date range.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {insights.map((item) => (
+          <div
+            key={item.id}
+            className="bg-slate-900/70 border border-slate-700/80 rounded-lg p-4"
+          >
+            <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">
+              {item.label}
+            </div>
+            <div className="text-xl font-bold text-white">{item.value}</div>
+            {item.detail && (
+              <div className="text-xs text-slate-500 mt-1 line-clamp-2">{item.detail}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecommendedActionsCard({ actions }) {
+  if (!actions?.length) return null;
+  const priorityStyles = {
+    high: 'border-amber-600/50 bg-amber-950/20',
+    medium: 'border-sky-700/50 bg-sky-950/20',
+    low: 'border-slate-700 bg-slate-900/40',
+  };
+  return (
+    <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
+      <h2 className="text-xl font-bold text-white mb-1">Recommended Actions</h2>
+      <p className="text-sm text-slate-400 mb-5">
+        Data-driven suggestions to improve the product.
+      </p>
+      <div className="space-y-3">
+        {actions.map((action) => (
+          <div
+            key={action.id}
+            className={`rounded-lg border p-4 ${priorityStyles[action.priority] || priorityStyles.low}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-sm font-semibold text-white">{action.title}</h3>
+              {action.priority === 'high' && (
+                <span className="shrink-0 text-[10px] uppercase tracking-wide font-semibold text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
+                  High
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-slate-300 mt-1.5">{action.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExpandableBlock({ title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-slate-700 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left bg-slate-900/50 hover:bg-slate-900/80 transition-colors cursor-pointer"
+      >
+        <span className="text-sm font-medium text-slate-200">{title}</span>
+        <span className="text-slate-500 text-xs">{open ? 'Collapse' : 'Expand'}</span>
+      </button>
+      {open && <div className="px-4 pb-4 pt-1">{children}</div>}
+    </div>
+  );
+}
+
+function FunnelCard({ id, funnel, viewMode, isMainJourney = false }) {
   const stepStats = Array.isArray(funnel?.stepStats)
     ? funnel.stepStats
     : funnel?.stepStats
       ? Object.values(funnel.stepStats)
       : [];
+  const dropOff = funnel?.biggestDropOff;
 
   return (
     <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-1">
         {FUNNEL_LABELS[id] || id}
       </h3>
-      <p className="text-xs text-slate-500 mb-4">
-        Overall completion: {formatPct(funnel?.overallCompletionPct)}
+      <p className="text-xs text-slate-500 mb-3">
+        Overall conversion: {formatPct(funnel?.overallCompletionPct)}
+        {isMainJourney && ' · Main journey path'}
       </p>
+      {dropOff && dropOff.dropoffPct > 0 && (
+        <div className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-2.5">
+          <div className="text-[10px] uppercase tracking-wide font-semibold text-rose-400 mb-1">
+            Biggest Drop-Off
+          </div>
+          <div className="text-sm text-rose-100">
+            Step {dropOff.step}: {formatEventName(dropOff.eventName)}
+          </div>
+          <div className="text-xs text-rose-300/80 mt-0.5">
+            {formatPct(dropOff.dropoffPct)} lost
+            {dropOff.sessionsLost > 0 && ` (${formatNumber(dropOff.sessionsLost)} sessions)`}
+            {dropOff.fromEvent && ` after ${formatEventName(dropOff.fromEvent)}`}
+          </div>
+        </div>
+      )}
       {viewMode === 'visual' ? (
         <AdminFunnel
           stepStats={stepStats}
@@ -273,6 +389,10 @@ function AdminAnalysisInner() {
   const sl = data?.savedLocations;
   const radar = data?.radar;
   const journeys = data?.userJourneys;
+  const missing = data?.missingLocationSearches;
+  const missingSearches = missing?.searches ?? (Array.isArray(missing) ? missing : []);
+  const countyViews = data?.countyAlertViews;
+  const hasMissingSearches = missingSearches.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -312,7 +432,10 @@ function AdminAnalysisInner() {
 
         {data && (
           <>
-            {/* 1. Returning Visitors */}
+            <TopInsightsCard insights={data.topInsights} />
+            <RecommendedActionsCard actions={data.recommendedActions} />
+
+            {/* Returning Visitors */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
               <SectionHeader
                 title="Returning Visitors"
@@ -327,41 +450,130 @@ function AdminAnalysisInner() {
                 <StatCard label="Returning" value={formatNumber(rv?.returningVisitors)} />
                 <StatCard label="Returning %" value={formatPct(rv?.returningPct)} />
               </div>
-              {viewModes.returningVisitors === 'visual' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                <StatCard
+                  label="Avg returning %"
+                  value={formatPct(rv?.avgReturningPct)}
+                  hint="Daily average in range"
+                />
+                <StatCard
+                  label="Highest returning day"
+                  value={
+                    rv?.highestReturningDay
+                      ? formatPct(rv.highestReturningDay.returningPct)
+                      : '—'
+                  }
+                  hint={
+                    rv?.highestReturningDay?.day
+                      ? rv.highestReturningDay.day
+                      : undefined
+                  }
+                />
+                <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4 flex flex-col justify-center">
+                  <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Trend</div>
+                  <TrendIndicator trend={rv?.returningTrend} />
+                </div>
+              </div>
+              {viewModes.returningVisitors === 'visual' ? (
                 <>
                   <SubsectionTitle>New vs returning visitors by day</SubsectionTitle>
-                  <AdminTimeSeries
+                  <AdminDualLineChart
                     data={rv?.dailyBreakdown}
                     emptyMessage="No visitor sessions in this period."
                   />
                 </>
+              ) : (
+                <DataTable
+                  columns={[
+                    { key: 'day', label: 'Day' },
+                    {
+                      key: 'newVisitors',
+                      label: 'New',
+                      render: (r) => formatNumber(r.newVisitors),
+                    },
+                    {
+                      key: 'returningVisitors',
+                      label: 'Returning',
+                      render: (r) => formatNumber(r.returningVisitors),
+                    },
+                  ]}
+                  rows={rv?.dailyBreakdown || []}
+                  emptyMessage="No visitor sessions in this period."
+                />
               )}
             </section>
 
-            {/* 2. Missing Location Searches */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Missing Location Searches</h2>
-              <p className="text-sm text-slate-400 mb-4">
-                Failed searches from missing_location_searches (all time) or location_search_events (date filter).
-              </p>
-              <DataTable
-                columns={[
-                  { key: 'query', label: 'Query' },
-                  { key: 'state_context', label: 'State', render: (r) => r.state_context || '—' },
-                  {
-                    key: 'search_count',
-                    label: 'Count',
-                    render: (r) => formatNumber(r.search_count),
-                  },
-                  {
-                    key: 'last_searched',
-                    label: 'Last searched',
-                    render: (r) => formatDate(r.last_searched),
-                  },
-                ]}
-                rows={data.missingLocationSearches || []}
-                emptyMessage="No failed location searches in this period."
-              />
+            {/* Missing Location Searches */}
+            <section
+              className={`rounded-xl p-5 sm:p-6 border ${
+                hasMissingSearches
+                  ? 'bg-amber-950/20 border-amber-600/50'
+                  : 'bg-slate-800 border-slate-700'
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                    Missing Location Searches
+                    {hasMissingSearches && (
+                      <span className="text-xs font-semibold uppercase tracking-wide text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
+                        Action needed
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    Failed searches from missing_location_searches (all time) or location_search_events (date filter).
+                  </p>
+                </div>
+                {hasMissingSearches && (
+                  <div className="text-sm font-semibold text-amber-300 tabular-nums">
+                    {formatNumber(missing?.totalFailed)} failed searches
+                  </div>
+                )}
+              </div>
+
+              {(missing?.recommendedCities?.length ?? 0) > 0 && (
+                <div className="mb-5">
+                  <SubsectionTitle>Recommended Cities To Add</SubsectionTitle>
+                  <div className="flex flex-wrap gap-2">
+                    {missing.recommendedCities.map((city) => (
+                      <span
+                        key={`${city.query}-${city.state}`}
+                        className="inline-flex items-center gap-1.5 text-sm bg-amber-900/30 border border-amber-700/40 text-amber-100 px-3 py-1.5 rounded-lg"
+                      >
+                        {city.label}
+                        <span className="text-amber-400/80 text-xs">
+                          ({formatNumber(city.searchCount)} searches)
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <ExpandableBlock
+                title={`Top missing searches (${missingSearches.length})`}
+                defaultOpen={hasMissingSearches}
+              >
+                <DataTable
+                  columns={[
+                    { key: 'query', label: 'Query' },
+                    { key: 'state_context', label: 'State', render: (r) => r.state_context || '—' },
+                    {
+                      key: 'search_count',
+                      label: 'Count',
+                      render: (r) => formatNumber(r.search_count),
+                    },
+                    {
+                      key: 'last_searched',
+                      label: 'Last searched',
+                      render: (r) => formatDate(r.last_searched),
+                    },
+                  ]}
+                  rows={missingSearches}
+                  emptyMessage="No failed location searches in this period."
+                />
+              </ExpandableBlock>
             </section>
 
             {/* 3. Location Search Performance */}
@@ -378,6 +590,28 @@ function AdminAnalysisInner() {
                 <StatCard label="Failed" value={formatNumber(ls?.failedSearches)} />
                 <StatCard label="Success rate" value={formatPct(ls?.successRate)} />
               </div>
+              <SubsectionTitle>Success rate trend</SubsectionTitle>
+              <AdminLineChart
+                data={ls?.successRateTrend}
+                dataKey="successRate"
+                name="Success rate"
+                valueSuffix="%"
+                formatValue={(v) => [`${v}%`, 'Success rate']}
+                emptyMessage="No location searches in this period."
+              />
+
+              {(ls?.searchesBySource?.length ?? 0) > 0 && (
+                <>
+                  <SubsectionTitle>Searches by source</SubsectionTitle>
+                  <AdminBarChart
+                    data={ls.searchesBySource}
+                    dataKey="search_count"
+                    nameKey="source"
+                    emptyMessage="No source data in this period."
+                  />
+                </>
+              )}
+
               {viewModes.locationSearch === 'visual' ? (
                 <>
                   <SubsectionTitle>Success vs failed searches</SubsectionTitle>
@@ -460,35 +694,75 @@ function AdminAnalysisInner() {
               <LocationSourcesCard sources={locationSources} />
             </section>
 
-            {/* 4. County Alert Views */}
+            {/* County Alert Views */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
               <h2 className="text-xl font-bold text-white mb-1">County Alert Views</h2>
-              <p className="text-sm text-slate-400 mb-4">
+              <p className="text-sm text-slate-400 mb-5">
                 Counties ranked by alert page views from county_alert_views (paired with county_alert_view product events).
               </p>
-              <DataTable
-                columns={[
-                  { key: 'county_name', label: 'County' },
-                  { key: 'state_code', label: 'State' },
-                  {
-                    key: 'view_count',
-                    label: 'Views',
-                    render: (r) => formatNumber(r.view_count),
-                  },
-                  {
-                    key: 'alert_count',
-                    label: 'Max alerts',
-                    render: (r) => formatNumber(r.alert_count),
-                  },
-                  {
-                    key: 'last_viewed',
-                    label: 'Last viewed',
-                    render: (r) => formatDate(r.last_viewed),
-                  },
-                ]}
-                rows={data.countyAlertViews || []}
-                emptyMessage="No county alert views in this period."
-              />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                <StatCard label="Total county views" value={formatNumber(countyViews?.totalViews)} />
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <SubsectionTitle>Top viewed counties</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'county_name', label: 'County' },
+                      { key: 'state_code', label: 'State' },
+                      {
+                        key: 'view_count',
+                        label: 'Views',
+                        render: (r) => formatNumber(r.view_count),
+                      },
+                      {
+                        key: 'last_viewed',
+                        label: 'Last viewed',
+                        render: (r) => formatDate(r.last_viewed),
+                      },
+                    ]}
+                    rows={countyViews?.topViewed || []}
+                    emptyMessage="No county alert views in this period."
+                  />
+                </div>
+                <div>
+                  <SubsectionTitle>Counties with highest alert counts</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'county_name', label: 'County' },
+                      { key: 'state_code', label: 'State' },
+                      {
+                        key: 'alert_count',
+                        label: 'Max alerts',
+                        render: (r) => formatNumber(r.alert_count),
+                      },
+                      {
+                        key: 'view_count',
+                        label: 'Views',
+                        render: (r) => formatNumber(r.view_count),
+                      },
+                    ]}
+                    rows={countyViews?.highestAlertCounts || []}
+                    emptyMessage="No county alert data in this period."
+                  />
+                </div>
+                <div>
+                  <SubsectionTitle>Counties generating radar views</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'county_name', label: 'County' },
+                      { key: 'state_code', label: 'State' },
+                      {
+                        key: 'radar_view_count',
+                        label: 'Radar views',
+                        render: (r) => formatNumber(r.radar_view_count),
+                      },
+                    ]}
+                    rows={countyViews?.generatingRadar || []}
+                    emptyMessage="No county → radar journeys in this period."
+                  />
+                </div>
+              </div>
             </section>
 
             {/* 5. Saved Locations */}
@@ -508,7 +782,7 @@ function AdminAnalysisInner() {
                   hint="Not tracked in DB"
                 />
               </div>
-              {viewModes.savedLocations === 'visual' ? (
+              {viewModes.savedLocations === 'visual' && (
                 <>
                   <SubsectionTitle>Saved locations by state</SubsectionTitle>
                   <AdminBarChart
@@ -517,42 +791,27 @@ function AdminAnalysisInner() {
                     nameKey="state"
                     emptyMessage="No saved locations in this period."
                   />
-                  <SubsectionTitle>Most saved locations</SubsectionTitle>
-                  <AdminBarChart
-                    data={(sl?.topLocations || []).map((row) => ({
-                      ...row,
-                      label: row.state
-                        ? `${row.location_name} (${row.state})`
-                        : row.location_name,
-                    }))}
-                    dataKey="save_count"
-                    nameKey="label"
-                    emptyMessage="No saved locations in this period."
-                  />
-                </>
-              ) : (
-                <>
-                  <SubsectionTitle>Most saved locations</SubsectionTitle>
-                  <DataTable
-                    columns={[
-                      { key: 'location_name', label: 'Location' },
-                      { key: 'state', label: 'State', render: (r) => r.state || '—' },
-                      {
-                        key: 'save_count',
-                        label: 'Saves',
-                        render: (r) => formatNumber(r.save_count),
-                      },
-                      {
-                        key: 'last_saved',
-                        label: 'Last saved',
-                        render: (r) => formatDate(r.last_saved),
-                      },
-                    ]}
-                    rows={sl?.topLocations || []}
-                    emptyMessage="No saved locations in this period."
-                  />
                 </>
               )}
+              <SubsectionTitle>Most saved locations</SubsectionTitle>
+              <DataTable
+                columns={[
+                  { key: 'location_name', label: 'Location' },
+                  { key: 'state', label: 'State', render: (r) => r.state || '—' },
+                  {
+                    key: 'save_count',
+                    label: 'Saves',
+                    render: (r) => formatNumber(r.save_count),
+                  },
+                  {
+                    key: 'last_saved',
+                    label: 'Last saved',
+                    render: (r) => formatDate(r.last_saved),
+                  },
+                ]}
+                rows={sl?.topLocations || []}
+                emptyMessage="No saved locations in this period."
+              />
             </section>
 
             {/* 6. Radar Engagement */}
@@ -565,6 +824,36 @@ function AdminAnalysisInner() {
               />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <StatCard label="Total radar opens" value={formatNumber(radar?.totalOpens)} />
+                <StatCard
+                  label="Avg opens / session"
+                  value={formatNumber(radar?.insights?.avgOpensPerSession)}
+                />
+                <StatCard
+                  label="Top state"
+                  value={
+                    radar?.insights?.topState
+                      ? formatRadarState({ state_code: radar.insights.topState.stateCode })
+                      : '—'
+                  }
+                  hint={
+                    radar?.insights?.topState
+                      ? `${formatNumber(radar.insights.topState.openCount)} opens`
+                      : undefined
+                  }
+                />
+                <StatCard
+                  label="Top radar location"
+                  value={
+                    radar?.insights?.topLocation
+                      ? formatRadarState({ state_code: radar.insights.topLocation.stateCode })
+                      : '—'
+                  }
+                  hint={
+                    radar?.insights?.topLocation
+                      ? `${formatNumber(radar.insights.topLocation.viewCount)} location changes`
+                      : undefined
+                  }
+                />
               </div>
               {viewModes.radarEngagement === 'visual' ? (
                 <>
@@ -584,15 +873,19 @@ function AdminAnalysisInner() {
                     formatLabel={formatRadarState}
                     emptyMessage="No radar location changes in this period."
                   />
-                  <SubsectionTitle>Radar type usage</SubsectionTitle>
-                  <AdminSplitChart
-                    segments={(radar?.topRadarTypes || []).map((row) => ({
-                      name: row.radar_type,
-                      value: row.event_count,
-                    }))}
-                    emptyMessage="No radar type changes in this period."
-                    height={200}
-                  />
+                  {radar?.insights?.showRadarTypes && (
+                    <>
+                      <SubsectionTitle>Radar type usage</SubsectionTitle>
+                      <AdminSplitChart
+                        segments={(radar?.topRadarTypes || []).map((row) => ({
+                          name: row.radar_type,
+                          value: row.event_count,
+                        }))}
+                        emptyMessage="No radar type changes in this period."
+                        height={200}
+                      />
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -613,19 +906,23 @@ function AdminAnalysisInner() {
                     rows={radar?.opensByState || []}
                     emptyMessage="No radar opens in this period."
                   />
-                  <SubsectionTitle>Most used radar types</SubsectionTitle>
-                  <DataTable
-                    columns={[
-                      { key: 'radar_type', label: 'Type' },
-                      {
-                        key: 'event_count',
-                        label: 'Events',
-                        render: (r) => formatNumber(r.event_count),
-                      },
-                    ]}
-                    rows={radar?.topRadarTypes || []}
-                    emptyMessage="No radar type changes in this period."
-                  />
+                  {radar?.insights?.showRadarTypes && (
+                    <>
+                      <SubsectionTitle>Most used radar types</SubsectionTitle>
+                      <DataTable
+                        columns={[
+                          { key: 'radar_type', label: 'Type' },
+                          {
+                            key: 'event_count',
+                            label: 'Events',
+                            render: (r) => formatNumber(r.event_count),
+                          },
+                        ]}
+                        rows={radar?.topRadarTypes || []}
+                        emptyMessage="No radar type changes in this period."
+                      />
+                    </>
+                  )}
                   <SubsectionTitle>Most viewed radar locations</SubsectionTitle>
                   <DataTable
                     columns={[
@@ -655,6 +952,28 @@ function AdminAnalysisInner() {
                 viewMode={viewModes.userJourneys}
                 onViewModeChange={(mode) => setViewMode('userJourneys', mode)}
               />
+              {journeys?.mainJourney && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  <StatCard
+                    label="Main journey conversion"
+                    value={formatPct(journeys.mainJourney.overallCompletionPct)}
+                    hint="Homepage → Save Location"
+                  />
+                  <StatCard
+                    label="Largest drop-off step"
+                    value={
+                      journeys.mainJourney.biggestDropOff
+                        ? formatEventName(journeys.mainJourney.biggestDropOff.eventName)
+                        : '—'
+                    }
+                    hint={
+                      journeys.mainJourney.biggestDropOff
+                        ? `${formatPct(journeys.mainJourney.biggestDropOff.dropoffPct)} lost`
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
               <div className="space-y-6 mb-8">
                 {Object.entries(journeys?.funnels || {}).map(([id, funnel]) => (
                   <FunnelCard
@@ -662,6 +981,7 @@ function AdminAnalysisInner() {
                     id={id}
                     funnel={funnel}
                     viewMode={viewModes.userJourneys}
+                    isMainJourney={id === 'alerts_to_save'}
                   />
                 ))}
               </div>
