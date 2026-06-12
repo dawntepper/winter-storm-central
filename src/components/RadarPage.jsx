@@ -299,10 +299,7 @@ export default function RadarPage() {
 
         {/* Check Location (collapsed on desktop) → radar map */}
         <section className="space-y-2">
-          <div
-            id="radar-location-search"
-            className="jump-scroll-target rounded-xl overflow-visible border border-[antiquewhite] bg-[#1a3d2e]"
-          >
+          <div id="radar-location-search" className="jump-scroll-target">
             <ZipCodeSearch
               variant="radar"
               collapseOnDesktop

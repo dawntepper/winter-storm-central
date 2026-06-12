@@ -980,20 +980,22 @@ export default function ZipCodeSearch({
     );
   }
 
+  const radarCardClass = 'rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 shadow-2xl';
   const accordionHeaderClass = isRadar
-    ? 'w-full px-3 py-2 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all'
+    ? 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-800 to-slate-800/80 hover:from-slate-700 hover:to-slate-700/80 transition-all'
     : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all';
   const accordionPanelClass = isRadar
-    ? 'px-4 py-3 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible'
+    ? 'px-4 py-3 bg-slate-900 border-t border-slate-700 overflow-visible'
     : 'px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible';
 
   return (
     <div className={isRadar ? 'space-y-2' : 'space-y-4'} ref={panelRef}>
-      <div className="rounded-lg border border-slate-600 shadow-lg">
+      <div className={isRadar ? radarCardClass : 'rounded-lg border border-slate-600 shadow-lg'}>
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`${accordionHeaderClass} ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+          className={`${accordionHeaderClass} ${isExpanded ? (isRadar ? '' : 'rounded-t-lg') : (isRadar ? '' : 'rounded-lg')}`}
+          aria-expanded={isExpanded}
         >
           <div className="flex items-center gap-2">
             <span className={isRadar ? 'text-xs' : 'text-sm'} role="img" aria-label="location">📍</span>

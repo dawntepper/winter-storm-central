@@ -139,8 +139,11 @@ export default function NearMeHeader({
     ? 'text-base sm:text-lg font-bold text-white'
     : 'text-xl sm:text-2xl font-bold text-white';
 
+  const radarActionClass =
+    'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap shrink-0';
+
   const contextLine = isRadar && locationContext ? (
-    <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+    <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
       {locationContext.alertInfo ? (
         <span className="text-orange-400 whitespace-nowrap">⚠️ {locationContext.alertInfo.event}</span>
       ) : locationContext.alertCount > 0 ? (
@@ -149,6 +152,18 @@ export default function NearMeHeader({
         </span>
       ) : (
         <span className="text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
+      )}
+      {!locationContext.alertInfo && locationContext.alertCount === 0 && stateSlug && (
+        <>
+          <span className="text-slate-600">·</span>
+          <Link
+            to={`/alerts/${stateSlug}`}
+            onClick={() => trackBrowseByStateClick({ stateCode: region, source: NAV_SOURCES.NEAR_ME_HEADER })}
+            className="text-slate-500 hover:text-slate-400 whitespace-nowrap transition-colors"
+          >
+            View state alerts →
+          </Link>
+        </>
       )}
       {locationContext.conditions?.temperature != null && (
         <>
@@ -162,42 +177,66 @@ export default function NearMeHeader({
     </p>
   ) : null;
 
+  const locationActionButton = showLocationAction ? (
+    <button
+      type="button"
+      onClick={handlePrimaryAction}
+      disabled={!useChangeLocation && gpsStatus === 'locating'}
+      aria-label={
+        useChangeLocation
+          ? 'Change your location'
+          : 'Find weather near me using your device location'
+      }
+      className={
+        isRadar
+          ? radarActionClass
+          : 'inline-flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap px-4 py-2.5 text-sm'
+      }
+    >
+      {!isRadar && <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>}
+      {primaryLabel}
+    </button>
+  ) : null;
+
+  const gpsStatusHints = showLocationAction && !useChangeLocation && (
+    <>
+      {gpsStatus === 'unsupported' && (
+        <span className="text-[11px] text-amber-400">Geolocation unavailable on this device.</span>
+      )}
+      {gpsStatus === 'error' && (
+        <span className="text-[11px] text-amber-400">Couldn&apos;t get your location — try again.</span>
+      )}
+    </>
+  );
+
   return (
     <div className={`${isRadar ? 'space-y-1' : 'space-y-2'} ${className}`}>
-      <div className={showLocationAction ? `flex flex-col gap-2 ${isRadar ? 'sm:gap-2' : 'sm:gap-3'} sm:flex-row sm:items-center sm:justify-between` : undefined}>
-        <div className="min-w-0">
-          <HeadingTag className={headingClassName || defaultHeadingClass}>
-            {heading}
-          </HeadingTag>
-          {contextLine}
-        </div>
-        {showLocationAction && (
-          <div className="flex flex-col items-stretch sm:items-end gap-0.5 flex-shrink-0">
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              disabled={!useChangeLocation && gpsStatus === 'locating'}
-              aria-label={
-                useChangeLocation
-                  ? 'Change your location'
-                  : 'Find weather near me using your device location'
-              }
-              className={`inline-flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap ${
-                isRadar ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
-              }`}
-            >
-              <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>
-              {primaryLabel}
-            </button>
-            {!useChangeLocation && gpsStatus === 'unsupported' && (
-              <span className="text-[11px] text-amber-400 sm:text-right">Geolocation unavailable on this device.</span>
-            )}
-            {!useChangeLocation && gpsStatus === 'error' && (
-              <span className="text-[11px] text-amber-400 sm:text-right">Couldn&apos;t get your location — try again.</span>
-            )}
+      {isRadar ? (
+        <div className="space-y-0.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+            <HeadingTag className={`${headingClassName || defaultHeadingClass} min-w-0`}>
+              {heading}
+            </HeadingTag>
+            {locationActionButton}
           </div>
-        )}
-      </div>
+          {contextLine}
+          {gpsStatusHints}
+        </div>
+      ) : (
+        <div className={showLocationAction ? 'flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined}>
+          <div className="min-w-0">
+            <HeadingTag className={headingClassName || defaultHeadingClass}>
+              {heading}
+            </HeadingTag>
+          </div>
+          {showLocationAction && (
+            <div className="flex flex-col items-stretch sm:items-end gap-0.5 flex-shrink-0">
+              {locationActionButton}
+              {gpsStatusHints}
+            </div>
+          )}
+        </div>
+      )}
 
       {hasJumpLinks && !isRadar && (
         <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
