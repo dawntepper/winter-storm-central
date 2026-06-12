@@ -11,10 +11,9 @@ import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
-import CheckAlertsNearYou from './CheckAlertsNearYou';
 import { setHomepageMetaTags } from '../data/homepageMeta';
-import { fetchCountyGeoJSON, fetchCountyHighlight } from '../services/geoLocationService';
-import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
+import { fetchCountyGeoJSON } from '../services/geoLocationService';
+import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
 import { trackRadarTypeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
@@ -147,10 +146,7 @@ export default function RadarPage() {
   const [searchParams] = useSearchParams();
 
   // Get alerts for the map
-  const {
-    alerts: alertsData,
-    loading: alertsLoading
-  } = useExtremeWeather(true);
+  const { alerts: alertsData } = useExtremeWeather(true);
 
   const mapAlerts = alertsData?.byCategory
     ? Object.values(alertsData.byCategory).flat()
@@ -168,13 +164,9 @@ export default function RadarPage() {
   const [gpsStateCode, setGpsStateCode] = useState(null);
   // "Your area" county polygon (GeoJSON Feature) once GPS coords resolve.
   const [userArea, setUserArea] = useState(null);
-  // Map focus from Check Alerts Near You county/city search.
-  const [searchFocus, setSearchFocus] = useState(null);
   const areaReqRef = useRef(0);
 
   const effectiveStateCode = gpsStateCode || heroLocation?.region || null;
-  const effectiveStateSlug = effectiveStateCode ? ABBR_TO_SLUG[effectiveStateCode] : null;
-  const effectiveStateName = effectiveStateCode ? STATE_NAMES[effectiveStateCode] : null;
 
   const focusCounty = useCallback((lat, lon) => {
     if (lat == null || lon == null) return;
@@ -193,7 +185,6 @@ export default function RadarPage() {
   }, []);
 
   const handleGpsLocate = useCallback((c) => {
-    setSearchFocus(null);
     setGpsCenter(c);
     focusCounty(c.lat, c.lon);
     scrollMapIntoView();
@@ -201,54 +192,12 @@ export default function RadarPage() {
 
   const handleSearchLocationClick = useCallback((locationData) => {
     if (locationData.lat == null || locationData.lon == null) return;
-    setSearchFocus(null);
     setGpsCenter({ lat: locationData.lat, lon: locationData.lon, zoom: 9, id: Date.now() });
     focusCounty(locationData.lat, locationData.lon);
     const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
     if (stateMatch) setGpsStateCode(stateMatch[1]);
     scrollMapIntoView();
   }, [focusCounty, scrollMapIntoView]);
-
-  const handleAlertsLocationFocus = useCallback(({ lat, lon, zoom = 8, county }) => {
-    const reqId = ++areaReqRef.current;
-    const interimLat = county?.lat ?? lat;
-    const interimLon = county?.lon ?? lon;
-
-    setSearchFocus({
-      centerOn:
-        interimLat != null && interimLon != null
-          ? { lat: interimLat, lon: interimLon, zoom, id: Date.now() }
-          : null,
-      highlightArea: null,
-    });
-
-    fetchCountyHighlight(county ?? { lat: interimLat, lon: interimLon }).then(
-      ({ feature, lat: cLat, lon: cLon }) => {
-        if (reqId !== areaReqRef.current) return;
-        setSearchFocus((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            ...(cLat != null && cLon != null
-              ? { centerOn: { lat: cLat, lon: cLon, zoom, id: Date.now() } }
-              : {}),
-            highlightArea: feature,
-          };
-        });
-      },
-    );
-
-    if (window.innerWidth < 1024) {
-      setTimeout(() => {
-        document.querySelector('#radar-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, []);
-
-  const handleAlertsClearFocus = useCallback(() => {
-    areaReqRef.current += 1;
-    setSearchFocus(null);
-  }, []);
 
   const handleChangeLocation = () => {
     window.dispatchEvent(new CustomEvent('checkLocationExpand'));
@@ -275,8 +224,8 @@ export default function RadarPage() {
     return { id: `radar-${lat}-${lon}`, lat, lon, zoom };
   }, [searchParams]);
 
-  const displayCenterOn = searchFocus?.centerOn ?? gpsCenter ?? centerOn;
-  const displayHighlightArea = searchFocus?.highlightArea ?? userArea;
+  const displayCenterOn = gpsCenter ?? centerOn;
+  const displayHighlightArea = userArea;
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -392,16 +341,12 @@ export default function RadarPage() {
                 selectedStateCode={effectiveStateCode}
                 highlightArea={displayHighlightArea}
                 onAreaClick={handleAreaClick}
-                onResetView={searchFocus ? handleAlertsClearFocus : undefined}
-                showResetView={Boolean(searchFocus)}
-                resetViewLabel="Clear Search"
-                resetViewTitle="Return to your location view"
                 resetToDefaultOnClick={false}
               />
             </div>
           </div>
 
-          {/* Right: location search + state-scoped alert lookup */}
+          {/* Right: Check Location */}
           <div className="flex flex-col gap-4 lg:gap-5">
             <div
               id="radar-location-search"
@@ -417,18 +362,6 @@ export default function RadarPage() {
                 onLocationResolved={setHeroLocation}
               />
             </div>
-
-            {effectiveStateCode && effectiveStateSlug && effectiveStateName && (
-              <CheckAlertsNearYou
-                stateCode={effectiveStateCode}
-                stateSlug={effectiveStateSlug}
-                stateName={effectiveStateName}
-                allAlerts={alertsData?.allAlerts || []}
-                alertsLoading={alertsLoading}
-                onLocationFocus={handleAlertsLocationFocus}
-                onClearFocus={handleAlertsClearFocus}
-              />
-            )}
           </div>
         </section>
 
