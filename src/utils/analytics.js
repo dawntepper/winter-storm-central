@@ -1330,6 +1330,7 @@ export function trackForecastCityClick({
   city,
   citySlug,
   sourcePage,
+  destination = 'city_alert_page',
 }) {
   const code = stateCode || SLUG_TO_ABBR[stateSlug] || null;
   const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_LINK_CLICK, {
@@ -1338,6 +1339,7 @@ export function trackForecastCityClick({
       source_page: sourcePage,
       destination_state: stateSlug,
       destination_type: 'city',
+      destination,
       city,
       city_slug: citySlug,
     },
@@ -1347,6 +1349,31 @@ export function trackForecastCityClick({
     state: code || stateSlug,
     city,
     source_page: sourcePage,
+    destination,
+  });
+}
+
+/**
+ * City weather page view — Plausible "City Weather Page View" +
+ * product_events.city_weather_page_view.
+ */
+export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts, source }) {
+  const resolvedSource = resolveSource(source);
+  const recorded = recordProductEvent(PRODUCT_EVENTS.CITY_WEATHER_PAGE_VIEW, {
+    stateCode,
+    metadata: {
+      city,
+      city_slug: citySlug,
+      has_alerts: Boolean(hasAlerts),
+      source: resolvedSource,
+    },
+  });
+  if (!recorded) return;
+  track('City Weather Page View', {
+    state: stateCode || 'unknown',
+    city: city || citySlug || 'unknown',
+    has_alerts: Boolean(hasAlerts) ? 'yes' : 'no',
+    source: resolvedSource,
   });
 }
 
@@ -1568,5 +1595,6 @@ export default {
   trackForecastLinkClick,
   trackForecastCityClick,
   trackForecastStateClick,
+  trackCityWeatherPageView,
   FORECAST_SOURCE_PAGES,
 };

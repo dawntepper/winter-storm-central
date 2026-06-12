@@ -22,7 +22,7 @@ import {
 import { getForecastForCoords } from '../services/forecastService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
-import { FORECAST_SOURCE_PAGES, trackForecastLinkClick } from '../utils/analytics';
+import { FORECAST_SOURCE_PAGES, trackForecastLinkClick, trackCityWeatherPageView } from '../utils/analytics';
 import { getForecastIcon } from '../utils/getForecastIcon';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
@@ -54,8 +54,8 @@ for (const c of citiesIndex.cities || []) {
 function setCityMetaTags(city) {
   const url = `${BASE_URL}/alerts/${city.slug}`;
   const st = city.state_abbr;
-  const title = `${city.city}, ${st} Weather Alerts — Live Warnings & Radar`;
-  const description = `Is ${city.city} under a weather warning right now? Live NWS alerts, current conditions, and radar for ${city.city}, ${st} — updated every few minutes.`;
+  const title = `${city.city} Weather Alerts & Forecast | StormTracking`;
+  const description = `Live ${city.city} weather alerts, radar, current conditions, hourly forecast, and 7-day outlook from NWS and NOAA.`;
   const ogImage = `${BASE_URL}/og-image.png`;
 
   document.title = title;
@@ -195,8 +195,8 @@ function buildJsonLd(city, conditions) {
   const webPage = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `${city.city}, ${st} Weather Alerts — Live Warnings & Radar`,
-    description: `Is ${city.city} under a weather warning right now? Live NWS alerts, current conditions, and radar for ${city.city}, ${st} — updated every few minutes.`,
+    name: `${city.city} Weather Alerts & Forecast | StormTracking`,
+    description: `Live ${city.city} weather alerts, radar, current conditions, hourly forecast, and 7-day outlook from NWS and NOAA.`,
     url,
     dateModified: now,
     mainEntity: {
@@ -542,33 +542,26 @@ function SeasonalRisk({ city, season }) {
 
 function RelatedLinks({ city }) {
   const radarUrl = `/radar?lat=${city.lat}&lon=${city.lon}`;
-  const cardClasses = 'group block bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
-  const arrow = (
-    <span
-      aria-hidden="true"
-      className="text-sky-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
-    >
-      &rarr;
-    </span>
-  );
+  const cardClasses = 'group flex items-center justify-between gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
+  const ctaClass = 'text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors';
 
   return (
     <section>
       <h2 className="text-lg font-semibold text-white mb-3">Related</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link to={radarUrl} className={cardClasses}>
-          <p className="text-sm font-medium text-white flex items-center justify-between gap-2">
-            <span>Live radar centered on {city.city}</span>
-            {arrow}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">Real-time precipitation and storm tracking</p>
+          <div>
+            <p className="text-sm font-medium text-white">Live radar for {city.city}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Real-time precipitation and storm tracking</p>
+          </div>
+          <span className={ctaClass} aria-hidden="true">Open →</span>
         </Link>
         <Link to={`/alerts/${city.state_slug}`} className={cardClasses}>
-          <p className="text-sm font-medium text-white flex items-center justify-between gap-2">
-            <span>All {city.state} weather alerts</span>
-            {arrow}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">Statewide active warnings and watches</p>
+          <div>
+            <p className="text-sm font-medium text-white">All {city.state} weather alerts</p>
+            <p className="text-xs text-slate-400 mt-0.5">Statewide active warnings and watches</p>
+          </div>
+          <span className={ctaClass} aria-hidden="true">View Alerts →</span>
         </Link>
       </div>
     </section>
@@ -595,9 +588,10 @@ function NearbyCities({ city }) {
             <Link
               key={entry.slug}
               to={`/alerts/${entry.slug}`}
-              className="px-3 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-sky-300 hover:text-sky-200 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-sky-300 hover:text-sky-200 transition-colors"
             >
               {entry.idx.city}, {entry.idx.state_abbr || entry.idx.state}
+              <span aria-hidden="true" className="text-xs font-semibold text-sky-400">View Alerts →</span>
             </Link>
           ))}
         </div>
@@ -718,6 +712,16 @@ export default function CityAlertsPage() {
   }, [city]);
 
   useEffect(() => {
+    if (!city || alerts === null) return;
+    trackCityWeatherPageView({
+      stateCode: city.state_abbr,
+      city: city.city,
+      citySlug: city.slug,
+      hasAlerts: Array.isArray(alerts) && alerts.length > 0,
+    });
+  }, [city, alerts]);
+
+  useEffect(() => {
     if (!city) return;
     let cancelled = false;
     setAlerts(null);
@@ -794,6 +798,12 @@ export default function CityAlertsPage() {
       {/* Main */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div>
+          <Link
+            to={`/alerts/${city.state_slug}`}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-sky-400 hover:text-sky-300 mb-3 transition-colors"
+          >
+            ← {city.state} Alerts
+          </Link>
           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
             <Link to="/alerts" className="hover:text-slate-300">Alerts</Link>
             {' › '}
@@ -802,7 +812,7 @@ export default function CityAlertsPage() {
             <span className="text-slate-400">{city.city}</span>
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-white">
-            {city.city}, {city.state} Weather Alerts &amp; Current Conditions
+            {city.city} Weather Alerts &amp; Forecast
           </h1>
           <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
             {city.description_short} Live National Weather Service warnings, current temperature and conditions, and a 4-day forecast for {city.county} County. {alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'} Data from the NWS and Open-Meteo. No ads, no clutter, no paywalls.

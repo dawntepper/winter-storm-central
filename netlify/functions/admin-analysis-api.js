@@ -1262,18 +1262,33 @@ async function fetchForecastEngagement(supabase, since) {
     .eq('event_name', 'state_alert_page_view');
   stateViewsQuery = applySince(stateViewsQuery, 'created_at', since);
 
-  const [clicksRes, stateViewsRes] = await Promise.all([clicksQuery, stateViewsQuery]);
+  let cityViewsQuery = supabase
+    .from('product_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'city_weather_page_view');
+  cityViewsQuery = applySince(cityViewsQuery, 'created_at', since);
+
+  const [clicksRes, stateViewsRes, cityViewsRes] = await Promise.all([
+    clicksQuery,
+    stateViewsQuery,
+    cityViewsQuery,
+  ]);
   if (clicksRes.error) throw clicksRes.error;
   if (stateViewsRes.error) throw stateViewsRes.error;
+  if (cityViewsRes.error) throw cityViewsRes.error;
 
   const clicks = clicksRes.data || [];
   const cityCounts = new Map();
   const stateClickCounts = new Map();
   let statePageClicks = 0;
+  let cityAlertPageClicks = 0;
 
   for (const row of clicks) {
     if (isStatePageForecastClick(row)) {
       statePageClicks += 1;
+    }
+    if (row.metadata?.destination === 'city_alert_page') {
+      cityAlertPageClicks += 1;
     }
     const stateKey = row.state_code || row.metadata?.destination_state || null;
     if (stateKey) {
@@ -1293,9 +1308,14 @@ async function fetchForecastEngagement(supabase, since) {
   }
 
   const statePageViews = stateViewsRes.count ?? 0;
+  const cityPageViews = cityViewsRes.count ?? 0;
   const statePageCtr =
     statePageViews > 0
       ? Math.round((statePageClicks / statePageViews) * 1000) / 10
+      : null;
+  const cityPageCtr =
+    cityPageViews > 0
+      ? Math.round((cityAlertPageClicks / cityPageViews) * 1000) / 10
       : null;
 
   const topCities = Array.from(cityCounts.values())
@@ -1312,6 +1332,9 @@ async function fetchForecastEngagement(supabase, since) {
     statePageClicks,
     statePageViews,
     statePageCtr,
+    cityAlertPageClicks,
+    cityPageViews,
+    cityPageCtr,
     topCities,
     clicksByState,
   };
@@ -1392,6 +1415,7 @@ const PAGE_VIEW_EVENTS = [
   'homepage_view',
   'state_alert_page_view',
   'forecast_view',
+  'city_weather_page_view',
   'county_alert_view',
   'radar_view',
 ];
@@ -1406,6 +1430,10 @@ function pageViewLabel(eventName, stateCode) {
         : 'State Alert Pages';
     case 'forecast_view':
       return 'Forecast';
+    case 'city_weather_page_view':
+      return stateCode && stateCode !== 'unknown'
+        ? `City Weather (${stateCode})`
+        : 'City Weather Pages';
     case 'county_alert_view':
       return 'County Alert Pages';
     case 'radar_view':
