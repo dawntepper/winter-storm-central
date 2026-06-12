@@ -1357,7 +1357,7 @@ export function trackForecastCityClick({
  * City weather page view — Plausible "City Weather Page View" +
  * product_events.city_weather_page_view.
  */
-export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts, source }) {
+export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts, hasForecastData, source }) {
   const resolvedSource = resolveSource(source);
   const recorded = recordProductEvent(PRODUCT_EVENTS.CITY_WEATHER_PAGE_VIEW, {
     stateCode,
@@ -1365,6 +1365,7 @@ export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts,
       city,
       city_slug: citySlug,
       has_alerts: Boolean(hasAlerts),
+      has_forecast_data: Boolean(hasForecastData),
       source: resolvedSource,
     },
   });
@@ -1373,6 +1374,7 @@ export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts,
     state: stateCode || 'unknown',
     city: city || citySlug || 'unknown',
     has_alerts: Boolean(hasAlerts) ? 'yes' : 'no',
+    has_forecast_data: Boolean(hasForecastData) ? 'yes' : 'no',
     source: resolvedSource,
   });
 }

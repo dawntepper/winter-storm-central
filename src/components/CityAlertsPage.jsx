@@ -16,14 +16,11 @@ import {
 } from '../../shared/nws-alert-parser';
 import {
   fetchOpenMeteoConditions,
-  describeWeatherCode,
-  degreesToCompass,
 } from '../utils/fetchOpenMeteoConditions';
-import { getForecastForCoords } from '../services/forecastService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
-import { ForecastHourly, ForecastDaily } from './ForecastSections';
-import { FORECAST_SOURCE_PAGES, trackForecastLinkClick, trackCityWeatherPageView } from '../utils/analytics';
-import { getForecastIcon } from '../utils/getForecastIcon';
+import { trackCityWeatherPageView } from '../utils/analytics';
+import CityCurrentConditions from './CityCurrentConditions';
+import CityForecastSection from './CityForecastSection';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
@@ -144,23 +141,6 @@ function currentSeason() {
   return 'fall';
 }
 
-function formatTemp(t) {
-  return typeof t === 'number' ? `${Math.round(t)}°` : '—';
-}
-
-function formatDateShort(iso) {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 function formatDateTime(iso) {
   if (!iso) return '';
   try {
@@ -257,99 +237,6 @@ function buildJsonLd(city, conditions) {
 // ============================================================
 // SUB-SECTIONS
 // ============================================================
-
-function CurrentConditions({ city, conditions, error }) {
-  if (error) {
-    return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
-        <p className="text-slate-400 text-sm">
-          Current conditions are temporarily unavailable. Active alerts below are still live from the National Weather Service.
-        </p>
-      </section>
-    );
-  }
-  if (!conditions) {
-    return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
-        <p className="text-slate-400 text-sm">Loading current conditions for {city.city}…</p>
-      </section>
-    );
-  }
-
-  const { current, daily, fetchedAt } = conditions;
-  const wx = describeWeatherCode(current.weatherCode);
-  const windDir = degreesToCompass(current.windDirection);
-
-  return (
-    <section className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-700/60 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
-          Current Conditions
-        </h2>
-        <span className="text-xs text-slate-500">
-          Updated {formatDateTime(fetchedAt)}
-        </span>
-      </div>
-
-      <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 flex items-center gap-4">
-          <span className="text-5xl" aria-hidden="true">{wx.icon}</span>
-          <div>
-            <p className="text-5xl font-bold text-white leading-none">
-              {formatTemp(current.temperature)}<span className="text-2xl text-slate-400">F</span>
-            </p>
-            <p className="text-sm text-slate-300 mt-1">{wx.label}</p>
-            {typeof current.apparentTemperature === 'number' && (
-              <p className="text-xs text-slate-500 mt-0.5">
-                Feels like {formatTemp(current.apparentTemperature)}F
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <Metric label="Humidity" value={typeof current.humidity === 'number' ? `${Math.round(current.humidity)}%` : '—'} />
-          <Metric label="Wind" value={typeof current.windSpeed === 'number' ? `${Math.round(current.windSpeed)} mph ${windDir}` : '—'} />
-          <Metric label="Gusts" value={typeof current.windGusts === 'number' ? `${Math.round(current.windGusts)} mph` : '—'} />
-          <Metric label="UV Index" value={typeof current.uvIndex === 'number' ? current.uvIndex.toFixed(1) : '—'} />
-        </div>
-      </div>
-
-      {daily && daily.length > 0 && (
-        <div className="px-5 pb-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
-            {daily.slice(0, 4).map((d, i) => {
-              const dw = describeWeatherCode(d.weatherCode);
-              return (
-                <div key={d.date || i} className="bg-slate-900/60 border border-slate-700/60 rounded-lg p-3 text-center">
-                  <p className="text-xs text-slate-400">{i === 0 ? 'Today' : formatDateShort(d.date)}</p>
-                  <p className="text-2xl my-1" aria-hidden="true">{dw.icon}</p>
-                  <p className="text-sm font-medium text-white">
-                    {formatTemp(d.tempMax)} <span className="text-slate-500">/ {formatTemp(d.tempMin)}</span>
-                  </p>
-                  {typeof d.precipChance === 'number' && (
-                    <p className="text-[11px] text-sky-400 mt-1">
-                      {Math.round(d.precipChance)}% precip
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
-      <p className="text-base font-semibold text-white mt-0.5">{value}</p>
-    </div>
-  );
-}
 
 function ActiveAlerts({ city, alerts, error }) {
   if (error) {
@@ -606,72 +493,6 @@ function NearbyCities({ city }) {
 }
 
 // ============================================================
-// Forecast section — NWS-based hourly + 7-day outlook for this city.
-// Lives alongside the existing Open-Meteo current-conditions widget.
-// Lazy fetches on mount; failures degrade silently (section just hides).
-// ============================================================
-
-function CityForecastSection({ city }) {
-  const [forecast, setForecast] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!city?.lat || !city?.lon) return;
-    let cancelled = false;
-    setLoading(true);
-    getForecastForCoords(city.lat, city.lon)
-      .then((data) => { if (!cancelled) setForecast(data); })
-      .catch(() => { /* hide section silently on failure */ })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [city?.lat, city?.lon]);
-
-  if (loading && !forecast) {
-    return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
-        <p className="text-sm text-slate-400">Loading forecast…</p>
-      </section>
-    );
-  }
-
-  if (!forecast) return null;
-
-  const forecastLinkIcon = getForecastIcon(forecast?.current?.shortForecast);
-
-  return (
-    <section className="space-y-4">
-      <ForecastHourly
-        periods={forecast.hourly}
-        timeZone={forecast.location?.timeZone}
-        title={`Next 24 hours · ${city.city}`}
-      />
-      <ForecastDaily periods={forecast.daily} title={`7-day outlook · ${city.city}`} />
-      <div className="text-center">
-        <Link
-          to={`/forecast/${city.state_slug}?city=${city.slug}`}
-          onClick={() =>
-            trackForecastLinkClick('city-page', city.state_slug, 'city', {
-              sourcePage: FORECAST_SOURCE_PAGES.CITY_PAGE,
-              city: city.city,
-              citySlug: city.slug,
-            })
-          }
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 text-sky-300 hover:text-sky-200 text-sm font-semibold rounded-lg transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-        >
-          {forecastLinkIcon ? (
-            <span aria-hidden="true" className="text-base">
-              {forecastLinkIcon}
-            </span>
-          ) : null}
-          View full forecast for {city.city}
-          <span aria-hidden="true">→</span>
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
 // MAIN
 // ============================================================
 
@@ -846,14 +667,20 @@ export default function CityAlertsPage() {
           />
         </section>
 
-        <CurrentConditions city={city} conditions={conditions} error={conditionsError} />
+        <CityCurrentConditions cityName={city.city} conditions={conditions} error={conditionsError} />
         {alertsError && (
           <ActiveAlerts city={city} alerts={alerts} error />
         )}
         {Array.isArray(alerts) && alerts.length > 0 && (
           <ActiveAlerts city={city} alerts={alerts} error={false} />
         )}
-        <CityForecastSection city={city} />
+        <CityForecastSection
+          cityName={city.city}
+          citySlug={city.slug}
+          stateSlug={city.state_slug}
+          lat={city.lat}
+          lon={city.lon}
+        />
         <RelatedLinks city={city} />
         <NearbyCities city={city} />
         <SeasonalRisk city={city} season={season} />
