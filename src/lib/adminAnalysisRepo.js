@@ -64,3 +64,48 @@ export async function fetchAdminAnalysis(dateRange = '7d') {
 
   return parseResponse(res);
 }
+
+async function postAdminAnalysis(body) {
+  const password = getAdminPassword();
+  if (!password) {
+    throw new Error('Admin password required — please log in again.');
+  }
+
+  let res;
+  try {
+    res = await fetch(ADMIN_ANALYSIS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, ...body }),
+    });
+  } catch (err) {
+    const hint = import.meta.env.DEV
+      ? ' Start the functions server with `netlify dev`.'
+      : '';
+    throw new Error(`Could not reach admin analysis API.${hint} (${err.message})`);
+  }
+
+  return parseResponse(res);
+}
+
+/**
+ * Generate AI morning brief for a period (server re-fetches aggregated stats).
+ * @param {'today'|'yesterday'|'7d'} period
+ */
+export async function fetchMorningBrief(period) {
+  return postAdminAnalysis({
+    action: 'morning-brief',
+    period,
+  });
+}
+
+/**
+ * Generate AI operations center analysis for a period.
+ * @param {'today'|'yesterday'|'7d'} period
+ */
+export async function fetchOperationsAnalysis(period) {
+  return postAdminAnalysis({
+    action: 'operations-center',
+    period,
+  });
+}

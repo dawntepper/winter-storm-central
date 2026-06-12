@@ -4,6 +4,14 @@
  */
 
 const { getSupabaseAdmin } = require('./lib/supabase-admin');
+const { callHaiku, parseHaikuJSON } = require('./lib/haiku-client');
+const {
+  buildAnalysisPayload,
+  MORNING_BRIEF_SYSTEM,
+  OPERATIONS_CENTER_SYSTEM,
+  buildMorningBriefPrompt,
+  buildOperationsCenterPrompt,
+} = require('./lib/analysis-ai-payload');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD;
 
@@ -34,12 +42,26 @@ function assertAdmin(password) {
   }
 }
 
+const PERIOD_LABELS = {
+  today: 'Today',
+  yesterday: 'Yesterday',
+  '7d': 'Last 7 Days',
+  '30d': 'Last 30 Days',
+  all: 'All Time',
+};
+
 function getSinceDate(dateRange) {
   const now = new Date();
   switch (dateRange) {
     case 'today': {
       const start = new Date(now);
       start.setHours(0, 0, 0, 0);
+      return start.toISOString();
+    }
+    case 'yesterday': {
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 1);
       return start.toISOString();
     }
     case '7d':
@@ -872,6 +894,137 @@ async function fetchSavedLocations(supabase, since) {
   };
 }
 
+async function fetchAllAnalytics(supabase, dateRange) {
+  const since = getSinceDate(dateRange);
+
+  const [
+    returningVisitors,
+    missingLocationSearches,
+    locationSearch,
+    locationSources,
+    countyAlertViews,
+    savedLocations,
+    radar,
+    userJourneys,
+  ] = await Promise.all([
+    fetchReturningVisitors(supabase, since),
+    fetchMissingLocationSearches(supabase, since),
+    fetchLocationSearchPerformance(supabase, since),
+    fetchLocationSources(supabase, since),
+    fetchCountyAlertViews(supabase, since),
+    fetchSavedLocations(supabase, since),
+    fetchRadarEngagement(supabase, since),
+    fetchUserJourneys(supabase, since),
+  ]);
+
+  const topInsights = generateTopInsights({
+    returningVisitors,
+    radar,
+    locationSearch,
+    savedLocations,
+    userJourneys,
+    missingLocationSearches,
+    countyAlertViews,
+  });
+
+  const recommendedActions = generateRecommendedActions({
+    missingLocationSearches,
+    userJourneys,
+    countyAlertViews,
+    savedLocations,
+    radar,
+    locationSearch,
+    returningVisitors,
+  });
+
+  return {
+    dateRange,
+    since,
+    topInsights,
+    recommendedActions,
+    returningVisitors,
+    missingLocationSearches,
+    locationSearch,
+    locationSources,
+    countyAlertViews,
+    savedLocations,
+    radar,
+    userJourneys,
+  };
+}
+
+async function generateMorningBrief(analytics, period) {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
+    throw new Error('Server is missing ANTHROPIC_API_KEY env var');
+  }
+
+  const periodLabel = PERIOD_LABELS[period] || period;
+  const payload = buildAnalysisPayload({
+    periodLabel,
+    ...analytics,
+  });
+
+  const haikuResult = await callHaiku({
+    systemPrompt: MORNING_BRIEF_SYSTEM,
+    userPrompt: buildMorningBriefPrompt(payload),
+    apiKey: anthropicKey,
+    maxTokens: 800,
+  });
+
+  const { parsed, parseError } = parseHaikuJSON(haikuResult.text);
+  if (!parsed) {
+    throw new Error(`Haiku returned unparseable JSON: ${parseError}`);
+  }
+
+  return {
+    brief: parsed,
+    generatedAt: new Date().toISOString(),
+    generatedBy: haikuResult.model,
+    usage: haikuResult.usage,
+  };
+}
+
+async function generateOperationsCenter(analytics, period, morningBrief) {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
+    throw new Error('Server is missing ANTHROPIC_API_KEY env var');
+  }
+
+  const periodLabel = PERIOD_LABELS[period] || period;
+  const payload = buildAnalysisPayload({
+    periodLabel,
+    morningBrief,
+    ...analytics,
+  });
+
+  const haikuResult = await callHaiku({
+    systemPrompt: OPERATIONS_CENTER_SYSTEM,
+    userPrompt: buildOperationsCenterPrompt(payload),
+    apiKey: anthropicKey,
+    maxTokens: 1500,
+  });
+
+  const { parsed, parseError } = parseHaikuJSON(haikuResult.text);
+  if (!parsed) {
+    throw new Error(`Haiku returned unparseable JSON: ${parseError}`);
+  }
+
+  return {
+    analysis: {
+      attention_needed: parsed.attention_needed || [],
+      opportunities: parsed.opportunities || [],
+      weather_drivers: parsed.weather_drivers || [],
+      retention_signals: parsed.retention_signals || [],
+      recommended_actions: (parsed.recommended_actions || []).slice(0, 3),
+      wins: parsed.wins || [],
+    },
+    generatedAt: new Date().toISOString(),
+    generatedBy: haikuResult.model,
+    usage: haikuResult.usage,
+  };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' };
@@ -889,64 +1042,26 @@ exports.handler = async (event) => {
       return jsonResponse(200, { ok: true });
     }
 
-    const dateRange = body.dateRange || '7d';
-    const since = getSinceDate(dateRange);
     const supabase = getSupabaseAdmin();
 
-    const [
-      returningVisitors,
-      missingLocationSearches,
-      locationSearch,
-      locationSources,
-      countyAlertViews,
-      savedLocations,
-      radar,
-      userJourneys,
-    ] = await Promise.all([
-      fetchReturningVisitors(supabase, since),
-      fetchMissingLocationSearches(supabase, since),
-      fetchLocationSearchPerformance(supabase, since),
-      fetchLocationSources(supabase, since),
-      fetchCountyAlertViews(supabase, since),
-      fetchSavedLocations(supabase, since),
-      fetchRadarEngagement(supabase, since),
-      fetchUserJourneys(supabase, since),
-    ]);
+    if (body.action === 'morning-brief') {
+      const period = body.period || '7d';
+      const analytics = await fetchAllAnalytics(supabase, period);
+      const result = await generateMorningBrief(analytics, period);
+      return jsonResponse(200, result);
+    }
 
-    const topInsights = generateTopInsights({
-      returningVisitors,
-      radar,
-      locationSearch,
-      savedLocations,
-      userJourneys,
-      missingLocationSearches,
-      countyAlertViews,
-    });
+    if (body.action === 'operations-center') {
+      const period = body.period || '7d';
+      const analytics = await fetchAllAnalytics(supabase, period);
+      const morningBrief = body.morningBrief || null;
+      const result = await generateOperationsCenter(analytics, period, morningBrief);
+      return jsonResponse(200, result);
+    }
 
-    const recommendedActions = generateRecommendedActions({
-      missingLocationSearches,
-      userJourneys,
-      countyAlertViews,
-      savedLocations,
-      radar,
-      locationSearch,
-      returningVisitors,
-    });
-
-    return jsonResponse(200, {
-      dateRange,
-      since,
-      topInsights,
-      recommendedActions,
-      returningVisitors,
-      missingLocationSearches,
-      locationSearch,
-      locationSources,
-      countyAlertViews,
-      savedLocations,
-      radar,
-      userJourneys,
-    });
+    const dateRange = body.dateRange || '7d';
+    const analytics = await fetchAllAnalytics(supabase, dateRange);
+    return jsonResponse(200, analytics);
   } catch (err) {
     console.error('admin-analysis-api error:', err);
     const status = err.statusCode || 500;

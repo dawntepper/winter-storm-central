@@ -1,12 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AdminGate from '../components/AdminGate';
+import AdminAnalysisNav, { ANALYSIS_SECTIONS } from '../components/admin/AdminAnalysisNav';
 import AdminBarChart from '../components/admin/AdminBarChart';
 import AdminChartToggle from '../components/admin/AdminChartToggle';
 import AdminDualLineChart from '../components/admin/AdminDualLineChart';
 import AdminFunnel from '../components/admin/AdminFunnel';
 import AdminLineChart from '../components/admin/AdminLineChart';
 import AdminSplitChart from '../components/admin/AdminSplitChart';
+import CollapsibleAnalysisSection, {
+  readSectionExpandedState,
+  writeSectionExpandedState,
+} from '../components/admin/CollapsibleAnalysisSection';
+import MorningBriefCard from '../components/admin/MorningBriefCard';
+import OperationsCenter from '../components/admin/OperationsCenter';
 import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
 
 const DATE_RANGES = [
@@ -158,7 +165,7 @@ function TrendIndicator({ trend }) {
 function TopInsightsCard({ insights }) {
   if (!insights?.length) return null;
   return (
-    <section className="bg-gradient-to-br from-sky-950/50 to-slate-800 border border-sky-700/40 rounded-xl p-5 sm:p-6">
+    <div className="bg-gradient-to-br from-sky-950/50 to-slate-800 border border-sky-700/40 rounded-xl p-5 sm:p-6">
       <h2 className="text-xl font-bold text-white mb-1">Top Insights</h2>
       <p className="text-sm text-slate-400 mb-5">
         Key metrics from your selected date range.
@@ -179,42 +186,14 @@ function TopInsightsCard({ insights }) {
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-function RecommendedActionsCard({ actions }) {
-  if (!actions?.length) return null;
-  const priorityStyles = {
-    high: 'border-amber-600/50 bg-amber-950/20',
-    medium: 'border-sky-700/50 bg-sky-950/20',
-    low: 'border-slate-700 bg-slate-900/40',
-  };
-  return (
-    <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-      <h2 className="text-xl font-bold text-white mb-1">Recommended Actions</h2>
-      <p className="text-sm text-slate-400 mb-5">
-        Data-driven suggestions to improve the product.
-      </p>
-      <div className="space-y-3">
-        {actions.map((action) => (
-          <div
-            key={action.id}
-            className={`rounded-lg border p-4 ${priorityStyles[action.priority] || priorityStyles.low}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">{action.title}</h3>
-              {action.priority === 'high' && (
-                <span className="shrink-0 text-[10px] uppercase tracking-wide font-semibold text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
-                  High
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-300 mt-1.5">{action.description}</p>
-          </div>
-        ))}
-      </div>
-    </section>
+function buildDefaultSectionState() {
+  const saved = readSectionExpandedState();
+  return Object.fromEntries(
+    ANALYSIS_SECTIONS.map((s) => [s.id, saved[s.id] ?? true])
   );
 }
 
@@ -360,9 +339,30 @@ function AdminAnalysisInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewModes, setViewModes] = useState(DEFAULT_VIEW_MODES);
+  const [sectionsExpanded, setSectionsExpanded] = useState(buildDefaultSectionState);
 
   const setViewMode = (section, mode) => {
     setViewModes((prev) => ({ ...prev, [section]: mode }));
+  };
+
+  const toggleSection = (id) => {
+    setSectionsExpanded((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      writeSectionExpandedState(next);
+      return next;
+    });
+  };
+
+  const collapseAllSections = () => {
+    const next = Object.fromEntries(ANALYSIS_SECTIONS.map((s) => [s.id, false]));
+    setSectionsExpanded(next);
+    writeSectionExpandedState(next);
+  };
+
+  const expandAllSections = () => {
+    const next = Object.fromEntries(ANALYSIS_SECTIONS.map((s) => [s.id, true]));
+    setSectionsExpanded(next);
+    writeSectionExpandedState(next);
   };
 
   const load = useCallback(async (range) => {
@@ -396,8 +396,11 @@ function AdminAnalysisInner() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800 border-b border-slate-700 px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+      <header
+        id="admin-analysis-header"
+        className="bg-slate-800 border-b border-slate-700 px-4 py-3"
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/admin" className="text-slate-400 hover:text-white text-sm">
               ← Admin
@@ -412,7 +415,14 @@ function AdminAnalysisInner() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8 sm:py-10 space-y-8">
+      {data && (
+        <AdminAnalysisNav
+          onCollapseAll={collapseAllSections}
+          onExpandAll={expandAllSections}
+        />
+      )}
+
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:py-10 space-y-8">
         {error && (
           <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
             {error}
@@ -432,17 +442,47 @@ function AdminAnalysisInner() {
 
         {data && (
           <>
-            <TopInsightsCard insights={data.topInsights} />
-            <RecommendedActionsCard actions={data.recommendedActions} />
-
-            {/* Returning Visitors */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <SectionHeader
-                title="Returning Visitors"
-                description="Session data from visitor_sessions. Date filter applies to session created_at."
-                viewMode={viewModes.returningVisitors}
-                onViewModeChange={(mode) => setViewMode('returningVisitors', mode)}
+            <CollapsibleAnalysisSection
+              id="overview"
+              title="Overview"
+              description="Morning brief, operations center, and top insights for the selected period."
+              expanded={sectionsExpanded.overview}
+              onToggle={() => toggleSection('overview')}
+              className="bg-slate-800/80 border border-slate-700"
+            >
+              <OperationsCenter
+                dashboardDateRange={dateRange}
+                variant="mobile-accordion"
               />
+              <div className="mt-6 lg:grid lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-6 items-start">
+                <div className="space-y-6 min-w-0">
+                  <MorningBriefCard dateRange={dateRange} />
+                  <TopInsightsCard insights={data.topInsights} />
+                </div>
+                <div className="hidden lg:block">
+                  <div className="sticky top-14">
+                    <OperationsCenter
+                      dashboardDateRange={dateRange}
+                      variant="sidebar"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CollapsibleAnalysisSection>
+
+            <CollapsibleAnalysisSection
+              id="returning-visitors"
+              title="Returning Visitors"
+              description="Session data from visitor_sessions. Date filter applies to session created_at."
+              expanded={sectionsExpanded['returning-visitors']}
+              onToggle={() => toggleSection('returning-visitors')}
+              headerExtra={
+                <AdminChartToggle
+                  value={viewModes.returningVisitors}
+                  onChange={(mode) => setViewMode('returningVisitors', mode)}
+                />
+              }
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
                 <StatCard label="Total sessions" value={formatNumber(rv?.totalSessions)} />
                 <StatCard label="Unique visitors" value={formatNumber(rv?.uniqueVisitors)} />
@@ -501,26 +541,32 @@ function AdminAnalysisInner() {
                   emptyMessage="No visitor sessions in this period."
                 />
               )}
-            </section>
+            </CollapsibleAnalysisSection>
 
-            {/* Missing Location Searches */}
-            <section
-              className={`rounded-xl p-5 sm:p-6 border ${
-                hasMissingSearches
-                  ? 'bg-amber-950/20 border-amber-600/50'
-                  : 'bg-slate-800 border-slate-700'
-              }`}
+            <CollapsibleAnalysisSection
+              id="location-searches"
+              title="Location Searches"
+              description="Missing searches, search performance, and location source breakdown."
+              expanded={sectionsExpanded['location-searches']}
+              onToggle={() => toggleSection('location-searches')}
             >
+              <div
+                className={`rounded-xl p-5 sm:p-6 border mb-6 ${
+                  hasMissingSearches
+                    ? 'bg-amber-950/20 border-amber-600/50'
+                    : 'bg-slate-900/60 border-slate-700'
+                }`}
+              >
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
                     Missing Location Searches
                     {hasMissingSearches && (
                       <span className="text-xs font-semibold uppercase tracking-wide text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
                         Action needed
                       </span>
                     )}
-                  </h2>
+                  </h3>
                   <p className="text-sm text-slate-400">
                     Failed searches from missing_location_searches (all time) or location_search_events (date filter).
                   </p>
@@ -574,10 +620,9 @@ function AdminAnalysisInner() {
                   emptyMessage="No failed location searches in this period."
                 />
               </ExpandableBlock>
-            </section>
+              </div>
 
-            {/* 3. Location Search Performance */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
+              <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6 mb-6">
               <SectionHeader
                 title="Location Search Performance"
                 description="Success rate and top searched locations."
@@ -683,23 +728,24 @@ function AdminAnalysisInner() {
                   />
                 </>
               )}
-            </section>
+              </div>
 
-            {/* 3b. Location Sources */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Location Sources</h2>
+              <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6">
+              <h3 className="text-lg font-bold text-white mb-1">Location Sources</h3>
               <p className="text-sm text-slate-400 mb-5">
                 How users change location — successful events from location_search_events by resolved type.
               </p>
               <LocationSourcesCard sources={locationSources} />
-            </section>
+              </div>
+            </CollapsibleAnalysisSection>
 
-            {/* County Alert Views */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">County Alert Views</h2>
-              <p className="text-sm text-slate-400 mb-5">
-                Counties ranked by alert page views from county_alert_views (paired with county_alert_view product events).
-              </p>
+            <CollapsibleAnalysisSection
+              id="county-alert-views"
+              title="County Alert Views"
+              description="Counties ranked by alert page views from county_alert_views (paired with county_alert_view product events)."
+              expanded={sectionsExpanded['county-alert-views']}
+              onToggle={() => toggleSection('county-alert-views')}
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 <StatCard label="Total county views" value={formatNumber(countyViews?.totalViews)} />
               </div>
@@ -763,16 +809,21 @@ function AdminAnalysisInner() {
                   />
                 </div>
               </div>
-            </section>
+            </CollapsibleAnalysisSection>
 
-            {/* 5. Saved Locations */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <SectionHeader
-                title="Saved Locations"
-                description="Signed-in user saves from user_locations. Anonymous localStorage saves are not in Supabase."
-                viewMode={viewModes.savedLocations}
-                onViewModeChange={(mode) => setViewMode('savedLocations', mode)}
-              />
+            <CollapsibleAnalysisSection
+              id="saved-locations"
+              title="Saved Locations"
+              description="Signed-in user saves from user_locations. Anonymous localStorage saves are not in Supabase."
+              expanded={sectionsExpanded['saved-locations']}
+              onToggle={() => toggleSection('saved-locations')}
+              headerExtra={
+                <AdminChartToggle
+                  value={viewModes.savedLocations}
+                  onChange={(mode) => setViewMode('savedLocations', mode)}
+                />
+              }
+            >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 <StatCard label="Total saves" value={formatNumber(sl?.totalSaved)} />
                 <StatCard label="Signed-in users" value={formatNumber(sl?.signedInUsers)} />
@@ -812,16 +863,21 @@ function AdminAnalysisInner() {
                 rows={sl?.topLocations || []}
                 emptyMessage="No saved locations in this period."
               />
-            </section>
+            </CollapsibleAnalysisSection>
 
-            {/* 6. Radar Engagement */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <SectionHeader
-                title="Radar Engagement"
-                description="Radar opens, types, and location views from radar_events."
-                viewMode={viewModes.radarEngagement}
-                onViewModeChange={(mode) => setViewMode('radarEngagement', mode)}
-              />
+            <CollapsibleAnalysisSection
+              id="radar-engagement"
+              title="Radar Engagement"
+              description="Radar opens, types, and location views from radar_events."
+              expanded={sectionsExpanded['radar-engagement']}
+              onToggle={() => toggleSection('radar-engagement')}
+              headerExtra={
+                <AdminChartToggle
+                  value={viewModes.radarEngagement}
+                  onChange={(mode) => setViewMode('radarEngagement', mode)}
+                />
+              }
+            >
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <StatCard label="Total radar opens" value={formatNumber(radar?.totalOpens)} />
                 <StatCard
@@ -942,16 +998,21 @@ function AdminAnalysisInner() {
                   />
                 </>
               )}
-            </section>
+            </CollapsibleAnalysisSection>
 
-            {/* 7. User Journeys */}
-            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <SectionHeader
-                title="User Journeys"
-                description="Sequential funnels and top paths from product_events."
-                viewMode={viewModes.userJourneys}
-                onViewModeChange={(mode) => setViewMode('userJourneys', mode)}
-              />
+            <CollapsibleAnalysisSection
+              id="user-journeys"
+              title="User Journeys"
+              description="Sequential funnels and top paths from product_events."
+              expanded={sectionsExpanded['user-journeys']}
+              onToggle={() => toggleSection('user-journeys')}
+              headerExtra={
+                <AdminChartToggle
+                  value={viewModes.userJourneys}
+                  onChange={(mode) => setViewMode('userJourneys', mode)}
+                />
+              }
+            >
               {journeys?.mainJourney && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                   <StatCard
@@ -1006,7 +1067,7 @@ function AdminAnalysisInner() {
                 rows={journeys?.topPaths || []}
                 emptyMessage="No journey paths in this period."
               />
-            </section>
+            </CollapsibleAnalysisSection>
           </>
         )}
       </main>
