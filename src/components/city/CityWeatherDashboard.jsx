@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import PageBackNav from '../PageBackNav';
-import CityAlertStatusCard from './CityAlertStatusCard';
-import CitySaveLocationToggle from './CitySaveLocationToggle';
+import CityCompactHero from './CityCompactHero';
 import CityActiveAlertBanner from './CityActiveAlertBanner';
 import CityAlertsSectionDefault from './CityAlertsSection';
 import { sortAlertsBySeverity } from '../../utils/alertRanking';
+import { trackForecastCityClick } from '../../utils/analytics';
 
 const cardClasses = 'group flex items-center justify-between gap-3 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
 const ctaClass = 'text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors';
@@ -39,25 +39,45 @@ export function CityRelatedLinks({ cityName, lat, lon, stateSlug, stateLabel }) 
   );
 }
 
-export function CityNearbyLinks({ title, cities }) {
+export function CityNearbyLinks({ title = 'Nearby Forecasts', cities, stateCode, stateSlug }) {
   if (!cities || cities.length === 0) return null;
+
+  const linked = cities.filter((c) => c.href);
+  if (linked.length === 0) return null;
+
+  const handleClick = (entry) => {
+    trackForecastCityClick({
+      stateCode: entry.stateCode || stateCode,
+      stateSlug: entry.stateSlug || stateSlug,
+      city: entry.cityName || entry.label,
+      citySlug: entry.slug,
+      sourcePage: 'nearby_forecasts',
+      destination: 'city_alert_page',
+    });
+  };
+
   return (
-    <section aria-label="Nearby cities">
+    <section aria-label="Nearby forecasts">
       <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
         {title}
       </h2>
-      <div className="flex flex-wrap gap-2">
-        {cities.filter((c) => c.href).map((entry) => (
-          <Link
-            key={entry.slug || entry.id}
-            to={entry.href}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 rounded-full text-sky-300 hover:text-sky-200 transition-colors"
-          >
-            {entry.label}
-            <span aria-hidden="true" className="text-xs font-semibold text-sky-400">View Alerts →</span>
-          </Link>
+      <p className="text-sm flex flex-wrap items-center gap-x-1 gap-y-1">
+        {linked.map((entry, i) => (
+          <span key={entry.slug || entry.id} className="inline-flex items-center">
+            {i > 0 && (
+              <span className="text-slate-500 mx-1" aria-hidden="true">→</span>
+            )}
+            <Link
+              to={entry.href}
+              onClick={() => handleClick(entry)}
+              className="text-sky-300 hover:text-sky-200 font-medium transition-colors"
+            >
+              {entry.label}
+            </Link>
+          </span>
         ))}
-      </div>
+        <span className="text-slate-500 ml-1" aria-hidden="true">→</span>
+      </p>
       {cities.some((c) => c.comingSoon) && (
         <p className="text-xs text-slate-500 mt-2">
           More coming soon: {cities.filter((c) => c.comingSoon).map((c) => c.label).join(' • ')}
@@ -137,36 +157,32 @@ export function CitySeasonalRisk({ description, seasonalRisks, season }) {
 }
 
 /**
- * ForecastPage-inspired layout shell for city alert dashboards.
- * Section order: hero → alert summary → radar → forecast → full NWS text → related.
+ * ForecastPage-inspired layout for city weather pages.
+ * Order: hero → alert banner → radar → right now → forecast → nearby → active alerts → related.
  */
 export default function CityWeatherDashboard({
   jsonLdBlocks = [],
   headerNav,
   stateBackLink,
   breadcrumb,
-  title,
-  subtitle,
   cityName,
   lat,
   lon,
   citySlug,
   stateCode,
+  stateSlug,
   alerts,
   alertsLoading = false,
   alertsError = false,
-  lastUpdated,
-  currentConditions,
   rightNow,
   radar,
   forecast,
+  nearby,
   alertsSection,
   related,
-  nearby,
   seasonal,
   footer,
   signupBar,
-  alertsSignupHint = false,
 }) {
   const sortedAlerts = useMemo(
     () => (Array.isArray(alerts) ? sortAlertsBySeverity(alerts) : alerts),
@@ -198,44 +214,21 @@ export default function CityWeatherDashboard({
         </div>
       </header>
 
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
-        <div className="max-w-5xl mx-auto">
-          {stateBackLink}
-          {breadcrumb}
-          <h1 className="text-xl sm:text-2xl font-bold text-white">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
-          )}
-        </div>
-      </div>
-
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-              <CityAlertStatusCard
-                cityName={cityName}
-                alerts={sortedAlerts}
-                loading={alertsLoading}
-                error={alertsError}
-                lastUpdated={lastUpdated}
-                compact={!hasAlerts}
-                lat={lat}
-                lon={lon}
-              />
-              <CitySaveLocationToggle
-                locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
-                lat={lat}
-                lon={lon}
-                citySlug={citySlug}
-                stateCode={stateCode}
-                variant="inline"
-              />
-            </div>
-            {currentConditions}
+        {(stateBackLink || breadcrumb) && (
+          <div>
+            {stateBackLink}
+            {breadcrumb}
           </div>
-          {rightNow}
-        </div>
+        )}
+
+        <CityCompactHero
+          cityName={cityName}
+          stateCode={stateCode}
+          lat={lat}
+          lon={lon}
+          citySlug={citySlug}
+        />
 
         <CityActiveAlertBanner
           alerts={sortedAlerts}
@@ -243,22 +236,25 @@ export default function CityWeatherDashboard({
         />
 
         {radar}
+
+        {rightNow}
+
         {forecast}
-        <div id="city-active-alerts">
-          {alertsSection ?? (hasAlerts ? (
-            <CityAlertsSectionDefault
-              cityName={cityName}
-              alerts={sortedAlerts}
-              loading={alertsLoading}
-              error={alertsError}
-              lat={lat}
-              lon={lon}
-              signupHint={alertsSignupHint}
-            />
-          ) : null)}
-        </div>
-        {related}
+
         {nearby}
+
+        {alertsSection ?? (hasAlerts ? (
+          <CityAlertsSectionDefault
+            cityName={cityName}
+            alerts={sortedAlerts}
+            loading={alertsLoading}
+            error={alertsError}
+            lat={lat}
+            lon={lon}
+          />
+        ) : null)}
+
+        {related}
         {seasonal}
         {footer}
       </main>
@@ -268,5 +264,4 @@ export default function CityWeatherDashboard({
   );
 }
 
-// Re-export for convenience when pages need custom alerts section
 export { default as CityAlertsSection } from './CityAlertsSection';

@@ -189,8 +189,12 @@ export default function CatalogCityAlertsPage() {
 
   const siblingLinks = siblingCities.slice(0, 8).map((c) => ({
     id: c.id,
+    slug: c.slug,
     href: cityAlertsPath(c.slug, RICH_CITY_SLUGS.has(c.slug)),
     label: c.name,
+    cityName: c.name,
+    stateCode: city.stateCode,
+    stateSlug,
   }));
 
   return (
@@ -204,11 +208,8 @@ export default function CatalogCityAlertsPage() {
           ← {stateLabel} Alerts
         </Link>
       ) : null}
-      title={`${city.name} Weather Alerts & Forecast`}
-      subtitle={county
-        ? `${county.name} County · NWS county-level warnings. ${alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'} Current conditions, hourly forecast, and 7-day outlook from NWS and NOAA.`
-        : `Live National Weather Service warnings and forecast for ${city.name}, ${stateLabel}. ${alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'}`}
       cityName={city.name}
+      stateSlug={stateSlug}
       lat={city.lat}
       lon={city.lon}
       citySlug={city.slug}
@@ -288,8 +289,10 @@ export default function CatalogCityAlertsPage() {
       )}
       nearby={siblingCities.length > 0 && county ? (
         <CityNearbyLinks
-          title={`Nearby cities in ${county.name} County`}
+          title="Nearby Forecasts"
           cities={siblingLinks}
+          stateCode={city.stateCode}
+          stateSlug={stateSlug}
         />
       ) : null}
       footer={(

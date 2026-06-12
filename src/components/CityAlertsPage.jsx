@@ -286,7 +286,10 @@ export default function CityAlertsPage() {
         return {
           slug: nearbySlug,
           href: `/alerts/${nearbySlug}`,
-          label: `${idx.city}, ${idx.state_abbr || idx.state}`,
+          label: idx.city,
+          cityName: idx.city,
+          stateCode: idx.state_abbr,
+          stateSlug: idx.state_slug,
         };
       }
       return {
@@ -329,9 +332,8 @@ export default function CityAlertsPage() {
           <span className="text-slate-400">{city.city}</span>
         </p>
       )}
-      title={`${city.city} Weather Alerts & Forecast`}
-      subtitle={`${city.description_short} Live NWS warnings, current conditions, hourly outlook, and 7-day forecast for ${city.county} County. ${alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'}`}
       cityName={city.city}
+      stateSlug={city.state_slug}
       lat={city.lat}
       lon={city.lon}
       citySlug={city.slug}
@@ -339,7 +341,6 @@ export default function CityAlertsPage() {
       alerts={alerts}
       alertsLoading={alerts === null && !alertsError}
       alertsError={alertsError}
-      alertsSignupHint
       rightNow={(
         <CityRightNowCard
           lat={city.lat}
@@ -399,8 +400,10 @@ export default function CityAlertsPage() {
       )}
       nearby={(
         <CityNearbyLinks
-          title="Weather alerts in nearby cities"
+          title="Nearby Forecasts"
           cities={nearbyLinks}
+          stateCode={city.state_abbr}
+          stateSlug={city.state_slug}
         />
       )}
       seasonal={(

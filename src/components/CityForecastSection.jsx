@@ -108,7 +108,7 @@ export default function CityForecastSection({
         <ForecastDaily periods={forecast.daily} title={`7-day outlook · ${cityName}`} />
       </div>
       {stateSlug && citySlug && (
-        <div className="text-center">
+        <p className="text-center">
           <Link
             to={`/forecast/${stateSlug}?city=${citySlug}`}
             onClick={() =>
@@ -118,17 +118,17 @@ export default function CityForecastSection({
                 citySlug,
               })
             }
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 text-sky-300 hover:text-sky-200 text-sm font-semibold rounded-lg transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-400 hover:text-sky-300 transition-colors"
           >
             {forecastLinkIcon ? (
               <span aria-hidden="true" className="text-base">
                 {forecastLinkIcon}
               </span>
             ) : null}
-            View full forecast for {cityName}
+            NWS Forecast Details
             <span aria-hidden="true">→</span>
           </Link>
-        </div>
+        </p>
       )}
     </section>
   );

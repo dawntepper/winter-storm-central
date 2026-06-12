@@ -96,7 +96,8 @@ function AlertTextCard({ alert, isPrimary = false }) {
 }
 
 /**
- * Collapsed full NWS alert text — secondary to the top Active Alert Summary.
+ * Collapsed active alerts section — secondary to hero/banner summary.
+ * No duplicate alert copy; expands to full NWS text on demand.
  */
 export default function CityAlertsSection({
   cityName,
@@ -110,9 +111,9 @@ export default function CityAlertsSection({
 
   if (error) {
     return (
-      <section aria-label="Full NWS alert text">
+      <section aria-label="Active alerts">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-          Full NWS Alert Text
+          Active Alerts
         </h2>
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-sm text-amber-200">
           NWS alert data is temporarily unavailable. Please refresh, or check{' '}
@@ -138,9 +139,9 @@ export default function CityAlertsSection({
 
   if (loading || alerts === null) {
     return (
-      <section aria-label="Full NWS alert text">
+      <section aria-label="Active alerts">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-          Full NWS Alert Text
+          Active Alerts
         </h2>
         <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
           <p className="text-slate-400 text-sm">Loading alerts for {cityName}…</p>
@@ -153,28 +154,38 @@ export default function CityAlertsSection({
     return null;
   }
 
+  const topAlert = alerts[0];
+  const topCategory = ALERT_CATEGORIES[topAlert.category];
+
   return (
-    <section aria-label="Full NWS alert text">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3">
+    <section aria-label="Active alerts" id="city-active-alerts">
+      <button
+        type="button"
+        data-alert-section-toggle
+        onClick={() => setSectionOpen((v) => !v)}
+        className="w-full flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-left group"
+        aria-expanded={sectionOpen}
+      >
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-          Full NWS Alert Text
-          {alerts.length > 1 && (
-            <span className="text-slate-500 font-normal normal-case tracking-normal ml-1.5">
-              ({alerts.length} alerts)
-            </span>
-          )}
+          Active Alerts ({alerts.length})
         </h2>
-        <button
-          type="button"
-          onClick={() => setSectionOpen((v) => !v)}
-          className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer"
-          aria-expanded={sectionOpen}
-        >
-          {sectionOpen ? 'Hide full NWS message' : 'View full NWS message'} {sectionOpen ? '▴' : '▾'}
-        </button>
-      </div>
+        <span className="text-xs text-sky-400 group-hover:text-sky-300">
+          {sectionOpen ? 'Hide full NWS message ▴' : 'View Full NWS Message →'}
+        </span>
+      </button>
+
+      {!sectionOpen && topAlert && (
+        <p className="mt-2 text-sm text-slate-300 flex items-center gap-2">
+          {topCategory && <span aria-hidden="true">{topCategory.icon}</span>}
+          <span>{topAlert.event}</span>
+          {alerts.length > 1 && (
+            <span className="text-slate-500">+{alerts.length - 1} more</span>
+          )}
+        </p>
+      )}
+
       {sectionOpen && (
-        <div className="space-y-3">
+        <div className="mt-3 space-y-3">
           {alerts.map((alert, index) => (
             <AlertTextCard key={alert.id} alert={alert} isPrimary={index === 0} />
           ))}
