@@ -182,21 +182,73 @@ export function extractStateCode(alert) {
 }
 
 /**
+ * Compute centroid from a GeoJSON ring ([lon, lat] pairs).
+ */
+function ringCentroid(ring) {
+  if (!ring?.length) return null;
+  const lats = ring.map((c) => c[1]);
+  const lons = ring.map((c) => c[0]);
+  return {
+    lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+    lon: lons.reduce((a, b) => a + b, 0) / lons.length,
+  };
+}
+
+/**
  * Extract coordinates from alert polygon geometry (centroid).
  * Returns { lat, lon } or null if no polygon geometry exists.
  * This is the basic extraction — the client-side adds FIPS/centroid fallbacks.
  */
 export function extractGeometryCoordinates(alert) {
-  if (alert.geometry?.type === 'Polygon' && alert.geometry?.coordinates?.[0]) {
-    const coords = alert.geometry.coordinates[0];
-    const lats = coords.map((c) => c[1]);
-    const lons = coords.map((c) => c[0]);
+  const geometry = alert.geometry;
+  if (!geometry?.coordinates) return null;
+
+  if (geometry.type === 'Polygon' && geometry.coordinates[0]) {
+    return ringCentroid(geometry.coordinates[0]);
+  }
+
+  if (geometry.type === 'MultiPolygon' && geometry.coordinates.length > 0) {
+    const centroids = geometry.coordinates
+      .map((polygon) => ringCentroid(polygon[0]))
+      .filter(Boolean);
+    if (centroids.length === 0) return null;
     return {
-      lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-      lon: lons.reduce((a, b) => a + b, 0) / lons.length,
+      lat: centroids.reduce((sum, c) => sum + c.lat, 0) / centroids.length,
+      lon: centroids.reduce((sum, c) => sum + c.lon, 0) / centroids.length,
     };
   }
+
   return null;
+}
+
+/**
+ * Normalize a NWS SAME/FIPS code to a 5-digit county FIPS string.
+ */
+export function normalizeSameFips(sameCode) {
+  if (!sameCode) return null;
+  const digits = String(sameCode).replace(/\D/g, '');
+  if (digits.length < 5) return null;
+  return digits.slice(-5).padStart(5, '0');
+}
+
+/**
+ * Filter SAME codes to those belonging to a postal state (e.g. "DE").
+ * Multi-state alerts list every affected county; map markers should use
+ * only the primary state's codes (first UGC / areaDesc segment).
+ */
+export function filterSameCodesForState(sameCodes, stateCode, stateFipsFromPostal) {
+  if (!Array.isArray(sameCodes) || sameCodes.length === 0) return [];
+  if (!stateCode || typeof stateFipsFromPostal !== 'function') return sameCodes;
+
+  const stateFips = stateFipsFromPostal(stateCode);
+  if (!stateFips) return sameCodes;
+
+  const filtered = sameCodes.filter((code) => {
+    const fips = normalizeSameFips(code);
+    return fips && fips.startsWith(stateFips);
+  });
+
+  return filtered.length > 0 ? filtered : sameCodes;
 }
 
 /**

@@ -4,6 +4,8 @@
  * Format: FIPS state code or postal code -> { lat, lon }
  */
 
+import countyCentroids from './countyCentroids.json';
+
 // State postal code to centroid
 export const STATE_CENTROIDS = {
   AL: { lat: 32.806671, lon: -86.791130 },
@@ -85,6 +87,29 @@ export const FIPS_TO_POSTAL = {
   '69': 'MP'
 };
 
+// Postal code to 2-digit state FIPS
+export const POSTAL_TO_FIPS = Object.fromEntries(
+  Object.entries(FIPS_TO_POSTAL).map(([fips, postal]) => [postal, fips])
+);
+
+/**
+ * Get 2-digit state FIPS from a postal code (e.g. "DE" -> "10").
+ */
+export function getStateFipsFromPostal(stateCode) {
+  if (!stateCode) return null;
+  return POSTAL_TO_FIPS[stateCode.toUpperCase()] || null;
+}
+
+/**
+ * Normalize a NWS SAME/FIPS code to a 5-digit county FIPS string.
+ */
+export function normalizeSameFips(sameCode) {
+  if (!sameCode) return null;
+  const digits = String(sameCode).replace(/\D/g, '');
+  if (digits.length < 5) return null;
+  return digits.slice(-5).padStart(5, '0');
+}
+
 /**
  * Get coordinates from state code (postal or FIPS)
  */
@@ -104,24 +129,19 @@ export function getStateCentroid(stateCode) {
 }
 
 /**
- * Get coordinates from SAME/FIPS code (6-digit county code)
- * Format: SSCCC where SS = state FIPS, CCC = county FIPS
+ * Get coordinates from SAME/FIPS code (5- or 6-digit county code).
+ * Prefers county centroid from us-atlas; falls back to state centroid.
  */
 export function getCoordinatesFromFIPS(sameCode) {
-  if (!sameCode || sameCode.length < 5) return null;
+  const countyFips = normalizeSameFips(sameCode);
+  if (!countyFips) return null;
 
-  // SAME code format varies - could be 5 or 6 digits
-  // State FIPS is first 2-3 digits, we need to handle both
-  let stateFips;
-  if (sameCode.length === 6) {
-    stateFips = sameCode.substring(0, 3).replace(/^0/, ''); // Remove leading zero
-  } else {
-    stateFips = sameCode.substring(0, 2);
+  const countyEntry = countyCentroids[countyFips];
+  if (countyEntry) {
+    return { lat: countyEntry[0], lon: countyEntry[1] };
   }
 
-  // Pad to 2 digits for lookup
-  stateFips = stateFips.padStart(2, '0');
-
+  const stateFips = countyFips.substring(0, 2);
   const postal = FIPS_TO_POSTAL[stateFips];
   if (postal && STATE_CENTROIDS[postal]) {
     return STATE_CENTROIDS[postal];
@@ -133,6 +153,9 @@ export function getCoordinatesFromFIPS(sameCode) {
 export default {
   STATE_CENTROIDS,
   FIPS_TO_POSTAL,
+  POSTAL_TO_FIPS,
   getStateCentroid,
+  getStateFipsFromPostal,
+  normalizeSameFips,
   getCoordinatesFromFIPS
 };

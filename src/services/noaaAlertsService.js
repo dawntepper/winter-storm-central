@@ -6,7 +6,7 @@
  * Adds client-side features: coordinate fallbacks, caching, balanced selection
  */
 
-import { getStateCentroid, getCoordinatesFromFIPS } from '../data/stateCentroids';
+import { getStateCentroid, getCoordinatesFromFIPS, getStateFipsFromPostal } from '../data/stateCentroids';
 import {
   ALERTS_API,
   NWS_HEADERS,
@@ -19,6 +19,7 @@ import {
   extractLocationName,
   extractStateCode,
   extractGeometryCoordinates,
+  filterSameCodesForState,
   filterAlertFeatures,
 } from '../../shared/nws-alert-parser';
 // Dev-only fixture for verifying tornado UI without waiting for a real
@@ -97,7 +98,7 @@ function addJitter(coords, spread = 0.15) {
  * Extract coordinates from alert geometry or use state centroid as fallback.
  * Client-side version with full FIPS/centroid fallback chain for map display.
  */
-function extractCoordinates(alert) {
+export function extractCoordinates(alert) {
   // Try polygon geometry first (most accurate)
   const geomCoords = extractGeometryCoordinates(alert);
   if (geomCoords) {
@@ -112,18 +113,25 @@ function extractCoordinates(alert) {
     return null; // Skip marine zones
   }
 
-  // Try to get coordinates from SAME/FIPS codes
-  // Use all SAME codes to calculate average position (better than single code)
+  // Try to get coordinates from SAME/FIPS codes scoped to the alert's primary
+  // state. Multi-state alerts (e.g. DE+NJ+PA heat advisories) list every
+  // affected county — averaging all of them drags markers into neighboring states.
   const sameCodes = alert.properties?.geocode?.SAME || [];
   if (sameCodes.length > 0) {
-    const coordsList = sameCodes
-      .map(code => getCoordinatesFromFIPS(code))
+    const primaryState = extractStateCode(alert);
+    const scopedCodes = filterSameCodesForState(
+      sameCodes,
+      primaryState,
+      getStateFipsFromPostal
+    );
+
+    const coordsList = scopedCodes
+      .map((code) => getCoordinatesFromFIPS(code))
       .filter(Boolean);
 
     if (coordsList.length > 0) {
       const avgLat = coordsList.reduce((sum, c) => sum + c.lat, 0) / coordsList.length;
       const avgLon = coordsList.reduce((sum, c) => sum + c.lon, 0) / coordsList.length;
-      // Add jitter to spread out alerts that share similar coordinates
       return addJitter({ lat: avgLat, lon: avgLon, source: 'fips' }, 0.2);
     }
   }

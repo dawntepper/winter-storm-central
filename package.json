@@ -19,7 +19,8 @@
     "db:seed:city-counties": "node scripts/db/seed-city-counties.js",
     "db:seed:zips": "node scripts/db/seed-zips.js",
     "db:build:places": "node scripts/db/data/build-places-dataset.js",
-    "db:build:county-cache": "node scripts/db/build-county-cache.js"
+    "db:build:county-cache": "node scripts/db/build-county-cache.js",
+    "generate:county-centroids": "node scripts/generate-county-centroids.js"
   },
   "dependencies": {
     "@capacitor/cli": "^8.1.0",
