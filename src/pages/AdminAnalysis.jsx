@@ -13,9 +13,11 @@ import CollapsibleAnalysisSection, {
   writeSectionExpandedState,
 } from '../components/admin/CollapsibleAnalysisSection';
 import CountyAlertOpportunities from '../components/admin/CountyAlertOpportunities';
+import CountyDiscoveryCard from '../components/admin/CountyDiscoveryCard';
 import ExecutiveSummaryCard from '../components/admin/ExecutiveSummaryCard';
 import ExpansionOpportunities from '../components/admin/ExpansionOpportunities';
 import HealthStatusCard from '../components/admin/HealthStatusCard';
+import LocationPreferenceCard from '../components/admin/LocationPreferenceCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import MostVisitedPages from '../components/admin/MostVisitedPages';
 import OperationsCenter from '../components/admin/OperationsCenter';
@@ -148,6 +150,7 @@ const DEFAULT_VIEW_MODES = {
   radarEngagement: 'visual',
   locationSearch: 'table',
   locationSources: 'visual',
+  locationPreference: 'visual',
   savedLocations: 'visual',
   userJourneys: 'table',
 };
@@ -364,6 +367,8 @@ function AdminAnalysisInner() {
   const rv = data?.returningVisitors;
   const ls = data?.locationSearch;
   const locationSources = data?.locationSources;
+  const locationPreference = data?.locationPreference;
+  const countyDiscovery = data?.countyDiscovery;
   const sl = data?.savedLocations;
   const radar = data?.radar;
   const journeys = data?.userJourneys;
@@ -768,6 +773,14 @@ function AdminAnalysisInner() {
               </div>
               <LocationSourcesCard sources={locationSources} viewMode={viewModes.locationSources} />
               </div>
+
+              <div className="mt-6">
+                <LocationPreferenceCard
+                  data={locationPreference}
+                  viewMode={viewModes.locationPreference}
+                  onViewModeChange={(mode) => setViewMode('locationPreference', mode)}
+                />
+              </div>
             </CollapsibleAnalysisSection>
 
             <CollapsibleAnalysisSection
@@ -777,6 +790,9 @@ function AdminAnalysisInner() {
               expanded={sectionsExpanded['county-alert-views']}
               onToggle={() => toggleSection('county-alert-views')}
             >
+              <div className="mb-6">
+                <CountyDiscoveryCard data={countyDiscovery} />
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 <StatCard
                   label="Total county views"

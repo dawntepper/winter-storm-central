@@ -615,14 +615,22 @@ function bucketSearchSourcePage(sourcePage) {
   return 'Other';
 }
 
-async function fetchLocationSources(supabase, since) {
+const LOCATION_PREFERENCE_META = [
+  { key: 'useMyLocation', label: 'Use My Location (GPS)' },
+  { key: 'citySearch', label: 'City Search' },
+  { key: 'zipSearch', label: 'ZIP Search' },
+  { key: 'countySearch', label: 'County Search' },
+  { key: 'savedLocationTap', label: 'Saved Location Clicks' },
+];
+
+async function fetchLocationSourceCounts(supabase, since, until = null) {
   let query = supabase
     .from('location_search_events')
     .select('resolved_type')
     .eq('success', true)
     .limit(10000);
 
-  query = applySince(query, 'created_at', since);
+  query = applyPeriod(query, 'created_at', since, until);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -641,6 +649,282 @@ async function fetchLocationSources(supabase, since) {
   }
 
   return counts;
+}
+
+async function fetchLocationSources(supabase, since) {
+  return fetchLocationSourceCounts(supabase, since);
+}
+
+function buildLocationPreferenceSources(counts, previousCounts) {
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+  const sources = LOCATION_PREFERENCE_META.map(({ key, label }) => {
+    const count = counts[key] ?? 0;
+    const pct = total > 0 ? Math.round((100 * count) / total * 10) / 10 : 0;
+    const trend = previousCounts
+      ? computeTrend(count, previousCounts[key] ?? 0)
+      : null;
+    return { key, label, count, pct, trend };
+  }).sort((a, b) => b.count - a.count);
+
+  return { total, sources };
+}
+
+function buildLocationPreferenceFallback(sources, total) {
+  if (total === 0) {
+    return 'No location interactions recorded in this period.';
+  }
+
+  const byKey = Object.fromEntries(sources.map((s) => [s.key, s]));
+  const cityPct = byKey.citySearch?.pct ?? 0;
+  const countyPct = byKey.countySearch?.pct ?? 0;
+  const zipPct = byKey.zipSearch?.pct ?? 0;
+  const gpsPct = byKey.useMyLocation?.pct ?? 0;
+  const savedPct = byKey.savedLocationTap?.pct ?? 0;
+
+  const parts = [];
+
+  if (cityPct > countyPct * 2 && cityPct >= 25) {
+    parts.push(
+      `Users strongly prefer city search (${cityPct}%) over county search (${countyPct}%) — suggests cities are the default mental model for location.`
+    );
+  } else if (countyPct > cityPct && countyPct >= 15) {
+    parts.push(
+      `County search (${countyPct}%) leads city search (${cityPct}%) — users may already think in county terms.`
+    );
+  } else {
+    parts.push(
+      `City search is ${cityPct}% of location changes vs ${countyPct}% for county — mixed preference.`
+    );
+  }
+
+  if (zipPct >= 20) {
+    parts.push(`ZIP search is heavily used at ${zipPct}%.`);
+  }
+  if (gpsPct >= 20) {
+    parts.push(`"Use My Location" (GPS) accounts for ${gpsPct}% of changes.`);
+  }
+  if (savedPct >= 15) {
+    parts.push(`Saved location clicks drive ${savedPct}% of interactions.`);
+  }
+
+  return parts.join(' ');
+}
+
+async function generateLocationPreferenceInsight(sources, total) {
+  const fallback = buildLocationPreferenceFallback(sources, total);
+  const anthropic = describeAnthropicKeyConfig();
+  if (!anthropic.configured || !anthropic.looksValid || total === 0) {
+    return { blurb: fallback, generatedBy: 'rule-based' };
+  }
+
+  const summary = sources.map((s) => ({
+    source: s.label,
+    count: s.count,
+    pct: s.pct,
+  }));
+
+  try {
+    const haikuResult = await callHaikuForJSON({
+      systemPrompt: `You analyze location preference for a storm-tracking admin dashboard.
+Return ONLY JSON: { "blurb": string } — one or two sentences under 200 chars on whether users prefer cities vs counties, ZIP, GPS, or saved locations. No PII.`,
+      userPrompt: `Location preference (${total} total interactions): ${JSON.stringify(summary)}. Write the blurb JSON.`,
+      maxTokens: 200,
+    });
+
+    if (haikuResult.parsed?.blurb) {
+      return { blurb: haikuResult.parsed.blurb, generatedBy: haikuResult.model };
+    }
+  } catch (err) {
+    console.warn('Location preference insight generation failed:', err.message);
+  }
+
+  return { blurb: fallback, generatedBy: 'rule-based' };
+}
+
+async function fetchLocationPreference(supabase, dateRange) {
+  const since = getSinceDate(dateRange);
+  const bounds = getPreviousPeriodBounds(dateRange);
+
+  const [currentCounts, previousCounts] = await Promise.all([
+    fetchLocationSourceCounts(supabase, since),
+    bounds
+      ? fetchLocationSourceCounts(supabase, bounds.since, bounds.until)
+      : Promise.resolve(null),
+  ]);
+
+  const { total, sources } = buildLocationPreferenceSources(
+    currentCounts,
+    previousCounts
+  );
+  const insight = await generateLocationPreferenceInsight(sources, total);
+
+  return { total, sources, insight };
+}
+
+async function fetchCountyDiscoveryMetrics(supabase, since, until = null) {
+  let stateQuery = supabase
+    .from('product_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'state_alert_page_view');
+  stateQuery = applyPeriod(stateQuery, 'created_at', since, until);
+
+  let countySearchQuery = supabase
+    .from('location_search_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('resolved_type', 'county');
+  countySearchQuery = applyPeriod(countySearchQuery, 'created_at', since, until);
+
+  let countyPageQuery = supabase
+    .from('product_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'county_alert_view');
+  countyPageQuery = applyPeriod(countyPageQuery, 'created_at', since, until);
+
+  let countyAlertQuery = supabase
+    .from('county_alert_views')
+    .select('*', { count: 'exact', head: true });
+  countyAlertQuery = applyPeriod(countyAlertQuery, 'created_at', since, until);
+
+  const [stateRes, searchRes, pageRes, alertRes] = await Promise.all([
+    stateQuery,
+    countySearchQuery,
+    countyPageQuery,
+    countyAlertQuery,
+  ]);
+
+  if (stateRes.error) throw stateRes.error;
+  if (searchRes.error) throw searchRes.error;
+  if (pageRes.error) throw pageRes.error;
+  if (alertRes.error) throw alertRes.error;
+
+  return {
+    statePageViews: stateRes.count ?? 0,
+    countySearchAttempts: searchRes.count ?? 0,
+    countyPageViews: pageRes.count ?? 0,
+    countyAlertViews: alertRes.count ?? 0,
+  };
+}
+
+function buildCountyDiscoveryFunnel(metrics) {
+  const steps = [
+    { step: 1, eventName: 'State Page Views', sessions: metrics.statePageViews },
+    {
+      step: 2,
+      eventName: 'County Search Attempts',
+      sessions: metrics.countySearchAttempts,
+    },
+    { step: 3, eventName: 'County Page Views', sessions: metrics.countyPageViews },
+    {
+      step: 4,
+      eventName: 'County Alert Views',
+      sessions: metrics.countyAlertViews,
+    },
+  ];
+
+  const base = steps[0].sessions || 1;
+
+  return steps.map((s, i) => {
+    const prevSessions = i === 0 ? s.sessions : steps[i - 1].sessions;
+    const dropoffPct =
+      i === 0
+        ? 0
+        : prevSessions > 0
+          ? Math.round((1 - s.sessions / prevSessions) * 1000) / 10
+          : 0;
+    const completionPct =
+      base > 0 ? Math.round((s.sessions / base) * 1000) / 10 : 0;
+    return { ...s, completionPct, dropoffPct };
+  });
+}
+
+function buildCountyDiscoveryConclusion(metrics) {
+  const { statePageViews, countySearchAttempts, countyPageViews } = metrics;
+
+  if (statePageViews < 5) {
+    return {
+      code: 'insufficient_data',
+      blurb:
+        'Not enough state page traffic to assess county discovery patterns in this period.',
+    };
+  }
+
+  const searchRate =
+    statePageViews > 0 ? countySearchAttempts / statePageViews : 0;
+  const pageReachRate =
+    countySearchAttempts > 0 ? countyPageViews / countySearchAttempts : 0;
+
+  const LOW_SEARCH_RATE = 0.05;
+  const LOW_PAGE_REACH = 0.35;
+
+  if (searchRate < LOW_SEARCH_RATE) {
+    return {
+      code: 'not_attempting',
+      blurb:
+        'Users are not attempting county workflows — county searches are low relative to state page views.',
+      searchRatePct: Math.round(searchRate * 1000) / 10,
+      pageReachPct: Math.round(pageReachRate * 1000) / 10,
+    };
+  }
+
+  if (pageReachRate < LOW_PAGE_REACH) {
+    return {
+      code: 'abandoning',
+      blurb:
+        'Users are attempting county workflows but abandoning before reaching county pages.',
+      searchRatePct: Math.round(searchRate * 1000) / 10,
+      pageReachPct: Math.round(pageReachRate * 1000) / 10,
+    };
+  }
+
+  return {
+    code: 'healthy',
+    blurb:
+      'County discovery funnel looks healthy — users who search for counties often reach county pages.',
+    searchRatePct: Math.round(searchRate * 1000) / 10,
+    pageReachPct: Math.round(pageReachRate * 1000) / 10,
+  };
+}
+
+async function generateCountyDiscoveryInsight(metrics, conclusion) {
+  const fallback = conclusion.blurb;
+  const anthropic = describeAnthropicKeyConfig();
+  if (!anthropic.configured || !anthropic.looksValid) {
+    return { ...conclusion, generatedBy: 'rule-based' };
+  }
+
+  try {
+    const haikuResult = await callHaikuForJSON({
+      systemPrompt: `You analyze county discovery funnels for a storm admin dashboard.
+Return ONLY JSON: { "blurb": string } — one sentence under 180 chars distinguishing:
+(A) users not attempting county workflows vs (B) attempting but abandoning before county pages.
+Use the provided conclusion code as guidance. No PII.`,
+      userPrompt: `Funnel: state views=${metrics.statePageViews}, county searches=${metrics.countySearchAttempts}, county pages=${metrics.countyPageViews}, county alert views=${metrics.countyAlertViews}. Rule conclusion: ${conclusion.code} — "${fallback}". Write blurb JSON.`,
+      maxTokens: 200,
+    });
+
+    if (haikuResult.parsed?.blurb) {
+      return {
+        ...conclusion,
+        blurb: haikuResult.parsed.blurb,
+        generatedBy: haikuResult.model,
+      };
+    }
+  } catch (err) {
+    console.warn('County discovery insight generation failed:', err.message);
+  }
+
+  return { ...conclusion, generatedBy: 'rule-based' };
+}
+
+async function fetchCountyDiscovery(supabase, dateRange) {
+  const since = getSinceDate(dateRange);
+  const metrics = await fetchCountyDiscoveryMetrics(supabase, since);
+  const funnel = buildCountyDiscoveryFunnel(metrics);
+  const ruleConclusion = buildCountyDiscoveryConclusion(metrics);
+  const conclusion = await generateCountyDiscoveryInsight(metrics, ruleConclusion);
+
+  return { metrics, funnel, conclusion };
 }
 
 async function fetchLocationSearchPerformance(supabase, since) {
@@ -1483,6 +1767,8 @@ async function fetchAllAnalytics(supabase, dateRange) {
     missingLocationSearches,
     locationSearch,
     locationSources,
+    locationPreference,
+    countyDiscovery,
     countyAlertViews,
     savedLocations,
     radarBase,
@@ -1496,6 +1782,8 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchMissingLocationSearches(supabase, since),
     fetchLocationSearchPerformance(supabase, since),
     fetchLocationSources(supabase, since),
+    fetchLocationPreference(supabase, dateRange),
+    fetchCountyDiscovery(supabase, dateRange),
     fetchCountyAlertViews(supabase, since),
     fetchSavedLocations(supabase, since),
     fetchRadarEngagement(supabase, since),
@@ -1583,6 +1871,8 @@ async function fetchAllAnalytics(supabase, dateRange) {
       trend: metricTrends.searchSuccessRate,
     },
     locationSources,
+    locationPreference,
+    countyDiscovery,
     countyAlertViews: {
       ...countyAlertViews,
       trend: metricTrends.countyAlertViews,
