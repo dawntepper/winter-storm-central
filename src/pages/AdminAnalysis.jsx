@@ -12,9 +12,12 @@ import CollapsibleAnalysisSection, {
   readSectionExpandedState,
   writeSectionExpandedState,
 } from '../components/admin/CollapsibleAnalysisSection';
+import CountyAlertOpportunities from '../components/admin/CountyAlertOpportunities';
+import ExecutiveSummaryCard from '../components/admin/ExecutiveSummaryCard';
 import ExpansionOpportunities from '../components/admin/ExpansionOpportunities';
 import HealthStatusCard from '../components/admin/HealthStatusCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
+import MostVisitedPages from '../components/admin/MostVisitedPages';
 import OperationsCenter from '../components/admin/OperationsCenter';
 import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import SortableDataTable from '../components/admin/SortableDataTable';
@@ -119,7 +122,7 @@ function formatRadarState(row) {
 
 function SectionHeader({ title, description, viewMode, onViewModeChange, showToggle = true }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
         <h2 className="text-xl font-bold text-white mb-1">{title}</h2>
         {description && <p className="text-sm text-slate-400">{description}</p>}
@@ -132,7 +135,7 @@ function SectionHeader({ title, description, viewMode, onViewModeChange, showTog
 }
 
 function SubsectionTitle({ children }) {
-  return <h3 className="text-sm font-semibold text-slate-300 mb-3">{children}</h3>;
+  return <h3 className="text-sm font-semibold text-slate-300 mb-2">{children}</h3>;
 }
 
 function formatEventName(name) {
@@ -148,47 +151,6 @@ const DEFAULT_VIEW_MODES = {
   userJourneys: 'table',
 };
 
-function TopInsightsCard({ insights, metricTrends }) {
-  if (!insights?.length) return null;
-
-  const trendById = {
-    'radar-opens': metricTrends?.radarOpens,
-    'returning-visitors': metricTrends?.returningVisitors,
-    'search-success': metricTrends?.locationSearches,
-    'county-views': metricTrends?.countyAlertViews,
-    'top-save-state': metricTrends?.savedLocations,
-  };
-
-  return (
-    <div className="bg-gradient-to-br from-sky-950/50 to-slate-800 border border-sky-700/40 rounded-xl p-5 sm:p-6">
-      <h2 className="text-xl font-bold text-white mb-1">Top Insights</h2>
-      <p className="text-sm text-slate-400 mb-5">
-        Key metrics from your selected date range with period-over-period trends.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {insights.map((item) => (
-          <div
-            key={item.id}
-            className="bg-slate-900/70 border border-slate-700/80 rounded-lg p-4"
-          >
-            <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">
-              {item.label}
-            </div>
-            <div className="text-xl font-bold text-white">{item.value}</div>
-            {trendById[item.id] && (
-              <div className="mt-1">
-                <TrendIndicator trend={trendById[item.id]} compact />
-              </div>
-            )}
-            {item.detail && (
-              <div className="text-xs text-slate-500 mt-1 line-clamp-2">{item.detail}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function buildDefaultSectionState() {
   const saved = readSectionExpandedState();
@@ -390,6 +352,9 @@ function AdminAnalysisInner() {
   const countyViews = data?.countyAlertViews;
   const metricTrends = data?.metricTrends;
   const expansionOpportunities = data?.expansionOpportunities;
+  const executiveSummary = data?.executiveSummary;
+  const mostVisitedPages = data?.mostVisitedPages;
+  const countyAlertOpportunities = data?.countyAlertOpportunities;
   const analyticsHealth = data?.analyticsHealth;
   const hasMissingSearches = missingSearches.length > 0;
 
@@ -428,9 +393,9 @@ function AdminAnalysisInner() {
         </>
       )}
 
-      <div className="px-4 py-8 sm:py-10">
+      <div className="px-4 py-5 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          <main className="space-y-8">
+          <main className="space-y-5">
             {error && (
               <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
                 {error}
@@ -453,13 +418,17 @@ function AdminAnalysisInner() {
                 <CollapsibleAnalysisSection
                   id="overview"
                   title="Overview"
-                  description="Health status, morning brief, operations center, and top insights."
+                  description="Health, executive summary, AI briefings, and expansion signals."
                   expanded={sectionsExpanded.overview}
                   onToggle={() => toggleSection('overview')}
                   className="bg-slate-800/80 border border-slate-700"
                 >
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <HealthStatusCard health={analyticsHealth} />
+                    <ExecutiveSummaryCard
+                      summary={executiveSummary}
+                      metricTrends={metricTrends}
+                    />
                     <MorningBriefCard dateRange={dateRange} />
                     <div className="hidden lg:block">
                       <OperationsCenter dashboardDateRange={dateRange} variant="inline" />
@@ -468,8 +437,9 @@ function AdminAnalysisInner() {
                       dashboardDateRange={dateRange}
                       variant="mobile-accordion"
                     />
-                    <TopInsightsCard insights={data.topInsights} metricTrends={metricTrends} />
                     <ExpansionOpportunities data={expansionOpportunities} />
+                    <CountyAlertOpportunities data={countyAlertOpportunities} />
+                    <MostVisitedPages data={mostVisitedPages} dateRange={dateRange} />
                   </div>
                 </CollapsibleAnalysisSection>
 
@@ -486,7 +456,7 @@ function AdminAnalysisInner() {
                 />
               }
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mb-4">
                 <StatCard label="Total sessions" value={formatNumber(rv?.totalSessions)} />
                 <StatCard label="Unique visitors" value={formatNumber(rv?.uniqueVisitors)} />
                 <StatCard label="New visitors" value={formatNumber(rv?.newVisitors)} />
@@ -497,7 +467,7 @@ function AdminAnalysisInner() {
                 />
                 <StatCard label="Returning %" value={formatPct(rv?.returningPct)} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
                 <StatCard
                   label="Avg returning %"
                   value={formatPct(rv?.avgReturningPct)}
@@ -900,7 +870,7 @@ function AdminAnalysisInner() {
                 />
               }
             >
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
                 <StatCard
                   label="Total radar opens"
                   value={formatNumber(radar?.totalOpens)}
@@ -937,6 +907,14 @@ function AdminAnalysisInner() {
                   }
                 />
               </div>
+              {radar?.weatherContext?.blurb && (
+                <div className="mb-4 rounded-lg border border-sky-700/40 bg-sky-950/25 px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-wide font-semibold text-sky-400 mb-1">
+                    Weather context
+                  </div>
+                  <p className="text-sm text-sky-100">{radar.weatherContext.blurb}</p>
+                </div>
+              )}
               {viewModes.radarEngagement === 'visual' ? (
                 <>
                   <SubsectionTitle>Radar opens by state</SubsectionTitle>

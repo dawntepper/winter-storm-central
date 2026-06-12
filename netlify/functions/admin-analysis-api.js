@@ -942,7 +942,213 @@ function formatRadarStateLabel(stateCode) {
   return code;
 }
 
-function generateTopInsights({
+const PAGE_VIEW_EVENTS = [
+  'homepage_view',
+  'state_alert_page_view',
+  'forecast_view',
+  'county_alert_view',
+  'radar_view',
+];
+
+function pageViewLabel(eventName, stateCode) {
+  switch (eventName) {
+    case 'homepage_view':
+      return 'Homepage';
+    case 'state_alert_page_view':
+      return stateCode && stateCode !== 'unknown'
+        ? `State Alerts (${stateCode})`
+        : 'State Alert Pages';
+    case 'forecast_view':
+      return 'Forecast';
+    case 'county_alert_view':
+      return 'County Alert Pages';
+    case 'radar_view':
+      return 'Radar';
+    default:
+      return String(eventName || 'Unknown').replace(/_/g, ' ');
+  }
+}
+
+async function fetchMostVisitedPages(supabase) {
+  const since30d = getSinceDate('30d');
+  let query = supabase
+    .from('product_events')
+    .select('event_name, state_code, created_at')
+    .in('event_name', PAGE_VIEW_EVENTS)
+    .order('created_at', { ascending: false })
+    .limit(10000);
+  query = applySince(query, 'created_at', since30d);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const since7dMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const sinceTodayMs = new Date().setHours(0, 0, 0, 0);
+
+  const map = new Map();
+  for (const row of data || []) {
+    const label = pageViewLabel(row.event_name, row.state_code);
+    const key = `${row.event_name}::${row.state_code || ''}`;
+    const existing = map.get(key) || {
+      page: label,
+      eventName: row.event_name,
+      stateCode: row.state_code || null,
+      viewsToday: 0,
+      views7d: 0,
+      views30d: 0,
+    };
+    const ts = new Date(row.created_at).getTime();
+    existing.views30d += 1;
+    if (ts >= since7dMs) existing.views7d += 1;
+    if (ts >= sinceTodayMs) existing.viewsToday += 1;
+    map.set(key, existing);
+  }
+
+  const pages = Array.from(map.values())
+    .sort((a, b) => b.views30d - a.views30d)
+    .slice(0, 20);
+
+  return { pages };
+}
+
+async function fetchCountyAlertOpportunities(supabase, since) {
+  let stateViewsQuery = supabase
+    .from('product_events')
+    .select('state_code')
+    .eq('event_name', 'state_alert_page_view')
+    .limit(10000);
+  stateViewsQuery = applySince(stateViewsQuery, 'created_at', since);
+
+  let countySearchQuery = supabase
+    .from('location_search_events')
+    .select('state_code, resolved_type')
+    .eq('success', true)
+    .limit(10000);
+  countySearchQuery = applySince(countySearchQuery, 'created_at', since);
+
+  let countyViewsQuery = supabase
+    .from('county_alert_views')
+    .select('state_code')
+    .limit(10000);
+  countyViewsQuery = applySince(countyViewsQuery, 'created_at', since);
+
+  const [stateViewsRes, countySearchRes, countyViewsRes] = await Promise.all([
+    stateViewsQuery,
+    countySearchQuery,
+    countyViewsQuery,
+  ]);
+
+  if (stateViewsRes.error) throw stateViewsRes.error;
+  if (countySearchRes.error) throw countySearchRes.error;
+  if (countyViewsRes.error) throw countyViewsRes.error;
+
+  const stateMap = new Map();
+
+  function ensureState(code) {
+    const state = code && code !== 'unknown' ? code : null;
+    if (!state) return null;
+    if (!stateMap.has(state)) {
+      stateMap.set(state, {
+        stateCode: state,
+        statePageViews: 0,
+        countySearches: 0,
+        countyPageViews: 0,
+        opportunityScore: 0,
+      });
+    }
+    return stateMap.get(state);
+  }
+
+  for (const row of stateViewsRes.data || []) {
+    const entry = ensureState(row.state_code);
+    if (entry) entry.statePageViews += 1;
+  }
+
+  for (const row of countySearchRes.data || []) {
+    const type = String(row.resolved_type || '').toLowerCase();
+    if (type !== 'county') continue;
+    const entry = ensureState(row.state_code);
+    if (entry) entry.countySearches += 1;
+  }
+
+  for (const row of countyViewsRes.data || []) {
+    const entry = ensureState(row.state_code);
+    if (entry) entry.countyPageViews += 1;
+  }
+
+  const opportunities = Array.from(stateMap.values())
+    .filter((s) => s.statePageViews >= 5)
+    .map((s) => {
+      const countyEngagement = s.countyPageViews + s.countySearches * 0.5;
+      const ratio = s.statePageViews / Math.max(countyEngagement, 1);
+      s.opportunityScore = Math.round(ratio * 10) / 10;
+      s.countyEngagementGap =
+        s.statePageViews > 0
+          ? Math.round(
+              (100 * Math.max(0, s.statePageViews - countyEngagement)) /
+                s.statePageViews
+            )
+          : 0;
+      return s;
+    })
+    .filter((s) => s.opportunityScore >= 2)
+    .sort((a, b) => b.opportunityScore - a.opportunityScore)
+    .slice(0, 12);
+
+  return { opportunities, totalStates: stateMap.size };
+}
+
+function buildRadarWeatherFallback(radar) {
+  const topStates = (radar?.opensByState || []).slice(0, 3);
+  if (topStates.length === 0) return null;
+  const leader = topStates[0];
+  const label = formatRadarStateLabel(leader.state_code);
+  const others =
+    topStates.length > 1
+      ? ` followed by ${topStates
+          .slice(1)
+          .map((s) => formatRadarStateLabel(s.state_code))
+          .join(', ')}`
+      : '';
+  return `${label} radar opens lead at ${leader.open_count.toLocaleString()}${others} — likely driven by active weather in those regions.`;
+}
+
+async function generateRadarWeatherContext(radar) {
+  const fallback = buildRadarWeatherFallback(radar);
+  if (!fallback) return null;
+
+  const anthropic = describeAnthropicKeyConfig();
+  if (!anthropic.configured || !anthropic.looksValid) {
+    return { blurb: fallback, generatedBy: 'rule-based' };
+  }
+
+  const topStates = (radar?.opensByState || []).slice(0, 6).map((s) => ({
+    state: formatRadarStateLabel(s.state_code),
+    opens: s.open_count,
+  }));
+
+  try {
+    const haikuResult = await callHaikuForJSON({
+      systemPrompt: `You explain radar engagement spikes for a storm tracking admin dashboard.
+Return ONLY JSON: { "blurb": string } — one sentence under 120 chars linking state radar opens to likely weather drivers (storms, warnings, tornadoes). No PII.`,
+      userPrompt: `Radar opens by state: ${JSON.stringify(topStates)}. Total opens: ${radar?.totalOpens ?? 0}. Write the blurb JSON.`,
+      maxTokens: 200,
+    });
+
+    if (haikuResult.parsed?.blurb) {
+      return {
+        blurb: haikuResult.parsed.blurb,
+        generatedBy: haikuResult.model,
+      };
+    }
+  } catch (err) {
+    console.warn('Radar weather context generation failed:', err.message);
+  }
+
+  return { blurb: fallback, generatedBy: 'rule-based' };
+}
+
+function generateExecutiveSummary({
   returningVisitors,
   radar,
   locationSearch,
@@ -950,98 +1156,128 @@ function generateTopInsights({
   userJourneys,
   missingLocationSearches,
   countyAlertViews,
+  countyAlertOpportunities,
+  recommendedActions,
+  metricTrends,
 }) {
-  const insights = [];
+  const metrics = [];
 
-  if (radar?.insights?.topState) {
-    insights.push({
-      id: 'top-radar-state',
-      label: 'Most viewed radar state',
-      value: formatRadarStateLabel(radar.insights.topState.stateCode),
-      detail: `${radar.insights.topState.openCount.toLocaleString()} opens`,
-    });
+  metrics.push({
+    id: 'radar-opens',
+    label: 'Radar Opens',
+    value: (radar?.totalOpens ?? 0).toLocaleString(),
+    detail: radar?.insights?.avgOpensPerSession
+      ? `${radar.insights.avgOpensPerSession} avg per session`
+      : undefined,
+    trend: metricTrends?.radarOpens ?? null,
+  });
+
+  metrics.push({
+    id: 'returning-visitors',
+    label: 'Returning Visitors',
+    value: (returningVisitors?.returningVisitors ?? 0).toLocaleString(),
+    detail: `${returningVisitors?.returningPct ?? 0}% of sessions`,
+    trend: metricTrends?.returningVisitors ?? null,
+  });
+
+  metrics.push({
+    id: 'search-success',
+    label: 'Search Success Rate',
+    value:
+      locationSearch?.totalSearches > 0
+        ? `${locationSearch.successRate}%`
+        : '—',
+    detail:
+      locationSearch?.totalSearches > 0
+        ? `${locationSearch.totalSearches.toLocaleString()} searches`
+        : 'No searches in period',
+    trend: metricTrends?.locationSearches ?? null,
+  });
+
+  const topState = radar?.insights?.topState;
+  metrics.push({
+    id: 'top-state',
+    label: 'Top State',
+    value: topState ? formatRadarStateLabel(topState.stateCode) : '—',
+    detail: topState ? `${topState.openCount.toLocaleString()} radar opens` : undefined,
+  });
+
+  const topLocation =
+    locationSearch?.topLocations?.[0] ||
+    savedLocations?.topLocations?.[0] ||
+    countyAlertViews?.topViewed?.[0];
+  let locationValue = '—';
+  let locationDetail;
+  if (topLocation?.query) {
+    locationValue = topLocation.state_code
+      ? `${topLocation.query}, ${topLocation.state_code}`
+      : topLocation.query;
+    locationDetail = `${topLocation.search_count} searches`;
+  } else if (topLocation?.location_name) {
+    locationValue = topLocation.state
+      ? `${topLocation.location_name}, ${topLocation.state}`
+      : topLocation.location_name;
+    locationDetail = `${topLocation.save_count} saves`;
+  } else if (topLocation?.county_name) {
+    locationValue = `${topLocation.county_name}, ${topLocation.state_code}`;
+    locationDetail = `${topLocation.view_count} county views`;
   }
+  metrics.push({
+    id: 'most-viewed-location',
+    label: 'Most Viewed Location',
+    value: locationValue,
+    detail: locationDetail,
+  });
 
-  if (returningVisitors?.returningVisitors > 0) {
-    insights.push({
-      id: 'returning-visitors',
-      label: 'Returning visitors',
-      value: returningVisitors.returningVisitors.toLocaleString(),
-      detail: `${returningVisitors.returningPct}% of sessions`,
-    });
+  const topCountyOpp = countyAlertOpportunities?.opportunities?.[0];
+  const topCityOpp = missingLocationSearches?.recommendedCities?.[0];
+  let oppValue = '—';
+  let oppDetail;
+  if (topCountyOpp) {
+    oppValue = `${topCountyOpp.stateCode} counties`;
+    oppDetail = `${topCountyOpp.statePageViews} state views vs ${topCountyOpp.countyPageViews} county views (score ${topCountyOpp.opportunityScore})`;
+  } else if (topCityOpp) {
+    oppValue = topCityOpp.label;
+    oppDetail = `${topCityOpp.searchCount} failed searches — add city coverage`;
   }
+  metrics.push({
+    id: 'biggest-opportunity',
+    label: 'Biggest Opportunity',
+    value: oppValue,
+    detail: oppDetail,
+  });
 
-  const topPath = userJourneys?.topPaths?.[0];
-  if (topPath?.path) {
-    insights.push({
-      id: 'common-journey',
-      label: 'Most common journey',
-      value: topPath.session_count.toLocaleString() + ' sessions',
-      detail: topPath.path.replace(/_/g, ' ').slice(0, 80),
-    });
+  const highAction = (recommendedActions || []).find((a) => a.priority === 'high');
+  const mainDrop = userJourneys?.mainJourney?.biggestDropOff;
+  let riskValue = '—';
+  let riskDetail;
+  if (highAction) {
+    riskValue = highAction.title;
+    riskDetail = highAction.description;
+  } else if (mainDrop && mainDrop.dropoffPct >= 15) {
+    riskValue = String(mainDrop.eventName || 'Funnel step').replace(/_/g, ' ');
+    riskDetail = `${mainDrop.dropoffPct}% drop-off in main journey`;
+  } else if ((missingLocationSearches?.totalFailed ?? 0) > 0) {
+    riskValue = 'Failed searches';
+    riskDetail = `${missingLocationSearches.totalFailed} searches without matches`;
   }
+  metrics.push({
+    id: 'biggest-risk',
+    label: 'Biggest Risk',
+    value: riskValue,
+    detail: riskDetail,
+  });
 
-  if (userJourneys?.mainJourney?.overallCompletionPct != null) {
-    insights.push({
-      id: 'main-conversion',
-      label: 'Homepage → Save conversion',
-      value: `${userJourneys.mainJourney.overallCompletionPct}%`,
-      detail: 'Main product funnel completion',
-    });
-  }
+  const aiSummaries = (recommendedActions || [])
+    .slice(0, 3)
+    .map((a) => ({ title: a.title, text: a.description, priority: a.priority }));
 
-  if (radar?.totalOpens > 0) {
-    insights.push({
-      id: 'radar-opens',
-      label: 'Total radar opens',
-      value: radar.totalOpens.toLocaleString(),
-      detail: radar.insights?.avgOpensPerSession
-        ? `${radar.insights.avgOpensPerSession} avg per session`
-        : undefined,
-    });
-  }
+  return { metrics, aiSummaries };
+}
 
-  if (locationSearch?.successRate != null && locationSearch.totalSearches > 0) {
-    insights.push({
-      id: 'search-success',
-      label: 'Location search success',
-      value: `${locationSearch.successRate}%`,
-      detail: `${locationSearch.totalSearches.toLocaleString()} total searches`,
-    });
-  }
-
-  const topSaveState = savedLocations?.savesByState?.[0];
-  if (topSaveState) {
-    insights.push({
-      id: 'top-save-state',
-      label: 'Top saved state',
-      value: topSaveState.state,
-      detail: `${topSaveState.save_count} saves`,
-    });
-  }
-
-  if (missingLocationSearches?.totalFailed > 0) {
-    insights.push({
-      id: 'missing-searches',
-      label: 'Failed location searches',
-      value: missingLocationSearches.totalFailed.toLocaleString(),
-      detail: `${missingLocationSearches.searches?.length ?? 0} unique queries`,
-    });
-  }
-
-  if (countyAlertViews?.totalViews > 0) {
-    const topCounty = countyAlertViews.topViewed?.[0];
-    insights.push({
-      id: 'county-views',
-      label: 'County alert views',
-      value: countyAlertViews.totalViews.toLocaleString(),
-      detail: topCounty
-        ? `Top: ${topCounty.county_name}, ${topCounty.state_code}`
-        : undefined,
-    });
-  }
-
-  return insights.slice(0, 8);
+/** @deprecated use executiveSummary */
+function generateTopInsights(args) {
+  return generateExecutiveSummary(args).metrics;
 }
 
 function generateRecommendedActions({
@@ -1207,10 +1443,12 @@ async function fetchAllAnalytics(supabase, dateRange) {
     locationSources,
     countyAlertViews,
     savedLocations,
-    radar,
+    radarBase,
     userJourneys,
     analyticsHealth,
     previousMetrics,
+    mostVisitedPages,
+    countyAlertOpportunities,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -1222,7 +1460,15 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchUserJourneys(supabase, since),
     fetchAnalyticsHealth(supabase),
     fetchPreviousPeriodMetrics(supabase, dateRange),
+    fetchMostVisitedPages(supabase),
+    fetchCountyAlertOpportunities(supabase, since),
   ]);
+
+  const weatherContext = await generateRadarWeatherContext(radarBase);
+  const radar = {
+    ...radarBase,
+    weatherContext,
+  };
 
   const currentMetrics = {
     radarOpens: radar.totalOpens ?? 0,
@@ -1235,16 +1481,6 @@ async function fetchAllAnalytics(supabase, dateRange) {
 
   const metricTrends = buildMetricTrends(currentMetrics, previousMetrics);
 
-  const topInsights = generateTopInsights({
-    returningVisitors,
-    radar,
-    locationSearch,
-    savedLocations,
-    userJourneys,
-    missingLocationSearches,
-    countyAlertViews,
-  });
-
   const recommendedActions = generateRecommendedActions({
     missingLocationSearches,
     userJourneys,
@@ -1254,6 +1490,21 @@ async function fetchAllAnalytics(supabase, dateRange) {
     locationSearch,
     returningVisitors,
   });
+
+  const executiveSummary = generateExecutiveSummary({
+    returningVisitors,
+    radar,
+    locationSearch,
+    savedLocations,
+    userJourneys,
+    missingLocationSearches,
+    countyAlertViews,
+    countyAlertOpportunities,
+    recommendedActions,
+    metricTrends,
+  });
+
+  const topInsights = executiveSummary.metrics;
 
   const expansionOpportunities = generateExpansionOpportunities({
     missingLocationSearches,
@@ -1268,8 +1519,11 @@ async function fetchAllAnalytics(supabase, dateRange) {
     analyticsHealth,
     metricTrends,
     expansionOpportunities,
+    executiveSummary,
     topInsights,
     recommendedActions,
+    mostVisitedPages,
+    countyAlertOpportunities,
     returningVisitors: {
       ...returningVisitors,
       trend: metricTrends.returningVisitors,

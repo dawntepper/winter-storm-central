@@ -32,27 +32,35 @@ export default function AdminFunnel({
     <div className="space-y-3">
       {steps.map((step, index) => {
         const widthPct = Math.max(4, (step.sessions / maxSessions) * 100);
+        const highDropOff = (step.dropoffPct ?? 0) >= 25;
         return (
           <div key={step.step ?? index}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs mb-1.5">
-              <span className="text-slate-200 font-medium">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs mb-1">
+              <span className={`font-medium ${highDropOff ? 'text-rose-200' : 'text-slate-200'}`}>
                 {step.step}. {formatEventName(step.eventName)}
               </span>
-              <span className="text-slate-400 tabular-nums">
+              <span className={`tabular-nums ${highDropOff ? 'text-rose-400 font-semibold' : 'text-slate-400'}`}>
                 {formatNumber(step.sessions)} sessions ·{' '}
                 {formatPct(step.completionPct)} complete · Drop-off{' '}
                 {formatPct(step.dropoffPct)}
               </span>
             </div>
-            <div className="h-7 bg-slate-800 rounded-md overflow-hidden">
+            <div className="h-6 bg-slate-800 rounded-md overflow-hidden relative">
               <div
                 className="h-full rounded-md transition-all"
                 style={{
                   width: `${widthPct}%`,
-                  backgroundColor: CHART_COLORS.sky,
-                  opacity: 0.85 - index * 0.08,
+                  backgroundColor: highDropOff ? '#f43f5e' : CHART_COLORS.sky,
+                  opacity: highDropOff ? 0.9 : 0.85 - index * 0.08,
                 }}
               />
+              {highDropOff && index > 0 && (
+                <div
+                  className="absolute right-0 top-0 h-full border-l-2 border-dashed border-rose-400/60"
+                  style={{ width: `${Math.min(100 - widthPct, 40)}%`, marginLeft: `${widthPct}%` }}
+                  title="Sessions lost at this step"
+                />
+              )}
             </div>
           </div>
         );

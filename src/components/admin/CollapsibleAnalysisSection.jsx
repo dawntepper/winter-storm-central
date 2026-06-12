@@ -28,7 +28,7 @@ export default function CollapsibleAnalysisSection({
   children,
 }) {
   return (
-    <section id={id} className={`rounded-xl p-5 sm:p-6 scroll-mt-36 ${className}`}>
+    <section id={id} className={`rounded-xl p-4 sm:p-5 scroll-mt-36 ${className}`}>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -51,7 +51,7 @@ export default function CollapsibleAnalysisSection({
       </div>
 
       {expanded && (
-        <div id={`${id}-content`} className="mt-5">
+        <div id={`${id}-content`} className="mt-4">
           {children}
         </div>
       )}

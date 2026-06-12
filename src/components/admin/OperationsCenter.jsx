@@ -9,70 +9,138 @@ export const OPS_PERIODS = [
   { id: '7d', label: 'Last 7 Days' },
 ];
 
-const SECTION_STYLES = {
-  what_changed: {
-    title: 'What Changed?',
-    border: 'border-indigo-700/50',
-    bg: 'bg-indigo-950/20',
-    titleColor: 'text-indigo-300',
-    dot: 'bg-indigo-500',
-  },
-  opportunities: {
-    title: 'Opportunities',
-    border: 'border-amber-700/50',
-    bg: 'bg-amber-950/20',
-    titleColor: 'text-amber-300',
-    dot: 'bg-amber-500',
-  },
-  risks: {
-    title: 'Risks',
-    border: 'border-rose-700/50',
-    bg: 'bg-rose-950/25',
-    titleColor: 'text-rose-300',
-    dot: 'bg-rose-500',
-  },
-  attention_needed: {
-    title: 'Attention Needed',
-    border: 'border-rose-700/50',
-    bg: 'bg-rose-950/25',
-    titleColor: 'text-rose-300',
-    dot: 'bg-rose-500',
-  },
-  weather_drivers: {
-    title: 'Weather Drivers',
-    border: 'border-sky-700/50',
-    bg: 'bg-sky-950/20',
-    titleColor: 'text-sky-300',
-    dot: 'bg-sky-500',
-  },
-  retention_signals: {
-    title: 'Retention Signals',
-    border: 'border-violet-700/50',
-    bg: 'bg-violet-950/20',
-    titleColor: 'text-violet-300',
-    dot: 'bg-violet-500',
-  },
-  recommended_actions: {
-    title: 'Recommended Actions',
-    border: 'border-slate-600/50',
-    bg: 'bg-slate-900/50',
-    titleColor: 'text-slate-200',
-    dot: 'bg-slate-400',
-  },
-  wins: {
-    title: 'Wins',
-    border: 'border-emerald-700/50',
-    bg: 'bg-emerald-950/20',
-    titleColor: 'text-emerald-300',
-    dot: 'bg-emerald-500',
-  },
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+const PRIORITY_BADGE = {
+  high: 'bg-rose-950/60 border-rose-600/50 text-rose-300',
+  medium: 'bg-amber-950/60 border-amber-600/50 text-amber-300',
+  low: 'bg-slate-800 border-slate-600 text-slate-400',
 };
 
-const PRIORITY_STYLES = {
-  high: 'text-rose-300 font-semibold',
-  medium: 'text-amber-300',
-  low: 'text-slate-400',
-};
+function PriorityBadge({ priority }) {
+  if (!priority) return null;
+  return (
+    <span
+      className={`inline-block text-[10px] uppercase font-bold tracking-wide px-1.5 py-0.5 rounded border mr-1.5 ${
+        PRIORITY_BADGE[priority] || PRIORITY_BADGE.low
+      }`}
+    >
+      {priority}
+    </span>
+  );
+}
+
+function sortByPriority(items) {
+  return [...(items || [])].sort(
+    (a, b) =>
+      (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3)
+  );
+}
+
+function OpsGroup({ title, border, bg, titleColor, items, showPriority = false }) {
+  if (!items?.length) return null;
+
+  return (
+    <div className={`rounded-lg border p-3 ${border} ${bg}`}>
+      <h3 className={`text-xs font-bold uppercase tracking-wide mb-2 ${titleColor}`}>
+        {title}
+      </h3>
+      <ul className="space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="text-sm text-slate-200 flex gap-2">
+            <span className="shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-current opacity-60" />
+            <span>
+              {showPriority && <PriorityBadge priority={item.priority} />}
+              {item.title ? (
+                <>
+                  <span className="font-medium text-white">{item.title}</span>
+                  {item.detail && <span className="text-slate-400"> — {item.detail}</span>}
+                  {!item.detail && item.text && (
+                    <span className="text-slate-400"> — {item.text}</span>
+                  )}
+                </>
+              ) : (
+                item.text
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function buildGroupedSections(analysis) {
+  if (!analysis) return [];
+
+  const issues = sortByPriority([
+    ...(analysis.risks || []),
+    ...(analysis.attention_needed || []),
+  ]).slice(0, 5);
+
+  const opportunities = [
+    ...(analysis.opportunities || []),
+    ...(analysis.wins || []).map((w) => ({ text: w.text, priority: 'low' })),
+  ].slice(0, 5);
+
+  const growthSignals = [
+    ...(analysis.what_changed || []),
+    ...(analysis.retention_signals || []),
+  ].slice(0, 5);
+
+  const weatherActivity = (analysis.weather_drivers || []).slice(0, 4);
+
+  const recommended = (analysis.recommended_actions || []).slice(0, 3);
+
+  return [
+    {
+      key: 'recommended',
+      title: 'Top Actions',
+      border: 'border-slate-600/50',
+      bg: 'bg-slate-900/50',
+      titleColor: 'text-slate-200',
+      items: recommended.map((a) => ({
+        title: a.title,
+        detail: a.detail,
+        priority: 'high',
+      })),
+      showPriority: true,
+    },
+    {
+      key: 'issues',
+      title: 'Issues',
+      border: 'border-rose-700/50',
+      bg: 'bg-rose-950/20',
+      titleColor: 'text-rose-300',
+      items: issues,
+      showPriority: true,
+    },
+    {
+      key: 'opportunities',
+      title: 'Opportunities',
+      border: 'border-amber-700/50',
+      bg: 'bg-amber-950/20',
+      titleColor: 'text-amber-300',
+      items: opportunities,
+    },
+    {
+      key: 'growth',
+      title: 'Growth Signals',
+      border: 'border-violet-700/50',
+      bg: 'bg-violet-950/20',
+      titleColor: 'text-violet-300',
+      items: growthSignals,
+    },
+    {
+      key: 'weather',
+      title: 'Weather Activity',
+      border: 'border-sky-700/50',
+      bg: 'bg-sky-950/20',
+      titleColor: 'text-sky-300',
+      items: weatherActivity,
+    },
+  ].filter((g) => g.items.length > 0);
+}
 
 function cacheKey(period) {
   return `${CACHE_PREFIX}:${period}`;
@@ -113,43 +181,6 @@ function formatGeneratedAt(iso) {
   }
 }
 
-function OpsSection({ sectionKey, items }) {
-  const style = SECTION_STYLES[sectionKey];
-  if (!style || !items?.length) return null;
-
-  return (
-    <div className={`rounded-lg border p-3 ${style.border} ${style.bg}`}>
-      <h3 className={`text-xs font-bold uppercase tracking-wide mb-2 ${style.titleColor}`}>
-        {style.title}
-      </h3>
-      <ul className="space-y-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="text-sm text-slate-200 flex gap-2">
-            <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${style.dot}`} />
-            <span>
-              {(sectionKey === 'attention_needed' || sectionKey === 'risks') && item.priority && (
-                <span className={`text-[10px] uppercase mr-1.5 ${PRIORITY_STYLES[item.priority] || ''}`}>
-                  {item.priority}
-                </span>
-              )}
-              {sectionKey === 'recommended_actions' ? (
-                <>
-                  <span className="font-medium text-white">{item.title}</span>
-                  {item.detail && (
-                    <span className="text-slate-400"> — {item.detail}</span>
-                  )}
-                </>
-              ) : (
-                item.text
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function OperationsContent({
   period,
   onPeriodChange,
@@ -160,6 +191,8 @@ function OperationsContent({
   onRefresh,
   compact = false,
 }) {
+  const groups = buildGroupedSections(analysis);
+
   return (
     <div className={compact ? '' : 'space-y-3'}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -201,15 +234,18 @@ function OperationsContent({
       )}
 
       {analysis && (
-        <div className={`space-y-2.5 ${loading ? 'opacity-60' : ''}`}>
-          <OpsSection sectionKey="what_changed" items={analysis.what_changed} />
-          <OpsSection sectionKey="opportunities" items={analysis.opportunities} />
-          <OpsSection sectionKey="risks" items={analysis.risks} />
-          <OpsSection sectionKey="attention_needed" items={analysis.attention_needed} />
-          <OpsSection sectionKey="weather_drivers" items={analysis.weather_drivers} />
-          <OpsSection sectionKey="retention_signals" items={analysis.retention_signals} />
-          <OpsSection sectionKey="recommended_actions" items={analysis.recommended_actions} />
-          <OpsSection sectionKey="wins" items={analysis.wins} />
+        <div className={`space-y-2 ${loading ? 'opacity-60' : ''}`}>
+          {groups.map((group) => (
+            <OpsGroup
+              key={group.key}
+              title={group.title}
+              border={group.border}
+              bg={group.bg}
+              titleColor={group.titleColor}
+              items={group.items}
+              showPriority={group.showPriority}
+            />
+          ))}
           {generatedAt && (
             <p className="text-[10px] text-slate-500 pt-1">
               Generated {formatGeneratedAt(generatedAt)}

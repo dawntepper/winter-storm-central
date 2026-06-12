@@ -18,11 +18,14 @@ function buildAnalysisPayload({
   radar,
   userJourneys,
   topInsights,
+  executiveSummary,
   recommendedActions,
   morningBrief,
   metricTrends,
   analyticsHealth,
   expansionOpportunities,
+  mostVisitedPages,
+  countyAlertOpportunities,
 }) {
   const mainJourney = userJourneys?.mainJourney;
   const mainDrop = mainJourney?.biggestDropOff;
@@ -126,6 +129,9 @@ function buildAnalysisPayload({
       ),
     },
     topInsights: (topInsights || []).slice(0, 8),
+    executiveSummary: executiveSummary || null,
+    mostVisitedPages: (mostVisitedPages?.pages || []).slice(0, 8),
+    countyAlertOpportunities: (countyAlertOpportunities?.opportunities || []).slice(0, 6),
     ruleBasedActions: (recommendedActions || []).slice(0, 6),
     morningBrief: morningBrief || null,
   };

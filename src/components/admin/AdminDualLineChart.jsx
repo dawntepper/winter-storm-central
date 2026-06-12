@@ -42,7 +42,7 @@ export default function AdminDualLineChart({
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={220}>
       <LineChart data={rows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid {...CHART_GRID} vertical={false} />
         <XAxis
