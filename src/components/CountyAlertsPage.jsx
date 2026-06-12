@@ -165,8 +165,7 @@ export default function CountyAlertsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
           <section
-            className="sticky z-10 -mx-4 sm:-mx-6 lg:mx-0 lg:static lg:z-auto [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
+            className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 -mx-4 sm:-mx-6 lg:mx-0 [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
           >
             <h2 className="text-lg font-semibold text-white mb-3 px-4 sm:px-6 lg:px-0">
               Live Weather Radar — {county.name} County
@@ -188,7 +187,7 @@ export default function CountyAlertsPage() {
             )}
           </section>
 
-          <div className="space-y-4 mt-6 lg:mt-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <div className="space-y-4 mt-6 lg:mt-0">
             <section>
               <h2 className="text-lg font-semibold text-white mb-3">
                 Active Weather Alerts in {county.name} County
