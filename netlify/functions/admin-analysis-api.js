@@ -78,9 +78,307 @@ function getSinceDate(dateRange) {
   }
 }
 
+/** Previous equivalent period bounds for period-over-period trends. */
+function getPreviousPeriodBounds(dateRange) {
+  const now = new Date();
+  switch (dateRange) {
+    case 'today': {
+      const until = new Date(now);
+      until.setHours(0, 0, 0, 0);
+      const since = new Date(until);
+      since.setDate(since.getDate() - 1);
+      return { since: since.toISOString(), until: until.toISOString() };
+    }
+    case '7d': {
+      const until = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const since = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      return { since: since.toISOString(), until: until.toISOString() };
+    }
+    case '30d': {
+      const until = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const since = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      return { since: since.toISOString(), until: until.toISOString() };
+    }
+    case 'all':
+    default:
+      return null;
+  }
+}
+
 function applySince(query, column, since) {
   if (!since) return query;
   return query.gte(column, since);
+}
+
+function applyUntil(query, column, until) {
+  if (!until) return query;
+  return query.lt(column, until);
+}
+
+function applyPeriod(query, column, since, until) {
+  let q = applySince(query, column, since);
+  q = applyUntil(q, column, until);
+  return q;
+}
+
+function computeTrend(current, previous) {
+  const cur = Number(current) || 0;
+  const prev = Number(previous) || 0;
+  if (cur === 0 && prev === 0) {
+    return { direction: 'flat', changePct: 0, current: cur, previous: prev };
+  }
+  if (prev === 0) {
+    return { direction: 'up', changePct: 100, current: cur, previous: prev };
+  }
+  const changePct = Math.round(((cur - prev) / prev) * 1000) / 10;
+  return {
+    direction: changePct > 1 ? 'up' : changePct < -1 ? 'down' : 'flat',
+    changePct,
+    current: cur,
+    previous: prev,
+  };
+}
+
+async function countRowsSince(supabase, table, since) {
+  let query = supabase.from(table).select('*', { count: 'exact', head: true });
+  query = applySince(query, 'created_at', since);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function fetchAnalyticsHealth(supabase) {
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const anthropic = describeAnthropicKeyConfig();
+
+  const [visitorCount, radarCount, searchCount, countyCount] = await Promise.all([
+    countRowsSince(supabase, 'visitor_sessions', since24h),
+    countRowsSince(supabase, 'radar_events', since24h),
+    countRowsSince(supabase, 'location_search_events', since24h),
+    countRowsSince(supabase, 'county_alert_views', since24h),
+  ]);
+
+  const checks = [
+    {
+      id: 'visitor_tracking',
+      label: 'Visitor tracking',
+      count: visitorCount,
+      status: visitorCount > 0 ? 'healthy' : 'warning',
+      message:
+        visitorCount > 0
+          ? `${visitorCount.toLocaleString()} sessions in last 24h`
+          : 'No visitor sessions recorded in the last 24 hours',
+    },
+    {
+      id: 'radar_events',
+      label: 'Radar events',
+      count: radarCount,
+      status: radarCount > 0 ? 'healthy' : 'warning',
+      message:
+        radarCount > 0
+          ? `${radarCount.toLocaleString()} radar events in last 24h`
+          : 'No radar events recorded in the last 24 hours',
+    },
+    {
+      id: 'location_searches',
+      label: 'Location searches',
+      count: searchCount,
+      status: searchCount > 0 ? 'healthy' : 'warning',
+      message:
+        searchCount > 0
+          ? `${searchCount.toLocaleString()} searches in last 24h`
+          : 'No location searches recorded in the last 24 hours',
+    },
+    {
+      id: 'county_alert_views',
+      label: 'County alert views',
+      count: countyCount,
+      status: countyCount > 0 ? 'healthy' : 'warning',
+      message:
+        countyCount > 0
+          ? `${countyCount.toLocaleString()} county views in last 24h`
+          : 'No county alert views recorded in the last 24 hours',
+    },
+    {
+      id: 'morning_brief',
+      label: 'AI Morning Brief',
+      count: null,
+      status: anthropic.configured && anthropic.looksValid ? 'healthy' : 'issue',
+      message:
+        anthropic.configured && anthropic.looksValid
+          ? 'Anthropic API key configured for brief generation'
+          : 'Anthropic API key missing or invalid — Morning Brief will fail',
+    },
+  ];
+
+  const issueCount = checks.filter((c) => c.status === 'issue').length;
+  const warningCount = checks.filter((c) => c.status === 'warning').length;
+  let overall = 'healthy';
+  if (issueCount > 0) overall = 'issue';
+  else if (warningCount > 0) overall = 'warning';
+
+  return { overall, checks, checkedAt: new Date().toISOString() };
+}
+
+async function fetchPreviousPeriodMetrics(supabase, dateRange) {
+  const bounds = getPreviousPeriodBounds(dateRange);
+  if (!bounds) return null;
+
+  const { since, until } = bounds;
+
+  let visitorQuery = supabase
+    .from('visitor_sessions')
+    .select('*', { count: 'exact', head: true });
+  visitorQuery = applyPeriod(visitorQuery, 'created_at', since, until);
+
+  let searchQuery = supabase
+    .from('location_search_events')
+    .select('*', { count: 'exact', head: true });
+  searchQuery = applyPeriod(searchQuery, 'created_at', since, until);
+
+  let saveQuery = supabase
+    .from('user_locations')
+    .select('*', { count: 'exact', head: true });
+  saveQuery = applyPeriod(saveQuery, 'created_at', since, until);
+
+  let countyQuery = supabase
+    .from('county_alert_views')
+    .select('*', { count: 'exact', head: true });
+  countyQuery = applyPeriod(countyQuery, 'created_at', since, until);
+
+  const [visitorsRes, searchesRes, savesRes, countiesRes, radarRes, returningRes] =
+    await Promise.all([
+      visitorQuery,
+      searchQuery,
+      saveQuery,
+      countyQuery,
+      supabase.rpc('admin_radar_engagement_stats', { p_since: since }),
+      supabase.rpc('admin_returning_visitor_stats', { p_since: since }),
+    ]);
+
+  if (visitorsRes.error) throw visitorsRes.error;
+  if (searchesRes.error) throw searchesRes.error;
+  if (savesRes.error) throw savesRes.error;
+  if (countiesRes.error) throw countiesRes.error;
+  if (radarRes.error) throw radarRes.error;
+  if (returningRes.error) throw returningRes.error;
+
+  // Filter radar to previous period only (RPC uses p_since only)
+  let radarOpens = radarRes.data?.totalOpens ?? 0;
+  if (until) {
+    let radarCountQuery = supabase
+      .from('radar_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_type', 'radar_opened');
+    radarCountQuery = applyPeriod(radarCountQuery, 'created_at', since, until);
+    const { count, error } = await radarCountQuery;
+    if (error) throw error;
+    radarOpens = count ?? 0;
+  }
+
+  return {
+    radarOpens,
+    returningVisitors: returningRes.data?.returning_visitors ?? 0,
+    locationSearches: searchesRes.count ?? 0,
+    savedLocations: savesRes.count ?? 0,
+    countyAlertViews: countiesRes.count ?? 0,
+    totalSessions: visitorsRes.count ?? 0,
+  };
+}
+
+function buildMetricTrends(current, previous) {
+  if (!previous) {
+    return {
+      radarOpens: null,
+      returningVisitors: null,
+      locationSearches: null,
+      savedLocations: null,
+      countyAlertViews: null,
+    };
+  }
+
+  return {
+    radarOpens: computeTrend(current.radarOpens, previous.radarOpens),
+    returningVisitors: computeTrend(
+      current.returningVisitors,
+      previous.returningVisitors
+    ),
+    locationSearches: computeTrend(
+      current.locationSearches,
+      previous.locationSearches
+    ),
+    savedLocations: computeTrend(
+      current.savedLocations,
+      previous.savedLocations
+    ),
+    countyAlertViews: computeTrend(
+      current.countyAlertViews,
+      previous.countyAlertViews
+    ),
+  };
+}
+
+function suggestExpansionAction(row) {
+  const query = String(row.query || row.label || '').toLowerCase();
+  const state = row.state || row.state_context || row.state_code;
+  if (query.includes('county') || query.includes(' co')) {
+    return 'Expand county coverage';
+  }
+  if (query.includes('forecast') || query.includes('weather')) {
+    return 'Add forecast link';
+  }
+  return 'Add city page';
+}
+
+function generateExpansionOpportunities({
+  missingLocationSearches,
+  locationSearch,
+  countyAlertViews,
+  locationSources,
+}) {
+  const failedSearches = (missingLocationSearches?.searches || []).slice(0, 10).map((row) => ({
+    query: row.query,
+    state: row.state_context || row.state_code || null,
+    searchCount: row.search_count,
+    lastSearched: row.last_searched,
+    suggestion: suggestExpansionAction(row),
+  }));
+
+  const topCities = (missingLocationSearches?.recommendedCities || [])
+    .slice(0, 8)
+    .map((city) => ({
+      ...city,
+      suggestion: suggestExpansionAction(city),
+    }));
+
+  const topSuccessfulCities = (locationSearch?.topLocations || [])
+    .slice(0, 5)
+    .map((row) => ({
+      query: row.query,
+      state: row.state_code || null,
+      searchCount: row.search_count,
+    }));
+
+  const lowTrafficCounties = (countyAlertViews?.topViewed || [])
+    .filter((c) => c.view_count <= 2)
+    .slice(0, 5)
+    .map((row) => ({
+      county: row.county_name,
+      state: row.state_code,
+      views: row.view_count,
+      suggestion: 'Promote county alerts on state page',
+    }));
+
+  return {
+    totalFailed: missingLocationSearches?.totalFailed ?? 0,
+    failedSearches,
+    topCities,
+    topSuccessfulCities,
+    lowTrafficCounties,
+    citySearchCount: locationSources?.citySearch ?? 0,
+    countySearchCount: locationSources?.countySearch ?? 0,
+    totalCountyViews: countyAlertViews?.totalViews ?? 0,
+  };
 }
 
 function computeReturningVisitorExtras(dailyBreakdown, returningPct) {
@@ -910,6 +1208,8 @@ async function fetchAllAnalytics(supabase, dateRange) {
     savedLocations,
     radar,
     userJourneys,
+    analyticsHealth,
+    previousMetrics,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -919,7 +1219,20 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchSavedLocations(supabase, since),
     fetchRadarEngagement(supabase, since),
     fetchUserJourneys(supabase, since),
+    fetchAnalyticsHealth(supabase),
+    fetchPreviousPeriodMetrics(supabase, dateRange),
   ]);
+
+  const currentMetrics = {
+    radarOpens: radar.totalOpens ?? 0,
+    returningVisitors: returningVisitors.returningVisitors ?? 0,
+    locationSearches: locationSearch.totalSearches ?? 0,
+    savedLocations: savedLocations.totalSaved ?? 0,
+    countyAlertViews: countyAlertViews.totalViews ?? 0,
+    totalSessions: returningVisitors.totalSessions ?? 0,
+  };
+
+  const metricTrends = buildMetricTrends(currentMetrics, previousMetrics);
 
   const topInsights = generateTopInsights({
     returningVisitors,
@@ -941,18 +1254,43 @@ async function fetchAllAnalytics(supabase, dateRange) {
     returningVisitors,
   });
 
+  const expansionOpportunities = generateExpansionOpportunities({
+    missingLocationSearches,
+    locationSearch,
+    countyAlertViews,
+    locationSources,
+  });
+
   return {
     dateRange,
     since,
+    analyticsHealth,
+    metricTrends,
+    expansionOpportunities,
     topInsights,
     recommendedActions,
-    returningVisitors,
+    returningVisitors: {
+      ...returningVisitors,
+      trend: metricTrends.returningVisitors,
+    },
     missingLocationSearches,
-    locationSearch,
+    locationSearch: {
+      ...locationSearch,
+      trend: metricTrends.locationSearches,
+    },
     locationSources,
-    countyAlertViews,
-    savedLocations,
-    radar,
+    countyAlertViews: {
+      ...countyAlertViews,
+      trend: metricTrends.countyAlertViews,
+    },
+    savedLocations: {
+      ...savedLocations,
+      trend: metricTrends.savedLocations,
+    },
+    radar: {
+      ...radar,
+      trend: metricTrends.radarOpens,
+    },
     userJourneys,
   };
 }
@@ -1004,8 +1342,10 @@ async function generateOperationsCenter(analytics, period, morningBrief) {
 
   return {
     analysis: {
-      attention_needed: parsed.attention_needed || [],
+      what_changed: parsed.what_changed || [],
       opportunities: parsed.opportunities || [],
+      risks: parsed.risks || [],
+      attention_needed: parsed.attention_needed || [],
       weather_drivers: parsed.weather_drivers || [],
       retention_signals: parsed.retention_signals || [],
       recommended_actions: (parsed.recommended_actions || []).slice(0, 3),

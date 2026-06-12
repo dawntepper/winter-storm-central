@@ -10,12 +10,12 @@ export const OPS_PERIODS = [
 ];
 
 const SECTION_STYLES = {
-  attention_needed: {
-    title: 'Attention Needed',
-    border: 'border-rose-700/50',
-    bg: 'bg-rose-950/25',
-    titleColor: 'text-rose-300',
-    dot: 'bg-rose-500',
+  what_changed: {
+    title: 'What Changed?',
+    border: 'border-indigo-700/50',
+    bg: 'bg-indigo-950/20',
+    titleColor: 'text-indigo-300',
+    dot: 'bg-indigo-500',
   },
   opportunities: {
     title: 'Opportunities',
@@ -23,6 +23,20 @@ const SECTION_STYLES = {
     bg: 'bg-amber-950/20',
     titleColor: 'text-amber-300',
     dot: 'bg-amber-500',
+  },
+  risks: {
+    title: 'Risks',
+    border: 'border-rose-700/50',
+    bg: 'bg-rose-950/25',
+    titleColor: 'text-rose-300',
+    dot: 'bg-rose-500',
+  },
+  attention_needed: {
+    title: 'Attention Needed',
+    border: 'border-rose-700/50',
+    bg: 'bg-rose-950/25',
+    titleColor: 'text-rose-300',
+    dot: 'bg-rose-500',
   },
   weather_drivers: {
     title: 'Weather Drivers',
@@ -113,7 +127,7 @@ function OpsSection({ sectionKey, items }) {
           <li key={i} className="text-sm text-slate-200 flex gap-2">
             <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${style.dot}`} />
             <span>
-              {sectionKey === 'attention_needed' && item.priority && (
+              {(sectionKey === 'attention_needed' || sectionKey === 'risks') && item.priority && (
                 <span className={`text-[10px] uppercase mr-1.5 ${PRIORITY_STYLES[item.priority] || ''}`}>
                   {item.priority}
                 </span>
@@ -188,8 +202,10 @@ function OperationsContent({
 
       {analysis && (
         <div className={`space-y-2.5 ${loading ? 'opacity-60' : ''}`}>
-          <OpsSection sectionKey="attention_needed" items={analysis.attention_needed} />
+          <OpsSection sectionKey="what_changed" items={analysis.what_changed} />
           <OpsSection sectionKey="opportunities" items={analysis.opportunities} />
+          <OpsSection sectionKey="risks" items={analysis.risks} />
+          <OpsSection sectionKey="attention_needed" items={analysis.attention_needed} />
           <OpsSection sectionKey="weather_drivers" items={analysis.weather_drivers} />
           <OpsSection sectionKey="retention_signals" items={analysis.retention_signals} />
           <OpsSection sectionKey="recommended_actions" items={analysis.recommended_actions} />
@@ -213,7 +229,7 @@ export function mapDashboardRangeToOpsPeriod(dateRange) {
 
 export default function OperationsCenter({
   dashboardDateRange,
-  variant = 'sidebar',
+  variant = 'inline',
 }) {
   const [period, setPeriod] = useState(() => mapDashboardRangeToOpsPeriod(dashboardDateRange));
   const [analysis, setAnalysis] = useState(null);

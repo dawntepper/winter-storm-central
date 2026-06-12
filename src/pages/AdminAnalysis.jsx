@@ -12,17 +12,15 @@ import CollapsibleAnalysisSection, {
   readSectionExpandedState,
   writeSectionExpandedState,
 } from '../components/admin/CollapsibleAnalysisSection';
+import ExpansionOpportunities from '../components/admin/ExpansionOpportunities';
+import HealthStatusCard from '../components/admin/HealthStatusCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import OperationsCenter from '../components/admin/OperationsCenter';
 import ScrollToTopButton from '../components/admin/ScrollToTopButton';
+import SortableDataTable from '../components/admin/SortableDataTable';
+import StickyDateRangePicker, { DateRangeButtons } from '../components/admin/StickyDateRangePicker';
+import TrendIndicator from '../components/admin/TrendIndicator';
 import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
-
-const DATE_RANGES = [
-  { id: 'today', label: 'Today' },
-  { id: '7d', label: '7 days' },
-  { id: '30d', label: '30 days' },
-  { id: 'all', label: 'All time' },
-];
 
 function formatNumber(n) {
   if (n == null) return '—';
@@ -49,11 +47,16 @@ function formatDate(iso) {
   }
 }
 
-function StatCard({ label, value, hint }) {
+function StatCard({ label, value, hint, trend }) {
   return (
     <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
       <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">{label}</div>
       <div className="text-2xl font-bold text-white">{value}</div>
+      {trend && (
+        <div className="mt-1">
+          <TrendIndicator trend={trend} compact />
+        </div>
+      )}
       {hint && <div className="text-xs text-slate-500 mt-1">{hint}</div>}
     </div>
   );
@@ -141,35 +144,26 @@ const DEFAULT_VIEW_MODES = {
   returningVisitors: 'visual',
   radarEngagement: 'visual',
   locationSearch: 'table',
-  savedLocations: 'table',
+  savedLocations: 'visual',
   userJourneys: 'table',
 };
 
-function TrendIndicator({ trend }) {
-  if (!trend) return null;
-  const { direction, changePct } = trend;
-  if (direction === 'flat') {
-    return (
-      <span className="text-slate-400 text-sm">
-        → Flat ({changePct >= 0 ? '+' : ''}{changePct}% vs prior period)
-      </span>
-    );
-  }
-  const isUp = direction === 'up';
-  return (
-    <span className={`text-sm font-medium ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-      {isUp ? '↑' : '↓'} {isUp ? 'Up' : 'Down'} {Math.abs(changePct)}% vs prior period
-    </span>
-  );
-}
-
-function TopInsightsCard({ insights }) {
+function TopInsightsCard({ insights, metricTrends }) {
   if (!insights?.length) return null;
+
+  const trendById = {
+    'radar-opens': metricTrends?.radarOpens,
+    'returning-visitors': metricTrends?.returningVisitors,
+    'search-success': metricTrends?.locationSearches,
+    'county-views': metricTrends?.countyAlertViews,
+    'top-save-state': metricTrends?.savedLocations,
+  };
+
   return (
     <div className="bg-gradient-to-br from-sky-950/50 to-slate-800 border border-sky-700/40 rounded-xl p-5 sm:p-6">
       <h2 className="text-xl font-bold text-white mb-1">Top Insights</h2>
       <p className="text-sm text-slate-400 mb-5">
-        Key metrics from your selected date range.
+        Key metrics from your selected date range with period-over-period trends.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {insights.map((item) => (
@@ -181,6 +175,11 @@ function TopInsightsCard({ insights }) {
               {item.label}
             </div>
             <div className="text-xl font-bold text-white">{item.value}</div>
+            {trendById[item.id] && (
+              <div className="mt-1">
+                <TrendIndicator trend={trendById[item.id]} compact />
+              </div>
+            )}
             {item.detail && (
               <div className="text-xs text-slate-500 mt-1 line-clamp-2">{item.detail}</div>
             )}
@@ -313,25 +312,7 @@ function LocationSourcesCard({ sources }) {
 }
 
 function DateRangePicker({ value, onChange, disabled }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {DATE_RANGES.map((range) => (
-        <button
-          key={range.id}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(range.id)}
-          className={`px-3 py-1.5 text-sm rounded-lg border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-            value === range.id
-              ? 'bg-sky-600 border-sky-500 text-white'
-              : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-sky-500/50'
-          }`}
-        >
-          {range.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <DateRangeButtons value={value} onChange={onChange} disabled={disabled} />;
 }
 
 function AdminAnalysisInner() {
@@ -384,6 +365,20 @@ function AdminAnalysisInner() {
     load(dateRange);
   }, [dateRange, load]);
 
+  useEffect(() => {
+    if (!data) return undefined;
+    const nav = document.getElementById('admin-analysis-nav');
+    const updateStickyTop = () => {
+      document.documentElement.style.setProperty(
+        '--sticky-date-top',
+        `${nav?.offsetHeight ?? 0}px`
+      );
+    };
+    updateStickyTop();
+    window.addEventListener('resize', updateStickyTop);
+    return () => window.removeEventListener('resize', updateStickyTop);
+  }, [data]);
+
   const rv = data?.returningVisitors;
   const ls = data?.locationSearch;
   const locationSources = data?.locationSources;
@@ -393,6 +388,9 @@ function AdminAnalysisInner() {
   const missing = data?.missingLocationSearches;
   const missingSearches = missing?.searches ?? (Array.isArray(missing) ? missing : []);
   const countyViews = data?.countyAlertViews;
+  const metricTrends = data?.metricTrends;
+  const expansionOpportunities = data?.expansionOpportunities;
+  const analyticsHealth = data?.analyticsHealth;
   const hasMissingSearches = missingSearches.length > 0;
 
   return (
@@ -417,21 +415,22 @@ function AdminAnalysisInner() {
       </header>
 
       {data && (
-        <AdminAnalysisNav
-          onCollapseAll={collapseAllSections}
-          onExpandAll={expandAllSections}
-        />
+        <>
+          <AdminAnalysisNav
+            onCollapseAll={collapseAllSections}
+            onExpandAll={expandAllSections}
+          />
+          <StickyDateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            disabled={loading}
+          />
+        </>
       )}
 
       <div className="px-4 py-8 sm:py-10">
-        <div
-          className={
-            data
-              ? 'lg:flex lg:items-start lg:justify-center lg:gap-4 xl:gap-5'
-              : 'max-w-7xl mx-auto'
-          }
-        >
-          <main className="flex-1 min-w-0 w-full max-w-7xl space-y-8">
+        <div className="max-w-7xl mx-auto">
+          <main className="space-y-8">
             {error && (
               <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
                 {error}
@@ -454,18 +453,23 @@ function AdminAnalysisInner() {
                 <CollapsibleAnalysisSection
                   id="overview"
                   title="Overview"
-                  description="Morning brief, operations center, and top insights for the selected period."
+                  description="Health status, morning brief, operations center, and top insights."
                   expanded={sectionsExpanded.overview}
                   onToggle={() => toggleSection('overview')}
                   className="bg-slate-800/80 border border-slate-700"
                 >
-                  <OperationsCenter
-                    dashboardDateRange={dateRange}
-                    variant="mobile-accordion"
-                  />
-                  <div className="mt-6 space-y-6">
+                  <div className="space-y-6">
+                    <HealthStatusCard health={analyticsHealth} />
                     <MorningBriefCard dateRange={dateRange} />
-                    <TopInsightsCard insights={data.topInsights} />
+                    <div className="hidden lg:block">
+                      <OperationsCenter dashboardDateRange={dateRange} variant="inline" />
+                    </div>
+                    <OperationsCenter
+                      dashboardDateRange={dateRange}
+                      variant="mobile-accordion"
+                    />
+                    <TopInsightsCard insights={data.topInsights} metricTrends={metricTrends} />
+                    <ExpansionOpportunities data={expansionOpportunities} />
                   </div>
                 </CollapsibleAnalysisSection>
 
@@ -486,7 +490,11 @@ function AdminAnalysisInner() {
                 <StatCard label="Total sessions" value={formatNumber(rv?.totalSessions)} />
                 <StatCard label="Unique visitors" value={formatNumber(rv?.uniqueVisitors)} />
                 <StatCard label="New visitors" value={formatNumber(rv?.newVisitors)} />
-                <StatCard label="Returning" value={formatNumber(rv?.returningVisitors)} />
+                <StatCard
+                  label="Returning"
+                  value={formatNumber(rv?.returningVisitors)}
+                  trend={rv?.trend}
+                />
                 <StatCard label="Returning %" value={formatPct(rv?.returningPct)} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
@@ -629,7 +637,11 @@ function AdminAnalysisInner() {
                 onViewModeChange={(mode) => setViewMode('locationSearch', mode)}
               />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <StatCard label="Total searches" value={formatNumber(ls?.totalSearches)} />
+                <StatCard
+                  label="Total searches"
+                  value={formatNumber(ls?.totalSearches)}
+                  trend={ls?.trend}
+                />
                 <StatCard label="Successful" value={formatNumber(ls?.successfulSearches)} />
                 <StatCard label="Failed" value={formatNumber(ls?.failedSearches)} />
                 <StatCard label="Success rate" value={formatPct(ls?.successRate)} />
@@ -746,7 +758,11 @@ function AdminAnalysisInner() {
               onToggle={() => toggleSection('county-alert-views')}
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                <StatCard label="Total county views" value={formatNumber(countyViews?.totalViews)} />
+                <StatCard
+                  label="Total county views"
+                  value={formatNumber(countyViews?.totalViews)}
+                  trend={countyViews?.trend}
+                />
               </div>
               <div className="space-y-6">
                 <div>
@@ -824,7 +840,11 @@ function AdminAnalysisInner() {
               }
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                <StatCard label="Total saves" value={formatNumber(sl?.totalSaved)} />
+                <StatCard
+                  label="Total saves"
+                  value={formatNumber(sl?.totalSaved)}
+                  trend={sl?.trend}
+                />
                 <StatCard label="Signed-in users" value={formatNumber(sl?.signedInUsers)} />
                 <StatCard
                   label="Anonymous saves"
@@ -844,7 +864,7 @@ function AdminAnalysisInner() {
                 </>
               )}
               <SubsectionTitle>Most saved locations</SubsectionTitle>
-              <DataTable
+              <SortableDataTable
                 columns={[
                   { key: 'location_name', label: 'Location' },
                   { key: 'state', label: 'State', render: (r) => r.state || '—' },
@@ -861,6 +881,9 @@ function AdminAnalysisInner() {
                 ]}
                 rows={sl?.topLocations || []}
                 emptyMessage="No saved locations in this period."
+                defaultSortKey="save_count"
+                defaultSortDir="desc"
+                compact
               />
             </CollapsibleAnalysisSection>
 
@@ -878,7 +901,11 @@ function AdminAnalysisInner() {
               }
             >
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <StatCard label="Total radar opens" value={formatNumber(radar?.totalOpens)} />
+                <StatCard
+                  label="Total radar opens"
+                  value={formatNumber(radar?.totalOpens)}
+                  trend={radar?.trend}
+                />
                 <StatCard
                   label="Avg opens / session"
                   value={formatNumber(radar?.insights?.avgOpensPerSession)}
@@ -1070,17 +1097,6 @@ function AdminAnalysisInner() {
               </>
             )}
           </main>
-
-          {data && (
-            <aside className="hidden lg:block w-80 xl:w-[340px] shrink-0 self-start">
-              <div className="sticky top-14">
-                <OperationsCenter
-                  dashboardDateRange={dateRange}
-                  variant="sidebar"
-                />
-              </div>
-            </aside>
-          )}
         </div>
       </div>
       <ScrollToTopButton />

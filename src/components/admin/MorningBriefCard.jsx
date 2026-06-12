@@ -94,7 +94,7 @@ export default function MorningBriefCard({ dateRange }) {
         <div>
           <h2 className="text-xl font-bold text-white mb-1">Morning Brief</h2>
           <p className="text-sm text-slate-400">
-            AI summary of key product metrics for the selected period.
+            AI summary highlighting what changed vs the prior period.
           </p>
         </div>
         <button

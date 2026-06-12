@@ -2,12 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 
 export const ANALYSIS_SECTIONS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'returning-visitors', label: 'Returning Visitors' },
-  { id: 'location-searches', label: 'Location Searches' },
-  { id: 'county-alert-views', label: 'County Alert Views' },
+  { id: 'returning-visitors', label: 'Visitors' },
+  { id: 'location-searches', label: 'Searches' },
+  { id: 'county-alert-views', label: 'Counties' },
   { id: 'saved-locations', label: 'Saved Locations' },
-  { id: 'radar-engagement', label: 'Radar Engagement' },
-  { id: 'user-journeys', label: 'User Journeys' },
+  { id: 'radar-engagement', label: 'Radar' },
+  { id: 'user-journeys', label: 'Journeys' },
 ];
 
 function scrollToSection(id) {
@@ -15,9 +15,9 @@ function scrollToSection(id) {
   if (!el) return;
   const nav = document.getElementById('admin-analysis-nav');
   const navHeight = nav?.offsetHeight ?? 0;
-  const header = document.getElementById('admin-analysis-header');
-  const headerHeight = header?.offsetHeight ?? 0;
-  const offset = navHeight + headerHeight + 8;
+  const stickyDate = document.getElementById('sticky-date-range');
+  const stickyDateHeight = stickyDate?.offsetHeight ?? 0;
+  const offset = navHeight + stickyDateHeight + 12;
   const top = el.getBoundingClientRect().top + window.scrollY - offset;
   window.scrollTo({ top, behavior: 'smooth' });
 }
@@ -33,21 +33,27 @@ export default function AdminAnalysisNav({
     if (sectionEls.length === 0) return undefined;
 
     const nav = document.getElementById('admin-analysis-nav');
-    const header = document.getElementById('admin-analysis-header');
-    const offset = (nav?.offsetHeight ?? 0) + (header?.offsetHeight ?? 0) + 16;
+    const stickyDate = document.getElementById('sticky-date-range');
+    const offset =
+      (nav?.offsetHeight ?? 0) + (stickyDate?.offsetHeight ?? 0) + 20;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          .sort((a, b) => {
+            if (b.intersectionRatio !== a.intersectionRatio) {
+              return b.intersectionRatio - a.intersectionRatio;
+            }
+            return a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top;
+          });
         if (visible.length > 0) {
           setActiveId(visible[0].target.id);
         }
       },
       {
-        rootMargin: `-${offset}px 0px -55% 0px`,
-        threshold: [0, 0.1, 0.25, 0.5],
+        rootMargin: `-${offset}px 0px -50% 0px`,
+        threshold: [0, 0.05, 0.15, 0.35, 0.5],
       }
     );
 
@@ -66,22 +72,25 @@ export default function AdminAnalysisNav({
       className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/80"
     >
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-thin">
-          {ANALYSIS_SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => handleClick(section.id)}
-              className={`shrink-0 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
-                activeId === section.id
-                  ? 'bg-sky-600 border-sky-500 text-white'
-                  : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:border-sky-500/50 hover:text-white'
-              }`}
-            >
-              {section.label}
-            </button>
-          ))}
-          <div className="shrink-0 flex items-center gap-1.5 ml-auto pl-2 border-l border-slate-700">
+        <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-thin">
+          {ANALYSIS_SECTIONS.map((section) => {
+            const isActive = activeId === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => handleClick(section.id)}
+                className={`shrink-0 px-3 py-2 text-xs sm:text-sm transition-colors cursor-pointer whitespace-nowrap border-b-2 ${
+                  isActive
+                    ? 'border-sky-400 text-sky-300 font-semibold bg-sky-950/30'
+                    : 'border-transparent text-slate-400 hover:text-white hover:border-slate-600'
+                }`}
+              >
+                {section.label}
+              </button>
+            );
+          })}
+          <div className="shrink-0 flex items-center gap-1.5 ml-auto pl-3 border-l border-slate-700">
             <button
               type="button"
               onClick={onCollapseAll}
