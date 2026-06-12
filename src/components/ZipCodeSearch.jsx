@@ -341,6 +341,13 @@ export default function ZipCodeSearch({
     return () => window.removeEventListener('savedLocationsChanged', handler);
   }, []);
 
+  // Expand when hero "Change Location" scrolls here (App.jsx dispatches this).
+  useEffect(() => {
+    const handler = () => setIsExpanded(true);
+    window.addEventListener('checkLocationExpand', handler);
+    return () => window.removeEventListener('checkLocationExpand', handler);
+  }, []);
+
   // Load catalog cities when a state is selected (same source as state alert pages).
   useEffect(() => {
     if (!selectedState) {

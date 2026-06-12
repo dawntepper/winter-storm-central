@@ -803,6 +803,7 @@ export default function App() {
   };
 
   const handleChangeLocation = () => {
+    window.dispatchEvent(new CustomEvent('checkLocationExpand'));
     const isMobile = window.innerWidth < 1024;
     const target = document.querySelector(isMobile ? '#location-search-mobile' : '#location-search');
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
