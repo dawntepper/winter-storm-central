@@ -2,12 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import SignInModal from './SignInModal';
 
+/** Matches homepage header nav chips (Live Alerts, Radar, State dropdown). */
+const NAV_CHIP_CLASS =
+  'text-xs sm:text-sm text-slate-400 hover:bg-slate-500/25 font-medium bg-slate-500/15 px-2.5 py-1 rounded border border-slate-500/30 transition-colors';
+
 /**
  * Header account control. Hidden entirely when Supabase isn't configured, so
  * the app degrades to its current anonymous-only behavior with zero UI noise.
  *
  *  - Signed out → "Sign in with email" button that opens the magic-link modal.
- *  - Signed in  → "My Account" + a small dropdown with Sign out.
+ *  - Signed in  → "Account" + a small dropdown with Sign out.
  *
  * Never gates content — it's a convenience entry point only.
  */
@@ -35,18 +39,10 @@ export default function AccountMenu() {
       <>
         <button
           onClick={() => setShowModal(true)}
-          className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 cursor-pointer"
+          className={`${NAV_CHIP_CLASS} cursor-pointer`}
           title="Sign in with email"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-          <span className="hidden sm:inline">Sign in with email</span>
+          Sign in
         </button>
         {showModal && <SignInModal onClose={() => setShowModal(false)} />}
       </>
@@ -65,13 +61,12 @@ export default function AccountMenu() {
       <button
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
-        className="p-2 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-sm font-medium transition-colors flex items-center gap-1.5 border border-slate-700 cursor-pointer"
-        title="My Account"
+        className={`${NAV_CHIP_CLASS} cursor-pointer`}
+        title="Account"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="text-base">👤</span>
-        <span className="hidden sm:inline">My Account</span>
+        Account
       </button>
 
       {open && (

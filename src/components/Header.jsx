@@ -115,9 +115,6 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
             </div>
           </div>
 
-          <div className="flex-shrink-0">
-            <AccountMenu />
-          </div>
         </div>
 
         <div className="flex items-center justify-between gap-x-3 gap-y-1 sm:gap-4 flex-wrap">
@@ -125,6 +122,7 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
             <Link to="/alerts" className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
             <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors">Live Weather Radar</Link>
             <StateAlertsDropdown source={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN} />
+            <AccountMenu />
           </div>
 
           {showUtilities && (
