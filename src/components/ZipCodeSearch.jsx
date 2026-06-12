@@ -984,11 +984,11 @@ export default function ZipCodeSearch({
   }
 
   const radarCardClass = `rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl ${
-    cityDropdownOpen ? 'overflow-visible relative z-10' : 'overflow-hidden'
+    isExpanded ? 'overflow-visible relative z-10' : 'overflow-hidden'
   }`;
-  const defaultCardClass = cityDropdownOpen
+  const defaultCardClass = isExpanded
     ? 'rounded-lg border border-slate-600 shadow-lg overflow-visible relative z-10'
-    : 'rounded-lg border border-slate-600 shadow-lg';
+    : 'rounded-lg border border-slate-600 shadow-lg overflow-hidden';
   const accordionHeaderClass = isRadar
     ? 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-800 to-slate-800/80 hover:from-slate-700 hover:to-slate-700/80 transition-all'
     : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all';
