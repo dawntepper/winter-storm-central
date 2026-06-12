@@ -61,6 +61,15 @@ describe('savedLocationAlertsPath', () => {
     expect(savedLocationAlertsPath({ name: '80301', citySlug: 'boulder-co' })).toBe('/alerts/city/boulder-co');
   });
 
+  it('prefers stored cityAlertsPath over static index', () => {
+    expect(
+      savedLocationAlertsPath({
+        name: 'Miami, FL',
+        cityAlertsPath: '/alerts/city/miami-fl',
+      })
+    ).toBe('/alerts/city/miami-fl');
+  });
+
   it('returns null for non-city labels', () => {
     expect(savedLocationAlertsPath({ name: 'Near me (40.01, -105.27)' })).toBeNull();
   });

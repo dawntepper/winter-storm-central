@@ -49,6 +49,35 @@ import {
 const SEARCH_LOCATIONS_KEY = 'winterStorm_userLocations';
 const ALERT_LOCATIONS_KEY = 'winterStorm_alertLocations';
 
+function cityLinkPatchFromResult(result) {
+  if (!result?.slug) return null;
+  return {
+    citySlug: result.slug,
+    cityAlertsPath: result.path,
+    hasStaticPage: result.hasStaticPage,
+  };
+}
+
+/** Persist citySlug/cityAlertsPath on a ZipCodeSearch localStorage entry. */
+function patchSearchLocationCityLink(loc, patch) {
+  if (!loc || !patch) return;
+  try {
+    const stored = localStorage.getItem(SEARCH_LOCATIONS_KEY);
+    if (!stored) return;
+    const savedLocations = JSON.parse(stored);
+    const locationKey = loc.zip || String(loc.id || '').replace(/^user-/, '');
+    const entry = savedLocations[locationKey];
+    if (!entry?.data) return;
+    savedLocations[locationKey] = {
+      ...entry,
+      data: { ...entry.data, ...patch },
+    };
+    localStorage.setItem(SEARCH_LOCATIONS_KEY, JSON.stringify(savedLocations));
+  } catch (e) {
+    console.error('Error patching search location city link:', e);
+  }
+}
+
 function LoadingState() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -328,6 +357,20 @@ export default function App() {
   const geoKey = (lat, lon) => `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)}`;
   const [dbConditions, setDbConditions] = useState({}); // userLocationId -> conditions
 
+  // Ensure a saved "City, ST" pin has a catalog slug/path for linking.
+  const enrichSavedLocationCityLink = useCallback((loc, applyPatch) => {
+    if (!loc?.name || loc.citySlug || loc.lat == null || loc.lon == null) return;
+    ensureCityFromSavedLocation({
+      label: loc.name,
+      lat: loc.lat,
+      lon: loc.lon,
+    }).then((result) => {
+      const patch = cityLinkPatchFromResult(result);
+      if (!patch) return;
+      applyPatch(patch);
+    });
+  }, []);
+
   const localGeoKeys = new Set(
     [...searchLocations, ...alertLocations]
       .filter((l) => l?.lat != null && l?.lon != null)
@@ -383,6 +426,11 @@ export default function App() {
         if (!conditions) return;
         setAlertLocations(prev =>
           prev.map(l => (l.id === loc.id ? { ...l, conditions } : l))
+        );
+      });
+      enrichSavedLocationCityLink(loc, (patch) => {
+        setAlertLocations((prev) =>
+          prev.map((l) => (l.id === loc.id ? { ...l, ...patch } : l))
         );
       });
     });
@@ -559,6 +607,11 @@ export default function App() {
           prev.map(loc => (loc.id === newLocation.id ? { ...loc, conditions } : loc))
         );
       });
+      enrichSavedLocationCityLink(newLocation, (patch) => {
+        setAlertLocations((prev) =>
+          prev.map((loc) => (loc.id === newLocation.id ? { ...loc, ...patch } : loc))
+        );
+      });
     }
 
     // Center map on the added location (skip when toggling from the alert popup —
@@ -612,35 +665,24 @@ export default function App() {
     }
   };
 
-  // Receive search-pin changes from ZipCodeSearch. For signed-in users, mirror
-  // each on-map location into their account (idempotent — the DB de-dupes by
-  // rounded lat/lon, and addUserLocation ignores an existing save).
+  // Receive search-pin changes from ZipCodeSearch. Mirror on-map pins into the
+  // account when signed in, and ensure city page links for all users.
   const handleSearchLocationsChange = useCallback((locs) => {
     setSearchLocations(locs);
-    if (saved.isAuthenticated && Array.isArray(locs)) {
-      locs.forEach((l) => {
-        if (l?.lat != null && l?.lon != null) {
-          saved.addToAccount({ name: l.name, lat: l.lat, lon: l.lon, zip: l.zip });
-          if (l.name && !l.citySlug) {
-            ensureCityFromSavedLocation({
-              label: l.name,
-              lat: l.lat,
-              lon: l.lon,
-            }).then((result) => {
-              if (!result?.slug) return;
-              setSearchLocations((prev) =>
-                prev.map((loc) =>
-                  loc.id === l.id
-                    ? { ...loc, citySlug: result.slug, cityAlertsPath: result.path }
-                    : loc
-                )
-              );
-            });
-          }
-        }
+    if (!Array.isArray(locs)) return;
+    locs.forEach((l) => {
+      if (l?.lat == null || l?.lon == null) return;
+      if (saved.isAuthenticated) {
+        saved.addToAccount({ name: l.name, lat: l.lat, lon: l.lon, zip: l.zip });
+      }
+      enrichSavedLocationCityLink(l, (patch) => {
+        setSearchLocations((prev) =>
+          prev.map((loc) => (loc.id === l.id ? { ...loc, ...patch } : loc))
+        );
+        patchSearchLocationCityLink(l, patch);
       });
-    }
-  }, [saved]);
+    });
+  }, [saved, enrichSavedLocationCityLink]);
 
   // Remove an account-backed pin (merge-down) — deletes it from the user's
   // account; refresh() then drops it from the list/map everywhere.

@@ -585,6 +585,7 @@ export default function ZipCodeSearch({
             ...entry.data,
             citySlug: result.slug,
             cityAlertsPath: result.path,
+            hasStaticPage: result.hasStaticPage,
           },
         },
       };
@@ -598,6 +599,23 @@ export default function ZipCodeSearch({
       return updated;
     });
   };
+
+  // Backfill city links when hydrating saved pins that predate slug persistence.
+  const cityLinkBackfillDone = useRef(false);
+  useEffect(() => {
+    if (cityLinkBackfillDone.current || Object.keys(savedLocations).length === 0) return;
+    cityLinkBackfillDone.current = true;
+    for (const [locationId, entry] of Object.entries(savedLocations)) {
+      const data = entry?.data;
+      if (!entry?.onMap || !data?.name || data.citySlug) continue;
+      if (data.lat == null || data.lon == null) continue;
+      ensureCityFromSavedLocation({
+        label: data.name,
+        lat: data.lat,
+        lon: data.lon,
+      }).then((result) => applyCityLinkToSavedLocation(locationId, result));
+    }
+  }, [savedLocations]);
 
   const handleToggleMap = (locationId, checked) => {
     const locationData = (currentLocationData?.zip === locationId || currentLocationData?.id === `user-${locationId}`)

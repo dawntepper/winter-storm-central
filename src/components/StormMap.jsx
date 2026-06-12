@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
-import { getCitySlugForLocation } from '../utils/cityLookup';
+import { savedLocationAlertsPath } from '../services/locationCatalogService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
@@ -1803,15 +1803,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                   {(() => {
                     const m = (hoveredUserLocation.name || '').match(/^(.*?),\s*([A-Z]{2})$/);
                     const linkClass = 'text-sky-600 hover:text-sky-700 hover:underline';
+                    const cityPath = savedLocationAlertsPath(hoveredUserLocation);
                     if (m) {
                       const cityPart = m[1];
                       const abbr = m[2];
                       const stateSlug = ABBR_TO_SLUG[abbr];
-                      const citySlug = getCitySlugForLocation(hoveredUserLocation.name);
                       return (
                         <h4 className="font-semibold text-slate-800 text-sm">
-                          {citySlug ? (
-                            <Link to={`/alerts/${citySlug}`} className={linkClass} onClick={(e) => e.stopPropagation()}>
+                          {cityPath ? (
+                            <Link to={cityPath} className={linkClass} onClick={(e) => e.stopPropagation()}>
                               {cityPart}
                             </Link>
                           ) : (
@@ -1835,10 +1835,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                         </h4>
                       );
                     }
-                    const slug = getCitySlugForLocation(hoveredUserLocation.name);
-                    return slug ? (
+                    return cityPath ? (
                       <Link
-                        to={`/alerts/${slug}`}
+                        to={cityPath}
                         className={`font-semibold ${linkClass} text-sm`}
                       >
                         {hoveredUserLocation.name} &rarr;
