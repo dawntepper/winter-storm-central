@@ -15,6 +15,7 @@
  * | state_alert_page_view       | visit_cooldown  | state:{stateCode} (3s) |
  * | forecast_view               | visit_cooldown  | forecast:{state_slug} (3s) |
  * | forecast_link_click         | none            | every click |
+ * | state_selector_used         | none            | every selection |
  * | radar_view                  | visit_cooldown  | radar_view:{pagePath} (3s) |
  * | county_alert_view           | visit_cooldown  | county:{county_id} (3s) |
  * | location_change             | debounce        | loc:{state}:{source}:{coords} (2s) |
@@ -47,6 +48,7 @@ export const PRODUCT_EVENTS = {
   RADAR_VIEW: 'radar_view',
   FORECAST_VIEW: 'forecast_view',
   FORECAST_LINK_CLICK: 'forecast_link_click',
+  STATE_SELECTOR_USED: 'state_selector_used',
   SAVE_LOCATION: 'save_location',
   SIGN_IN: 'sign_in',
   LOCATIONS_SYNCED: 'locations_synced',
@@ -109,6 +111,7 @@ const PRODUCT_DEDUPE_RULES = {
       `search:${stateCode || 'unknown'}:${metadata?.query || ''}`,
   },
   [PRODUCT_EVENTS.FORECAST_LINK_CLICK]: { type: 'none' },
+  [PRODUCT_EVENTS.STATE_SELECTOR_USED]: { type: 'none' },
   [PRODUCT_EVENTS.SAVE_LOCATION]: { type: 'none' },
 };
 

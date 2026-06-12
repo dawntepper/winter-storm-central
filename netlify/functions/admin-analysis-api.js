@@ -1191,7 +1191,9 @@ async function fetchRadarEngagement(supabase, since) {
 }
 
 const STATE_PAGE_FORECAST_SOURCES = new Set([
+  'forecasts_conditions_card',
   'weather_forecast_card',
+  'popular_forecasts',
   'popular_forecasts_section',
   'state_alert_page',
   'state-page-widget',
@@ -1227,11 +1229,16 @@ async function fetchForecastEngagement(supabase, since) {
 
   const clicks = clicksRes.data || [];
   const cityCounts = new Map();
+  const stateClickCounts = new Map();
   let statePageClicks = 0;
 
   for (const row of clicks) {
     if (isStatePageForecastClick(row)) {
       statePageClicks += 1;
+    }
+    const stateKey = row.state_code || row.metadata?.destination_state || null;
+    if (stateKey) {
+      stateClickCounts.set(stateKey, (stateClickCounts.get(stateKey) || 0) + 1);
     }
     const city = row.metadata?.city;
     if (city) {
@@ -1256,12 +1263,18 @@ async function fetchForecastEngagement(supabase, since) {
     .sort((a, b) => b.click_count - a.click_count)
     .slice(0, 10);
 
+  const clicksByState = Array.from(stateClickCounts.entries())
+    .map(([state_code, click_count]) => ({ state_code, click_count }))
+    .sort((a, b) => b.click_count - a.click_count)
+    .slice(0, 15);
+
   return {
     totalClicks: clicks.length,
     statePageClicks,
     statePageViews,
     statePageCtr,
     topCities,
+    clicksByState,
   };
 }
 

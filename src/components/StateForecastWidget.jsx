@@ -41,9 +41,9 @@ export function ForecastDestinationCard({
       ) : null}
       <span
         aria-hidden="true"
-        className="text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors"
+        className="text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors ml-auto"
       >
-        →
+        More →
       </span>
     </Link>
   );
@@ -56,7 +56,7 @@ function CityForecastDestinationCard({ city, stateSlug, stateCode, sourcePage, t
   return (
     <ForecastDestinationCard
       to={`/forecast/${stateSlug}?city=${city.slug}`}
-      label={`${city.city} Forecast`}
+      label={city.city}
       icon={icon}
       highTemp={temps?.highTemp}
       lowTemp={temps?.lowTemp}
@@ -93,7 +93,7 @@ export function PopularForecastsSection({ stateSlug, stateName, stateCode, maxCi
             city={c}
             stateSlug={stateSlug}
             stateCode={stateCode}
-            sourcePage={FORECAST_SOURCE_PAGES.POPULAR_FORECASTS_SECTION}
+            sourcePage={FORECAST_SOURCE_PAGES.POPULAR_FORECASTS}
             tempsBySlug={tempsBySlug}
           />
         ))}
@@ -131,14 +131,14 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
       return;
     }
     trackForecastLinkClick('state-page-widget', stateSlug, 'zip', {
-      sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
+      sourcePage: FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD,
     });
     navigate(`/forecast/${stateSlug}?zip=${zip}`);
   };
 
   return (
     <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-white mb-1">Weather Forecast</h2>
+      <h2 className="text-sm font-semibold text-white mb-1">Forecasts &amp; Conditions</h2>
       <p className="text-[11px] text-slate-500 mb-3">
         Hourly + 7-day outlook from NWS — tap a city for details
       </p>
@@ -151,7 +151,7 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
               city={c}
               stateSlug={stateSlug}
               stateCode={stateCode}
-              sourcePage={FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD}
+              sourcePage={FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD}
               tempsBySlug={tempsBySlug}
             />
           ))}
@@ -190,12 +190,12 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
           trackForecastStateClick({
             stateCode,
             stateSlug,
-            sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
+            sourcePage: FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD,
           })
         }
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 mt-1 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 rounded-lg text-sm text-sky-300 hover:text-sky-200 font-semibold transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
       >
-        View {stateName} state forecast
+        7-Day Forecast
         <span aria-hidden="true">→</span>
       </Link>
     </section>

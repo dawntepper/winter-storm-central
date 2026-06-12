@@ -42,7 +42,7 @@ function fetchCityTemps(city) {
 /**
  * Lazy-load today's high/low temps for catalog cities via NWS forecast API.
  * Results are cached for the SPA session so sibling widgets on the same page
- * (Weather Forecast card + Popular Forecasts) share one fetch per city.
+ * (Forecasts & Conditions card + Popular Forecasts) share one fetch per city.
  *
  * @param {Array<{ slug: string, lat: number, lon: number }>} cities
  * @returns {Record<string, { highTemp?: number, lowTemp?: number, shortForecast?: string } | null | undefined>}

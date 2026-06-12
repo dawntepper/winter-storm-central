@@ -48,7 +48,6 @@ import {
 import {
   trackStateAlertsPageView,
   trackStateNearbyClick,
-  trackBrowseByStateClick,
   trackRadarLinkClick,
   setNavSource,
   NAV_SOURCES
@@ -425,7 +424,10 @@ export default function StateAlertsPage() {
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>
             </Link>
           </div>
-          <PageHeaderNav source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN} />
+          <PageHeaderNav
+            source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
+            showStateDropdown={false}
+          />
         </div>
       </header>
 
@@ -474,9 +476,6 @@ export default function StateAlertsPage() {
             id="state-alerts-map"
             className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 -mx-4 sm:-mx-6 lg:mx-0 [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
           >
-            <h2 className="text-lg font-semibold text-white mb-3 px-4 sm:px-6 lg:px-0">
-              Live Weather Radar — {stateData.name}
-            </h2>
             <StormMap
               weatherData={{}}
               stormPhase="active"
@@ -493,6 +492,8 @@ export default function StateAlertsPage() {
               selectedStateCode={stateAbbr}
               radarLayerType="precipitation"
               radarColorScheme={4}
+              stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
+              currentStateSlug={stateSlug}
             />
             <PopularForecastsSection
               stateSlug={stateSlug}

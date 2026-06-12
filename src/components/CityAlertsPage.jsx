@@ -22,7 +22,7 @@ import {
 import { getForecastForCoords } from '../services/forecastService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
-import { trackForecastLinkClick } from '../utils/analytics';
+import { FORECAST_SOURCE_PAGES, trackForecastLinkClick } from '../utils/analytics';
 import { getForecastIcon } from '../utils/getForecastIcon';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
@@ -655,7 +655,13 @@ function CityForecastSection({ city }) {
       <div className="text-center">
         <Link
           to={`/forecast/${city.state_slug}?city=${city.slug}`}
-          onClick={() => trackForecastLinkClick('city-page', city.state_slug, 'city')}
+          onClick={() =>
+            trackForecastLinkClick('city-page', city.state_slug, 'city', {
+              sourcePage: FORECAST_SOURCE_PAGES.CITY_PAGE,
+              city: city.city,
+              citySlug: city.slug,
+            })
+          }
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 text-sky-300 hover:text-sky-200 text-sm font-semibold rounded-lg transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
         >
           {forecastLinkIcon ? (

@@ -498,6 +498,28 @@ function AdminAnalysisInner() {
                         defaultSortDir="desc"
                         compact
                       />
+                      <div className="mt-4">
+                        <SubsectionTitle>Forecast clicks by state</SubsectionTitle>
+                      </div>
+                      <SortableDataTable
+                        columns={[
+                          {
+                            key: 'state_code',
+                            label: 'State',
+                            render: (r) => r.state_code || '—',
+                          },
+                          {
+                            key: 'click_count',
+                            label: 'Clicks',
+                            render: (r) => formatNumber(r.click_count),
+                          },
+                        ]}
+                        rows={forecastEngagement?.clicksByState || []}
+                        emptyMessage="No forecast clicks by state in this period."
+                        defaultSortKey="click_count"
+                        defaultSortDir="desc"
+                        compact
+                      />
                     </ExpandableBlock>
                     <MorningBriefCard dateRange={dateRange} />
                     <div className="hidden lg:block">

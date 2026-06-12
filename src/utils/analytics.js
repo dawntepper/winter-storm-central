@@ -766,6 +766,27 @@ export function trackBrowseByStateClick({ stateCode, source }) {
   track('Browse By State Click', { stateCode, source });
 }
 
+/**
+ * State selector on state alert radar card — Plausible "State Selector Used" +
+ * product_events.state_selector_used.
+ */
+export function trackStateSelectorUsed({ currentStateCode, destinationStateCode, source }) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.STATE_SELECTOR_USED, {
+    stateCode: destinationStateCode,
+    metadata: {
+      current_state: currentStateCode,
+      destination_state: destinationStateCode,
+      source,
+    },
+  });
+  if (!recorded) return;
+  track('State Selector Used', {
+    current_state: currentStateCode,
+    destination_state: destinationStateCode,
+    source,
+  });
+}
+
 // ============================================
 // ALERT SIGNUP EVENTS
 // ============================================
@@ -1251,8 +1272,9 @@ export function trackForecastLocationChanged(source, { stateCode } = {}) {
 
 /** source_page values for forecast clicks on state alert surfaces. */
 export const FORECAST_SOURCE_PAGES = {
-  WEATHER_FORECAST_CARD: 'weather_forecast_card',
-  POPULAR_FORECASTS_SECTION: 'popular_forecasts_section',
+  FORECASTS_CONDITIONS_CARD: 'forecasts_conditions_card',
+  POPULAR_FORECASTS: 'popular_forecasts',
+  CITY_PAGE: 'city_page',
   STATE_ALERT_PAGE: 'state_alert_page',
 };
 
@@ -1519,6 +1541,7 @@ export default {
   trackStateAlertDetailView,
   trackStateNearbyClick,
   trackBrowseByStateClick,
+  trackStateSelectorUsed,
   // Navigation source tracking
   NAV_SOURCES,
   SAVE_TRIGGERS,

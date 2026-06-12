@@ -1,8 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { US_STATES } from '../data/stateConfig';
+import { Link } from 'react-router-dom';
+import StateAlertsDropdown from './StateAlertsDropdown';
 import {
   trackRadarLinkClick,
-  trackBrowseByStateClick,
   setNavSource,
   NAV_SOURCES,
 } from '../utils/analytics';
@@ -16,10 +15,13 @@ import {
  * @param {string} props.source  NAV_SOURCES value attributed to clicks
  *   from this header instance (e.g. 'state_page_state_dropdown',
  *   'forecast_page_state_dropdown').
+ * @param {boolean} [props.showStateDropdown=true]  Set false on state alert
+ *   pages where the selector lives in the radar card header instead.
  */
-export default function PageHeaderNav({ source = NAV_SOURCES.HEADER_NAVIGATION }) {
-  const navigate = useNavigate();
-
+export default function PageHeaderNav({
+  source = NAV_SOURCES.HEADER_NAVIGATION,
+  showStateDropdown = true,
+}) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
       <Link
@@ -35,26 +37,11 @@ export default function PageHeaderNav({ source = NAV_SOURCES.HEADER_NAVIGATION }
       >
         Live Weather Radar
       </Link>
-      <span className="relative inline-flex items-center">
-        <select
-          defaultValue=""
-          onChange={(e) => {
-            if (e.target.value) {
-              const abbr = US_STATES[e.target.value]?.abbr;
-              if (abbr) trackBrowseByStateClick({ stateCode: abbr, source });
-              setNavSource(source);
-              navigate(`/alerts/${e.target.value}`);
-              e.target.value = '';
-            }
-          }}
-          className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2.5 pr-2 py-1 rounded focus:outline-none text-xs sm:text-sm font-medium border border-sky-500/30 transition-colors"
-        >
-          <option value="" disabled>State Alerts/Radar ▾</option>
-          {Object.entries(US_STATES).map(([slug, s]) => (
-            <option key={slug} value={slug}>{s.name}</option>
-          ))}
-        </select>
-      </span>
+      {showStateDropdown && (
+        <span className="relative inline-flex items-center">
+          <StateAlertsDropdown source={source} />
+        </span>
+      )}
     </div>
   );
 }
