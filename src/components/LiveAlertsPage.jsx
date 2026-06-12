@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PageBackNav from './PageBackNav';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
-import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
+import { CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { US_STATES } from '../data/stateConfig';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { rankAlerts } from '../utils/alertRanking';
@@ -51,7 +51,7 @@ function resetMetaTags() {
 export default function LiveAlertsPage() {
   const navigate = useNavigate();
   const { alerts: alertsData, loading, error, refresh } = useExtremeWeather(true);
-  const [activeFilter, setActiveFilter] = useState(null);
+  const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [tick, setTick] = useState(0);
   const [mapCenterOn, setMapCenterOn] = useState(null);
 
@@ -67,24 +67,13 @@ export default function LiveAlertsPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Ranked + filtered alerts
+  // Ranked + filtered alerts (category filter synced from map emoji chips)
   const ranked = useMemo(() => {
     const all = rankAlerts(alertsData?.allAlerts || []);
-    if (!activeFilter) return all;
     return all
-      .filter((a) => a.category === activeFilter)
-      .map((a, i) => ({ ...a, rank: i + 1 })); // re-rank within filter
-  }, [alertsData, activeFilter, tick]);
-
-  // Category counts for filter pills
-  const categoryCounts = useMemo(() => {
-    const allRanked = rankAlerts(alertsData?.allAlerts || []);
-    const counts = {};
-    for (const a of allRanked) {
-      counts[a.category] = (counts[a.category] || 0) + 1;
-    }
-    return counts;
-  }, [alertsData]);
+      .filter((a) => activeCategories.has(a.category))
+      .map((a, i) => ({ ...a, rank: i + 1 }));
+  }, [alertsData, activeCategories, tick]);
 
   // All alerts for map display (same pattern as App.jsx)
   const mapAlerts = useMemo(() => {
@@ -97,10 +86,6 @@ export default function LiveAlertsPage() {
     if (alert.lat && alert.lon) {
       setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
     }
-  };
-
-  const handleFilterClick = (catId) => {
-    setActiveFilter((prev) => (prev === catId ? null : catId));
   };
 
   return (
@@ -177,45 +162,13 @@ export default function LiveAlertsPage() {
               alerts={mapAlerts}
               isHero
               centerOn={mapCenterOn}
+              activeCategories={activeCategories}
+              onActiveCategoriesChange={setActiveCategories}
             />
           </section>
 
-          {/* RIGHT COLUMN: Filters + alert cards */}
+          {/* RIGHT COLUMN: Alert cards (filtered by map emoji chips) */}
           <div className="space-y-4">
-            {/* Category filter pills */}
-            <div className="flex flex-wrap gap-2">
-              {CATEGORY_ORDER.map((catId) => {
-                const cat = ALERT_CATEGORIES[catId];
-                const count = categoryCounts[catId] || 0;
-                if (count === 0) return null;
-                const isActive = activeFilter === catId;
-                return (
-                  <button
-                    key={catId}
-                    onClick={() => handleFilterClick(catId)}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      isActive
-                        ? 'text-white border-white/30'
-                        : 'text-slate-400 border-slate-700 hover:border-slate-500'
-                    }`}
-                    style={isActive ? { backgroundColor: cat.color + '30', borderColor: cat.color } : undefined}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.name}</span>
-                    <span className="text-[10px] text-slate-500">{count}</span>
-                  </button>
-                );
-              })}
-              {activeFilter && (
-                <button
-                  onClick={() => setActiveFilter(null)}
-                  className="text-[10px] text-slate-500 hover:text-slate-300 px-2 py-1.5 cursor-pointer transition-colors"
-                >
-                  Clear filter
-                </button>
-              )}
-            </div>
-
             {/* Loading state */}
             {loading && !alertsData && (
               <div className="space-y-3">
@@ -248,7 +201,11 @@ export default function LiveAlertsPage() {
               <div className="text-center py-12">
                 <p className="text-2xl mb-2">✅</p>
                 <p className="text-slate-400">
-                  {activeFilter ? 'No alerts in this category.' : 'No active weather alerts nationwide.'}
+                  {activeCategories.size === 0
+                    ? 'Alerts hidden — tap Alerts on the map to show them.'
+                    : activeCategories.size < CATEGORY_ORDER.length
+                      ? 'No alerts in the selected categories.'
+                      : 'No active weather alerts nationwide.'}
                 </p>
               </div>
             )}

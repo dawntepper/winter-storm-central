@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap, useMapEvents } from 'react-leaflet';
-import { useEffect, useState, useMemo, useRef, createContext, useContext } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback, createContext, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
@@ -1153,7 +1153,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetToDefaultOnClick = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetToDefaultOnClick = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1202,7 +1202,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     prevCenterOnRef.current = centerOn;
   }, [centerOn, selectedStateCode, radarLayerType]);
   const [showAlerts, setShowAlerts] = useState(true);
-  const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
+  const [internalActiveCategories, setInternalActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
+  const isCategoriesControlled = controlledActiveCategories !== undefined;
+  const activeCategories = isCategoriesControlled ? controlledActiveCategories : internalActiveCategories;
+  const setActiveCategories = useCallback((updater) => {
+    const next = typeof updater === 'function' ? updater(activeCategories) : updater;
+    if (isCategoriesControlled) {
+      onActiveCategoriesChange?.(next);
+    } else {
+      setInternalActiveCategories(next);
+    }
+  }, [activeCategories, isCategoriesControlled, onActiveCategoriesChange]);
   const [hoveredCatTip, setHoveredCatTip] = useState(null); // { label, x } — instant pill tooltip
   const catRowRef = useRef(null);
   const [hoveredAlert, setHoveredAlert] = useState(null);
