@@ -112,6 +112,51 @@ async function fetchMissingLocationSearches(supabase, since) {
   return groupSearchEvents(data).slice(0, 50);
 }
 
+const LOCATION_SOURCE_BUCKETS = {
+  useMyLocation: ['gps', 'use_my_location', 'geolocation'],
+  citySearch: ['city'],
+  zipSearch: ['zip'],
+  savedLocationTap: ['saved_location'],
+};
+
+function normalizeLocationSourceType(row) {
+  return String(row?.resolved_type || row?.match_type || '').toLowerCase();
+}
+
+function bucketLocationSource(type) {
+  for (const [bucket, types] of Object.entries(LOCATION_SOURCE_BUCKETS)) {
+    if (types.includes(type)) return bucket;
+  }
+  return null;
+}
+
+async function fetchLocationSources(supabase, since) {
+  let query = supabase
+    .from('location_search_events')
+    .select('resolved_type, match_type')
+    .eq('success', true)
+    .limit(10000);
+
+  query = applySince(query, 'created_at', since);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const counts = {
+    useMyLocation: 0,
+    citySearch: 0,
+    zipSearch: 0,
+    savedLocationTap: 0,
+  };
+
+  for (const row of data || []) {
+    const bucket = bucketLocationSource(normalizeLocationSourceType(row));
+    if (bucket) counts[bucket] += 1;
+  }
+
+  return counts;
+}
+
 async function fetchLocationSearchPerformance(supabase, since) {
   const { data: stats, error: statsError } = await supabase.rpc(
     'admin_location_search_stats',
@@ -315,6 +360,7 @@ exports.handler = async (event) => {
       returningVisitors,
       missingLocationSearches,
       locationSearch,
+      locationSources,
       countyAlertViews,
       savedLocations,
       radar,
@@ -323,6 +369,7 @@ exports.handler = async (event) => {
       fetchReturningVisitors(supabase, since),
       fetchMissingLocationSearches(supabase, since),
       fetchLocationSearchPerformance(supabase, since),
+      fetchLocationSources(supabase, since),
       fetchCountyAlertViews(supabase, since),
       fetchSavedLocations(supabase, since),
       fetchRadarEngagement(supabase, since),
@@ -335,6 +382,7 @@ exports.handler = async (event) => {
       returningVisitors,
       missingLocationSearches,
       locationSearch,
+      locationSources,
       countyAlertViews,
       savedLocations,
       radar,

@@ -145,6 +145,31 @@ function FunnelCard({ id, funnel }) {
   );
 }
 
+const LOCATION_SOURCE_ROWS = [
+  { key: 'useMyLocation', label: 'Use My Location' },
+  { key: 'citySearch', label: 'City Search' },
+  { key: 'zipSearch', label: 'ZIP Search' },
+  { key: 'savedLocationTap', label: 'Saved Location Tap' },
+];
+
+function LocationSourcesCard({ sources }) {
+  return (
+    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+      {LOCATION_SOURCE_ROWS.map((row) => (
+        <div
+          key={row.key}
+          className="flex items-center justify-between gap-4 py-2 border-b border-slate-800/80 last:border-0"
+        >
+          <span className="text-sm text-slate-200">{row.label}</span>
+          <span className="text-sm font-semibold text-white tabular-nums">
+            {formatNumber(sources?.[row.key] ?? 0)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DateRangePicker({ value, onChange, disabled }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -193,6 +218,7 @@ function AdminAnalysisInner() {
 
   const rv = data?.returningVisitors;
   const ls = data?.locationSearch;
+  const locationSources = data?.locationSources;
   const sl = data?.savedLocations;
   const radar = data?.radar;
   const journeys = data?.userJourneys;
@@ -314,6 +340,15 @@ function AdminAnalysisInner() {
                 rows={ls?.topMissing || []}
                 emptyMessage="No failed location searches in this period."
               />
+            </section>
+
+            {/* 3b. Location Sources */}
+            <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
+              <h2 className="text-xl font-bold text-white mb-1">Location Sources</h2>
+              <p className="text-sm text-slate-400 mb-5">
+                How users change location — successful events from location_search_events by resolved type.
+              </p>
+              <LocationSourcesCard sources={locationSources} />
             </section>
 
             {/* 4. County Alert Views */}

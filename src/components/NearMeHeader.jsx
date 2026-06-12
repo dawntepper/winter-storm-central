@@ -4,6 +4,7 @@ import { fetchApproxLocation, reverseGeocode } from '../services/geoLocationServ
 import { ABBR_TO_SLUG, US_STATES } from '../data/stateConfig';
 import { getCitySlugForLocation } from '../utils/cityLookup';
 import { trackGeolocationUsed, trackBrowseByStateClick, NAV_SOURCES } from '../utils/analytics';
+import { trackLocationSearch } from '../services/locationCatalogService';
 
 /**
  * Localized homepage hero headline + jump-to links.
@@ -93,6 +94,17 @@ export default function NearMeHeader({
           setResolved({ city: place.city, region: place.region || null });
           if (place.region) onResolveState?.(place.region);
         }
+        const queryLabel = place?.city
+          ? `${place.city}${place.region ? `, ${place.region}` : ''}`
+          : `Near me (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
+        await trackLocationSearch({
+          query: queryLabel,
+          matchType: 'gps',
+          stateCode: place?.region || null,
+          pageContext: variant === 'radar' ? 'radar-hero' : 'homepage-hero',
+          success: true,
+          resolvedType: 'gps',
+        });
         setGpsStatus('idle');
       },
       (err) => {

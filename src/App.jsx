@@ -23,6 +23,7 @@ import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
+import { trackLocationSearch } from './services/locationCatalogService';
 import { setHomepageMetaTags } from './data/homepageMeta';
 import {
   startSessionTracking,
@@ -786,6 +787,17 @@ export default function App() {
 
       // Track location viewed on map
       trackLocationViewedOnMap(location.name || location.location);
+
+      const locationLabel = location.name || location.location || '';
+      const stateMatch = locationLabel.match(/,\s*([A-Za-z]{2})\s*$/);
+      trackLocationSearch({
+        query: locationLabel,
+        matchType: 'saved_location',
+        stateCode: location.region || stateMatch?.[1]?.toUpperCase() || null,
+        pageContext: 'homepage-saved-locations',
+        success: true,
+        resolvedType: 'saved_location',
+      });
 
       // On mobile, scroll to the map so user can see the location
       const isMobile = window.innerWidth < 1024; // lg breakpoint

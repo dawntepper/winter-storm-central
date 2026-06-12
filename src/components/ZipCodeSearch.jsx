@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { trackLocationAdded, trackLocationRemoved, trackGeolocationUsed, SAVE_TRIGGERS } from '../utils/analytics';
 import { STATE_NAMES } from '../data/stateConfig';
-import { getCitiesForState, resolveCityByName } from '../services/locationCatalogService';
+import {
+  getCitiesForState,
+  resolveCityByName,
+  trackLocationSearch,
+  trackLocationSearchNotFound,
+} from '../services/locationCatalogService';
 import { reverseGeocode } from '../services/geoLocationService';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
 const STATE_OPTIONS = Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
+
+function locationSearchPageContext(variant) {
+  if (variant === 'radar') return 'radar';
+  if (variant === 'compact') return 'radar-compact';
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/radar')) {
+    return 'radar';
+  }
+  return 'homepage';
+}
 
 
 // Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
@@ -476,6 +490,16 @@ export default function ZipCodeSearch({
         onResolveState?.(zipParts[1]);
       }
 
+      await trackLocationSearch({
+        query: zipCode,
+        matchType: 'zip',
+        stateCode: zipParts?.[1] || null,
+        zipCode,
+        pageContext: locationSearchPageContext(variant),
+        success: true,
+        resolvedType: 'zip',
+      });
+
       // Check if this zip already exists in saved locations
       const existingLocation = savedLocations[zipCode];
       if (existingLocation) {
@@ -490,6 +514,11 @@ export default function ZipCodeSearch({
       console.error('Zip code search error:', err);
       setError(err.message || 'Failed to fetch weather data');
       setCurrentLocationData(null);
+      await trackLocationSearchNotFound({
+        query: zipCode,
+        stateCode: selectedState || null,
+        pageContext: locationSearchPageContext(variant),
+      });
     } finally {
       setLoading(false);
     }
@@ -512,6 +541,16 @@ export default function ZipCodeSearch({
 
       setCurrentLocationData(weather);
 
+      await trackLocationSearch({
+        query: cityData.name,
+        matchType: 'city',
+        stateCode,
+        cityId: cityData.id,
+        pageContext: locationSearchPageContext(variant),
+        success: true,
+        resolvedType: 'city',
+      });
+
       // Check if this city already exists in saved locations
       const existingLocation = savedLocations[cityId];
       if (existingLocation) {
@@ -527,6 +566,11 @@ export default function ZipCodeSearch({
       console.error('City search error:', err);
       setError(err.message || 'Failed to fetch weather data');
       setCurrentLocationData(null);
+      await trackLocationSearchNotFound({
+        query: cityData.name,
+        stateCode,
+        pageContext: locationSearchPageContext(variant),
+      });
       return null;
     } finally {
       setLoading(false);
@@ -618,6 +662,11 @@ export default function ZipCodeSearch({
       const resolved = await resolveCityByName(trimmed, selectedState, []);
       if (!resolved.city) {
         setError(`City "${trimmed}" not found in ${STATE_NAMES[selectedState] || selectedState}`);
+        await trackLocationSearchNotFound({
+          query: trimmed,
+          stateCode: selectedState,
+          pageContext: locationSearchPageContext(variant),
+        });
         return;
       }
       setCityQuery(resolved.city.name);
@@ -693,6 +742,17 @@ export default function ZipCodeSearch({
           onLocationResolved?.(resolved);
           if (place.region) onResolveState?.(place.region);
         }
+        const queryLabel = place?.city
+          ? `${place.city}${place.region ? `, ${place.region}` : ''}`
+          : `Near me (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
+        await trackLocationSearch({
+          query: queryLabel,
+          matchType: 'gps',
+          stateCode: place?.region || selectedState || null,
+          pageContext: locationSearchPageContext(variant),
+          success: true,
+          resolvedType: 'gps',
+        });
         setGpsStatus('idle');
       },
       (err) => {
@@ -700,7 +760,7 @@ export default function ZipCodeSearch({
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
-  }, [onLocate, onResolveState, onLocationResolved, isCompact]);
+  }, [onLocate, onResolveState, onLocationResolved, isCompact, selectedState, variant]);
 
   const gpsButton = (
     <button
