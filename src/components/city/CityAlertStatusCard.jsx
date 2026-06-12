@@ -156,7 +156,7 @@ export default function CityAlertStatusCard({
           )}
           {count > 1 && (
             <p className="text-xs mt-2 opacity-75">
-              + {count - 1} more — see details below
+              + {count - 1} more — view full NWS text below
             </p>
           )}
         </>

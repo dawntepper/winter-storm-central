@@ -8,7 +8,8 @@ function chipTone(severity) {
 }
 
 /**
- * Compact alert chips shown under hero when NWS alerts are active — safety signal before radar.
+ * Compact alert chips under the Active Alert Summary — links to collapsed full NWS text below.
+ * Alerts are expected pre-sorted by severity (highest priority first).
  */
 export default function CityActiveAlertBanner({ alerts, loading = false }) {
   if (loading || !alerts || alerts.length === 0) return null;

@@ -97,6 +97,19 @@ function scoreAlert(alert, now) {
 }
 
 /**
+ * Sort alerts by NWS severity (Extreme → Unknown), stable within ties.
+ */
+export function sortAlertsBySeverity(alerts) {
+  if (!alerts?.length) return alerts || [];
+  return [...alerts].sort((a, b) => {
+    const sa = SEVERITY_SCORES[a.severity] ?? SEVERITY_SCORES.Unknown;
+    const sb = SEVERITY_SCORES[b.severity] ?? SEVERITY_SCORES.Unknown;
+    if (sb !== sa) return sb - sa;
+    return (a.event || '').localeCompare(b.event || '');
+  });
+}
+
+/**
  * Rank alerts by severity/urgency/area, filtering out expired.
  * Returns a new array sorted descending by score with `rank` added.
  */

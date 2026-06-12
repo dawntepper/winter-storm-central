@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import PageBackNav from '../PageBackNav';
 import CityAlertStatusCard from './CityAlertStatusCard';
 import CitySaveLocationToggle from './CitySaveLocationToggle';
 import CityActiveAlertBanner from './CityActiveAlertBanner';
 import CityAlertsSectionDefault from './CityAlertsSection';
+import { sortAlertsBySeverity } from '../../utils/alertRanking';
 
 const cardClasses = 'group flex items-center justify-between gap-3 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
 const ctaClass = 'text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors';
@@ -136,7 +138,7 @@ export function CitySeasonalRisk({ description, seasonalRisks, season }) {
 
 /**
  * ForecastPage-inspired layout shell for city alert dashboards.
- * Section order: title → status + conditions → radar → forecast → alerts → related → seasonal.
+ * Section order: hero → alert summary → radar → forecast → full NWS text → related.
  */
 export default function CityWeatherDashboard({
   jsonLdBlocks = [],
@@ -165,7 +167,11 @@ export default function CityWeatherDashboard({
   signupBar,
   alertsSignupHint = false,
 }) {
-  const alertCount = Array.isArray(alerts) ? alerts.length : 0;
+  const sortedAlerts = useMemo(
+    () => (Array.isArray(alerts) ? sortAlertsBySeverity(alerts) : alerts),
+    [alerts],
+  );
+  const alertCount = Array.isArray(sortedAlerts) ? sortedAlerts.length : 0;
   const hasAlerts = alertCount > 0;
 
   return (
@@ -207,7 +213,7 @@ export default function CityWeatherDashboard({
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <CityAlertStatusCard
               cityName={cityName}
-              alerts={alerts}
+              alerts={sortedAlerts}
               loading={alertsLoading}
               error={alertsError}
               lastUpdated={lastUpdated}
@@ -228,7 +234,7 @@ export default function CityWeatherDashboard({
         </section>
 
         <CityActiveAlertBanner
-          alerts={alerts}
+          alerts={sortedAlerts}
           loading={alertsLoading || alerts === null}
         />
 
@@ -238,7 +244,7 @@ export default function CityWeatherDashboard({
           {alertsSection ?? (hasAlerts ? (
             <CityAlertsSectionDefault
               cityName={cityName}
-              alerts={alerts}
+              alerts={sortedAlerts}
               loading={alertsLoading}
               error={alertsError}
               lat={lat}
