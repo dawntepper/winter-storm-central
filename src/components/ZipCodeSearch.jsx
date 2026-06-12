@@ -724,7 +724,7 @@ export default function ZipCodeSearch({
   ) : null;
 
   const modeToggle = (
-    <div className={`flex items-center gap-1 text-xs shrink-0 ${isCompact ? '' : 'ml-auto'}`}>
+    <div className="flex items-center gap-1 text-xs shrink-0">
       <button
         type="button"
         onClick={() => setSearchMode('city')}
@@ -751,10 +751,8 @@ export default function ZipCodeSearch({
     </div>
   );
 
-  const cityFormClass = isCompact
-    ? 'flex flex-wrap items-center gap-2 min-w-0'
-    : 'flex flex-col sm:flex-row gap-2 max-w-lg';
-  const zipFormClass = isCompact ? 'flex items-center gap-2 min-w-0' : 'flex gap-2 max-w-md';
+  const cityFormClass = 'flex flex-wrap items-center gap-2 min-w-0 flex-1';
+  const zipFormClass = 'flex flex-wrap items-center gap-2 min-w-0 flex-1';
   const submitButtonClass = isCompact
     ? 'px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shrink-0'
     : 'px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer';
@@ -959,17 +957,26 @@ export default function ZipCodeSearch({
           </form>
         );
 
+  const controlSeparator = (
+    <span className="text-slate-600 text-xs shrink-0 select-none" aria-hidden="true">|</span>
+  );
+
   const searchControls = (
     <>
-      <div className={`flex flex-wrap items-center gap-2 ${isCompact ? 'justify-end' : 'gap-3 pt-3 mb-3'}`}>
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-2 ${isCompact ? '' : 'pt-3 mb-3'}`}>
         {gpsButton}
-        {gpsStatusMessage}
+        {controlSeparator}
         {modeToggle}
-        {isCompact && searchForms}
+        {controlSeparator}
+        <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1 basis-[10rem]">
+          {searchForms}
+        </div>
+        {gpsStatusMessage && (
+          <div className="basis-full mt-0.5">{gpsStatusMessage}</div>
+        )}
       </div>
-      {!isCompact && searchForms}
       {error && (
-        <p className={`text-red-400 text-xs ${isCompact ? 'text-right' : ''} mt-2`}>{error}</p>
+        <p className="text-red-400 text-xs mt-2">{error}</p>
       )}
       {locationResult}
     </>
