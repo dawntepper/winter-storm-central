@@ -54,6 +54,7 @@ export default function LiveAlertsPage() {
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [tick, setTick] = useState(0);
   const [mapCenterOn, setMapCenterOn] = useState(null);
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
 
   // SEO meta tags
   useEffect(() => {
@@ -85,7 +86,13 @@ export default function LiveAlertsPage() {
   const handleAlertTap = (alert) => {
     if (alert.lat && alert.lon) {
       setMapCenterOn({ lat: alert.lat, lon: alert.lon, id: Date.now() });
+      setSelectedAlertId(alert.id);
     }
+  };
+
+  const handleFullView = () => {
+    setMapCenterOn(null);
+    setSelectedAlertId(null);
   };
 
   return (
@@ -162,8 +169,14 @@ export default function LiveAlertsPage() {
               alerts={mapAlerts}
               isHero
               centerOn={mapCenterOn}
+              selectedAlertId={selectedAlertId}
+              selectedAlertUsesCategoryColor
               activeCategories={activeCategories}
               onActiveCategoriesChange={setActiveCategories}
+              onResetView={handleFullView}
+              resetViewLabel="Full View"
+              resetViewTitle="Reset to default US view"
+              resetUsesUsDefault
             />
           </section>
 

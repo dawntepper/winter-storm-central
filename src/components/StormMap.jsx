@@ -316,13 +316,13 @@ function FitBoundsToLocations({ userLocations, triggerFit }) {
 }
 
 // Reset map to default view (responsive)
-function ResetMapView({ trigger, centerOn }) {
+function ResetMapView({ trigger, centerOn, useUsDefault = false }) {
   const map = useMap();
 
   useEffect(() => {
     if (trigger) {
       const isMobile = window.innerWidth < 768;
-      if (centerOn?.lat && centerOn?.lon) {
+      if (!useUsDefault && centerOn?.lat && centerOn?.lon) {
         const latOffset = isMobile ? 0.1 : -0.2;
         const adjustedLat = centerOn.lat + latOffset;
         const zoomLevel = centerOn.zoom || 7;
@@ -333,7 +333,7 @@ function ResetMapView({ trigger, centerOn }) {
         map.setView(center, zoom, { animate: true, duration: 0.5 });
       }
     }
-  }, [trigger, map, centerOn]);
+  }, [trigger, map, centerOn, useUsDefault]);
 
   return null;
 }
@@ -844,11 +844,11 @@ const alertCategoryColors = {
 };
 
 // Simple alert dot marker with highlight and selected support
-function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false, shouldPulse = false }) {
+function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false, selectedUsesCategoryColor = false, shouldPulse = false }) {
   const position = [alert.lat, alert.lon];
   const baseColor = alertCategoryColors[alert.category] || alertCategoryColors.default;
-  // Green when selected, otherwise use category color
-  const color = selected ? '#10b981' : baseColor;
+  // Green when selected (storm pages), category color when selectedUsesCategoryColor (live alerts page)
+  const color = selected && !selectedUsesCategoryColor ? '#10b981' : baseColor;
 
   // Tornado Watch dots render as a hollow ring (red border, transparent center)
   // — meaning: "tornadoes possible" (potential), distinct from Severe Warning's
@@ -912,25 +912,29 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
     );
   }
 
+  const selectedGlowRadius = selectedUsesCategoryColor ? 24 : 20;
+  const selectedPulseClass = selectedUsesCategoryColor ? 'pulse-marker-highlighted' : 'pulse-marker-selected';
+
   return (
     <>
       {/* Pulsing outer ring - larger and more prominent when highlighted or selected.
           Watch dots get a dimmer halo so they read as quieter than Warnings. */}
       <CircleMarker
         center={position}
-        radius={selected ? 20 : (highlighted ? 18 : 12)}
+        radius={selected ? selectedGlowRadius : (highlighted ? 18 : 12)}
         pathOptions={{
           fillColor: color,
           fillOpacity: selected
-            ? 0.5
+            ? (selectedUsesCategoryColor ? 0.55 : 0.5)
             : (highlighted ? 0.5 : (isTornadoWatch ? 0.12 : 0.3)),
           color: 'transparent',
           weight: 0
         }}
-        className={selected ? 'pulse-marker-selected' : (highlighted ? 'pulse-marker-highlighted' : 'pulse-marker')}
+        className={selected ? selectedPulseClass : (highlighted ? 'pulse-marker-highlighted' : 'pulse-marker')}
       />
       {/* Main dot marker - filled for everything except Tornado Watch, which
-          renders as a hollow ring. Selected state always overrides to filled green. */}
+          renders as a hollow ring. Selected state uses category color (live alerts)
+          or green (storm event pages). */}
       <CircleMarker
         center={position}
         radius={selected ? 10 : (highlighted ? 9 : 7)}
@@ -1142,7 +1146,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetToDefaultOnClick = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1448,7 +1452,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <button
                 onClick={handleResetView}
                 className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
-                title={resetViewTitle ?? (resetViewLabel === 'Reset View' ? 'Reset to default US view' : `Return to ${resetViewLabel.toLowerCase()}`)}
+                title={resetViewTitle ?? (resetViewLabel === 'Full View' ? resetViewTitleUsDefault : (resetViewLabel === 'Reset View' ? resetViewTitleUsDefault : `Return to ${resetViewLabel.toLowerCase()}`))}
               >
                 {resetViewLabel}
               </button>
@@ -1583,7 +1587,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
-          <ResetMapView trigger={resetTrigger} centerOn={centerOn} />
+          <ResetMapView trigger={resetTrigger} centerOn={centerOn} useUsDefault={resetUsesUsDefault} />
           <CenterOnLocation location={centerOn} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
@@ -1615,6 +1619,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 onClick={handleAlertClick}
                 highlighted={highlightedAlertId === alert.id}
                 selected={selectedAlertId === alert.id}
+                selectedUsesCategoryColor={selectedAlertUsesCategoryColor}
                 shouldPulse={tornadoWarningPulseIds.has(alert.id)}
               />
             ))}
