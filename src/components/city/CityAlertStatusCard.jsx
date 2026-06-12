@@ -73,6 +73,28 @@ export default function CityAlertStatusCard({
         </p>
       );
     }
+
+    const count = alerts.length;
+    const topAlert = alerts[0];
+    const topCategory = topAlert ? ALERT_CATEGORIES[topAlert.category] : null;
+
+    return (
+      <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-medium ${severityTone(topAlert?.severity)}`}>
+          {topCategory && <span aria-hidden="true">{topCategory.icon}</span>}
+          {count} active alert{count === 1 ? '' : 's'}
+        </span>
+        {topAlert && (
+          <span className="text-slate-300 text-xs sm:text-sm truncate max-w-[min(100%,20rem)]">
+            {topAlert.event}
+            {count > 1 && ` (+${count - 1} more)`}
+          </span>
+        )}
+        {updatedLabel && (
+          <span className="text-xs text-slate-500">NWS updated {updatedLabel}</span>
+        )}
+      </p>
+    );
   }
 
   if (error) {

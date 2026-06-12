@@ -15,6 +15,7 @@
  * | state_alert_page_view       | visit_cooldown  | state:{stateCode} (3s) |
  * | forecast_view               | visit_cooldown  | forecast:{state_slug} (3s) |
  * | city_weather_page_view      | visit_cooldown  | city:{city_slug} (3s) |
+ * | city_radar_viewed           | visit_cooldown  | city_radar:{city_slug} (3s) |
  * | forecast_link_click         | none            | every click |
  * | forecast_section_viewed     | visit_cooldown  | forecast_section:{city_slug} (3s) |
  * | state_selector_used         | none            | every selection |
@@ -50,6 +51,7 @@ export const PRODUCT_EVENTS = {
   RADAR_VIEW: 'radar_view',
   FORECAST_VIEW: 'forecast_view',
   CITY_WEATHER_PAGE_VIEW: 'city_weather_page_view',
+  CITY_RADAR_VIEWED: 'city_radar_viewed',
   FORECAST_LINK_CLICK: 'forecast_link_click',
   FORECAST_SECTION_VIEWED: 'forecast_section_viewed',
   STATE_SELECTOR_USED: 'state_selector_used',
@@ -92,6 +94,10 @@ const PRODUCT_DEDUPE_RULES = {
   [PRODUCT_EVENTS.CITY_WEATHER_PAGE_VIEW]: {
     type: 'visit_cooldown',
     key: ({ metadata }) => `city:${metadata?.city_slug || 'unknown'}`,
+  },
+  [PRODUCT_EVENTS.CITY_RADAR_VIEWED]: {
+    type: 'visit_cooldown',
+    key: ({ metadata }) => `city_radar:${metadata?.city_slug || 'unknown'}`,
   },
   [PRODUCT_EVENTS.RADAR_VIEW]: {
     type: 'visit_cooldown',

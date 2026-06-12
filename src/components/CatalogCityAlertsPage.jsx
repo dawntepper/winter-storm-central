@@ -20,9 +20,10 @@ import { trackCityAlertView, trackCityWeatherPageView } from '../utils/analytics
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import PageHeaderNav from './PageHeaderNav';
 import StormMap from './StormMap';
-import CityCurrentConditions from './CityCurrentConditions';
+import CityConditionsStrip from './city/CityConditionsStrip';
 import CityForecastSection from './CityForecastSection';
 import CityWeatherDashboard, { CityRelatedLinks, CityNearbyLinks } from './city/CityWeatherDashboard';
+import CityRadarSection from './city/CityRadarSection';
 import { NAV_SOURCES } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
 
@@ -234,31 +235,40 @@ export default function CatalogCityAlertsPage() {
       alertsLoading={alertsLoading}
       lastUpdated={lastUpdated}
       currentConditions={(
-        <CityCurrentConditions
+        <CityConditionsStrip
           cityName={city.name}
           conditions={conditions}
           error={conditionsError}
         />
       )}
       radar={(
-        <section aria-label={`Live weather radar — ${city.name}`}>
-          <StormMap
-            weatherData={{}}
-            stormPhase="active"
-            userLocations={[{
-              id: `city-pin-${city.slug}`,
-              lat: city.lat,
-              lon: city.lon,
-              name: `${city.name}, ${city.stateCode}`,
-              conditions: mapConditions,
-            }]}
-            alerts={mapAlerts}
-            isHero
-            selectedStateCode={city.stateCode}
-            showResetView={false}
-            centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 9 }}
-          />
-        </section>
+        <CityRadarSection
+          cityName={city.name}
+          citySlug={city.slug}
+          stateCode={city.stateCode}
+          analyticsSource="catalog_city_page"
+          hasAlerts={alertCount > 0}
+        >
+          <section aria-label={`Live weather radar — ${city.name}`}>
+            <StormMap
+              weatherData={{}}
+              stormPhase="active"
+              userLocations={[{
+                id: `city-pin-${city.slug}`,
+                lat: city.lat,
+                lon: city.lon,
+                name: `${city.name}, ${city.stateCode}`,
+                conditions: mapConditions,
+              }]}
+              alerts={mapAlerts}
+              isHero
+              heroCompact
+              selectedStateCode={city.stateCode}
+              showResetView={false}
+              centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 9 }}
+            />
+          </section>
+        </CityRadarSection>
       )}
       forecast={(
         <CityForecastSection

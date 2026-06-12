@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import PageBackNav from '../PageBackNav';
 import CityAlertStatusCard from './CityAlertStatusCard';
 import CitySaveLocationToggle from './CitySaveLocationToggle';
+import CityActiveAlertBanner from './CityActiveAlertBanner';
 import CityAlertsSectionDefault from './CityAlertsSection';
 
 const cardClasses = 'group flex items-center justify-between gap-3 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
@@ -177,7 +178,7 @@ export default function CityWeatherDashboard({
         />
       ))}
 
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
+      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <PageBackNav />
@@ -190,79 +191,62 @@ export default function CityWeatherDashboard({
         </div>
       </header>
 
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
+      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto">
           {stateBackLink}
           {breadcrumb}
-          <h1 className="text-xl sm:text-2xl font-bold text-white">{title}</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-white leading-tight">{title}</h1>
           {subtitle && (
-            <p className="text-sm text-slate-400 mt-1 leading-relaxed">{subtitle}</p>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5 leading-snug line-clamp-2">{subtitle}</p>
           )}
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {hasAlerts ? (
-          <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
-            <div className="space-y-3 flex flex-col">
-              <CityAlertStatusCard
-                cityName={cityName}
-                alerts={alerts}
-                loading={alertsLoading}
-                error={alertsError}
-                lastUpdated={lastUpdated}
-                lat={lat}
-                lon={lon}
-              />
-              <CitySaveLocationToggle
-                locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
-                lat={lat}
-                lon={lon}
-                citySlug={citySlug}
-                stateCode={stateCode}
-              />
-            </div>
-            {currentConditions}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 space-y-3">
+        <section aria-label="City weather summary" className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <CityAlertStatusCard
+              cityName={cityName}
+              alerts={alerts}
+              loading={alertsLoading}
+              error={alertsError}
+              lastUpdated={lastUpdated}
+              compact
+              lat={lat}
+              lon={lon}
+            />
+            <CitySaveLocationToggle
+              locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
+              lat={lat}
+              lon={lon}
+              citySlug={citySlug}
+              stateCode={stateCode}
+              variant="inline"
+            />
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <CityAlertStatusCard
-                cityName={cityName}
-                alerts={alerts}
-                loading={alertsLoading}
-                error={alertsError}
-                lastUpdated={lastUpdated}
-                compact
-                lat={lat}
-                lon={lon}
-              />
-              <CitySaveLocationToggle
-                locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
-                lat={lat}
-                lon={lon}
-                citySlug={citySlug}
-                stateCode={stateCode}
-                variant="inline"
-              />
-            </div>
-            {currentConditions}
-          </div>
-        )}
+          {currentConditions}
+        </section>
+
+        <CityActiveAlertBanner
+          alerts={alerts}
+          loading={alertsLoading || alerts === null}
+        />
 
         {radar}
         {forecast}
-        {alertsSection ?? (hasAlerts ? (
-          <CityAlertsSectionDefault
-            cityName={cityName}
-            alerts={alerts}
-            loading={alertsLoading}
-            error={alertsError}
-            lat={lat}
-            lon={lon}
-            signupHint={alertsSignupHint}
-          />
-        ) : null)}
+        <div id="city-active-alerts">
+          {alertsSection ?? (hasAlerts ? (
+            <CityAlertsSectionDefault
+              cityName={cityName}
+              alerts={alerts}
+              loading={alertsLoading}
+              error={alertsError}
+              lat={lat}
+              lon={lon}
+              signupHint={alertsSignupHint}
+            />
+          ) : null)}
+        </div>
         {related}
         {nearby}
         {seasonal}

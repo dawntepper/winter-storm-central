@@ -1135,7 +1135,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetToDefaultOnClick = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetToDefaultOnClick = true, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1559,8 +1559,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         <MapContainer
           center={initialCenter}
           zoom={initialZoom}
-          style={{ height: isSidebar ? '100%' : (isHero ? '500px' : '350px'), width: '100%' }}
-          className={`z-0 ${!isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]' : ''} ${!isSidebar && !isHero ? 'sm:!h-[450px]' : ''}`}
+          style={{
+            height: isSidebar
+              ? '100%'
+              : (isHero ? (heroCompact ? '320px' : '500px') : '350px'),
+            width: '100%',
+          }}
+          className={`z-0 ${
+            !isSidebar && isHero && heroCompact ? 'sm:!h-[360px] lg:!h-[400px]'
+            : !isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]'
+            : !isSidebar && !isHero ? 'sm:!h-[450px]' : ''
+          }`}
           zoomControl={true}
           whenReady={() => setMapReady(true)}
         >

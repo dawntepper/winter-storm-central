@@ -1381,6 +1381,31 @@ export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts,
 }
 
 /**
+ * City radar viewed on a city weather page — Plausible "City Radar Viewed" +
+ * product_events.city_radar_viewed. Fires once per city slug per visit cooldown
+ * when the embedded StormMap mounts or scrolls into view.
+ */
+export function trackCityRadarViewed({ stateCode, city, citySlug, source, hasAlerts }) {
+  const resolvedSource = resolveSource(source);
+  const recorded = recordProductEvent(PRODUCT_EVENTS.CITY_RADAR_VIEWED, {
+    stateCode,
+    metadata: {
+      city,
+      city_slug: citySlug,
+      source: resolvedSource,
+      has_alerts: Boolean(hasAlerts),
+    },
+  });
+  if (!recorded) return;
+  track('City Radar Viewed', {
+    state: stateCode || 'unknown',
+    city: city || citySlug || 'unknown',
+    source: resolvedSource,
+    has_alerts: Boolean(hasAlerts) ? 'yes' : 'no',
+  });
+}
+
+/**
  * Forecast section viewed on a city alert page — Plausible "Forecast Section Viewed" +
  * product_events.forecast_section_viewed. Fires once per city slug per visit cooldown
  * when the NWS forecast block mounts or scrolls into view.
@@ -1624,6 +1649,7 @@ export default {
   trackForecastCityClick,
   trackForecastStateClick,
   trackCityWeatherPageView,
+  trackCityRadarViewed,
   trackForecastSectionViewed,
   FORECAST_SOURCE_PAGES,
 };
