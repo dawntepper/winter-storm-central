@@ -17,6 +17,7 @@ import {
   trackCountyResultClick,
   trackCityResultClick,
   trackCityAlertView,
+  trackForecastLinkClick,
 } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
 
@@ -633,7 +634,14 @@ export default function CheckAlertsNearYou({
                     ? `/forecast/${resolvedStateSlug}?city=${result.city.slug}`
                     : `/forecast/${resolvedStateSlug}`
               }
-              className="text-sm px-3 py-2 bg-slate-900/60 hover:bg-slate-900 border border-slate-700 text-slate-300 rounded-lg transition-colors"
+              onClick={() =>
+                trackForecastLinkClick(
+                  'state-page-search',
+                  resolvedStateSlug,
+                  result.zip ? 'zip' : result.city ? 'city' : 'state-default',
+                )
+              }
+              className="text-sm px-3 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 hover:border-sky-400/60 text-sky-300 hover:text-sky-200 rounded-lg font-medium transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10"
             >
               Forecast →
             </Link>

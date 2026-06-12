@@ -14,6 +14,7 @@
  * | locations_synced            | session_once    | locations_synced |
  * | state_alert_page_view       | visit_cooldown  | state:{stateCode} (3s) |
  * | forecast_view               | visit_cooldown  | forecast:{state_slug} (3s) |
+ * | forecast_link_click         | none            | every click |
  * | radar_view                  | visit_cooldown  | radar_view:{pagePath} (3s) |
  * | county_alert_view           | visit_cooldown  | county:{county_id} (3s) |
  * | location_change             | debounce        | loc:{state}:{source}:{coords} (2s) |
@@ -47,6 +48,7 @@ export const PRODUCT_EVENTS = {
   COUNTY_ALERT_VIEW: 'county_alert_view',
   RADAR_VIEW: 'radar_view',
   FORECAST_VIEW: 'forecast_view',
+  FORECAST_LINK_CLICK: 'forecast_link_click',
   SAVE_LOCATION: 'save_location',
   SIGN_IN: 'sign_in',
   LOCATIONS_SYNCED: 'locations_synced',
@@ -108,6 +110,7 @@ const PRODUCT_DEDUPE_RULES = {
     key: ({ stateCode, metadata }) =>
       `search:${stateCode || 'unknown'}:${metadata?.query || ''}`,
   },
+  [PRODUCT_EVENTS.FORECAST_LINK_CLICK]: { type: 'none' },
   [PRODUCT_EVENTS.SAVE_LOCATION]: { type: 'none' },
 };
 
@@ -125,11 +128,32 @@ const RADAR_DEDUPE_RULES = {
   },
 };
 
-function getIds() {
+function createId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function getOrCreateStorageId(storage, key) {
+  try {
+    let id = storage.getItem(key);
+    if (!id) {
+      id = createId();
+      storage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+/** Ensure visitor/session IDs exist before product_events insert (avoids race with initVisitorSession). */
+function getOrCreateIds() {
   if (typeof window === 'undefined') return null;
   try {
-    const visitorId = localStorage.getItem(VISITOR_ID_KEY);
-    const sessionId = sessionStorage.getItem(SESSION_ID_KEY);
+    const visitorId = getOrCreateStorageId(localStorage, VISITOR_ID_KEY);
+    const sessionId = getOrCreateStorageId(sessionStorage, SESSION_ID_KEY);
     if (!visitorId || !sessionId) return null;
     return { visitorId, sessionId };
   } catch {
@@ -226,7 +250,7 @@ export function shouldEmitAnalyticsEvent(table, eventId, context = {}) {
 }
 
 async function insertRow(table, row) {
-  const ids = getIds();
+  const ids = getOrCreateIds();
   if (!ids || !supabase) return false;
 
   const { error } = await supabase.from(table).insert({

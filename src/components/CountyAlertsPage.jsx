@@ -22,7 +22,7 @@ import PageHeaderNav from './PageHeaderNav';
 import StormMap from './StormMap';
 import AlertDetailModal from './AlertDetailModal';
 import AlertsByCategory from './AlertsByCategory';
-import { NAV_SOURCES } from '../utils/analytics';
+import { NAV_SOURCES, trackForecastLinkClick } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
 
 const RICH_CITY_SLUGS = new Set((citiesIndex.cities || []).map((c) => c.slug));
@@ -247,7 +247,8 @@ export default function CountyAlertsPage() {
               {stateSlug && (
                 <Link
                   to={`/forecast/${stateSlug}`}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg font-medium"
+                  onClick={() => trackForecastLinkClick('county-page', stateSlug, 'state-default')}
+                  className="px-4 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 hover:border-sky-400/60 text-sky-300 hover:text-sky-200 text-sm rounded-lg font-semibold transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10"
                 >
                   {county.stateCode} forecast →
                 </Link>

@@ -10,6 +10,7 @@ import {
   PRODUCT_EVENTS,
   RADAR_EVENTS,
 } from '../services/productAnalyticsService';
+import { SLUG_TO_ABBR } from '../data/stateConfig';
 
 // Session tracking state
 let sessionStartTime = Date.now();
@@ -1224,7 +1225,9 @@ export function trackIndexNowSubmission(source, urlsCount, success) {
  * locationSource: 'state-default' | 'city' | 'zip' | 'geolocation'
  */
 export function trackForecastPageView(stateSlug, locationSource) {
+  const stateCode = SLUG_TO_ABBR[stateSlug] || null;
   const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_VIEW, {
+    stateCode,
     metadata: { state_slug: stateSlug, location_source: locationSource },
   });
   if (!recorded) return;
@@ -1252,11 +1255,22 @@ export function trackForecastLocationChanged(source, { stateCode } = {}) {
  * forecast widget city links, etc.). Pairs with Forecast Page View on the
  * landing side to measure the entry funnel.
  *
- * source:           'city-page' | 'state-page-widget'  (where the click came from)
+ * source:           'city-page' | 'state-page-widget' | 'state-page-search' |
+ *                     'county-page' | 'catalog-city-page'  (where the click came from)
  * destinationState: state slug being navigated to
  * destinationType:  'city' | 'zip' | 'state-default'
  */
 export function trackForecastLinkClick(source, destinationState, destinationType) {
+  const stateCode = SLUG_TO_ABBR[destinationState] || null;
+  const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_LINK_CLICK, {
+    stateCode,
+    metadata: {
+      source,
+      destination_state: destinationState,
+      destination_type: destinationType,
+    },
+  });
+  if (!recorded) return;
   track('Forecast Link Click', {
     source,
     destination_state: destinationState,

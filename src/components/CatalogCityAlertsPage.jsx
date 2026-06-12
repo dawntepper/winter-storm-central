@@ -15,7 +15,7 @@ import {
   cityAlertsPath,
   alertMatchesCity,
 } from '../services/locationCatalogService';
-import { trackCityAlertView } from '../utils/analytics';
+import { trackCityAlertView, trackForecastLinkClick } from '../utils/analytics';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
@@ -252,7 +252,8 @@ export default function CatalogCityAlertsPage() {
           {stateSlug && (
             <Link
               to={`/forecast/${stateSlug}?city=${city.slug}`}
-              className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg font-medium"
+              onClick={() => trackForecastLinkClick('catalog-city-page', stateSlug, 'city')}
+              className="px-4 py-2 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 hover:border-sky-400/60 text-sky-300 hover:text-sky-200 text-sm rounded-lg font-semibold transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10"
             >
               Forecast →
             </Link>
