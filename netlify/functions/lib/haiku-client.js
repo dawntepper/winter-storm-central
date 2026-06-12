@@ -132,21 +132,192 @@ async function callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens = ANTHROP
   };
 }
 
-function parseHaikuJSON(rawText) {
-  try {
-    return { parsed: JSON.parse(rawText), parseError: null };
-  } catch (err) {
-    const first = rawText.indexOf('{');
-    const last = rawText.lastIndexOf('}');
-    if (first !== -1 && last > first) {
-      try {
-        return { parsed: JSON.parse(rawText.slice(first, last + 1)), parseError: null };
-      } catch (err2) {
-        return { parsed: null, parseError: err2.message };
-      }
-    }
-    return { parsed: null, parseError: err.message };
+function stripMarkdownFences(text) {
+  let s = String(text || '').trim();
+  const fullFence = s.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fullFence) return fullFence[1].trim();
+  s = s.replace(/^```(?:json)?\s*\n?/i, '');
+  s = s.replace(/\n?```\s*$/i, '');
+  return s.trim();
+}
+
+function removeTrailingCommas(jsonStr) {
+  return jsonStr.replace(/,(\s*[}\]])/g, '$1');
+}
+
+function extractJSONObject(text) {
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first !== -1 && last > first) {
+    return text.slice(first, last + 1);
   }
+  if (first !== -1) return text.slice(first);
+  return text;
+}
+
+/** Close unbalanced brackets/strings when Haiku output is truncated mid-JSON. */
+function repairTruncatedJSON(jsonStr) {
+  let s = jsonStr.trim();
+  const stack = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (c === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') {
+      inString = true;
+      continue;
+    }
+    if (c === '{') stack.push('}');
+    else if (c === '[') stack.push(']');
+    else if ((c === '}' || c === ']') && stack.length && stack[stack.length - 1] === c) {
+      stack.pop();
+    }
+  }
+
+  if (inString) s += '"';
+
+  s = s.replace(/,\s*"[^"]*"\s*:\s*("[^"]*)?$/, '');
+  s = s.replace(/,\s*\{[^{}]*$/, '');
+  s = s.replace(/,\s*\[[^\[\]]*$/, '');
+  s = s.replace(/,\s*"[^"]*$/, '');
+  s = s.replace(/:\s*$/, ': null');
+  s = s.replace(/,\s*$/, '');
+
+  while (stack.length) s += stack.pop();
+  return s;
+}
+
+function tryParseJSON(text) {
+  try {
+    return { parsed: JSON.parse(text), error: null };
+  } catch (err) {
+    return { parsed: null, error: err.message };
+  }
+}
+
+function parseHaikuJSON(rawText) {
+  const candidates = new Set();
+  const base = String(rawText || '');
+  candidates.add(base);
+  const stripped = stripMarkdownFences(base);
+  candidates.add(stripped);
+  candidates.add(extractJSONObject(stripped));
+  candidates.add(extractJSONObject(base));
+
+  let lastError = 'Unknown parse error';
+
+  for (const candidate of candidates) {
+    const direct = tryParseJSON(candidate);
+    if (direct.parsed) {
+      return { parsed: direct.parsed, parseError: null, repaired: false };
+    }
+    lastError = direct.error;
+
+    const noTrailing = removeTrailingCommas(candidate);
+    const fixed = tryParseJSON(noTrailing);
+    if (fixed.parsed) {
+      return { parsed: fixed.parsed, parseError: null, repaired: true };
+    }
+    lastError = fixed.error;
+
+    const repaired = repairTruncatedJSON(noTrailing);
+    const fixedRepaired = tryParseJSON(repaired);
+    if (fixedRepaired.parsed) {
+      return { parsed: fixedRepaired.parsed, parseError: null, repaired: true };
+    }
+    lastError = fixedRepaired.error;
+  }
+
+  return { parsed: null, parseError: lastError, repaired: false };
+}
+
+/**
+ * Call Haiku and parse JSON with repair + optional compact retry on failure.
+ * @param {object} opts
+ * @param {object} [opts.retry] — { systemPrompt, userPrompt?, maxTokens? }
+ */
+async function callHaikuForJSON({
+  systemPrompt,
+  userPrompt,
+  apiKey,
+  maxTokens = ANTHROPIC_MAX_TOKENS,
+  retry = null,
+}) {
+  const first = await callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens });
+  let { parsed, parseError, repaired } = parseHaikuJSON(first.text);
+
+  if (parsed) {
+    const warnings = [];
+    if (first.stopReason === 'max_tokens') warnings.push('Response may be truncated');
+    if (repaired) warnings.push('JSON was auto-repaired');
+    return {
+      parsed,
+      parseError: null,
+      parseWarning: warnings.length ? warnings.join('; ') : null,
+      truncated: first.stopReason === 'max_tokens',
+      repaired,
+      usage: first.usage,
+      model: first.model,
+      stopReason: first.stopReason,
+      retried: false,
+    };
+  }
+
+  if (retry) {
+    console.warn('Haiku JSON parse failed, retrying with compact prompt:', parseError);
+    const second = await callHaiku({
+      systemPrompt: retry.systemPrompt,
+      userPrompt: retry.userPrompt ?? userPrompt,
+      apiKey,
+      maxTokens: retry.maxTokens ?? maxTokens,
+    });
+    ({ parsed, parseError, repaired } = parseHaikuJSON(second.text));
+    if (parsed) {
+      return {
+        parsed,
+        parseError: null,
+        parseWarning: 'Generated with compact prompt after initial parse failure',
+        truncated: second.stopReason === 'max_tokens',
+        repaired,
+        usage: second.usage,
+        model: second.model,
+        stopReason: second.stopReason,
+        retried: true,
+      };
+    }
+    return {
+      parsed: null,
+      parseError,
+      rawText: second.text,
+      usage: second.usage,
+      model: second.model,
+      stopReason: second.stopReason,
+      retried: true,
+    };
+  }
+
+  return {
+    parsed: null,
+    parseError,
+    rawText: first.text,
+    usage: first.usage,
+    model: first.model,
+    stopReason: first.stopReason,
+    retried: false,
+  };
 }
 
 module.exports = {
@@ -154,5 +325,6 @@ module.exports = {
   getAnthropicApiKey,
   describeAnthropicKeyConfig,
   callHaiku,
+  callHaikuForJSON,
   parseHaikuJSON,
 };

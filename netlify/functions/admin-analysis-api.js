@@ -5,14 +5,15 @@
 
 const { getSupabaseAdmin } = require('./lib/supabase-admin');
 const {
-  callHaiku,
-  parseHaikuJSON,
+  callHaikuForJSON,
   describeAnthropicKeyConfig,
 } = require('./lib/haiku-client');
 const {
   buildAnalysisPayload,
   MORNING_BRIEF_SYSTEM,
+  MORNING_BRIEF_SYSTEM_COMPACT,
   OPERATIONS_CENTER_SYSTEM,
+  OPERATIONS_CENTER_SYSTEM_COMPACT,
   buildMorningBriefPrompt,
   buildOperationsCenterPrompt,
 } = require('./lib/analysis-ai-payload');
@@ -1295,6 +1296,46 @@ async function fetchAllAnalytics(supabase, dateRange) {
   };
 }
 
+function fallbackMorningBrief(parseWarning) {
+  return {
+    headline: 'Morning brief could not be generated',
+    bullets: ['Click Refresh Brief to try again.'],
+    generated_at_note: parseWarning || 'AI response was not valid JSON',
+  };
+}
+
+function normalizeOperationsAnalysis(parsed) {
+  return {
+    what_changed: parsed?.what_changed || [],
+    opportunities: parsed?.opportunities || [],
+    risks: parsed?.risks || [],
+    attention_needed: parsed?.attention_needed || [],
+    weather_drivers: parsed?.weather_drivers || [],
+    retention_signals: parsed?.retention_signals || [],
+    recommended_actions: (parsed?.recommended_actions || []).slice(0, 3),
+    wins: parsed?.wins || [],
+  };
+}
+
+function fallbackOperationsAnalysis(parseWarning) {
+  return {
+    what_changed: [],
+    opportunities: [],
+    risks: [
+      {
+        priority: 'medium',
+        text: 'Operations analysis could not be fully generated. Click Refresh Analysis to retry.',
+      },
+    ],
+    attention_needed: [],
+    weather_drivers: [],
+    retention_signals: [],
+    recommended_actions: [],
+    wins: [],
+    parseWarning: parseWarning || 'AI response was not valid JSON',
+  };
+}
+
 async function generateMorningBrief(analytics, period) {
   const periodLabel = PERIOD_LABELS[period] || period;
   const payload = buildAnalysisPayload({
@@ -1302,19 +1343,25 @@ async function generateMorningBrief(analytics, period) {
     ...analytics,
   });
 
-  const haikuResult = await callHaiku({
+  const haikuResult = await callHaikuForJSON({
     systemPrompt: MORNING_BRIEF_SYSTEM,
     userPrompt: buildMorningBriefPrompt(payload),
-    maxTokens: 800,
+    maxTokens: 1200,
+    retry: {
+      systemPrompt: MORNING_BRIEF_SYSTEM_COMPACT,
+      maxTokens: 1200,
+    },
   });
 
-  const { parsed, parseError } = parseHaikuJSON(haikuResult.text);
-  if (!parsed) {
-    throw new Error(`Haiku returned unparseable JSON: ${parseError}`);
+  const partial = !haikuResult.parsed;
+  if (partial) {
+    console.error('Morning brief JSON parse failed:', haikuResult.parseError);
   }
 
   return {
-    brief: parsed,
+    brief: partial ? fallbackMorningBrief(haikuResult.parseError) : haikuResult.parsed,
+    partial,
+    parseWarning: haikuResult.parseWarning || (partial ? haikuResult.parseError : null),
     generatedAt: new Date().toISOString(),
     generatedBy: haikuResult.model,
     usage: haikuResult.usage,
@@ -1329,28 +1376,29 @@ async function generateOperationsCenter(analytics, period, morningBrief) {
     ...analytics,
   });
 
-  const haikuResult = await callHaiku({
+  const haikuResult = await callHaikuForJSON({
     systemPrompt: OPERATIONS_CENTER_SYSTEM,
     userPrompt: buildOperationsCenterPrompt(payload),
-    maxTokens: 1500,
+    maxTokens: 4096,
+    retry: {
+      systemPrompt: OPERATIONS_CENTER_SYSTEM_COMPACT,
+      maxTokens: 3000,
+    },
   });
 
-  const { parsed, parseError } = parseHaikuJSON(haikuResult.text);
-  if (!parsed) {
-    throw new Error(`Haiku returned unparseable JSON: ${parseError}`);
+  const partial = !haikuResult.parsed;
+  if (partial) {
+    console.error('Operations center JSON parse failed:', haikuResult.parseError);
   }
 
+  const analysis = partial
+    ? fallbackOperationsAnalysis(haikuResult.parseError)
+    : normalizeOperationsAnalysis(haikuResult.parsed);
+
   return {
-    analysis: {
-      what_changed: parsed.what_changed || [],
-      opportunities: parsed.opportunities || [],
-      risks: parsed.risks || [],
-      attention_needed: parsed.attention_needed || [],
-      weather_drivers: parsed.weather_drivers || [],
-      retention_signals: parsed.retention_signals || [],
-      recommended_actions: (parsed.recommended_actions || []).slice(0, 3),
-      wins: parsed.wins || [],
-    },
+    analysis,
+    partial,
+    parseWarning: haikuResult.parseWarning || (partial ? haikuResult.parseError : null),
     generatedAt: new Date().toISOString(),
     generatedBy: haikuResult.model,
     usage: haikuResult.usage,

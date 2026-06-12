@@ -131,6 +131,11 @@ function buildAnalysisPayload({
   };
 }
 
+const JSON_OUTPUT_RULES = `CRITICAL OUTPUT RULES:
+- Return ONLY raw JSON starting with { — no markdown fences, no commentary before or after.
+- Valid JSON only: no trailing commas, double-quote all strings, escape internal quotes.
+- Keep every string under 120 characters. Prefer short phrases over full sentences.`;
+
 const MORNING_BRIEF_SYSTEM = `You are a product analytics assistant for StormTracking.io, a free storm-tracking site.
 
 Write a concise "Morning Brief" for the admin team based on aggregated analytics only. No PII, no individual users.
@@ -144,10 +149,16 @@ FOCUS ON CHANGE, NOT JUST SUMMARY:
 - Note failed searches and expansion opportunities when relevant.
 - If analyticsHealth shows warnings, mention tracking gaps briefly.
 
+${JSON_OUTPUT_RULES}
+
 Output valid JSON with keys:
 - headline (string, one sentence — the single most important CHANGE or takeaway)
-- bullets (array of 3-5 short strings, each emphasizing change, spike, or action — include % changes when available)
+- bullets (array of 3-4 short strings, each emphasizing change, spike, or action — include % changes when available)
 - generated_at_note (string, brief note about the period covered and comparison baseline)`;
+
+const MORNING_BRIEF_SYSTEM_COMPACT = `${MORNING_BRIEF_SYSTEM}
+
+COMPACT MODE: Use exactly 3 bullets. Keep headline under 80 characters.`;
 
 const OPERATIONS_CENTER_SYSTEM = `You are an operations analyst for StormTracking.io admin dashboard.
 
@@ -156,15 +167,21 @@ Analyze aggregated product analytics and produce an operations briefing. Use onl
 Focus on actionability over raw statistics. Short bullet items only — no paragraphs.
 Use metricTrends and periodTrend fields to explain what changed vs the prior equivalent period.
 
+${JSON_OUTPUT_RULES}
+
 Output valid JSON with these exact keys:
-- what_changed (array of { text: string } — key metric shifts with % change vs prior period, max 5)
-- opportunities (array of { text: string } — city/county expansion, forecast links, growth areas, max 5)
-- risks (array of { priority: "high"|"medium"|"low", text: string } — funnel drop-offs, tracking gaps, declining metrics, max 5)
-- attention_needed (array of { priority: "high"|"medium"|"low", text: string } — issues needing admin attention, max 5)
-- weather_drivers (array of { text: string } — hypotheses for why traffic is changing based on geography/engagement patterns, max 4)
-- retention_signals (array of { text: string } — habit formation, returning visitors, saves, max 4)
-- recommended_actions (array of exactly 3 { title: string, detail: string } — top 3 concrete next steps)
-- wins (array of { text: string } — positive progress to celebrate, max 4)`;
+- what_changed (array of { "text": string } — key metric shifts with % change vs prior period, max 4)
+- opportunities (array of { "text": string } — city/county expansion, forecast links, growth areas, max 3)
+- risks (array of { "priority": "high"|"medium"|"low", "text": string } — funnel drop-offs, tracking gaps, declining metrics, max 3)
+- attention_needed (array of { "priority": "high"|"medium"|"low", "text": string } — issues needing admin attention, max 3)
+- weather_drivers (array of { "text": string } — hypotheses for why traffic is changing, max 3)
+- retention_signals (array of { "text": string } — habit formation, returning visitors, saves, max 3)
+- recommended_actions (array of exactly 3 { "title": string, "detail": string } — top 3 concrete next steps, detail under 80 chars)
+- wins (array of { "text": string } — positive progress to celebrate, max 3)`;
+
+const OPERATIONS_CENTER_SYSTEM_COMPACT = `${OPERATIONS_CENTER_SYSTEM}
+
+COMPACT MODE: Max 2 items per array (3 for recommended_actions). Each text under 80 characters.`;
 
 function buildMorningBriefPrompt(payload) {
   return `Period: ${payload.period}
@@ -191,7 +208,9 @@ Produce the operations center briefing JSON. Prioritize risks and attention_need
 module.exports = {
   buildAnalysisPayload,
   MORNING_BRIEF_SYSTEM,
+  MORNING_BRIEF_SYSTEM_COMPACT,
   OPERATIONS_CENTER_SYSTEM,
+  OPERATIONS_CENTER_SYSTEM_COMPACT,
   buildMorningBriefPrompt,
   buildOperationsCenterPrompt,
 };
