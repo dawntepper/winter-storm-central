@@ -16,7 +16,7 @@ import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
-import { trackRadarTypeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -132,15 +132,6 @@ function ActiveStormsHighlight() {
   );
 }
 
-// Radar layer type options.
-// Satellite (GOES-East_ABI_GeoColor via NASA GIBS) is hidden — the upstream
-// endpoint currently 404s for all timestamps; re-add once the GIBS layer is
-// renamed/restored.
-const LAYER_TYPES = [
-  { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow radar' },
-  { id: 'infrared', label: 'Infrared', description: 'Cloud top temperatures' }
-];
-
 export default function RadarPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -152,9 +143,6 @@ export default function RadarPage() {
     ? Object.values(alertsData.byCategory).flat()
     : [];
 
-  // Radar controls
-  const [radarType, setRadarType] = useState('precipitation');
-  const [showInfo, setShowInfo] = useState(false);
   const [heroLocation, setHeroLocation] = useState(null);
 
   // GPS center from hero locate / location search. Takes precedence over
@@ -226,6 +214,23 @@ export default function RadarPage() {
 
   const displayCenterOn = gpsCenter ?? centerOn;
   const displayHighlightArea = userArea;
+  const hasLocalFocus = !!(gpsCenter || userArea);
+
+  const handleMapResetView = useCallback(() => {
+    areaReqRef.current += 1;
+    if (hasLocalFocus) {
+      setGpsCenter(null);
+      setUserArea(null);
+      setGpsStateCode(null);
+    } else if (centerOn) {
+      navigate('/radar', { replace: true });
+    }
+  }, [hasLocalFocus, centerOn, navigate]);
+
+  const mapResetViewLabel = hasLocalFocus ? 'Your Area' : 'Full View';
+  const mapResetViewTitle = hasLocalFocus
+    ? 'Return to your searched location on the map'
+    : 'Reset to default US view';
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -275,65 +280,9 @@ export default function RadarPage() {
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
 
-        {/* Radar controls + map — full width single column */}
-        <section className="space-y-3 sm:space-y-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Radar Type</label>
-              <button
-                type="button"
-                onClick={() => setShowInfo(!showInfo)}
-                aria-label="Radar map info"
-                aria-expanded={showInfo}
-                className={`p-0.5 rounded transition-colors cursor-pointer ${
-                  showInfo
-                    ? 'text-sky-400'
-                    : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex gap-2">
-              {LAYER_TYPES.map(type => (
-                <button
-                  key={type.id}
-                  onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: effectiveStateCode }); }}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                    radarType === type.id
-                      ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
-                  }`}
-                >
-                  <span className="block">{type.label}</span>
-                  <span className="block text-[10px] mt-0.5 opacity-70">{type.description}</span>
-                </button>
-              ))}
-            </div>
-            {showInfo && (
-              <div className="mt-2 p-3 bg-slate-800/60 rounded-lg border border-slate-700">
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Live precipitation and infrared radar from NOAA, refreshing about every 5 minutes.
-                  NWS alert overlays refresh every 10 minutes (every 2 minutes during urgent warnings).
-                  Toggle radar on the map, zoom for local detail, or switch layers above.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <ZipCodeSearch
-            variant="compact"
-            stormPhase="active"
-            totalLocationCount={0}
-            onLocationsChange={() => {}}
-            onLocationClick={handleSearchLocationClick}
-            onLocate={handleGpsLocate}
-            onResolveState={setGpsStateCode}
-            onLocationResolved={setHeroLocation}
-          />
-
+        {/* Map + sidebar — two-column on desktop, stacked on mobile (map first) */}
+        <section className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6">
+          {/* Left: sticky map */}
           <div
             id="radar-map"
             className="lg:sticky lg:top-4 -mx-3 sm:-mx-4 lg:mx-0 [&_.leaflet-container]:max-lg:!h-[40vh]"
@@ -344,14 +293,35 @@ export default function RadarPage() {
               userLocations={[]}
               alerts={mapAlerts}
               isHero
-              radarLayerType={radarType}
+              radarLayerType="precipitation"
               radarColorScheme={4}
               centerOn={displayCenterOn}
               selectedStateCode={effectiveStateCode}
               highlightArea={displayHighlightArea}
               onAreaClick={handleAreaClick}
-              resetToDefaultOnClick={false}
+              onResetView={handleMapResetView}
+              resetViewLabel={mapResetViewLabel}
+              resetViewTitle={mapResetViewTitle}
+              resetToDefaultOnClick={!hasLocalFocus}
             />
+          </div>
+
+          {/* Right: Check Location */}
+          <div className="flex flex-col gap-4 lg:gap-5">
+            <div
+              id="radar-location-search"
+              className="jump-scroll-target max-lg:rounded-xl max-lg:overflow-visible max-lg:border max-lg:border-[antiquewhite] max-lg:bg-[#1a3d2e]"
+            >
+              <ZipCodeSearch
+                stormPhase="active"
+                totalLocationCount={0}
+                onLocationsChange={() => {}}
+                onLocationClick={handleSearchLocationClick}
+                onLocate={handleGpsLocate}
+                onResolveState={setGpsStateCode}
+                onLocationResolved={setHeroLocation}
+              />
+            </div>
           </div>
         </section>
 
