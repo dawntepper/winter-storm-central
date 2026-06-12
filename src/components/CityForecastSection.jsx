@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getForecastForCoords } from '../services/forecastService';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
-import { FORECAST_SOURCE_PAGES, trackForecastLinkClick } from '../utils/analytics';
+import { FORECAST_SOURCE_PAGES, trackForecastLinkClick, trackForecastSectionViewed } from '../utils/analytics';
 import { getForecastIcon } from '../utils/getForecastIcon';
 
 /**
@@ -13,16 +13,20 @@ export default function CityForecastSection({
   cityName,
   citySlug,
   stateSlug,
+  stateCode,
   lat,
   lon,
   showUnavailableFallback = false,
   onForecastLoad,
   forecastLinkSource = 'city-page',
+  analyticsSource,
 }) {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const onForecastLoadRef = useRef(onForecastLoad);
+  const sectionRef = useRef(null);
+  const viewedRef = useRef(false);
   onForecastLoadRef.current = onForecastLoad;
 
   useEffect(() => {
@@ -52,10 +56,45 @@ export default function CityForecastSection({
     return () => { cancelled = true; };
   }, [lat, lon]);
 
+  useEffect(() => {
+    if (!forecast || viewedRef.current) return undefined;
+
+    const fireViewed = () => {
+      if (viewedRef.current) return;
+      viewedRef.current = true;
+      trackForecastSectionViewed({
+        stateCode: stateCode || forecast.location?.state,
+        city: cityName,
+        citySlug,
+        source: analyticsSource || forecastLinkSource,
+        hasForecastData: true,
+      });
+    };
+
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      fireViewed();
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          fireViewed();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    );
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [forecast, cityName, citySlug, stateCode, analyticsSource, forecastLinkSource]);
+
   if (loading && !forecast) {
     return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
-        <p className="text-sm text-slate-400">Loading forecast…</p>
+      <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
+        <p className="text-sm text-slate-400">Loading hourly + 7-day forecast…</p>
       </section>
     );
   }
@@ -63,8 +102,8 @@ export default function CityForecastSection({
   if (!forecast) {
     if (showUnavailableFallback && failed) {
       return (
-        <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-2">
+        <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
+          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
             Forecast
           </h2>
           <p className="text-slate-400 text-sm">
@@ -79,7 +118,7 @@ export default function CityForecastSection({
   const forecastLinkIcon = getForecastIcon(forecast?.current?.shortForecast);
 
   return (
-    <section className="space-y-4">
+    <section ref={sectionRef} className="space-y-4" aria-label={`Forecast for ${cityName}`}>
       <ForecastHourly
         periods={forecast.hourly}
         timeZone={forecast.location?.timeZone}

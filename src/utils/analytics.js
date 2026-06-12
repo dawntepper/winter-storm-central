@@ -1040,6 +1040,7 @@ export const SAVE_TRIGGERS = {
   ALERT_ADD_TO_MAP: 'alert_add_to_map',
   MAP_ALERT_POPUP: 'map_alert_popup',
   MAP_LOCATION_PIN_CLICK: 'map_location_pin_click',
+  CITY_PAGE: 'city_page',
   AUTO_GEOLOCATE: 'auto_geolocate',
 };
 
@@ -1380,6 +1381,31 @@ export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts,
 }
 
 /**
+ * Forecast section viewed on a city alert page — Plausible "Forecast Section Viewed" +
+ * product_events.forecast_section_viewed. Fires once per city slug per visit cooldown
+ * when the NWS forecast block mounts or scrolls into view.
+ */
+export function trackForecastSectionViewed({ stateCode, city, citySlug, source, hasForecastData }) {
+  const resolvedSource = resolveSource(source);
+  const recorded = recordProductEvent(PRODUCT_EVENTS.FORECAST_SECTION_VIEWED, {
+    stateCode,
+    metadata: {
+      city,
+      city_slug: citySlug,
+      source: resolvedSource,
+      has_forecast_data: Boolean(hasForecastData),
+    },
+  });
+  if (!recorded) return;
+  track('Forecast Section Viewed', {
+    state: stateCode || 'unknown',
+    city: city || citySlug || 'unknown',
+    source: resolvedSource,
+    has_forecast_data: Boolean(hasForecastData) ? 'yes' : 'no',
+  });
+}
+
+/**
  * Forecast state-default destination click — Plausible "Forecast State Click" +
  * product_events.forecast_link_click (destination_type: state-default).
  */
@@ -1598,5 +1624,6 @@ export default {
   trackForecastCityClick,
   trackForecastStateClick,
   trackCityWeatherPageView,
+  trackForecastSectionViewed,
   FORECAST_SOURCE_PAGES,
 };

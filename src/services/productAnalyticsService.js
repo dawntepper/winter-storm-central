@@ -16,6 +16,7 @@
  * | forecast_view               | visit_cooldown  | forecast:{state_slug} (3s) |
  * | city_weather_page_view      | visit_cooldown  | city:{city_slug} (3s) |
  * | forecast_link_click         | none            | every click |
+ * | forecast_section_viewed     | visit_cooldown  | forecast_section:{city_slug} (3s) |
  * | state_selector_used         | none            | every selection |
  * | radar_view                  | visit_cooldown  | radar_view:{pagePath} (3s) |
  * | county_alert_view           | visit_cooldown  | county:{county_id} (3s) |
@@ -50,6 +51,7 @@ export const PRODUCT_EVENTS = {
   FORECAST_VIEW: 'forecast_view',
   CITY_WEATHER_PAGE_VIEW: 'city_weather_page_view',
   FORECAST_LINK_CLICK: 'forecast_link_click',
+  FORECAST_SECTION_VIEWED: 'forecast_section_viewed',
   STATE_SELECTOR_USED: 'state_selector_used',
   SAVE_LOCATION: 'save_location',
   SIGN_IN: 'sign_in',
@@ -117,6 +119,10 @@ const PRODUCT_DEDUPE_RULES = {
       `search:${stateCode || 'unknown'}:${metadata?.query || ''}`,
   },
   [PRODUCT_EVENTS.FORECAST_LINK_CLICK]: { type: 'none' },
+  [PRODUCT_EVENTS.FORECAST_SECTION_VIEWED]: {
+    type: 'visit_cooldown',
+    key: ({ metadata }) => `forecast_section:${metadata?.city_slug || 'unknown'}`,
+  },
   [PRODUCT_EVENTS.STATE_SELECTOR_USED]: { type: 'none' },
   [PRODUCT_EVENTS.SAVE_LOCATION]: { type: 'none' },
 };

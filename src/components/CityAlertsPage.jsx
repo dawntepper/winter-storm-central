@@ -7,16 +7,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import PageBackNav from './PageBackNav';
 import {
   NWS_HEADERS,
   INCLUDED_EVENTS,
   getCategoryForEvent,
-  ALERT_CATEGORIES,
 } from '../../shared/nws-alert-parser';
-import {
-  fetchOpenMeteoConditions,
-} from '../utils/fetchOpenMeteoConditions';
+import { fetchOpenMeteoConditions, describeWeatherCode } from '../utils/fetchOpenMeteoConditions';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { trackCityWeatherPageView } from '../utils/analytics';
 import CityCurrentConditions from './CityCurrentConditions';
@@ -24,11 +20,15 @@ import CityForecastSection from './CityForecastSection';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
+import CityWeatherDashboard, {
+  CityRelatedLinks,
+  CityNearbyLinks,
+  CitySeasonalRisk,
+} from './city/CityWeatherDashboard';
 import citiesIndex from '../content/cities/index.json';
 
 const BASE_URL = 'https://stormtracking.io';
 
-// Eager-load every city JSON at build time so slug → data is a sync lookup.
 const cityModules = import.meta.glob('../content/cities/*.json', { eager: true });
 const CITY_DATA = {};
 for (const [path, mod] of Object.entries(cityModules)) {
@@ -38,19 +38,13 @@ for (const [path, mod] of Object.entries(cityModules)) {
   }
 }
 
-// Map city slugs in index.json → display labels for "nearby cities" links.
 const CITY_INDEX_BY_SLUG = {};
 for (const c of citiesIndex.cities || []) {
   CITY_INDEX_BY_SLUG[c.slug] = c;
 }
 
-// ============================================================
-// META TAGS
-// ============================================================
-
 function setCityMetaTags(city) {
   const url = `${BASE_URL}/alerts/${city.slug}`;
-  const st = city.state_abbr;
   const title = `${city.city} Weather Alerts & Forecast | StormTracking`;
   const description = `Live ${city.city} weather alerts, radar, current conditions, hourly forecast, and 7-day outlook from NWS and NOAA.`;
   const ogImage = `${BASE_URL}/og-image.png`;
@@ -82,14 +76,6 @@ function setCityMetaTags(city) {
     `${city.city.toLowerCase()} weather alerts, ${city.city.toLowerCase()} ${city.state.toLowerCase()} weather, ${city.city.toLowerCase()} severe weather warnings, ${city.city.toLowerCase()} radar, NWS ${city.city.toLowerCase()}`,
   );
 }
-
-function resetMetaTags() {
-  setHomepageMetaTags();
-}
-
-// ============================================================
-// LIVE DATA FETCH
-// ============================================================
 
 async function fetchCityAlerts(zone) {
   if (!zone) return [];
@@ -129,10 +115,6 @@ async function fetchCityAlerts(zone) {
   }
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-
 function currentSeason() {
   const m = new Date().getMonth();
   if (m <= 1 || m === 11) return 'winter';
@@ -141,35 +123,8 @@ function currentSeason() {
   return 'fall';
 }
 
-function formatDateTime(iso) {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function severityClasses(severity) {
-  if (severity === 'Extreme') return 'bg-red-500/20 text-red-300 border-red-500/40';
-  if (severity === 'Severe') return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
-  if (severity === 'Moderate') return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-  if (severity === 'Minor') return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
-  return 'bg-slate-500/20 text-slate-300 border-slate-500/40';
-}
-
-// ============================================================
-// JSON-LD
-// ============================================================
-
 function buildJsonLd(city, conditions) {
   const url = `${BASE_URL}/alerts/${city.slug}`;
-  const st = city.state_abbr;
   const now = new Date().toISOString();
 
   const webPage = {
@@ -234,268 +189,6 @@ function buildJsonLd(city, conditions) {
   return out;
 }
 
-// ============================================================
-// SUB-SECTIONS
-// ============================================================
-
-function ActiveAlerts({ city, alerts, error }) {
-  if (error) {
-    return (
-      <section>
-        <h2 className="text-lg font-semibold text-white mb-3">Active Alerts</h2>
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-sm text-amber-200">
-          NWS alert data is temporarily unavailable. Please refresh, or check
-          {' '}
-          <a className="underline" href={`https://forecast.weather.gov/MapClick.php?lat=${city.lat}&lon=${city.lon}`} target="_blank" rel="noopener noreferrer">
-            weather.gov directly
-          </a>.
-        </div>
-      </section>
-    );
-  }
-
-  if (alerts === null) {
-    return (
-      <section>
-        <h2 className="text-lg font-semibold text-white mb-3">Active Alerts</h2>
-        <p className="text-slate-400 text-sm">Loading alerts for {city.city}…</p>
-      </section>
-    );
-  }
-
-  if (alerts.length === 0) {
-    return (
-      <section>
-        <h2 className="text-lg font-semibold text-white mb-3">Active Alerts</h2>
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-5">
-          <p className="text-emerald-200 text-sm leading-relaxed">
-            <strong>No active weather alerts for {city.city} at this time.</strong>
-            {' '}Sign up below to be notified when severe weather threatens this area.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-white mb-3">
-        Active Alerts ({alerts.length})
-      </h2>
-      <div className="space-y-3">
-        {alerts.map((alert) => (
-          <AlertCard key={alert.id} alert={alert} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AlertCard({ alert }) {
-  const [open, setOpen] = useState(false);
-  const category = ALERT_CATEGORIES[alert.category];
-
-  return (
-    <article className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-      <header className="px-4 py-3 border-b border-slate-700/60">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              {category && (
-                <span className="text-base" aria-hidden="true">{category.icon}</span>
-              )}
-              <h3 className="text-base font-semibold text-white">{alert.event}</h3>
-            </div>
-            {alert.headline && (
-              <p className="text-sm text-slate-300 leading-snug">{alert.headline}</p>
-            )}
-          </div>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${severityClasses(alert.severity)} whitespace-nowrap`}>
-            {alert.severity || 'Alert'}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mt-2">
-          {alert.effective && <span>Effective: {formatDateTime(alert.effective)}</span>}
-          {alert.expires && <span>Expires: {formatDateTime(alert.expires)}</span>}
-        </div>
-      </header>
-
-      {alert.areaDesc && (
-        <div className="px-4 py-2 text-xs text-slate-400 bg-slate-900/40 border-b border-slate-700/60">
-          <span className="text-slate-500">Affected:</span> {alert.areaDesc}
-        </div>
-      )}
-
-      {(alert.description || alert.instruction) && (
-        <div className="px-4 py-3">
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer"
-          >
-            {open ? 'Hide details' : 'Show full NWS message'} {open ? '▴' : '▾'}
-          </button>
-          {open && (
-            <div className="mt-3 space-y-3 text-sm text-slate-300 whitespace-pre-line leading-relaxed">
-              {alert.description && <p>{alert.description}</p>}
-              {alert.instruction && (
-                <p className="border-l-2 border-amber-500/50 pl-3 text-amber-100">
-                  {alert.instruction}
-                </p>
-              )}
-              {alert.url && (
-                <a
-                  href={alert.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-xs text-sky-400 hover:underline"
-                >
-                  View on weather.gov &rarr;
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </article>
-  );
-}
-
-const SEASON_LABEL = {
-  spring: 'Spring',
-  summer: 'Summer',
-  fall: 'Fall',
-  winter: 'Winter',
-};
-
-const SEASON_ORDER = ['spring', 'summer', 'fall', 'winter'];
-
-const HAZARD_LABELS = {
-  'hurricane': 'Hurricanes',
-  'tropical-storm': 'Tropical storms',
-  'flooding': 'Flooding',
-  'severe-thunderstorm': 'Severe thunderstorms',
-  'lightning': 'Lightning',
-  'cold-front': 'Cold fronts',
-  'cold-fronts': 'Cold fronts',
-  'tornado': 'Tornadoes',
-  'winter-storm': 'Winter storms',
-  'ice-storm': 'Ice storms',
-  'heat': 'Extreme heat',
-  'wildfire': 'Wildfires',
-  'high-wind': 'High wind',
-};
-
-function SeasonalRisk({ city, season }) {
-  if (!city.seasonal_risks) return null;
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-white mb-3">Seasonal Risk Profile</h2>
-      <p className="text-sm text-slate-300 leading-relaxed mb-4">
-        {city.description_long}
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {SEASON_ORDER.map((s) => {
-          const risks = city.seasonal_risks[s] || [];
-          const isCurrent = s === season;
-          return (
-            <div
-              key={s}
-              className={`rounded-lg p-3 border ${
-                isCurrent
-                  ? 'border-sky-400/50 bg-sky-500/10'
-                  : 'border-slate-700 bg-slate-800/50'
-              }`}
-            >
-              <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${isCurrent ? 'text-sky-300' : 'text-slate-400'}`}>
-                {SEASON_LABEL[s]}{isCurrent && ' • Now'}
-              </p>
-              <ul className="space-y-1">
-                {risks.length === 0 && (
-                  <li className="text-xs text-slate-500">Low risk</li>
-                )}
-                {risks.map((r) => (
-                  <li key={r} className="text-xs text-slate-300">
-                    {HAZARD_LABELS[r] || r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function RelatedLinks({ city }) {
-  const radarUrl = `/radar?lat=${city.lat}&lon=${city.lon}`;
-  const cardClasses = 'group flex items-center justify-between gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 transition-all duration-200 hover:border-sky-500/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-500/10';
-  const ctaClass = 'text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors';
-
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-white mb-3">Related</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Link to={radarUrl} className={cardClasses}>
-          <div>
-            <p className="text-sm font-medium text-white">Live radar for {city.city}</p>
-            <p className="text-xs text-slate-400 mt-0.5">Real-time precipitation and storm tracking</p>
-          </div>
-          <span className={ctaClass} aria-hidden="true">Open →</span>
-        </Link>
-        <Link to={`/alerts/${city.state_slug}`} className={cardClasses}>
-          <div>
-            <p className="text-sm font-medium text-white">All {city.state} weather alerts</p>
-            <p className="text-xs text-slate-400 mt-0.5">Statewide active warnings and watches</p>
-          </div>
-          <span className={ctaClass} aria-hidden="true">View Alerts →</span>
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-function NearbyCities({ city }) {
-  const nearby = (city.nearby_cities || [])
-    .map((slug) => ({ slug, idx: CITY_INDEX_BY_SLUG[slug] }))
-    .filter((entry) => entry.idx); // only show supported cities
-
-  const unsupported = (city.nearby_cities || [])
-    .filter((slug) => !CITY_INDEX_BY_SLUG[slug])
-    .map((slug) => slug.replace(/-([a-z]{2})$/, ', $1').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
-
-  if (nearby.length === 0 && unsupported.length === 0) return null;
-
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-white mb-3">Weather alerts in nearby cities</h2>
-      {nearby.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {nearby.map((entry) => (
-            <Link
-              key={entry.slug}
-              to={`/alerts/${entry.slug}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-sky-300 hover:text-sky-200 transition-colors"
-            >
-              {entry.idx.city}, {entry.idx.state_abbr || entry.idx.state}
-              <span aria-hidden="true" className="text-xs font-semibold text-sky-400">View Alerts →</span>
-            </Link>
-          ))}
-        </div>
-      )}
-      {unsupported.length > 0 && (
-        <p className="text-xs text-slate-500">
-          More coming soon: {unsupported.join(' • ')}
-        </p>
-      )}
-    </section>
-  );
-}
-
-// ============================================================
-// MAIN
-// ============================================================
-
 export default function CityAlertsPage() {
   const { slug } = useParams();
   const city = CITY_DATA[slug];
@@ -505,8 +198,6 @@ export default function CityAlertsPage() {
   const [conditions, setConditions] = useState(null);
   const [conditionsError, setConditionsError] = useState(false);
 
-  // National feed supplies map coordinates; zone fetch is the source of truth
-  // for which alerts apply to this city (never show statewide markers).
   const { alerts: allAlertsData } = useExtremeWeather(true);
   const mapAlerts = useMemo(() => {
     if (!city || !Array.isArray(alerts) || alerts.length === 0) return [];
@@ -516,7 +207,6 @@ export default function CityAlertsPage() {
     const zoneIds = new Set(alerts.map((a) => a.id));
     const matched = national.filter((a) => zoneIds.has(a.id));
     if (matched.length > 0) return matched;
-    // Zone IDs may differ from the national feed — still only show this city's alerts.
     return alerts.map((a) => ({
       ...a,
       lat: city.lat,
@@ -529,7 +219,7 @@ export default function CityAlertsPage() {
   useEffect(() => {
     if (!city) return;
     setCityMetaTags(city);
-    return () => resetMetaTags();
+    return () => setHomepageMetaTags();
   }, [city]);
 
   useEffect(() => {
@@ -588,62 +278,75 @@ export default function CityAlertsPage() {
   const season = currentSeason();
   const alertCount = Array.isArray(alerts) ? alerts.length : 0;
 
+  const nearbyLinks = (city.nearby_cities || [])
+    .map((nearbySlug) => {
+      const idx = CITY_INDEX_BY_SLUG[nearbySlug];
+      if (idx) {
+        return {
+          slug: nearbySlug,
+          href: `/alerts/${nearbySlug}`,
+          label: `${idx.city}, ${idx.state_abbr || idx.state}`,
+        };
+      }
+      return {
+        slug: nearbySlug,
+        comingSoon: true,
+        label: nearbySlug.replace(/-([a-z]{2})$/, ', $1').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      };
+    });
+
+  const mapConditions = conditions?.current ? {
+    temperature: conditions.current.temperature,
+    temperatureUnit: 'F',
+    shortForecast: describeWeatherCode(conditions.current.weatherCode).label,
+  } : null;
+
   return (
-    <div className="min-h-screen bg-slate-900">
-      {jsonLdBlocks.map((block, i) => (
-        <script
-          key={i}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(block) }}
+    <CityWeatherDashboard
+      jsonLdBlocks={jsonLdBlocks}
+      headerNav={(
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
+          <Link to="/radar" className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
+          <Link to={`/alerts/${city.state_slug}`} className="text-[10px] sm:text-xs text-sky-400 hover:bg-sky-500/25 font-medium bg-sky-500/15 pl-2 pr-2 py-0.5 rounded border border-sky-500/30 transition-colors">{city.state_abbr} Alerts</Link>
+        </div>
+      )}
+      stateBackLink={(
+        <Link
+          to={`/alerts/${city.state_slug}`}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-sky-400 hover:text-sky-300 mb-3 transition-colors"
+        >
+          ← {city.state} Alerts
+        </Link>
+      )}
+      breadcrumb={(
+        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
+          <Link to="/alerts" className="hover:text-slate-300">Alerts</Link>
+          {' › '}
+          <Link to={`/alerts/${city.state_slug}`} className="hover:text-slate-300">{city.state}</Link>
+          {' › '}
+          <span className="text-slate-400">{city.city}</span>
+        </p>
+      )}
+      title={`${city.city} Weather Alerts & Forecast`}
+      subtitle={`${city.description_short} Live NWS warnings, current conditions, hourly outlook, and 7-day forecast for ${city.county} County. ${alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'}`}
+      cityName={city.city}
+      lat={city.lat}
+      lon={city.lon}
+      citySlug={city.slug}
+      stateCode={city.state_abbr}
+      alerts={alerts}
+      alertsLoading={alerts === null && !alertsError}
+      alertsError={alertsError}
+      alertsSignupHint
+      currentConditions={(
+        <CityCurrentConditions
+          cityName={city.city}
+          conditions={conditions}
+          error={conditionsError}
         />
-      ))}
-
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <PageBackNav />
-            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <span className="text-xl" aria-hidden="true">📡</span>
-              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
-            </Link>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-            <Link to="/radar" className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
-            <Link to={`/alerts/${city.state_slug}`} className="text-[10px] sm:text-xs text-sky-400 hover:bg-sky-500/25 font-medium bg-sky-500/15 pl-2 pr-2 py-0.5 rounded border border-sky-500/30 transition-colors">{city.state_abbr} Alerts</Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Main */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div>
-          <Link
-            to={`/alerts/${city.state_slug}`}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-sky-400 hover:text-sky-300 mb-3 transition-colors"
-          >
-            ← {city.state} Alerts
-          </Link>
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
-            <Link to="/alerts" className="hover:text-slate-300">Alerts</Link>
-            {' › '}
-            <Link to={`/alerts/${city.state_slug}`} className="hover:text-slate-300">{city.state}</Link>
-            {' › '}
-            <span className="text-slate-400">{city.city}</span>
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">
-            {city.city} Weather Alerts &amp; Forecast
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-            {city.description_short} Live National Weather Service warnings, current temperature and conditions, and a 4-day forecast for {city.county} County. {alertCount > 0 ? `${alertCount} active alert${alertCount === 1 ? '' : 's'} right now.` : 'No active alerts right now.'} Data from the NWS and Open-Meteo. No ads, no clutter, no paywalls.
-          </p>
-        </div>
-
-        {/* Live radar centered on the city — alert markers + hover popups
-            for any active NWS alert in range, plus a green pin labelling
-            the city itself. Same StormMap component used on the homepage,
-            state alerts pages, and /forecast/[state-slug]. */}
+      )}
+      radar={(
         <section aria-label={`Live weather radar — ${city.city}`}>
           <StormMap
             weatherData={{}}
@@ -653,11 +356,7 @@ export default function CityAlertsPage() {
               lat: city.lat,
               lon: city.lon,
               name: `${city.city}, ${city.state_abbr}`,
-              conditions: conditions ? {
-                temperature: conditions.temperature,
-                temperatureUnit: 'F',
-                shortForecast: conditions.shortForecast || conditions.condition,
-              } : null,
+              conditions: mapConditions,
             }]}
             alerts={mapAlerts}
             isHero
@@ -666,36 +365,54 @@ export default function CityAlertsPage() {
             centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
           />
         </section>
-
-        <CityCurrentConditions cityName={city.city} conditions={conditions} error={conditionsError} />
-        {alertsError && (
-          <ActiveAlerts city={city} alerts={alerts} error />
-        )}
-        {Array.isArray(alerts) && alerts.length > 0 && (
-          <ActiveAlerts city={city} alerts={alerts} error={false} />
-        )}
+      )}
+      forecast={(
         <CityForecastSection
           cityName={city.city}
           citySlug={city.slug}
           stateSlug={city.state_slug}
+          stateCode={city.state_abbr}
           lat={city.lat}
           lon={city.lon}
+          forecastLinkSource="city-page"
+          analyticsSource="city_alert_page"
         />
-        <RelatedLinks city={city} />
-        <NearbyCities city={city} />
-        <SeasonalRisk city={city} season={season} />
-
+      )}
+      related={(
+        <CityRelatedLinks
+          cityName={city.city}
+          lat={city.lat}
+          lon={city.lon}
+          stateSlug={city.state_slug}
+          stateLabel={city.state}
+        />
+      )}
+      nearby={(
+        <CityNearbyLinks
+          title="Weather alerts in nearby cities"
+          cities={nearbyLinks}
+        />
+      )}
+      seasonal={(
+        <CitySeasonalRisk
+          description={city.description_long}
+          seasonalRisks={city.seasonal_risks}
+          season={season}
+        />
+      )}
+      footer={(
         <footer className="pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-500 leading-relaxed">
+          <p className="text-xs text-slate-500 leading-relaxed text-center">
             Alerts sourced from the National Weather Service (NWS office: {city.nws_office}, forecast zone {city.nws_zone}).
             Current conditions and forecast from{' '}
-            <a className="hover:text-slate-300 underline" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.
-            Updated continuously. StormTracking.io is not affiliated with NOAA or the NWS — always follow official guidance from local authorities.
+            <a className="hover:text-slate-300 underline" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+            {' '}and{' '}
+            <a className="hover:text-slate-300 underline" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">weather.gov</a>.
+            Updated continuously. StormTracking.io is not affiliated with NOAA or the NWS.
           </p>
         </footer>
-      </main>
-
-      <AlertSignupBar />
-    </div>
+      )}
+      signupBar={<AlertSignupBar />}
+    />
   );
 }

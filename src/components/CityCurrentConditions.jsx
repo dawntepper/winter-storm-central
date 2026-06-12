@@ -49,7 +49,7 @@ function Metric({ label, value }) {
 export default function CityCurrentConditions({ cityName, conditions, error }) {
   if (error) {
     return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+      <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col h-full">
         <p className="text-slate-400 text-sm">
           Current conditions are temporarily unavailable. Active alerts below are still live from the National Weather Service.
         </p>
@@ -58,7 +58,7 @@ export default function CityCurrentConditions({ cityName, conditions, error }) {
   }
   if (!conditions) {
     return (
-      <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+      <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col h-full">
         <p className="text-slate-400 text-sm">Loading current conditions for {cityName}…</p>
       </section>
     );
@@ -69,9 +69,9 @@ export default function CityCurrentConditions({ cityName, conditions, error }) {
   const windDir = degreesToCompass(current.windDirection);
 
   return (
-    <section className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+      <section className="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden flex flex-col h-full">
       <div className="px-5 py-3 border-b border-slate-700/60 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           Current Conditions
         </h2>
         <span className="text-xs text-slate-500">
