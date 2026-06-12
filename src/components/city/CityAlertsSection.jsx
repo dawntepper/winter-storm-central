@@ -147,21 +147,7 @@ export default function CityAlertsSection({
   }
 
   if (alerts.length === 0) {
-    return (
-      <section aria-label="Active weather alerts">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-          Active Alerts
-        </h2>
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-5">
-          <p className="text-emerald-200 text-sm leading-relaxed">
-            <strong>No active weather alerts for {cityName} at this time.</strong>
-            {signupHint && (
-              <> Sign up below to be notified when severe weather threatens this area.</>
-            )}
-          </p>
-        </div>
-      </section>
-    );
+    return null;
   }
 
   return (

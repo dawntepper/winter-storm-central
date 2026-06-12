@@ -164,6 +164,9 @@ export default function CityWeatherDashboard({
   signupBar,
   alertsSignupHint = false,
 }) {
+  const alertCount = Array.isArray(alerts) ? alerts.length : 0;
+  const hasAlerts = alertCount > 0;
+
   return (
     <div className="min-h-screen bg-slate-900">
       {jsonLdBlocks.map((block, i) => (
@@ -198,30 +201,58 @@ export default function CityWeatherDashboard({
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
-          <div className="space-y-3 flex flex-col">
-            <CityAlertStatusCard
-              cityName={cityName}
-              alerts={alerts}
-              loading={alertsLoading}
-              error={alertsError}
-              lastUpdated={lastUpdated}
-            />
-            <CitySaveLocationToggle
-              locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
-              lat={lat}
-              lon={lon}
-              citySlug={citySlug}
-              stateCode={stateCode}
-            />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 space-y-4">
+        {hasAlerts ? (
+          <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
+            <div className="space-y-3 flex flex-col">
+              <CityAlertStatusCard
+                cityName={cityName}
+                alerts={alerts}
+                loading={alertsLoading}
+                error={alertsError}
+                lastUpdated={lastUpdated}
+                lat={lat}
+                lon={lon}
+              />
+              <CitySaveLocationToggle
+                locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
+                lat={lat}
+                lon={lon}
+                citySlug={citySlug}
+                stateCode={stateCode}
+              />
+            </div>
+            {currentConditions}
           </div>
-          {currentConditions}
-        </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <CityAlertStatusCard
+                cityName={cityName}
+                alerts={alerts}
+                loading={alertsLoading}
+                error={alertsError}
+                lastUpdated={lastUpdated}
+                compact
+                lat={lat}
+                lon={lon}
+              />
+              <CitySaveLocationToggle
+                locationName={`${cityName}${stateCode ? `, ${stateCode}` : ''}`}
+                lat={lat}
+                lon={lon}
+                citySlug={citySlug}
+                stateCode={stateCode}
+                variant="inline"
+              />
+            </div>
+            {currentConditions}
+          </div>
+        )}
 
         {radar}
         {forecast}
-        {alertsSection ?? (
+        {alertsSection ?? (hasAlerts ? (
           <CityAlertsSectionDefault
             cityName={cityName}
             alerts={alerts}
@@ -231,7 +262,7 @@ export default function CityWeatherDashboard({
             lon={lon}
             signupHint={alertsSignupHint}
           />
-        )}
+        ) : null)}
         {related}
         {nearby}
         {seasonal}

@@ -31,6 +31,7 @@ export default function CitySaveLocationToggle({
   lon,
   citySlug,
   stateCode,
+  variant = 'card',
 }) {
   const locationId = useMemo(() => {
     if (citySlug) return `city-${citySlug}`;
@@ -102,6 +103,20 @@ export default function CitySaveLocationToggle({
     writeSavedLocations(locations);
     setSaved(checked);
   };
+
+  if (variant === 'inline') {
+    return (
+      <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-slate-400 hover:text-slate-300 transition-colors shrink-0">
+        <input
+          type="checkbox"
+          checked={saved}
+          onChange={(e) => handleToggle(e.target.checked)}
+          className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+        />
+        <span>Save to map</span>
+      </label>
+    );
+  }
 
   return (
     <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3">

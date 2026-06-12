@@ -7,8 +7,17 @@ function severityTone(severity) {
   return 'border-sky-500/50 bg-sky-500/10 text-sky-200';
 }
 
+function formatUpdatedTime(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Alert status summary card — left column of the city dashboard top row.
+ * Alert status summary — prominent card when alerts are active, compact pill when all clear.
  */
 export default function CityAlertStatusCard({
   cityName,
@@ -16,7 +25,56 @@ export default function CityAlertStatusCard({
   loading = false,
   error = false,
   lastUpdated,
+  compact = false,
+  lat,
+  lon,
 }) {
+  const updatedLabel = formatUpdatedTime(lastUpdated);
+
+  if (compact) {
+    if (error) {
+      return (
+        <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-amber-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/40 bg-amber-500/10">
+            Alert feed unavailable
+          </span>
+          {Number.isFinite(lat) && Number.isFinite(lon) ? (
+            <a
+              className="text-sky-400 hover:text-sky-300 underline text-xs"
+              href={`https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Check weather.gov
+            </a>
+          ) : null}
+        </p>
+      );
+    }
+
+    if (loading || alerts === null) {
+      return (
+        <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-600 bg-slate-800/60 text-sm text-slate-400">
+          Checking NWS alerts for {cityName}…
+        </p>
+      );
+    }
+
+    if (alerts.length === 0) {
+      return (
+        <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 font-medium">
+            <span aria-hidden="true">✓</span>
+            No active alerts
+          </span>
+          {updatedLabel && (
+            <span className="text-xs text-slate-500">NWS updated {updatedLabel}</span>
+          )}
+        </p>
+      );
+    }
+  }
+
   if (error) {
     return (
       <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 h-full flex flex-col">
@@ -82,9 +140,9 @@ export default function CityAlertStatusCard({
         </>
       )}
 
-      {lastUpdated && (
+      {updatedLabel && (
         <p className="text-[10px] mt-auto pt-4 opacity-60">
-          NWS feed updated {new Date(lastUpdated).toLocaleTimeString()}
+          NWS feed updated {updatedLabel}
         </p>
       )}
     </div>
