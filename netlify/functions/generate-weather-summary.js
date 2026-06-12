@@ -30,17 +30,17 @@ const {
 } = require('../../shared/nws-alert-parser.js');
 
 const { getStore } = require('@netlify/blobs');
+const {
+  HAIKU_MODEL,
+  getAnthropicApiKey,
+  callHaiku,
+  parseHaikuJSON,
+} = require('./lib/haiku-client');
 
 const BLOB_STORE_NAME = 'weather-summaries';
 const INDEX_KEY = 'summaries-index';
 const SUMMARY_KEY_PREFIX = 'summary:';
 const INDEX_SCHEMA_VERSION = '1.0';
-
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_VERSION = '2023-06-01';
-const ANTHROPIC_MAX_TOKENS = 2000;
-const ANTHROPIC_TIMEOUT_MS = 30_000;
 
 // Cap how many alerts we send to Haiku — keeps input token usage predictable.
 // We sort by severity + significance before slicing.
@@ -245,79 +245,6 @@ async function fetchActiveAlerts() {
 }
 
 // ============================================================================
-// ANTHROPIC CALL
-// ============================================================================
-
-async function callHaiku({ systemPrompt, userPrompt, apiKey }) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
-
-  let resp;
-  try {
-    resp = await fetch(ANTHROPIC_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_VERSION,
-      },
-      body: JSON.stringify({
-        model: HAIKU_MODEL,
-        max_tokens: ANTHROPIC_MAX_TOKENS,
-        system: systemPrompt,
-        messages: [
-          { role: 'user', content: userPrompt },
-          // Prefill — forces the assistant turn to start with `{` so the
-          // output is a JSON object from byte 0.
-          { role: 'assistant', content: '{' },
-        ],
-      }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Anthropic API timed out after 30 seconds');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Anthropic API ${resp.status}: ${text.slice(0, 500)}`);
-  }
-
-  const data = await resp.json();
-  // Prefilled with `{`, so prepend it to reconstruct the full JSON string.
-  const text = '{' + (data?.content?.[0]?.text || '');
-  return {
-    text,
-    usage: data?.usage || null,
-    stopReason: data?.stop_reason || null,
-  };
-}
-
-function parseHaikuJSON(rawText) {
-  // Direct parse first — usually works because we prefilled `{`.
-  try {
-    return { parsed: JSON.parse(rawText), parseError: null };
-  } catch (err) {
-    // Last-ditch: try to slice from the first `{` to the last `}`.
-    const first = rawText.indexOf('{');
-    const last = rawText.lastIndexOf('}');
-    if (first !== -1 && last > first) {
-      try {
-        return { parsed: JSON.parse(rawText.slice(first, last + 1)), parseError: null };
-      } catch (err2) {
-        return { parsed: null, parseError: err2.message };
-      }
-    }
-    return { parsed: null, parseError: err.message };
-  }
-}
-
-// ============================================================================
 // STORAGE (Netlify Blobs)
 // ============================================================================
 
@@ -432,9 +359,10 @@ exports.handler = async (event) => {
 
 // ── POST: generate a new summary + persist ──────────────────────────────────
 async function handleGenerate(event) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) {
-    return jsonResponse(500, { error: 'Server is missing ANTHROPIC_API_KEY env var' });
+  try {
+    getAnthropicApiKey();
+  } catch (err) {
+    return jsonResponse(500, { error: err.message });
   }
 
   let body;
@@ -521,7 +449,6 @@ async function handleGenerate(event) {
     haikuResult = await callHaiku({
       systemPrompt,
       userPrompt,
-      apiKey: anthropicKey,
     });
   } catch (err) {
     return jsonResponse(502, { error: `Anthropic call failed: ${err.message}` });

@@ -954,11 +954,6 @@ async function fetchAllAnalytics(supabase, dateRange) {
 }
 
 async function generateMorningBrief(analytics, period) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) {
-    throw new Error('Server is missing ANTHROPIC_API_KEY env var');
-  }
-
   const periodLabel = PERIOD_LABELS[period] || period;
   const payload = buildAnalysisPayload({
     periodLabel,
@@ -968,7 +963,6 @@ async function generateMorningBrief(analytics, period) {
   const haikuResult = await callHaiku({
     systemPrompt: MORNING_BRIEF_SYSTEM,
     userPrompt: buildMorningBriefPrompt(payload),
-    apiKey: anthropicKey,
     maxTokens: 800,
   });
 
@@ -986,11 +980,6 @@ async function generateMorningBrief(analytics, period) {
 }
 
 async function generateOperationsCenter(analytics, period, morningBrief) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) {
-    throw new Error('Server is missing ANTHROPIC_API_KEY env var');
-  }
-
   const periodLabel = PERIOD_LABELS[period] || period;
   const payload = buildAnalysisPayload({
     periodLabel,
@@ -1001,7 +990,6 @@ async function generateOperationsCenter(analytics, period, morningBrief) {
   const haikuResult = await callHaiku({
     systemPrompt: OPERATIONS_CENTER_SYSTEM,
     userPrompt: buildOperationsCenterPrompt(payload),
-    apiKey: anthropicKey,
     maxTokens: 1500,
   });
 

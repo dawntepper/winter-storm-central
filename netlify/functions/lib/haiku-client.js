@@ -4,7 +4,19 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const ANTHROPIC_MAX_TOKENS = 2000;
 const ANTHROPIC_TIMEOUT_MS = 30_000;
 
+function getAnthropicApiKey() {
+  const raw = process.env.ANTHROPIC_API_KEY;
+  const key = typeof raw === 'string' ? raw.trim() : '';
+  if (!key) {
+    throw new Error('Server is missing ANTHROPIC_API_KEY env var');
+  }
+  return key;
+}
+
 async function callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens = ANTHROPIC_MAX_TOKENS }) {
+  const resolvedKey =
+    typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : getAnthropicApiKey();
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
 
@@ -14,7 +26,7 @@ async function callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens = ANTHROP
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': resolvedKey,
         'anthropic-version': ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
@@ -71,6 +83,7 @@ function parseHaikuJSON(rawText) {
 
 module.exports = {
   HAIKU_MODEL,
+  getAnthropicApiKey,
   callHaiku,
   parseHaikuJSON,
 };
