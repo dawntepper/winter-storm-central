@@ -15,15 +15,15 @@ import {
   cityAlertsPath,
   alertMatchesCity,
 } from '../services/locationCatalogService';
-import { fetchOpenMeteoConditions, describeWeatherCode } from '../utils/fetchOpenMeteoConditions';
 import { trackCityAlertView, trackCityWeatherPageView } from '../utils/analytics';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import PageHeaderNav from './PageHeaderNav';
 import StormMap from './StormMap';
-import CityConditionsStrip from './city/CityConditionsStrip';
+import CityRightNowCard from './city/CityRightNowCard';
 import CityForecastSection from './CityForecastSection';
 import CityWeatherDashboard, { CityRelatedLinks, CityNearbyLinks } from './city/CityWeatherDashboard';
 import CityRadarSection from './city/CityRadarSection';
+import { useCityForecast } from '../hooks/useCityForecast';
 import { NAV_SOURCES } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
 
@@ -59,8 +59,6 @@ export default function CatalogCityAlertsPage() {
   const [county, setCounty] = useState(null);
   const [siblingCities, setSiblingCities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [conditions, setConditions] = useState(null);
-  const [conditionsError, setConditionsError] = useState(false);
   const [forecastLoaded, setForecastLoaded] = useState(false);
   const [hasForecastData, setHasForecastData] = useState(false);
 
@@ -72,11 +70,13 @@ export default function CatalogCityAlertsPage() {
     return allAlerts.filter((a) => alertMatchesCity(a, city, county));
   }, [city, county, allAlerts]);
 
+  const { forecast: nwsForecast } = useCityForecast(city?.lat, city?.lon);
+
   const mapAlerts = useMemo(() => {
     if (!city || cityAlerts.length === 0) return [];
     const ids = new Set(cityAlerts.map((a) => a.id));
-    const matched = allAlerts.filter((a) => ids.has(a.id));
-    if (matched.length > 0) return matched;
+    const enriched = allAlerts.filter((a) => ids.has(a.id));
+    if (enriched.length > 0) return enriched;
     return cityAlerts.map((a) => ({
       ...a,
       lat: city.lat,
@@ -124,24 +124,6 @@ export default function CatalogCityAlertsPage() {
     })();
     return () => setHomepageMetaTags();
   }, [citySlug, redirectToRichPage]);
-
-  useEffect(() => {
-    if (!city || redirectToRichPage) return undefined;
-    let cancelled = false;
-    setConditions(null);
-    setConditionsError(false);
-    if (!Number.isFinite(city.lat) || !Number.isFinite(city.lon)) {
-      setConditionsError(true);
-      return undefined;
-    }
-    fetchOpenMeteoConditions({ lat: city.lat, lon: city.lon, timezone: 'auto' })
-      .then((result) => {
-        if (cancelled) return;
-        if (result === null) setConditionsError(true);
-        else setConditions(result);
-      });
-    return () => { cancelled = true; };
-  }, [city, redirectToRichPage]);
 
   useEffect(() => {
     if (!city || redirectToRichPage || alertsLoading || !forecastLoaded) return;
@@ -199,10 +181,10 @@ export default function CatalogCityAlertsPage() {
   const stateLabel = city.stateName || city.stateCode;
   const alertCount = cityAlerts.length;
 
-  const mapConditions = conditions?.current ? {
-    temperature: conditions.current.temperature,
-    temperatureUnit: 'F',
-    shortForecast: describeWeatherCode(conditions.current.weatherCode).label,
+  const mapConditions = nwsForecast?.current ? {
+    temperature: nwsForecast.current.temperature,
+    temperatureUnit: nwsForecast.current.temperatureUnit,
+    shortForecast: nwsForecast.current.shortForecast,
   } : null;
 
   const siblingLinks = siblingCities.slice(0, 8).map((c) => ({
@@ -234,11 +216,12 @@ export default function CatalogCityAlertsPage() {
       alerts={alertsLoading ? null : cityAlerts}
       alertsLoading={alertsLoading}
       lastUpdated={lastUpdated}
-      currentConditions={(
-        <CityConditionsStrip
+      rightNow={(
+        <CityRightNowCard
+          lat={city.lat}
+          lon={city.lon}
+          locationName={`${city.name}, ${city.stateCode}`}
           cityName={city.name}
-          conditions={conditions}
-          error={conditionsError}
         />
       )}
       radar={(
@@ -262,9 +245,8 @@ export default function CatalogCityAlertsPage() {
               }]}
               alerts={mapAlerts}
               isHero
-              heroCompact
               selectedStateCode={city.stateCode}
-              showResetView={false}
+              resetViewTitle={`Return to ${city.name}`}
               centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 9 }}
             />
           </section>

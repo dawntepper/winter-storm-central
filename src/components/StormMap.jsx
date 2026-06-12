@@ -316,17 +316,24 @@ function FitBoundsToLocations({ userLocations, triggerFit }) {
 }
 
 // Reset map to default view (responsive)
-function ResetMapView({ trigger }) {
+function ResetMapView({ trigger, centerOn }) {
   const map = useMap();
 
   useEffect(() => {
     if (trigger) {
       const isMobile = window.innerWidth < 768;
-      const center = isMobile ? CENTER_MOBILE : CENTER_DESKTOP;
-      const zoom = isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP;
-      map.setView(center, zoom, { animate: true, duration: 0.5 });
+      if (centerOn?.lat && centerOn?.lon) {
+        const latOffset = isMobile ? 0.1 : -0.2;
+        const adjustedLat = centerOn.lat + latOffset;
+        const zoomLevel = centerOn.zoom || 7;
+        map.setView([adjustedLat, centerOn.lon], zoomLevel, { animate: true, duration: 0.5 });
+      } else {
+        const center = isMobile ? CENTER_MOBILE : CENTER_DESKTOP;
+        const zoom = isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP;
+        map.setView(center, zoom, { animate: true, duration: 0.5 });
+      }
     }
-  }, [trigger, map]);
+  }, [trigger, map, centerOn]);
 
   return null;
 }
@@ -1576,7 +1583,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
-          <ResetMapView trigger={resetTrigger} />
+          <ResetMapView trigger={resetTrigger} centerOn={centerOn} />
           <CenterOnLocation location={centerOn} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 

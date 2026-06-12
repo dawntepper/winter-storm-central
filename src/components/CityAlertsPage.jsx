@@ -12,12 +12,13 @@ import {
   INCLUDED_EVENTS,
   getCategoryForEvent,
 } from '../../shared/nws-alert-parser';
-import { fetchOpenMeteoConditions, describeWeatherCode } from '../utils/fetchOpenMeteoConditions';
+import { fetchOpenMeteoConditions } from '../utils/fetchOpenMeteoConditions';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { trackCityWeatherPageView } from '../utils/analytics';
-import CityConditionsStrip from './city/CityConditionsStrip';
+import CityRightNowCard from './city/CityRightNowCard';
 import CityForecastSection from './CityForecastSection';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
+import { useCityForecast } from '../hooks/useCityForecast';
 import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
 import CityRadarSection from './city/CityRadarSection';
@@ -200,14 +201,13 @@ export default function CityAlertsPage() {
   const [conditionsError, setConditionsError] = useState(false);
 
   const { alerts: allAlertsData } = useExtremeWeather(true);
+  const { forecast: nwsForecast } = useCityForecast(city?.lat, city?.lon);
+
   const mapAlerts = useMemo(() => {
     if (!city || !Array.isArray(alerts) || alerts.length === 0) return [];
-    const national = (allAlertsData?.allAlerts || []).filter(
-      (a) => !a.state || a.state === city.state_abbr,
-    );
-    const zoneIds = new Set(alerts.map((a) => a.id));
-    const matched = national.filter((a) => zoneIds.has(a.id));
-    if (matched.length > 0) return matched;
+    const ids = new Set(alerts.map((a) => a.id));
+    const enriched = (allAlertsData?.allAlerts || []).filter((a) => ids.has(a.id));
+    if (enriched.length > 0) return enriched;
     return alerts.map((a) => ({
       ...a,
       lat: city.lat,
@@ -296,10 +296,10 @@ export default function CityAlertsPage() {
       };
     });
 
-  const mapConditions = conditions?.current ? {
-    temperature: conditions.current.temperature,
-    temperatureUnit: 'F',
-    shortForecast: describeWeatherCode(conditions.current.weatherCode).label,
+  const mapConditions = nwsForecast?.current ? {
+    temperature: nwsForecast.current.temperature,
+    temperatureUnit: nwsForecast.current.temperatureUnit,
+    shortForecast: nwsForecast.current.shortForecast,
   } : null;
 
   return (
@@ -340,11 +340,12 @@ export default function CityAlertsPage() {
       alertsLoading={alerts === null && !alertsError}
       alertsError={alertsError}
       alertsSignupHint
-      currentConditions={(
-        <CityConditionsStrip
+      rightNow={(
+        <CityRightNowCard
+          lat={city.lat}
+          lon={city.lon}
+          locationName={`${city.city}, ${city.state_abbr}`}
           cityName={city.city}
-          conditions={conditions}
-          error={conditionsError}
         />
       )}
       radar={(
@@ -368,9 +369,8 @@ export default function CityAlertsPage() {
               }]}
               alerts={mapAlerts}
               isHero
-              heroCompact
               selectedStateCode={city.state_abbr}
-              showResetView={false}
+              resetViewTitle={`Return to ${city.city}`}
               centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
             />
           </section>

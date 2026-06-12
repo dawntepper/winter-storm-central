@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { getForecastForCoords } from '../services/forecastService';
+import { useCityForecast } from '../hooks/useCityForecast';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
 import { FORECAST_SOURCE_PAGES, trackForecastLinkClick, trackForecastSectionViewed } from '../utils/analytics';
 import { getForecastIcon } from '../utils/getForecastIcon';
@@ -21,40 +21,20 @@ export default function CityForecastSection({
   forecastLinkSource = 'city-page',
   analyticsSource,
 }) {
-  const [forecast, setForecast] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const { forecast, loading, failed } = useCityForecast(lat, lon);
   const onForecastLoadRef = useRef(onForecastLoad);
   const sectionRef = useRef(null);
   const viewedRef = useRef(false);
+  const lastReportedRef = useRef(undefined);
   onForecastLoadRef.current = onForecastLoad;
 
   useEffect(() => {
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      setLoading(false);
-      setFailed(true);
-      onForecastLoadRef.current?.(null);
-      return undefined;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setFailed(false);
-    getForecastForCoords(lat, lon)
-      .then((data) => {
-        if (cancelled) return;
-        setForecast(data);
-        onForecastLoadRef.current?.(data);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setFailed(true);
-        onForecastLoadRef.current?.(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [lat, lon]);
+    if (loading) return;
+    const key = forecast ? 'ok' : 'fail';
+    if (lastReportedRef.current === key) return;
+    lastReportedRef.current = key;
+    onForecastLoadRef.current?.(forecast ?? null);
+  }, [forecast, loading]);
 
   useEffect(() => {
     if (!forecast || viewedRef.current) return undefined;
@@ -124,7 +104,9 @@ export default function CityForecastSection({
         timeZone={forecast.location?.timeZone}
         title={`Next 24 hours · ${cityName}`}
       />
-      <ForecastDaily periods={forecast.daily} title={`7-day outlook · ${cityName}`} />
+      <div id="forecast-7day">
+        <ForecastDaily periods={forecast.daily} title={`7-day outlook · ${cityName}`} />
+      </div>
       {stateSlug && citySlug && (
         <div className="text-center">
           <Link
