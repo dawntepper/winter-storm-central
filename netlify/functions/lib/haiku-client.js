@@ -4,18 +4,78 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const ANTHROPIC_MAX_TOKENS = 2000;
 const ANTHROPIC_TIMEOUT_MS = 30_000;
 
+/** Bracket access avoids esbuild inlining env vars at bundle time. */
+function readAnthropicEnvRaw() {
+  return process.env['ANTHROPIC_API_KEY'];
+}
+
+/**
+ * Normalize ANTHROPIC_API_KEY from Netlify/UI paste quirks (quotes, BOM, whitespace).
+ */
+function normalizeAnthropicApiKey(raw) {
+  if (typeof raw !== 'string') return { key: '', hadOuterQuotes: false };
+  let key = raw.trim().replace(/^\uFEFF/, '');
+  let hadOuterQuotes = false;
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    hadOuterQuotes = true;
+    key = key.slice(1, -1).trim();
+  }
+  return { key, hadOuterQuotes };
+}
+
 function getAnthropicApiKey() {
-  const raw = process.env.ANTHROPIC_API_KEY;
-  const key = typeof raw === 'string' ? raw.trim() : '';
+  const { key, hadOuterQuotes } = normalizeAnthropicApiKey(readAnthropicEnvRaw());
   if (!key) {
     throw new Error('Server is missing ANTHROPIC_API_KEY env var');
+  }
+  if (!key.startsWith('sk-ant-')) {
+    throw new Error(
+      `ANTHROPIC_API_KEY looks malformed (expected sk-ant-… prefix, got length ${key.length})${
+        hadOuterQuotes ? '; remove surrounding quotes in Netlify env' : ''
+      }`
+    );
   }
   return key;
 }
 
+/** Safe metadata for admin diagnostics — never returns the full key. */
+function describeAnthropicKeyConfig() {
+  const raw = readAnthropicEnvRaw();
+  const { key, hadOuterQuotes } = normalizeAnthropicApiKey(raw);
+  return {
+    configured: Boolean(key),
+    keyLength: key.length,
+    keyPrefix: key.slice(0, 10),
+    looksValid: key.startsWith('sk-ant-'),
+    hadOuterQuotes,
+    model: HAIKU_MODEL,
+    apiUrl: ANTHROPIC_API,
+  };
+}
+
+function normalizePassedApiKey(apiKey) {
+  if (typeof apiKey !== 'string' || !apiKey.trim()) return null;
+  const { key } = normalizeAnthropicApiKey(apiKey);
+  return key || null;
+}
+
+function formatAnthropicAuthHint() {
+  const diag = describeAnthropicKeyConfig();
+  const parts = [
+    `configured=${diag.configured}`,
+    `length=${diag.keyLength}`,
+    `prefix=${diag.keyPrefix || '(empty)'}`,
+    `looksValid=${diag.looksValid}`,
+  ];
+  if (diag.hadOuterQuotes) parts.push('hadOuterQuotes=true');
+  return parts.join(', ');
+}
+
 async function callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens = ANTHROPIC_MAX_TOKENS }) {
-  const resolvedKey =
-    typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : getAnthropicApiKey();
+  const resolvedKey = normalizePassedApiKey(apiKey) || getAnthropicApiKey();
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
@@ -51,6 +111,14 @@ async function callHaiku({ systemPrompt, userPrompt, apiKey, maxTokens = ANTHROP
 
   if (!resp.ok) {
     const text = await resp.text();
+    if (resp.status === 401) {
+      const hint = formatAnthropicAuthHint();
+      console.error('Anthropic 401 — key diagnostic:', describeAnthropicKeyConfig());
+      throw new Error(
+        `Anthropic API 401: invalid x-api-key (${hint}). ` +
+          'Check Netlify → Environment variables → ANTHROPIC_API_KEY: no quotes, Functions scope, redeploy after save.'
+      );
+    }
     throw new Error(`Anthropic API ${resp.status}: ${text.slice(0, 500)}`);
   }
 
@@ -84,6 +152,7 @@ function parseHaikuJSON(rawText) {
 module.exports = {
   HAIKU_MODEL,
   getAnthropicApiKey,
+  describeAnthropicKeyConfig,
   callHaiku,
   parseHaikuJSON,
 };

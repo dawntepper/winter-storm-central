@@ -4,7 +4,11 @@
  */
 
 const { getSupabaseAdmin } = require('./lib/supabase-admin');
-const { callHaiku, parseHaikuJSON } = require('./lib/haiku-client');
+const {
+  callHaiku,
+  parseHaikuJSON,
+  describeAnthropicKeyConfig,
+} = require('./lib/haiku-client');
 const {
   buildAnalysisPayload,
   MORNING_BRIEF_SYSTEM,
@@ -1028,6 +1032,10 @@ exports.handler = async (event) => {
 
     if (body.action === 'validate') {
       return jsonResponse(200, { ok: true });
+    }
+
+    if (body.action === 'anthropic-health') {
+      return jsonResponse(200, describeAnthropicKeyConfig());
     }
 
     const supabase = getSupabaseAdmin();
