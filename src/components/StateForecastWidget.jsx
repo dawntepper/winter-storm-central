@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCitiesForStateSlug } from '../data/cityCatalog';
+import { formatHighLowTemps, useCityForecastTemps } from '../hooks/useCityForecastTemps';
 import {
   FORECAST_SOURCE_PAGES,
   trackForecastCityClick,
   trackForecastLinkClick,
   trackForecastStateClick,
 } from '../utils/analytics';
-import { FORECAST_NAV_ICON } from '../utils/getForecastIcon';
+import { FORECAST_NAV_ICON, getForecastIcon } from '../utils/getForecastIcon';
 
 const forecastCardClassName =
   'group flex items-center gap-3 w-full px-4 py-3 bg-slate-900/60 hover:bg-sky-500/15 border border-slate-700 hover:border-sky-400/70 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/15 cursor-pointer text-sm text-slate-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60';
@@ -19,8 +20,12 @@ export function ForecastDestinationCard({
   to,
   label,
   icon = FORECAST_NAV_ICON,
+  highTemp,
+  lowTemp,
   onClick,
 }) {
+  const tempLabel = formatHighLowTemps(highTemp, lowTemp);
+
   return (
     <Link to={to} onClick={onClick} className={forecastCardClassName}>
       {icon ? (
@@ -29,6 +34,11 @@ export function ForecastDestinationCard({
         </span>
       ) : null}
       <span className="flex-1 min-w-0 font-semibold truncate">{label}</span>
+      {tempLabel ? (
+        <span className="text-slate-400 text-sm tabular-nums flex-shrink-0 whitespace-nowrap">
+          {tempLabel}
+        </span>
+      ) : null}
       <span
         aria-hidden="true"
         className="text-sm font-semibold text-sky-400 group-hover:text-sky-300 flex-shrink-0 transition-colors"
@@ -39,11 +49,36 @@ export function ForecastDestinationCard({
   );
 }
 
+function CityForecastDestinationCard({ city, stateSlug, stateCode, sourcePage, tempsBySlug }) {
+  const temps = tempsBySlug[city.slug];
+  const icon = getForecastIcon(temps?.shortForecast);
+
+  return (
+    <ForecastDestinationCard
+      to={`/forecast/${stateSlug}?city=${city.slug}`}
+      label={`${city.city} Forecast`}
+      icon={icon}
+      highTemp={temps?.highTemp}
+      lowTemp={temps?.lowTemp}
+      onClick={() =>
+        trackForecastCityClick({
+          stateCode,
+          stateSlug,
+          city: city.city,
+          citySlug: city.slug,
+          sourcePage,
+        })
+      }
+    />
+  );
+}
+
 /**
  * Popular city forecast links — shown below the state radar map.
  */
 export function PopularForecastsSection({ stateSlug, stateName, stateCode, maxCities = 5 }) {
   const cities = getCitiesForStateSlug(stateSlug).slice(0, maxCities);
+  const tempsBySlug = useCityForecastTemps(cities);
   if (cities.length === 0) return null;
 
   return (
@@ -53,19 +88,13 @@ export function PopularForecastsSection({ stateSlug, stateName, stateCode, maxCi
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {cities.map((c) => (
-          <ForecastDestinationCard
+          <CityForecastDestinationCard
             key={c.slug}
-            to={`/forecast/${stateSlug}?city=${c.slug}`}
-            label={`${c.city} Forecast`}
-            onClick={() =>
-              trackForecastCityClick({
-                stateCode,
-                stateSlug,
-                city: c.city,
-                citySlug: c.slug,
-                sourcePage: FORECAST_SOURCE_PAGES.POPULAR_FORECASTS_SECTION,
-              })
-            }
+            city={c}
+            stateSlug={stateSlug}
+            stateCode={stateCode}
+            sourcePage={FORECAST_SOURCE_PAGES.POPULAR_FORECASTS_SECTION}
+            tempsBySlug={tempsBySlug}
           />
         ))}
       </div>
@@ -82,10 +111,8 @@ export function PopularForecastsSection({ stateSlug, stateName, stateCode, maxCi
  *     different state)
  *   - "View state forecast" CTA (state-default forecast)
  *
- * Intentionally lean: no inline weather data. Fetching forecasts for 3-5
- * cities would mean 9-15 extra NWS API calls on every state-page load,
- * which doesn't justify the latency cost. The actual forecast renders
- * after the user clicks through to /forecast.
+ * City rows lazy-load today's high/low from NWS after paint (see
+ * useCityForecastTemps). Full hourly + 7-day forecast renders after click-through.
  */
 export default function StateForecastWidget({ stateSlug, stateName, stateCode }) {
   const navigate = useNavigate();
@@ -93,6 +120,7 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
   const [zipError, setZipError] = useState('');
 
   const cities = getCitiesForStateSlug(stateSlug);
+  const tempsBySlug = useCityForecastTemps(cities);
 
   const handleZipSubmit = (e) => {
     e.preventDefault();
@@ -118,19 +146,13 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
       {cities.length > 0 && (
         <div className="space-y-2 mb-4">
           {cities.map((c) => (
-            <ForecastDestinationCard
+            <CityForecastDestinationCard
               key={c.slug}
-              to={`/forecast/${stateSlug}?city=${c.slug}`}
-              label={`${c.city} Forecast`}
-              onClick={() =>
-                trackForecastCityClick({
-                  stateCode,
-                  stateSlug,
-                  city: c.city,
-                  citySlug: c.slug,
-                  sourcePage: FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD,
-                })
-              }
+              city={c}
+              stateSlug={stateSlug}
+              stateCode={stateCode}
+              sourcePage={FORECAST_SOURCE_PAGES.WEATHER_FORECAST_CARD}
+              tempsBySlug={tempsBySlug}
             />
           ))}
         </div>
