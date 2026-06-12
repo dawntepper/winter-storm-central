@@ -32,7 +32,7 @@ function severityClasses(severity) {
 }
 
 const selectClass =
-  'w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500';
+  'w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500 cursor-pointer disabled:cursor-not-allowed';
 
 /**
  * ZIP + county/city dropdown search for state alert pages (state-scoped).
@@ -363,7 +363,20 @@ export default function CheckAlertsNearYou({
             className={`relative overflow-visible${catalogLoading || searching ? ' opacity-50' : ''}`}
             ref={cityDropdownRef}
           >
-            <div className="flex items-center gap-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm focus-within:border-sky-500">
+            <div
+              className={`flex items-center gap-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm focus-within:border-sky-500 ${
+                catalogLoading || searching ? 'cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              onClick={(e) => {
+                if (catalogLoading || searching) return;
+                if (e.target.closest('button[type="button"]')) return;
+                if (!cityDropdownOpen) {
+                  setCityDropdownShowAll(true);
+                  setCityDropdownOpen(true);
+                }
+                cityInputRef.current?.focus();
+              }}
+            >
               <input
                 ref={cityInputRef}
                 id="city-search"
@@ -401,7 +414,13 @@ export default function CheckAlertsNearYou({
                 placeholder={catalogLoading ? 'Loading cities…' : 'Search...'}
                 aria-label="City name"
                 disabled={catalogLoading || searching}
-                className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none disabled:cursor-not-allowed"
+                className={`flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none ${
+                  catalogLoading || searching
+                    ? 'cursor-not-allowed'
+                    : cityDropdownOpen
+                      ? 'cursor-text'
+                      : 'cursor-pointer'
+                }`}
               />
               <button
                 type="button"

@@ -887,6 +887,15 @@ export default function ZipCodeSearch({
                 className={`flex items-center gap-1 w-full ${fieldClass} focus-within:border-sky-500 ${
                   !selectedState || catalogLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
+                onClick={(e) => {
+                  if (!selectedState || catalogLoading) return;
+                  if (e.target.closest('button[type="button"]')) return;
+                  if (!cityDropdownOpen) {
+                    setCityDropdownShowAll(true);
+                    setCityDropdownOpen(true);
+                  }
+                  cityInputRef.current?.focus();
+                }}
               >
                 <input
                   ref={cityInputRef}
@@ -915,7 +924,13 @@ export default function ZipCodeSearch({
                   disabled={!selectedState || catalogLoading}
                   placeholder={catalogLoading ? 'Loading cities…' : 'Search city…'}
                   aria-label="City name"
-                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none cursor-text disabled:cursor-not-allowed"
+                  className={`flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none ${
+                    !selectedState || catalogLoading
+                      ? 'cursor-not-allowed'
+                      : cityDropdownOpen
+                        ? 'cursor-text'
+                        : 'cursor-pointer'
+                  }`}
                 />
                 <button
                   type="button"
