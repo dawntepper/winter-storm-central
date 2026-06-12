@@ -62,12 +62,44 @@ async function fetchReturningVisitors(supabase, since) {
     p_since: since,
   });
   if (error) throw error;
+
+  let dailyQuery = supabase
+    .from('visitor_sessions')
+    .select('created_at, is_returning')
+    .order('created_at', { ascending: true })
+    .limit(10000);
+  dailyQuery = applySince(dailyQuery, 'created_at', since);
+  const { data: sessions, error: dailyError } = await dailyQuery;
+  if (dailyError) throw dailyError;
+
+  const dayMap = new Map();
+  for (const row of sessions || []) {
+    const day = row.created_at?.slice(0, 10);
+    if (!day) continue;
+    const existing = dayMap.get(day) || {
+      day,
+      newVisitors: 0,
+      returningVisitors: 0,
+    };
+    if (row.is_returning) {
+      existing.returningVisitors += 1;
+    } else {
+      existing.newVisitors += 1;
+    }
+    dayMap.set(day, existing);
+  }
+
+  const dailyBreakdown = Array.from(dayMap.values()).sort((a, b) =>
+    a.day.localeCompare(b.day)
+  );
+
   return {
     totalSessions: data?.total_sessions ?? 0,
     uniqueVisitors: data?.unique_visitors ?? 0,
     newVisitors: data?.new_visitors ?? 0,
     returningVisitors: data?.returning_visitors ?? 0,
     returningPct: data?.returning_pct ?? 0,
+    dailyBreakdown,
   };
 }
 
@@ -344,10 +376,20 @@ async function fetchSavedLocations(supabase, since) {
     .sort((a, b) => b.save_count - a.save_count)
     .slice(0, 20);
 
+  const stateMap = new Map();
+  for (const row of data || []) {
+    const state = row.locations?.state || 'Unknown';
+    stateMap.set(state, (stateMap.get(state) || 0) + 1);
+  }
+  const savesByState = Array.from(stateMap.entries())
+    .map(([state, save_count]) => ({ state, save_count }))
+    .sort((a, b) => b.save_count - a.save_count);
+
   return {
     totalSaved: stats?.total_saved ?? 0,
     signedInUsers: stats?.signed_in_users ?? 0,
     topLocations,
+    savesByState,
     note: 'Saved locations are stored for signed-in users only. Anonymous localStorage saves are not tracked in Supabase.',
   };
 }

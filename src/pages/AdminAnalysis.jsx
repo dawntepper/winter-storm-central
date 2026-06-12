@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AdminGate from '../components/AdminGate';
+import AdminBarChart from '../components/admin/AdminBarChart';
+import AdminChartToggle from '../components/admin/AdminChartToggle';
+import AdminFunnel from '../components/admin/AdminFunnel';
+import AdminSplitChart from '../components/admin/AdminSplitChart';
+import AdminTimeSeries from '../components/admin/AdminTimeSeries';
 import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
 
 const DATE_RANGES = [
@@ -94,12 +99,44 @@ const FUNNEL_LABELS = {
   county_to_radar: 'State Alerts → County Search → County Alert → Radar',
 };
 
+function formatRadarState(row) {
+  const code = row.state_code;
+  if (!code || code === 'unknown' || code === 'US') return 'National';
+  return code;
+}
+
+function SectionHeader({ title, description, viewMode, onViewModeChange, showToggle = true }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+      <div>
+        <h2 className="text-xl font-bold text-white mb-1">{title}</h2>
+        {description && <p className="text-sm text-slate-400">{description}</p>}
+      </div>
+      {showToggle && (
+        <AdminChartToggle value={viewMode} onChange={onViewModeChange} />
+      )}
+    </div>
+  );
+}
+
+function SubsectionTitle({ children }) {
+  return <h3 className="text-sm font-semibold text-slate-300 mb-3">{children}</h3>;
+}
+
 function formatEventName(name) {
   if (!name) return '—';
   return String(name).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function FunnelCard({ id, funnel }) {
+const DEFAULT_VIEW_MODES = {
+  returningVisitors: 'table',
+  radarEngagement: 'table',
+  locationSearch: 'table',
+  savedLocations: 'table',
+  userJourneys: 'table',
+};
+
+function FunnelCard({ id, funnel, viewMode }) {
   const stepStats = Array.isArray(funnel?.stepStats)
     ? funnel.stepStats
     : funnel?.stepStats
@@ -114,33 +151,41 @@ function FunnelCard({ id, funnel }) {
       <p className="text-xs text-slate-500 mb-4">
         Overall completion: {formatPct(funnel?.overallCompletionPct)}
       </p>
-      <DataTable
-        columns={[
-          { key: 'step', label: 'Step', render: (r) => r.step },
-          {
-            key: 'eventName',
-            label: 'Event',
-            render: (r) => formatEventName(r.eventName),
-          },
-          {
-            key: 'sessions',
-            label: 'Sessions',
-            render: (r) => formatNumber(r.sessions),
-          },
-          {
-            key: 'completionPct',
-            label: 'Step completion',
-            render: (r) => formatPct(r.completionPct),
-          },
-          {
-            key: 'dropoffPct',
-            label: 'Drop-off',
-            render: (r) => formatPct(r.dropoffPct),
-          },
-        ]}
-        rows={stepStats}
-        emptyMessage="No funnel data in this period."
-      />
+      {viewMode === 'visual' ? (
+        <AdminFunnel
+          stepStats={stepStats}
+          formatEventName={formatEventName}
+          emptyMessage="No funnel data in this period."
+        />
+      ) : (
+        <DataTable
+          columns={[
+            { key: 'step', label: 'Step', render: (r) => r.step },
+            {
+              key: 'eventName',
+              label: 'Event',
+              render: (r) => formatEventName(r.eventName),
+            },
+            {
+              key: 'sessions',
+              label: 'Sessions',
+              render: (r) => formatNumber(r.sessions),
+            },
+            {
+              key: 'completionPct',
+              label: 'Step completion',
+              render: (r) => formatPct(r.completionPct),
+            },
+            {
+              key: 'dropoffPct',
+              label: 'Drop-off',
+              render: (r) => formatPct(r.dropoffPct),
+            },
+          ]}
+          rows={stepStats}
+          emptyMessage="No funnel data in this period."
+        />
+      )}
     </div>
   );
 }
@@ -198,6 +243,11 @@ function AdminAnalysisInner() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [viewModes, setViewModes] = useState(DEFAULT_VIEW_MODES);
+
+  const setViewMode = (section, mode) => {
+    setViewModes((prev) => ({ ...prev, [section]: mode }));
+  };
 
   const load = useCallback(async (range) => {
     setLoading(true);
@@ -264,17 +314,28 @@ function AdminAnalysisInner() {
           <>
             {/* 1. Returning Visitors */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Returning Visitors</h2>
-              <p className="text-sm text-slate-400 mb-5">
-                Session data from visitor_sessions. Date filter applies to session created_at.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <SectionHeader
+                title="Returning Visitors"
+                description="Session data from visitor_sessions. Date filter applies to session created_at."
+                viewMode={viewModes.returningVisitors}
+                onViewModeChange={(mode) => setViewMode('returningVisitors', mode)}
+              />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
                 <StatCard label="Total sessions" value={formatNumber(rv?.totalSessions)} />
                 <StatCard label="Unique visitors" value={formatNumber(rv?.uniqueVisitors)} />
                 <StatCard label="New visitors" value={formatNumber(rv?.newVisitors)} />
                 <StatCard label="Returning" value={formatNumber(rv?.returningVisitors)} />
                 <StatCard label="Returning %" value={formatPct(rv?.returningPct)} />
               </div>
+              {viewModes.returningVisitors === 'visual' && (
+                <>
+                  <SubsectionTitle>New vs returning visitors by day</SubsectionTitle>
+                  <AdminTimeSeries
+                    data={rv?.dailyBreakdown}
+                    emptyMessage="No visitor sessions in this period."
+                  />
+                </>
+              )}
             </section>
 
             {/* 2. Missing Location Searches */}
@@ -305,42 +366,89 @@ function AdminAnalysisInner() {
 
             {/* 3. Location Search Performance */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Location Search Performance</h2>
-              <p className="text-sm text-slate-400 mb-5">Success rate and top searched locations.</p>
+              <SectionHeader
+                title="Location Search Performance"
+                description="Success rate and top searched locations."
+                viewMode={viewModes.locationSearch}
+                onViewModeChange={(mode) => setViewMode('locationSearch', mode)}
+              />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <StatCard label="Total searches" value={formatNumber(ls?.totalSearches)} />
                 <StatCard label="Successful" value={formatNumber(ls?.successfulSearches)} />
                 <StatCard label="Failed" value={formatNumber(ls?.failedSearches)} />
                 <StatCard label="Success rate" value={formatPct(ls?.successRate)} />
               </div>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Top searched locations</h3>
-              <DataTable
-                columns={[
-                  { key: 'query', label: 'Query' },
-                  { key: 'state_code', label: 'State', render: (r) => r.state_code || '—' },
-                  {
-                    key: 'search_count',
-                    label: 'Searches',
-                    render: (r) => formatNumber(r.search_count),
-                  },
-                ]}
-                rows={ls?.topLocations || []}
-                emptyMessage="No successful location searches in this period."
-              />
-              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most requested missing</h3>
-              <DataTable
-                columns={[
-                  { key: 'query', label: 'Query' },
-                  { key: 'state_code', label: 'State', render: (r) => r.state_code || '—' },
-                  {
-                    key: 'search_count',
-                    label: 'Failed searches',
-                    render: (r) => formatNumber(r.search_count),
-                  },
-                ]}
-                rows={ls?.topMissing || []}
-                emptyMessage="No failed location searches in this period."
-              />
+              {viewModes.locationSearch === 'visual' ? (
+                <>
+                  <SubsectionTitle>Success vs failed searches</SubsectionTitle>
+                  <AdminSplitChart
+                    segments={[
+                      { name: 'Successful', value: ls?.successfulSearches ?? 0 },
+                      { name: 'Failed', value: ls?.failedSearches ?? 0 },
+                    ]}
+                    emptyMessage="No location searches in this period."
+                  />
+                  <SubsectionTitle>Top searched locations</SubsectionTitle>
+                  <AdminBarChart
+                    data={(ls?.topLocations || []).map((row) => ({
+                      ...row,
+                      label: row.state_code
+                        ? `${row.query} (${row.state_code})`
+                        : row.query,
+                    }))}
+                    dataKey="search_count"
+                    nameKey="label"
+                    emptyMessage="No successful location searches in this period."
+                  />
+                  {(ls?.topMissing?.length ?? 0) > 0 && (
+                    <>
+                      <SubsectionTitle>Most requested missing</SubsectionTitle>
+                      <AdminBarChart
+                        data={(ls?.topMissing || []).map((row) => ({
+                          ...row,
+                          label: row.state_code
+                            ? `${row.query} (${row.state_code})`
+                            : row.query,
+                        }))}
+                        dataKey="search_count"
+                        nameKey="label"
+                        emptyMessage="No failed location searches in this period."
+                      />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <SubsectionTitle>Top searched locations</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'query', label: 'Query' },
+                      { key: 'state_code', label: 'State', render: (r) => r.state_code || '—' },
+                      {
+                        key: 'search_count',
+                        label: 'Searches',
+                        render: (r) => formatNumber(r.search_count),
+                      },
+                    ]}
+                    rows={ls?.topLocations || []}
+                    emptyMessage="No successful location searches in this period."
+                  />
+                  <SubsectionTitle>Most requested missing</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'query', label: 'Query' },
+                      { key: 'state_code', label: 'State', render: (r) => r.state_code || '—' },
+                      {
+                        key: 'search_count',
+                        label: 'Failed searches',
+                        render: (r) => formatNumber(r.search_count),
+                      },
+                    ]}
+                    rows={ls?.topMissing || []}
+                    emptyMessage="No failed location searches in this period."
+                  />
+                </>
+              )}
             </section>
 
             {/* 3b. Location Sources */}
@@ -385,10 +493,12 @@ function AdminAnalysisInner() {
 
             {/* 5. Saved Locations */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Saved Locations</h2>
-              <p className="text-sm text-slate-400 mb-5">
-                Signed-in user saves from user_locations. Anonymous localStorage saves are not in Supabase.
-              </p>
+              <SectionHeader
+                title="Saved Locations"
+                description="Signed-in user saves from user_locations. Anonymous localStorage saves are not in Supabase."
+                viewMode={viewModes.savedLocations}
+                onViewModeChange={(mode) => setViewMode('savedLocations', mode)}
+              />
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 <StatCard label="Total saves" value={formatNumber(sl?.totalSaved)} />
                 <StatCard label="Signed-in users" value={formatNumber(sl?.signedInUsers)} />
@@ -398,105 +508,164 @@ function AdminAnalysisInner() {
                   hint="Not tracked in DB"
                 />
               </div>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Most saved locations</h3>
-              <DataTable
-                columns={[
-                  { key: 'location_name', label: 'Location' },
-                  { key: 'state', label: 'State', render: (r) => r.state || '—' },
-                  {
-                    key: 'save_count',
-                    label: 'Saves',
-                    render: (r) => formatNumber(r.save_count),
-                  },
-                  {
-                    key: 'last_saved',
-                    label: 'Last saved',
-                    render: (r) => formatDate(r.last_saved),
-                  },
-                ]}
-                rows={sl?.topLocations || []}
-                emptyMessage="No saved locations in this period."
-              />
+              {viewModes.savedLocations === 'visual' ? (
+                <>
+                  <SubsectionTitle>Saved locations by state</SubsectionTitle>
+                  <AdminBarChart
+                    data={sl?.savesByState || []}
+                    dataKey="save_count"
+                    nameKey="state"
+                    emptyMessage="No saved locations in this period."
+                  />
+                  <SubsectionTitle>Most saved locations</SubsectionTitle>
+                  <AdminBarChart
+                    data={(sl?.topLocations || []).map((row) => ({
+                      ...row,
+                      label: row.state
+                        ? `${row.location_name} (${row.state})`
+                        : row.location_name,
+                    }))}
+                    dataKey="save_count"
+                    nameKey="label"
+                    emptyMessage="No saved locations in this period."
+                  />
+                </>
+              ) : (
+                <>
+                  <SubsectionTitle>Most saved locations</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'location_name', label: 'Location' },
+                      { key: 'state', label: 'State', render: (r) => r.state || '—' },
+                      {
+                        key: 'save_count',
+                        label: 'Saves',
+                        render: (r) => formatNumber(r.save_count),
+                      },
+                      {
+                        key: 'last_saved',
+                        label: 'Last saved',
+                        render: (r) => formatDate(r.last_saved),
+                      },
+                    ]}
+                    rows={sl?.topLocations || []}
+                    emptyMessage="No saved locations in this period."
+                  />
+                </>
+              )}
             </section>
 
             {/* 6. Radar Engagement */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">Radar Engagement</h2>
-              <p className="text-sm text-slate-400 mb-5">
-                Radar opens, types, and location views from radar_events.
-              </p>
+              <SectionHeader
+                title="Radar Engagement"
+                description="Radar opens, types, and location views from radar_events."
+                viewMode={viewModes.radarEngagement}
+                onViewModeChange={(mode) => setViewMode('radarEngagement', mode)}
+              />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <StatCard label="Total radar opens" value={formatNumber(radar?.totalOpens)} />
               </div>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Opens by state</h3>
-              <DataTable
-                columns={[
-                  {
-                    key: 'state_code',
-                    label: 'State',
-                    render: (r) => {
-                      const code = r.state_code;
-                      if (!code || code === 'unknown' || code === 'US') return 'National';
-                      return code;
-                    },
-                  },
-                  {
-                    key: 'open_count',
-                    label: 'Opens',
-                    render: (r) => formatNumber(r.open_count),
-                  },
-                ]}
-                rows={radar?.opensByState || []}
-                emptyMessage="No radar opens in this period."
-              />
-              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most used radar types</h3>
-              <DataTable
-                columns={[
-                  { key: 'radar_type', label: 'Type' },
-                  {
-                    key: 'event_count',
-                    label: 'Events',
-                    render: (r) => formatNumber(r.event_count),
-                  },
-                ]}
-                rows={radar?.topRadarTypes || []}
-                emptyMessage="No radar type changes in this period."
-              />
-              <h3 className="text-sm font-semibold text-slate-300 mb-3 mt-6">Most viewed radar locations</h3>
-              <DataTable
-                columns={[
-                  {
-                    key: 'state_code',
-                    label: 'State',
-                    render: (r) => {
-                      const code = r.state_code;
-                      if (!code || code === 'unknown' || code === 'US') return 'National';
-                      return code;
-                    },
-                  },
-                  {
-                    key: 'view_count',
-                    label: 'Location changes',
-                    render: (r) => formatNumber(r.view_count),
-                  },
-                ]}
-                rows={radar?.topLocations || []}
-                emptyMessage="No radar location changes in this period."
-              />
+              {viewModes.radarEngagement === 'visual' ? (
+                <>
+                  <SubsectionTitle>Radar opens by state</SubsectionTitle>
+                  <AdminBarChart
+                    data={radar?.opensByState || []}
+                    dataKey="open_count"
+                    nameKey="state_code"
+                    formatLabel={formatRadarState}
+                    emptyMessage="No radar opens in this period."
+                  />
+                  <SubsectionTitle>Most viewed radar locations</SubsectionTitle>
+                  <AdminBarChart
+                    data={radar?.topLocations || []}
+                    dataKey="view_count"
+                    nameKey="state_code"
+                    formatLabel={formatRadarState}
+                    emptyMessage="No radar location changes in this period."
+                  />
+                  <SubsectionTitle>Radar type usage</SubsectionTitle>
+                  <AdminSplitChart
+                    segments={(radar?.topRadarTypes || []).map((row) => ({
+                      name: row.radar_type,
+                      value: row.event_count,
+                    }))}
+                    emptyMessage="No radar type changes in this period."
+                    height={200}
+                  />
+                </>
+              ) : (
+                <>
+                  <SubsectionTitle>Opens by state</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      {
+                        key: 'state_code',
+                        label: 'State',
+                        render: (r) => formatRadarState(r),
+                      },
+                      {
+                        key: 'open_count',
+                        label: 'Opens',
+                        render: (r) => formatNumber(r.open_count),
+                      },
+                    ]}
+                    rows={radar?.opensByState || []}
+                    emptyMessage="No radar opens in this period."
+                  />
+                  <SubsectionTitle>Most used radar types</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      { key: 'radar_type', label: 'Type' },
+                      {
+                        key: 'event_count',
+                        label: 'Events',
+                        render: (r) => formatNumber(r.event_count),
+                      },
+                    ]}
+                    rows={radar?.topRadarTypes || []}
+                    emptyMessage="No radar type changes in this period."
+                  />
+                  <SubsectionTitle>Most viewed radar locations</SubsectionTitle>
+                  <DataTable
+                    columns={[
+                      {
+                        key: 'state_code',
+                        label: 'State',
+                        render: (r) => formatRadarState(r),
+                      },
+                      {
+                        key: 'view_count',
+                        label: 'Location changes',
+                        render: (r) => formatNumber(r.view_count),
+                      },
+                    ]}
+                    rows={radar?.topLocations || []}
+                    emptyMessage="No radar location changes in this period."
+                  />
+                </>
+              )}
             </section>
 
             {/* 7. User Journeys */}
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-white mb-1">User Journeys</h2>
-              <p className="text-sm text-slate-400 mb-5">
-                Sequential funnels and top paths from product_events.
-              </p>
+              <SectionHeader
+                title="User Journeys"
+                description="Sequential funnels and top paths from product_events."
+                viewMode={viewModes.userJourneys}
+                onViewModeChange={(mode) => setViewMode('userJourneys', mode)}
+              />
               <div className="space-y-6 mb-8">
                 {Object.entries(journeys?.funnels || {}).map(([id, funnel]) => (
-                  <FunnelCard key={id} id={id} funnel={funnel} />
+                  <FunnelCard
+                    key={id}
+                    id={id}
+                    funnel={funnel}
+                    viewMode={viewModes.userJourneys}
+                  />
                 ))}
               </div>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Top paths</h3>
+              <SubsectionTitle>Top paths</SubsectionTitle>
               <DataTable
                 columns={[
                   {
