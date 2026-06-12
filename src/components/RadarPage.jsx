@@ -10,11 +10,12 @@ import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
+import ZipCodeSearch from './ZipCodeSearch';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
-import StateAlertsDropdown from './StateAlertsDropdown';
 import PageBackNav from './PageBackNav';
+import PageHeaderNav from './PageHeaderNav';
 import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
@@ -158,8 +159,9 @@ export default function RadarPage() {
   const [radarType, setRadarType] = useState('precipitation');
   const [colorScheme, setColorScheme] = useState(4);
   const [showInfo, setShowInfo] = useState(false);
+  const [heroLocation, setHeroLocation] = useState(null);
 
-  // GPS center from the "Find Weather Near Me" button. Takes precedence over
+  // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.
   const [gpsCenter, setGpsCenter] = useState(null);
   // State to outline on the map once GPS resolves the user's state.
@@ -170,6 +172,11 @@ export default function RadarPage() {
   const handleGpsLocate = (c) => {
     setGpsCenter(c);
     fetchCountyGeoJSON(c.lat, c.lon).then(setUserArea);
+  };
+
+  const handleChangeLocation = () => {
+    window.dispatchEvent(new CustomEvent('checkLocationExpand'));
+    document.querySelector('#radar-location-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   // Click the highlighted county → its state alerts/radar page.
@@ -207,8 +214,8 @@ export default function RadarPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
+      {/* Header — shared nav cluster; state dropdown lives here, not on the map */}
+      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <PageBackNav />
@@ -217,123 +224,99 @@ export default function RadarPage() {
               <span className="text-lg sm:text-xl font-bold">StormTracking</span>
             </Link>
           </div>
-          <StateAlertsDropdown
-            source={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN}
-            className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
-          />
+          <PageHeaderNav source={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN} />
         </div>
       </header>
 
-      {/* Page Header */}
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Live Weather Radar Map</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Real-time radar data from NOAA</p>
-          </div>
-          <button
-            onClick={() => setShowInfo(!showInfo)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
-              showInfo
-                ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
-                : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Info
-          </button>
-        </div>
-
-        {/* Localized "weather near me" subhead. Renders as <h2> (the page
-            already owns the <h1> above), silently personalized via IP and
-            re-centers the radar on GPS tap. */}
-        <div className="max-w-7xl mx-auto mt-3">
+      {/* Compact hero — single location-focused title */}
+      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
+        <div className="max-w-7xl mx-auto">
           <NearMeHeader
-            as="h2"
+            as="h1"
+            variant="radar"
+            resolvedLocation={heroLocation}
+            onResolved={setHeroLocation}
             onLocate={handleGpsLocate}
+            onChangeLocation={handleChangeLocation}
             onResolveState={setGpsStateCode}
-            headingClassName="text-base sm:text-lg font-semibold text-slate-200"
+            className="space-y-1"
+            headingClassName="text-lg sm:text-xl font-bold text-white"
           />
         </div>
-
-        {/* Collapsible info panel */}
-        {showInfo && (
-          <div className="max-w-7xl mx-auto mt-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700 relative">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-sm font-semibold text-white mb-2">Interactive Weather Radar</h2>
-              <button
-                onClick={() => setShowInfo(false)}
-                className="p-1 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed mb-2">
-              Our live weather radar map displays precipitation, storm movement, and NWS
-              severe weather alerts across the United States. Radar imagery refreshes about
-              every 5 minutes; NWS alerts refresh every 10 minutes (every 2 minutes during
-              active tornado or flash flood warnings).
-            </p>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Toggle the radar overlay to view current weather conditions, zoom in to see
-              local detail, or click on alert markers to view severe weather warnings.
-              Switch between precipitation radar, satellite infrared imagery, and 30-minute
-              forecast views using the controls below.
-            </p>
-          </div>
-        )}
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
 
-        {/* Active Storms - prominent placement at top */}
-        <ActiveStormsHighlight />
-
-        {/* Radar Controls */}
-        <section className="flex flex-col sm:flex-row gap-4">
-          {/* Layer Type */}
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Radar Type</label>
-            <div className="flex gap-2">
-              {LAYER_TYPES.map(type => (
+        {/* Radar Controls — info help sits with type/scheme controls */}
+        <section>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            {/* Layer Type */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Radar Type</label>
                 <button
-                  key={type.id}
-                  onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: gpsStateCode }); }}
-                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                    radarType === type.id
-                      ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                  type="button"
+                  onClick={() => setShowInfo(!showInfo)}
+                  aria-label="Radar map info"
+                  aria-expanded={showInfo}
+                  className={`p-0.5 rounded transition-colors cursor-pointer ${
+                    showInfo
+                      ? 'text-sky-400'
+                      : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  <span className="block">{type.label}</span>
-                  <span className="block text-[10px] mt-0.5 opacity-70">{type.description}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </button>
-              ))}
+              </div>
+              <div className="flex gap-2">
+                {LAYER_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: gpsStateCode }); }}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
+                      radarType === type.id
+                        ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                    }`}
+                  >
+                    <span className="block">{type.label}</span>
+                    <span className="block text-[10px] mt-0.5 opacity-70">{type.description}</span>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Color Scheme - only for precipitation */}
+            {radarType === 'precipitation' && (
+              <div className="sm:w-56">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Color Scheme</label>
+                <select
+                  value={String(colorScheme)}
+                  onChange={(e) => { const val = Number(e.target.value); setColorScheme(val); trackRadarColorSchemeChange(RADAR_COLOR_SCHEMES[val]); }}
+                  className="w-full px-3 py-2 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
+                >
+                  {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Color Scheme - only for precipitation and forecast */}
-          {radarType === 'precipitation' && (
-            <div className="sm:w-56">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Color Scheme</label>
-              <select
-                value={String(colorScheme)}
-                onChange={(e) => { const val = Number(e.target.value); setColorScheme(val); trackRadarColorSchemeChange(RADAR_COLOR_SCHEMES[val]); }}
-                className="w-full px-3 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
-              >
-                {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
+          {showInfo && (
+            <div className="mt-2 p-3 bg-slate-800/60 rounded-lg border border-slate-700">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Live precipitation and infrared radar from NOAA, refreshing about every 5 minutes.
+                NWS alert overlays refresh every 10 minutes (every 2 minutes during urgent warnings).
+                Toggle radar on the map, zoom for local detail, or switch layers above.
+              </p>
             </div>
           )}
         </section>
 
-        {/* Map */}
+        {/* Map — primary focus, no duplicate state dropdown in map chrome */}
         <section>
           <StormMap
             weatherData={{}}
@@ -343,13 +326,28 @@ export default function RadarPage() {
             isHero
             radarLayerType={radarType}
             radarColorScheme={colorScheme}
-            stateNavSource={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN}
             centerOn={gpsCenter || centerOn}
             selectedStateCode={gpsStateCode}
             highlightArea={userArea}
             onAreaClick={handleAreaClick}
           />
         </section>
+
+        {/* Collapsed location picker — expands when hero Change Location is clicked */}
+        <section id="radar-location-search" className="jump-scroll-target rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
+          <ZipCodeSearch
+            stormPhase="active"
+            totalLocationCount={0}
+            onLocationsChange={() => {}}
+            onLocationClick={() => {}}
+            onLocate={handleGpsLocate}
+            onResolveState={setGpsStateCode}
+            onLocationResolved={setHeroLocation}
+          />
+        </section>
+
+        {/* Active Storms — below radar utility content */}
+        <ActiveStormsHighlight />
 
         {/* How to Use */}
         <section>

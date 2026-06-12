@@ -15,6 +15,7 @@ import { trackGeolocationUsed, trackBrowseByStateClick, NAV_SOURCES } from '../u
  */
 export default function NearMeHeader({
   as = 'h1',
+  variant = 'default',
   onLocate,
   onChangeLocation,
   onResolveState,
@@ -24,7 +25,7 @@ export default function NearMeHeader({
   headingClassName = '',
 }) {
   const HeadingTag = as;
-  const FALLBACK_HEADING = 'Live Weather & Alerts';
+  const FALLBACK_HEADING = variant === 'radar' ? 'Live Weather Radar' : 'Live Weather & Alerts';
 
   const [internalResolved, setInternalResolved] = useState(null);
   const [geoDenied, setGeoDenied] = useState(false);
@@ -99,11 +100,13 @@ export default function NearMeHeader({
     );
   }, [onLocate, onResolveState]);
 
-  if (geoDenied || gpsStatus === 'denied') return null;
+  if ((geoDenied || gpsStatus === 'denied') && variant !== 'radar') return null;
 
   const region = resolved?.region || null;
   const label = resolved ? (region ? `${resolved.city}, ${region}` : resolved.city) : null;
-  const heading = label ? `Weather Near ${label}` : FALLBACK_HEADING;
+  const heading = label
+    ? (variant === 'radar' ? `Live Radar — ${label}` : `Weather Near ${label}`)
+    : FALLBACK_HEADING;
 
   const showLocationAction = Boolean(onLocate || onChangeLocation);
   const useChangeLocation = Boolean(resolved && onChangeLocation);
@@ -163,8 +166,8 @@ export default function NearMeHeader({
       </div>
 
       {hasJumpLinks && (
-        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <span className="text-xs text-slate-500 font-medium">Jump to:</span>
+        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Jump to:</span>
           {citySlug && (
             <Link to={`/alerts/${citySlug}`} className={cityLinkClass}>
               {resolved.city} alerts
