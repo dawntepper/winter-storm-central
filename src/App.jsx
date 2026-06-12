@@ -18,7 +18,6 @@ import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
-import HomeUtilityBar from './components/HomeUtilityBar';
 import { useSavedLocations } from './hooks/useSavedLocations';
 import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
@@ -879,6 +878,7 @@ export default function App() {
         onRefresh={refreshAlerts}
         loading={alertsLoading}
         isStale={alertsIsStale}
+        showUtilities
       />
 
       {/* Inline error banner (non-blocking — page still renders) */}
@@ -903,13 +903,6 @@ export default function App() {
           onLocate={handleHeroLocate}
           onChangeLocation={handleChangeLocation}
           onResolveState={setSelectedStateCode}
-        />
-
-        <HomeUtilityBar
-          lastRefresh={alertsLastUpdated}
-          onRefresh={refreshAlerts}
-          loading={alertsLoading}
-          isStale={alertsIsStale}
         />
 
         {/* Stale Data Warning */}

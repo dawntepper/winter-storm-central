@@ -4,7 +4,7 @@ import ContactLink from './ContactLink';
 
 /**
  * Compact homepage utility row: updated timestamp, refresh, share, support.
- * Placed below the hero title / above the map — not in the main site header.
+ * Rendered in the site header (right column, below sign-in) on the homepage.
  */
 export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
