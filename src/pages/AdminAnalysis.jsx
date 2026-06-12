@@ -423,53 +423,51 @@ function AdminAnalysisInner() {
         />
       )}
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:py-10 space-y-8">
-        {error && (
-          <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
-            {error}
-            <button
-              type="button"
-              onClick={() => load(dateRange)}
-              className="ml-3 underline hover:text-red-200 cursor-pointer"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {loading && !data && (
-          <div className="text-center py-16 text-slate-400">Loading analytics…</div>
-        )}
-
-        {data && (
-          <>
-            <CollapsibleAnalysisSection
-              id="overview"
-              title="Overview"
-              description="Morning brief, operations center, and top insights for the selected period."
-              expanded={sectionsExpanded.overview}
-              onToggle={() => toggleSection('overview')}
-              className="bg-slate-800/80 border border-slate-700"
-            >
-              <OperationsCenter
-                dashboardDateRange={dateRange}
-                variant="mobile-accordion"
-              />
-              <div className="mt-6 lg:grid lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-6 items-start">
-                <div className="space-y-6 min-w-0">
-                  <MorningBriefCard dateRange={dateRange} />
-                  <TopInsightsCard insights={data.topInsights} />
-                </div>
-                <div className="hidden lg:block">
-                  <div className="sticky top-14">
-                    <OperationsCenter
-                      dashboardDateRange={dateRange}
-                      variant="sidebar"
-                    />
-                  </div>
-                </div>
+      <div className="px-4 py-8 sm:py-10">
+        <div
+          className={
+            data
+              ? 'lg:flex lg:items-start lg:justify-center lg:gap-4 xl:gap-5'
+              : 'max-w-7xl mx-auto'
+          }
+        >
+          <main className="flex-1 min-w-0 w-full max-w-7xl space-y-8">
+            {error && (
+              <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
+                {error}
+                <button
+                  type="button"
+                  onClick={() => load(dateRange)}
+                  className="ml-3 underline hover:text-red-200 cursor-pointer"
+                >
+                  Retry
+                </button>
               </div>
-            </CollapsibleAnalysisSection>
+            )}
+
+            {loading && !data && (
+              <div className="text-center py-16 text-slate-400">Loading analytics…</div>
+            )}
+
+            {data && (
+              <>
+                <CollapsibleAnalysisSection
+                  id="overview"
+                  title="Overview"
+                  description="Morning brief, operations center, and top insights for the selected period."
+                  expanded={sectionsExpanded.overview}
+                  onToggle={() => toggleSection('overview')}
+                  className="bg-slate-800/80 border border-slate-700"
+                >
+                  <OperationsCenter
+                    dashboardDateRange={dateRange}
+                    variant="mobile-accordion"
+                  />
+                  <div className="mt-6 space-y-6">
+                    <MorningBriefCard dateRange={dateRange} />
+                    <TopInsightsCard insights={data.topInsights} />
+                  </div>
+                </CollapsibleAnalysisSection>
 
             <CollapsibleAnalysisSection
               id="returning-visitors"
@@ -1069,9 +1067,22 @@ function AdminAnalysisInner() {
                 emptyMessage="No journey paths in this period."
               />
             </CollapsibleAnalysisSection>
-          </>
-        )}
-      </main>
+              </>
+            )}
+          </main>
+
+          {data && (
+            <aside className="hidden lg:block w-80 xl:w-[340px] shrink-0 self-start">
+              <div className="sticky top-14">
+                <OperationsCenter
+                  dashboardDateRange={dateRange}
+                  variant="sidebar"
+                />
+              </div>
+            </aside>
+          )}
+        </div>
+      </div>
       <ScrollToTopButton />
     </div>
   );
