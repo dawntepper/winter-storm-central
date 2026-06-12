@@ -21,10 +21,12 @@ export default function NearMeHeader({
   onResolveState,
   resolvedLocation = null,
   onResolved,
+  locationContext = null,
   className = '',
   headingClassName = '',
 }) {
   const HeadingTag = as;
+  const isRadar = variant === 'radar';
   const FALLBACK_HEADING = variant === 'radar' ? 'Live Weather Radar' : 'Live Weather & Alerts';
 
   const [internalResolved, setInternalResolved] = useState(null);
@@ -133,14 +135,44 @@ export default function NearMeHeader({
   const stateLinkClass =
     'inline-flex items-center px-2 py-0.5 rounded-md text-xs sm:text-sm font-medium text-emerald-300/90 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-950/25 hover:bg-emerald-950/40 transition-colors';
 
+  const defaultHeadingClass = isRadar
+    ? 'text-base sm:text-lg font-bold text-white'
+    : 'text-xl sm:text-2xl font-bold text-white';
+
+  const contextLine = isRadar && locationContext ? (
+    <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+      {locationContext.alertInfo ? (
+        <span className="text-orange-400 whitespace-nowrap">⚠️ {locationContext.alertInfo.event}</span>
+      ) : locationContext.alertCount > 0 ? (
+        <span className="text-orange-400 whitespace-nowrap">
+          ⚠️ {locationContext.alertCount} active alert{locationContext.alertCount !== 1 ? 's' : ''}
+        </span>
+      ) : (
+        <span className="text-cyan-500 whitespace-nowrap">✓ No active alerts</span>
+      )}
+      {locationContext.conditions?.temperature != null && (
+        <>
+          <span className="text-slate-600">·</span>
+          <span className="whitespace-nowrap">
+            {locationContext.conditions.temperature}°{locationContext.conditions.temperatureUnit || 'F'}
+            {locationContext.conditions.shortForecast ? ` · ${locationContext.conditions.shortForecast}` : ''}
+          </span>
+        </>
+      )}
+    </p>
+  ) : null;
+
   return (
-    <div className={`space-y-2 ${className}`}>
-      <div className={showLocationAction ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined}>
-        <HeadingTag className={headingClassName || 'text-xl sm:text-2xl font-bold text-white'}>
-          {heading}
-        </HeadingTag>
+    <div className={`${isRadar ? 'space-y-1' : 'space-y-2'} ${className}`}>
+      <div className={showLocationAction ? `flex flex-col gap-2 ${isRadar ? 'sm:gap-2' : 'sm:gap-3'} sm:flex-row sm:items-center sm:justify-between` : undefined}>
+        <div className="min-w-0">
+          <HeadingTag className={headingClassName || defaultHeadingClass}>
+            {heading}
+          </HeadingTag>
+          {contextLine}
+        </div>
         {showLocationAction && (
-          <div className="flex flex-col items-stretch sm:items-end gap-1 flex-shrink-0">
+          <div className="flex flex-col items-stretch sm:items-end gap-0.5 flex-shrink-0">
             <button
               type="button"
               onClick={handlePrimaryAction}
@@ -150,7 +182,9 @@ export default function NearMeHeader({
                   ? 'Change your location'
                   : 'Find weather near me using your device location'
               }
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white text-sm font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap"
+              className={`inline-flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap ${
+                isRadar ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
+              }`}
             >
               <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>
               {primaryLabel}
@@ -165,7 +199,7 @@ export default function NearMeHeader({
         )}
       </div>
 
-      {hasJumpLinks && (
+      {hasJumpLinks && !isRadar && (
         <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Jump to:</span>
           {citySlug && (

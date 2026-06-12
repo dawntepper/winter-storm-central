@@ -256,6 +256,12 @@ function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, sto
   );
 }
 
+function getInitialExpanded(collapseOnDesktop, defaultExpanded) {
+  if (typeof window === 'undefined') return defaultExpanded;
+  if (collapseOnDesktop) return window.innerWidth < 1024;
+  return defaultExpanded;
+}
+
 export default function ZipCodeSearch({
   stormPhase,
   totalLocationCount = 0,
@@ -266,8 +272,11 @@ export default function ZipCodeSearch({
   onResolveState,
   onLocationResolved,
   variant = 'default',
+  defaultExpanded = false,
+  collapseOnDesktop = false,
 }) {
   const isCompact = variant === 'compact';
+  const isRadar = variant === 'radar';
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -284,9 +293,9 @@ export default function ZipCodeSearch({
   const cityDropdownRef = useRef(null);
   const suppressCityDropdownOpenRef = useRef(false);
 
-  // Mobile collapse state - collapsed by default on mobile
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => getInitialExpanded(collapseOnDesktop, defaultExpanded));
+  const panelRef = useRef(null);
 
   // Track whether we've processed the initial location
   const [initialProcessed, setInitialProcessed] = useState(false);
@@ -343,9 +352,16 @@ export default function ZipCodeSearch({
     return () => window.removeEventListener('savedLocationsChanged', handler);
   }, []);
 
-  // Expand when hero "Change Location" scrolls here (App.jsx dispatches this).
+  // Expand + focus when hero "Change Location" scrolls here.
   useEffect(() => {
-    const handler = () => setIsExpanded(true);
+    const handler = () => {
+      setIsExpanded(true);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          panelRef.current?.querySelector('input[type="text"]')?.focus();
+        }, 50);
+      });
+    };
     window.addEventListener('checkLocationExpand', handler);
     return () => window.removeEventListener('checkLocationExpand', handler);
   }, []);
@@ -964,17 +980,24 @@ export default function ZipCodeSearch({
     );
   }
 
+  const accordionHeaderClass = isRadar
+    ? 'w-full px-3 py-2 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all'
+    : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all';
+  const accordionPanelClass = isRadar
+    ? 'px-4 py-3 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible'
+    : 'px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible';
+
   return (
-    <div className="space-y-4">
+    <div className={isRadar ? 'space-y-2' : 'space-y-4'} ref={panelRef}>
       <div className="rounded-lg border border-slate-600 shadow-lg">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
+          className={`${accordionHeaderClass} ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'}`}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm" role="img" aria-label="location">📍</span>
-            <label className="text-sm font-medium cursor-pointer" style={{ color: 'antiquewhite' }}>
+            <span className={isRadar ? 'text-xs' : 'text-sm'} role="img" aria-label="location">📍</span>
+            <label className={`${isRadar ? 'text-xs' : 'text-sm'} font-medium cursor-pointer`} style={{ color: 'antiquewhite' }}>
               Check Location
             </label>
             {!isExpanded && Object.values(savedLocations).filter(l => l.onMap).length > 0 && (
@@ -994,7 +1017,7 @@ export default function ZipCodeSearch({
         </button>
 
         {isExpanded && (
-          <div className="px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible">
+          <div className={accordionPanelClass}>
             {searchControls}
           </div>
         )}

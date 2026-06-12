@@ -144,6 +144,7 @@ export default function RadarPage() {
     : [];
 
   const [heroLocation, setHeroLocation] = useState(null);
+  const [locationSummary, setLocationSummary] = useState(null);
 
   // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.
@@ -180,6 +181,7 @@ export default function RadarPage() {
 
   const handleSearchLocationClick = useCallback((locationData) => {
     if (locationData.lat == null || locationData.lon == null) return;
+    setLocationSummary(locationData);
     setGpsCenter({ lat: locationData.lat, lon: locationData.lon, zoom: 9, id: Date.now() });
     focusCounty(locationData.lat, locationData.lon);
     const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
@@ -230,6 +232,24 @@ export default function RadarPage() {
   const mapResetViewLabel = 'Full View';
   const mapResetViewTitle = 'Reset to default US view';
 
+  const heroLocationContext = useMemo(() => {
+    if (locationSummary) {
+      return {
+        alertInfo: locationSummary.alertInfo || null,
+        alertCount: locationSummary.alertInfo ? 1 : 0,
+        conditions: locationSummary.conditions || null,
+      };
+    }
+    const stateCode = effectiveStateCode || heroLocation?.region;
+    if (!stateCode) return null;
+    const stateAlerts = mapAlerts.filter((a) => a.state === stateCode);
+    return {
+      alertInfo: null,
+      alertCount: stateAlerts.length,
+      conditions: null,
+    };
+  }, [locationSummary, effectiveStateCode, heroLocation, mapAlerts]);
+
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
     setRadarMetaTags();
@@ -259,8 +279,8 @@ export default function RadarPage() {
         </div>
       </header>
 
-      {/* Compact hero — single location-focused title */}
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
+      {/* Compact hero — radar-first title with location context */}
+      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-2">
         <div className="max-w-7xl mx-auto">
           <NearMeHeader
             as="h1"
@@ -270,21 +290,23 @@ export default function RadarPage() {
             onLocate={handleGpsLocate}
             onChangeLocation={handleChangeLocation}
             onResolveState={setGpsStateCode}
-            className="space-y-1"
-            headingClassName="text-lg sm:text-xl font-bold text-white"
+            locationContext={heroLocationContext}
           />
         </div>
       </div>
 
-      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
+      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-2 sm:space-y-3">
 
-        {/* Check Location (full width) → radar map below */}
-        <section className="space-y-4">
+        {/* Check Location (collapsed on desktop) → radar map */}
+        <section className="space-y-2">
           <div
             id="radar-location-search"
             className="jump-scroll-target rounded-xl overflow-visible border border-[antiquewhite] bg-[#1a3d2e]"
           >
             <ZipCodeSearch
+              variant="radar"
+              collapseOnDesktop
+              defaultExpanded
               stormPhase="active"
               totalLocationCount={0}
               onLocationsChange={() => {}}
