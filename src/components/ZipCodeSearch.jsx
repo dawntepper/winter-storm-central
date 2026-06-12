@@ -451,6 +451,13 @@ export default function ZipCodeSearch({
 
       setCurrentLocationData(weather);
 
+      if (onLocationClick) onLocationClick(weather);
+      const zipParts = weather.name?.split(', ');
+      if (zipParts?.length >= 2) {
+        onLocationResolved?.({ city: zipParts[0], region: zipParts[1] });
+        onResolveState?.(zipParts[1]);
+      }
+
       // Check if this zip already exists in saved locations
       const existingLocation = savedLocations[zipCode];
       if (existingLocation) {
@@ -599,8 +606,10 @@ export default function ZipCodeSearch({
       suppressCityDropdownOpenRef.current = true;
       closeCityDropdown();
       const weather = await fetchCityWeather(selectedState, resolved.city);
-      if (weather && onLocationClick) {
-        onLocationClick(weather);
+      if (weather) {
+        onLocationClick?.(weather);
+        onLocationResolved?.({ city: resolved.city.name, region: selectedState });
+        onResolveState?.(selectedState);
       }
     } catch (err) {
       console.error('City search error:', err);

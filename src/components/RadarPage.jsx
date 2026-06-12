@@ -176,12 +176,38 @@ export default function RadarPage() {
   const effectiveStateSlug = effectiveStateCode ? ABBR_TO_SLUG[effectiveStateCode] : null;
   const effectiveStateName = effectiveStateCode ? STATE_NAMES[effectiveStateCode] : null;
 
-  const handleGpsLocate = (c) => {
-    areaReqRef.current += 1;
+  const focusCounty = useCallback((lat, lon) => {
+    if (lat == null || lon == null) return;
+    const reqId = ++areaReqRef.current;
+    fetchCountyGeoJSON(lat, lon).then((feature) => {
+      if (reqId === areaReqRef.current) setUserArea(feature);
+    });
+  }, []);
+
+  const scrollMapIntoView = useCallback(() => {
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        document.querySelector('#radar-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
+
+  const handleGpsLocate = useCallback((c) => {
     setSearchFocus(null);
     setGpsCenter(c);
-    fetchCountyGeoJSON(c.lat, c.lon).then(setUserArea);
-  };
+    focusCounty(c.lat, c.lon);
+    scrollMapIntoView();
+  }, [focusCounty, scrollMapIntoView]);
+
+  const handleSearchLocationClick = useCallback((locationData) => {
+    if (locationData.lat == null || locationData.lon == null) return;
+    setSearchFocus(null);
+    setGpsCenter({ lat: locationData.lat, lon: locationData.lon, zoom: 9, id: Date.now() });
+    focusCounty(locationData.lat, locationData.lon);
+    const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
+    if (stateMatch) setGpsStateCode(stateMatch[1]);
+    scrollMapIntoView();
+  }, [focusCounty, scrollMapIntoView]);
 
   const handleAlertsLocationFocus = useCallback(({ lat, lon, zoom = 8, county }) => {
     const reqId = ++areaReqRef.current;
@@ -379,14 +405,13 @@ export default function RadarPage() {
           <div className="flex flex-col gap-4 lg:gap-5">
             <div
               id="radar-location-search"
-              className="jump-scroll-target rounded-xl overflow-visible"
-              style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}
+              className="jump-scroll-target max-lg:rounded-xl max-lg:overflow-visible max-lg:border max-lg:border-[antiquewhite] max-lg:bg-[#1a3d2e]"
             >
               <ZipCodeSearch
                 stormPhase="active"
                 totalLocationCount={0}
                 onLocationsChange={() => {}}
-                onLocationClick={() => {}}
+                onLocationClick={handleSearchLocationClick}
                 onLocate={handleGpsLocate}
                 onResolveState={setGpsStateCode}
                 onLocationResolved={setHeroLocation}
