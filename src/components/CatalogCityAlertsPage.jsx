@@ -1,9 +1,10 @@
 /**
  * Catalog city alerts page — /alerts/city/:citySlug
  * For cities in the Supabase catalog (rich /alerts/:slug pages redirect here).
+ * Uses ForecastPage layout with compact alert integration.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import {
@@ -15,15 +16,11 @@ import {
   cityAlertsPath,
   alertMatchesCity,
 } from '../services/locationCatalogService';
-import { trackCityAlertView, trackCityWeatherPageView } from '../utils/analytics';
+import { trackCityAlertView } from '../utils/analytics';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import PageHeaderNav from './PageHeaderNav';
-import StormMap from './StormMap';
-import CityRightNowCard from './city/CityRightNowCard';
-import CityForecastSection from './CityForecastSection';
-import CityWeatherDashboard, { CityRelatedLinks, CityNearbyLinks } from './city/CityWeatherDashboard';
-import CityRadarSection from './city/CityRadarSection';
-import { useCityForecast } from '../hooks/useCityForecast';
+import ForecastCityLayout from './ForecastCityLayout';
+import { CityRelatedLinks, CityNearbyLinks } from './city/CityWeatherDashboard';
 import { NAV_SOURCES } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
 
@@ -59,8 +56,6 @@ export default function CatalogCityAlertsPage() {
   const [county, setCounty] = useState(null);
   const [siblingCities, setSiblingCities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [forecastLoaded, setForecastLoaded] = useState(false);
-  const [hasForecastData, setHasForecastData] = useState(false);
 
   const { alerts: alertsData, loading: alertsLoading, lastUpdated } = useExtremeWeather(true);
   const allAlerts = alertsData?.allAlerts || [];
@@ -69,8 +64,6 @@ export default function CatalogCityAlertsPage() {
     if (!city) return [];
     return allAlerts.filter((a) => alertMatchesCity(a, city, county));
   }, [city, county, allAlerts]);
-
-  const { forecast: nwsForecast } = useCityForecast(city?.lat, city?.lon);
 
   const mapAlerts = useMemo(() => {
     if (!city || cityAlerts.length === 0) return [];
@@ -85,18 +78,11 @@ export default function CatalogCityAlertsPage() {
     }));
   }, [city, cityAlerts, allAlerts]);
 
-  const handleForecastLoad = useCallback((data) => {
-    setForecastLoaded(true);
-    setHasForecastData(Boolean(data));
-  }, []);
-
   useEffect(() => {
     if (redirectToRichPage) return undefined;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      setForecastLoaded(false);
-      setHasForecastData(false);
       const cityRow = await getCityBySlugWithFallback(citySlug);
       if (cancelled) return;
       setCity(cityRow);
@@ -124,18 +110,6 @@ export default function CatalogCityAlertsPage() {
     })();
     return () => setHomepageMetaTags();
   }, [citySlug, redirectToRichPage]);
-
-  useEffect(() => {
-    if (!city || redirectToRichPage || alertsLoading || !forecastLoaded) return;
-    trackCityWeatherPageView({
-      stateCode: city.stateCode,
-      city: city.name,
-      citySlug: city.slug,
-      hasAlerts: cityAlerts.length > 0,
-      hasForecastData,
-      source: 'catalog_city_page',
-    });
-  }, [city, cityAlerts.length, alertsLoading, redirectToRichPage, forecastLoaded, hasForecastData]);
 
   const countyPageViewTrackedRef = useRef(null);
   useEffect(() => {
@@ -179,13 +153,6 @@ export default function CatalogCityAlertsPage() {
 
   const stateSlug = getStateSlugForCode(city.stateCode);
   const stateLabel = city.stateName || city.stateCode;
-  const alertCount = cityAlerts.length;
-
-  const mapConditions = nwsForecast?.current ? {
-    temperature: nwsForecast.current.temperature,
-    temperatureUnit: nwsForecast.current.temperatureUnit,
-    shortForecast: nwsForecast.current.shortForecast,
-  } : null;
 
   const siblingLinks = siblingCities.slice(0, 8).map((c) => ({
     id: c.id,
@@ -198,77 +165,21 @@ export default function CatalogCityAlertsPage() {
   }));
 
   return (
-    <CityWeatherDashboard
-      headerNav={<PageHeaderNav source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN} />}
-      stateBackLink={stateSlug ? (
-        <Link
-          to={`/alerts/${stateSlug}`}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-sky-400 hover:text-sky-300 mb-3 transition-colors"
-        >
-          ← {stateLabel} Alerts
-        </Link>
-      ) : null}
+    <ForecastCityLayout
       cityName={city.name}
+      citySlug={city.slug}
       stateSlug={stateSlug}
+      stateName={stateLabel}
+      stateCode={city.stateCode}
       lat={city.lat}
       lon={city.lon}
-      citySlug={city.slug}
-      stateCode={city.stateCode}
       alerts={alertsLoading ? null : cityAlerts}
       alertsLoading={alertsLoading}
-      lastUpdated={lastUpdated}
-      rightNow={(
-        <CityRightNowCard
-          lat={city.lat}
-          lon={city.lon}
-          locationName={`${city.name}, ${city.stateCode}`}
-          cityName={city.name}
-        />
-      )}
-      radar={(
-        <CityRadarSection
-          cityName={city.name}
-          citySlug={city.slug}
-          stateCode={city.stateCode}
-          analyticsSource="catalog_city_page"
-          hasAlerts={alertCount > 0}
-        >
-          <section aria-label={`Live weather radar — ${city.name}`}>
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[{
-                id: `city-pin-${city.slug}`,
-                lat: city.lat,
-                lon: city.lon,
-                name: `${city.name}, ${city.stateCode}`,
-                conditions: mapConditions,
-              }]}
-              alerts={mapAlerts}
-              isHero
-              selectedStateCode={city.stateCode}
-              resetViewTitle={`Return to ${city.name}`}
-              centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 9 }}
-            />
-          </section>
-        </CityRadarSection>
-      )}
-      forecast={(
-        <CityForecastSection
-          cityName={city.name}
-          citySlug={city.slug}
-          stateSlug={stateSlug}
-          stateCode={city.stateCode}
-          lat={city.lat}
-          lon={city.lon}
-          showUnavailableFallback
-          onForecastLoad={handleForecastLoad}
-          forecastLinkSource="catalog-city-page"
-          analyticsSource="catalog_city_page"
-        />
-      )}
-      related={(
-        <>
+      mapAlerts={mapAlerts}
+      analyticsSource="catalog_city_page"
+      headerNav={<PageHeaderNav source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN} />}
+      extras={(
+        <div className="space-y-6">
           {county && (
             <Link
               to={`/alerts/county/${county.slug}`}
@@ -278,6 +189,14 @@ export default function CatalogCityAlertsPage() {
               <span aria-hidden="true">→</span>
             </Link>
           )}
+          {siblingCities.length > 0 && county && (
+            <CityNearbyLinks
+              title="Nearby Forecasts"
+              cities={siblingLinks}
+              stateCode={city.stateCode}
+              stateSlug={stateSlug}
+            />
+          )}
           <CityRelatedLinks
             cityName={city.name}
             lat={city.lat}
@@ -285,27 +204,18 @@ export default function CatalogCityAlertsPage() {
             stateSlug={stateSlug}
             stateLabel={stateLabel}
           />
-        </>
+        </div>
       )}
-      nearby={siblingCities.length > 0 && county ? (
-        <CityNearbyLinks
-          title="Nearby Forecasts"
-          cities={siblingLinks}
-          stateCode={city.stateCode}
-          stateSlug={stateSlug}
-        />
-      ) : null}
-      footer={(
-        <footer className="pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-500 leading-relaxed text-center">
-            Alerts sourced from the National Weather Service.
-            Current conditions from{' '}
-            <a className="hover:text-slate-300 underline" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-            . Forecast from NWS gridpoints via{' '}
-            <a className="hover:text-slate-300 underline" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">weather.gov</a>.
-            Updated continuously. StormTracking.io is not affiliated with NOAA or the NWS.
-          </p>
-        </footer>
+      footerNote={(
+        <>
+          Alerts sourced from the National Weather Service.
+          Forecast from NWS gridpoints via{' '}
+          <a className="text-sky-400 hover:underline" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">weather.gov</a>.
+          {lastUpdated && (
+            <> Last updated {new Date(lastUpdated).toLocaleTimeString()}.</>
+          )}
+          {' '}StormTracking.io is not affiliated with NOAA or the NWS.
+        </>
       )}
     />
   );

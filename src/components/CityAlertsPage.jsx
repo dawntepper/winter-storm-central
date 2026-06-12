@@ -1,8 +1,7 @@
 /**
  * City Alerts Page — reusable template rendered for any city in
- * src/content/cities/[slug].json. Reads city data, fetches live NWS alerts
- * (by NWS zone) and Open-Meteo current conditions + 4-day forecast, and
- * emits LLM/SEO-friendly meta tags + JSON-LD structured data.
+ * src/content/cities/[slug].json. Uses ForecastPage layout with compact
+ * alert integration and city-scoped radar.
  */
 
 import { useEffect, useState, useMemo } from 'react';
@@ -12,17 +11,11 @@ import {
   INCLUDED_EVENTS,
   getCategoryForEvent,
 } from '../../shared/nws-alert-parser';
-import { fetchOpenMeteoConditions } from '../utils/fetchOpenMeteoConditions';
 import { setHomepageMetaTags } from '../data/homepageMeta';
-import { trackCityWeatherPageView } from '../utils/analytics';
-import CityRightNowCard from './city/CityRightNowCard';
-import CityForecastSection from './CityForecastSection';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
-import { useCityForecast } from '../hooks/useCityForecast';
-import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
-import CityRadarSection from './city/CityRadarSection';
-import CityWeatherDashboard, {
+import ForecastCityLayout from './ForecastCityLayout';
+import {
   CityRelatedLinks,
   CityNearbyLinks,
   CitySeasonalRisk,
@@ -125,7 +118,7 @@ function currentSeason() {
   return 'fall';
 }
 
-function buildJsonLd(city, conditions) {
+function buildJsonLd(city) {
   const url = `${BASE_URL}/alerts/${city.slug}`;
   const now = new Date().toISOString();
 
@@ -169,26 +162,7 @@ function buildJsonLd(city, conditions) {
     ],
   };
 
-  const out = [webPage, breadcrumbs];
-
-  if (conditions?.current) {
-    out.push({
-      '@context': 'https://schema.org',
-      '@type': 'WeatherForecast',
-      datePublished: conditions.fetchedAt,
-      validIn: {
-        '@type': 'Place',
-        name: `${city.city}, ${city.state}`,
-        geo: {
-          '@type': 'GeoCoordinates',
-          latitude: city.lat,
-          longitude: city.lon,
-        },
-      },
-    });
-  }
-
-  return out;
+  return [webPage, breadcrumbs];
 }
 
 export default function CityAlertsPage() {
@@ -197,11 +171,8 @@ export default function CityAlertsPage() {
 
   const [alerts, setAlerts] = useState(null);
   const [alertsError, setAlertsError] = useState(false);
-  const [conditions, setConditions] = useState(null);
-  const [conditionsError, setConditionsError] = useState(false);
 
   const { alerts: allAlertsData } = useExtremeWeather(true);
-  const { forecast: nwsForecast } = useCityForecast(city?.lat, city?.lon);
 
   const mapAlerts = useMemo(() => {
     if (!city || !Array.isArray(alerts) || alerts.length === 0) return [];
@@ -224,16 +195,6 @@ export default function CityAlertsPage() {
   }, [city]);
 
   useEffect(() => {
-    if (!city || alerts === null) return;
-    trackCityWeatherPageView({
-      stateCode: city.state_abbr,
-      city: city.city,
-      citySlug: city.slug,
-      hasAlerts: Array.isArray(alerts) && alerts.length > 0,
-    });
-  }, [city, alerts]);
-
-  useEffect(() => {
     if (!city) return;
     let cancelled = false;
     setAlerts(null);
@@ -245,22 +206,6 @@ export default function CityAlertsPage() {
     });
     return () => { cancelled = true; };
   }, [city]);
-
-  useEffect(() => {
-    if (!city) return;
-    let cancelled = false;
-    setConditions(null);
-    setConditionsError(false);
-    fetchOpenMeteoConditions({ lat: city.lat, lon: city.lon, timezone: city.timezone || 'auto' })
-      .then((result) => {
-        if (cancelled) return;
-        if (result === null) setConditionsError(true);
-        else setConditions(result);
-      });
-    return () => { cancelled = true; };
-  }, [city]);
-
-  const jsonLdBlocks = useMemo(() => (city ? buildJsonLd(city, conditions) : []), [city, conditions]);
 
   if (!city) {
     return (
@@ -277,7 +222,7 @@ export default function CityAlertsPage() {
   }
 
   const season = currentSeason();
-  const alertCount = Array.isArray(alerts) ? alerts.length : 0;
+  const jsonLdBlocks = buildJsonLd(city);
 
   const nearbyLinks = (city.nearby_cities || [])
     .map((nearbySlug) => {
@@ -299,133 +244,61 @@ export default function CityAlertsPage() {
       };
     });
 
-  const mapConditions = nwsForecast?.current ? {
-    temperature: nwsForecast.current.temperature,
-    temperatureUnit: nwsForecast.current.temperatureUnit,
-    shortForecast: nwsForecast.current.shortForecast,
-  } : null;
-
   return (
-    <CityWeatherDashboard
-      jsonLdBlocks={jsonLdBlocks}
-      headerNav={(
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-          <Link to="/radar" className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
-          <Link to={`/alerts/${city.state_slug}`} className="text-[10px] sm:text-xs text-sky-400 hover:bg-sky-500/25 font-medium bg-sky-500/15 pl-2 pr-2 py-0.5 rounded border border-sky-500/30 transition-colors">{city.state_abbr} Alerts</Link>
-        </div>
-      )}
-      stateBackLink={(
-        <Link
-          to={`/alerts/${city.state_slug}`}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-sky-400 hover:text-sky-300 mb-3 transition-colors"
-        >
-          ← {city.state} Alerts
-        </Link>
-      )}
-      breadcrumb={(
-        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
-          <Link to="/alerts" className="hover:text-slate-300">Alerts</Link>
-          {' › '}
-          <Link to={`/alerts/${city.state_slug}`} className="hover:text-slate-300">{city.state}</Link>
-          {' › '}
-          <span className="text-slate-400">{city.city}</span>
-        </p>
-      )}
-      cityName={city.city}
-      stateSlug={city.state_slug}
-      lat={city.lat}
-      lon={city.lon}
-      citySlug={city.slug}
-      stateCode={city.state_abbr}
-      alerts={alerts}
-      alertsLoading={alerts === null && !alertsError}
-      alertsError={alertsError}
-      rightNow={(
-        <CityRightNowCard
-          lat={city.lat}
-          lon={city.lon}
-          locationName={`${city.city}, ${city.state_abbr}`}
-          cityName={city.city}
-        />
-      )}
-      radar={(
-        <CityRadarSection
-          cityName={city.city}
-          citySlug={city.slug}
-          stateCode={city.state_abbr}
-          analyticsSource="city_alert_page"
-          hasAlerts={alertCount > 0}
-        >
-          <section aria-label={`Live weather radar — ${city.city}`}>
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[{
-                id: `city-pin-${city.slug}`,
-                lat: city.lat,
-                lon: city.lon,
-                name: `${city.city}, ${city.state_abbr}`,
-                conditions: mapConditions,
-              }]}
-              alerts={mapAlerts}
-              isHero
-              selectedStateCode={city.state_abbr}
-              resetViewTitle={`Return to ${city.city}`}
-              centerOn={{ lat: city.lat, lon: city.lon, id: `city-${city.slug}`, zoom: 8 }}
+    <>
+      <ForecastCityLayout
+        jsonLdBlocks={jsonLdBlocks}
+        cityName={city.city}
+        citySlug={city.slug}
+        stateSlug={city.state_slug}
+        stateName={city.state}
+        stateCode={city.state_abbr}
+        lat={city.lat}
+        lon={city.lon}
+        alerts={alerts}
+        alertsLoading={alerts === null && !alertsError}
+        alertsError={alertsError}
+        mapAlerts={mapAlerts}
+        analyticsSource="city_alert_page"
+        headerNav={(
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
+            <Link to="/radar" className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
+            <Link to={`/alerts/${city.state_slug}`} className="text-[10px] sm:text-xs text-sky-400 hover:bg-sky-500/25 font-medium bg-sky-500/15 pl-2 pr-2 py-0.5 rounded border border-sky-500/30 transition-colors">{city.state_abbr} Alerts</Link>
+          </div>
+        )}
+        extras={(
+          <div className="space-y-6">
+            <CityNearbyLinks
+              title="Nearby Forecasts"
+              cities={nearbyLinks}
+              stateCode={city.state_abbr}
+              stateSlug={city.state_slug}
             />
-          </section>
-        </CityRadarSection>
-      )}
-      forecast={(
-        <CityForecastSection
-          cityName={city.city}
-          citySlug={city.slug}
-          stateSlug={city.state_slug}
-          stateCode={city.state_abbr}
-          lat={city.lat}
-          lon={city.lon}
-          forecastLinkSource="city-page"
-          analyticsSource="city_alert_page"
-        />
-      )}
-      related={(
-        <CityRelatedLinks
-          cityName={city.city}
-          lat={city.lat}
-          lon={city.lon}
-          stateSlug={city.state_slug}
-          stateLabel={city.state}
-        />
-      )}
-      nearby={(
-        <CityNearbyLinks
-          title="Nearby Forecasts"
-          cities={nearbyLinks}
-          stateCode={city.state_abbr}
-          stateSlug={city.state_slug}
-        />
-      )}
-      seasonal={(
-        <CitySeasonalRisk
-          description={city.description_long}
-          seasonalRisks={city.seasonal_risks}
-          season={season}
-        />
-      )}
-      footer={(
-        <footer className="pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-500 leading-relaxed text-center">
+            <CityRelatedLinks
+              cityName={city.city}
+              lat={city.lat}
+              lon={city.lon}
+              stateSlug={city.state_slug}
+              stateLabel={city.state}
+            />
+            <CitySeasonalRisk
+              description={city.description_long}
+              seasonalRisks={city.seasonal_risks}
+              season={season}
+            />
+          </div>
+        )}
+        footerNote={(
+          <>
             Alerts sourced from the National Weather Service (NWS office: {city.nws_office}, forecast zone {city.nws_zone}).
-            Current conditions and forecast from{' '}
-            <a className="hover:text-slate-300 underline" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-            {' '}and{' '}
-            <a className="hover:text-slate-300 underline" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">weather.gov</a>.
+            Forecast from{' '}
+            <a className="text-sky-400 hover:underline" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">weather.gov</a>.
             Updated continuously. StormTracking.io is not affiliated with NOAA or the NWS.
-          </p>
-        </footer>
-      )}
-      signupBar={<AlertSignupBar />}
-    />
+          </>
+        )}
+      />
+      <AlertSignupBar />
+    </>
   );
 }

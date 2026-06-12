@@ -15,6 +15,7 @@ export default function ForecastLocationPicker({
   stateSlug,
   stateName,
   currentLabel,
+  selectedCitySlug,
   onSelect,
 }) {
   const [mode, setMode] = useState('city'); // 'city' | 'zip'
@@ -146,7 +147,7 @@ export default function ForecastLocationPicker({
             </p>
           ) : (
             <select
-              defaultValue=""
+              value={selectedCitySlug || ''}
               onChange={handleCityChange}
               className="w-full max-w-md px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500 cursor-pointer"
             >
