@@ -33,9 +33,7 @@
  */
 
 import { supabase } from '../lib/supabase';
-
-const VISITOR_ID_KEY = 'stormtracking_visitor_id';
-const SESSION_ID_KEY = 'stormtracking_session_id';
+import { getOrCreateVisitorIds } from '../utils/visitorIds';
 const DEDUPE_PREFIX = 'stormtracking_pe_';
 const DEDUPE_RADAR_PREFIX = 'stormtracking_re_';
 const VISIT_COOLDOWN_MS = 3000;
@@ -128,39 +126,6 @@ const RADAR_DEDUPE_RULES = {
   },
 };
 
-function createId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
-
-function getOrCreateStorageId(storage, key) {
-  try {
-    let id = storage.getItem(key);
-    if (!id) {
-      id = createId();
-      storage.setItem(key, id);
-    }
-    return id;
-  } catch {
-    return null;
-  }
-}
-
-/** Ensure visitor/session IDs exist before product_events insert (avoids race with initVisitorSession). */
-function getOrCreateIds() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const visitorId = getOrCreateStorageId(localStorage, VISITOR_ID_KEY);
-    const sessionId = getOrCreateStorageId(sessionStorage, SESSION_ID_KEY);
-    if (!visitorId || !sessionId) return null;
-    return { visitorId, sessionId };
-  } catch {
-    return null;
-  }
-}
-
 function getPagePath() {
   if (typeof window === 'undefined') return '/';
   return window.location.pathname;
@@ -250,7 +215,7 @@ export function shouldEmitAnalyticsEvent(table, eventId, context = {}) {
 }
 
 async function insertRow(table, row) {
-  const ids = getOrCreateIds();
+  const ids = getOrCreateVisitorIds();
   if (!ids || !supabase) return false;
 
   const { error } = await supabase.from(table).insert({

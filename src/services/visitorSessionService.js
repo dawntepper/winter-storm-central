@@ -5,15 +5,16 @@
 
 import { supabase } from '../lib/supabase';
 import {
+  getOrCreateVisitorIds,
+  SESSION_ID_KEY,
+} from '../utils/visitorIds';
+import {
   trackVisitorSessionStarted,
   trackReturningVisitor,
   detectSourceFromReferrer,
 } from '../utils/analytics';
 
-const VISITOR_ID_KEY = 'stormtracking_visitor_id';
-const SESSION_ID_KEY = 'stormtracking_session_id';
 const SESSION_REGISTERED_KEY = 'stormtracking_session_registered';
-const SESSION_ROW_ID_KEY = 'stormtracking_session_row_id';
 
 const HEARTBEAT_DEBOUNCE_MS = 30_000;
 const HEARTBEAT_INTERVAL_MS = 60_000;
@@ -23,22 +24,6 @@ let heartbeatInterval = null;
 let listenersBound = false;
 /** Dedupes concurrent init (e.g. React StrictMode double-mount). */
 let initPromise = null;
-
-function createId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
-
-function getOrCreateStorageId(storage, key) {
-  let id = storage.getItem(key);
-  if (!id) {
-    id = createId();
-    storage.setItem(key, id);
-  }
-  return id;
-}
 
 function getDeviceType() {
   if (typeof window === 'undefined') return null;
@@ -93,36 +78,43 @@ async function insertVisitorSession({
   source,
   deviceType,
 }) {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('visitor_sessions')
-    .insert({
-      visitor_id: visitorId,
-      session_id: sessionId,
-      landing_page: landingPage,
-      referrer,
-      source,
-      device_type: deviceType,
-      is_returning: isReturning,
-    })
-    .select('id')
-    .single();
+  if (!supabase) return false;
+  // No .select() — anon has INSERT but not SELECT RLS; RETURNING would fail.
+  const { error } = await supabase.from('visitor_sessions').insert({
+    visitor_id: visitorId,
+    session_id: sessionId,
+    landing_page: landingPage,
+    referrer,
+    source,
+    device_type: deviceType,
+    is_returning: isReturning,
+  });
 
   if (error) {
     console.warn('visitor session insert:', error.message);
-    return null;
+    return false;
   }
-  return data?.id ?? null;
+
+  if (import.meta.env.DEV) {
+    console.log('[visitorSession] inserted', {
+      visitorId: visitorId.slice(0, 8),
+      sessionId: sessionId.slice(0, 8),
+      isReturning,
+    });
+  }
+
+  return true;
 }
 
-async function pulseLastSeen() {
-  const rowId = sessionStorage.getItem(SESSION_ROW_ID_KEY);
-  if (!rowId || !supabase) return;
+/** Update last_seen for the current browser session (session_id scoped). */
+export async function pulseVisitorSessionLastSeen() {
+  const sessionId = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!sessionId || !supabase) return;
 
   const { error } = await supabase
     .from('visitor_sessions')
     .update({ last_seen: new Date().toISOString() })
-    .eq('id', rowId);
+    .eq('session_id', sessionId);
 
   if (error) console.warn('visitor session heartbeat:', error.message);
 }
@@ -130,7 +122,7 @@ async function pulseLastSeen() {
 function scheduleHeartbeat() {
   if (heartbeatTimer) clearTimeout(heartbeatTimer);
   heartbeatTimer = setTimeout(() => {
-    pulseLastSeen().catch(() => {});
+    pulseVisitorSessionLastSeen().catch(() => {});
   }, HEARTBEAT_DEBOUNCE_MS);
 }
 
@@ -146,26 +138,28 @@ function bindHeartbeatListeners() {
   });
 
   heartbeatInterval = setInterval(() => {
-    pulseLastSeen().catch(() => {});
+    pulseVisitorSessionLastSeen().catch(() => {});
   }, HEARTBEAT_INTERVAL_MS);
 }
 
 export function startVisitorSessionHeartbeat() {
-  if (!sessionStorage.getItem(SESSION_ROW_ID_KEY)) return;
+  if (!sessionStorage.getItem(SESSION_REGISTERED_KEY)) return;
   bindHeartbeatListeners();
   scheduleHeartbeat();
 }
 
 async function registerVisitorSessionOnce() {
-  const visitorId = getOrCreateStorageId(localStorage, VISITOR_ID_KEY);
-  const sessionId = getOrCreateStorageId(sessionStorage, SESSION_ID_KEY);
+  const ids = getOrCreateVisitorIds();
+  if (!ids) return false;
+
+  const { visitorId, sessionId } = ids;
   const landingPage = getLandingPage();
   const referrer = getReferrer();
   const source = parseSource();
   const deviceType = getDeviceType();
 
   const isReturning = await checkIsReturning(visitorId);
-  const rowId = await insertVisitorSession({
+  const inserted = await insertVisitorSession({
     visitorId,
     sessionId,
     isReturning,
@@ -175,8 +169,9 @@ async function registerVisitorSessionOnce() {
     deviceType,
   });
 
+  if (!inserted) return false;
+
   sessionStorage.setItem(SESSION_REGISTERED_KEY, '1');
-  if (rowId) sessionStorage.setItem(SESSION_ROW_ID_KEY, rowId);
 
   const visitorType = isReturning ? 'returning' : 'new';
   trackVisitorSessionStarted({
@@ -188,6 +183,8 @@ async function registerVisitorSessionOnce() {
   if (isReturning) {
     trackReturningVisitor({ source, landingPage });
   }
+
+  return true;
 }
 
 /**
