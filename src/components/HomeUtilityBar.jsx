@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { trackShare, trackManualRefresh } from '../utils/analytics';
+import { useAuth } from '../hooks/useAuth';
+import AccountMenu from './auth/AccountMenu';
 import ContactLink from './ContactLink';
+
+function UtilitySeparator() {
+  return <span aria-hidden="true" className="text-slate-600">•</span>;
+}
 
 /**
  * Compact homepage utility row: updated timestamp, refresh, share, support.
@@ -8,6 +14,8 @@ import ContactLink from './ContactLink';
  */
 export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStale }) {
   const [shareMessage, setShareMessage] = useState('');
+  const { isConfigured, isAuthenticated, initializing } = useAuth();
+  const showAccount = isConfigured && !initializing && isAuthenticated;
 
   const handleShare = async () => {
     const shareData = {
@@ -44,6 +52,9 @@ export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStal
   const formatTime = (date) =>
     date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
+  const hasContentBeforeRefresh = Boolean(lastRefresh || showAccount);
+  const hasContentBeforeShare = Boolean(lastRefresh || showAccount || onRefresh);
+
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
       {lastRefresh && (
@@ -52,18 +63,26 @@ export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStal
           {isStale && <span className="text-amber-400/90 ml-1">(cached)</span>}
         </span>
       )}
-      {lastRefresh && onRefresh && <span aria-hidden="true" className="text-slate-600">•</span>}
-      {onRefresh && (
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={loading}
-          className="text-slate-400 hover:text-slate-200 disabled:opacity-50 transition-colors cursor-pointer"
-        >
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
+      {showAccount && (
+        <>
+          {lastRefresh && <UtilitySeparator />}
+          <AccountMenu placement="utility" />
+        </>
       )}
-      {(lastRefresh || onRefresh) && <span aria-hidden="true" className="text-slate-600">•</span>}
+      {onRefresh && (
+        <>
+          {hasContentBeforeRefresh && <UtilitySeparator />}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="text-slate-400 hover:text-slate-200 disabled:opacity-50 transition-colors cursor-pointer"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </>
+      )}
+      {hasContentBeforeShare && <UtilitySeparator />}
       <span className="relative">
         <button
           type="button"
@@ -78,7 +97,7 @@ export default function HomeUtilityBar({ lastRefresh, onRefresh, loading, isStal
           </span>
         )}
       </span>
-      <span aria-hidden="true" className="text-slate-600">•</span>
+      <UtilitySeparator />
       <ContactLink className="text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">
         Support
       </ContactLink>

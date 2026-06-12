@@ -2,24 +2,38 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import SignInModal from './SignInModal';
 
-/** Matches homepage header nav chips (Live Alerts, Radar, State dropdown). */
-const NAV_CHIP_CLASS =
-  'text-xs sm:text-sm text-slate-400 hover:bg-slate-500/25 font-medium bg-slate-500/15 px-2.5 py-1 rounded border border-slate-500/30 transition-colors';
+const UTILITY_TRIGGER_CLASS =
+  'inline-flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer';
+
+function AccountIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  );
+}
 
 /**
  * Header account control. Hidden entirely when Supabase isn't configured, so
  * the app degrades to its current anonymous-only behavior with zero UI noise.
  *
  *  - Signed out → "Sign in" on headerTop row (isolated from nav chips).
- *  - Signed in  → "Account" nav chip on nav row + dropdown with Sign out.
+ *  - Signed in  → utility-row control next to "Updated" (homepage) or headerTop fallback.
  *
  * Never gates content — it's a convenience entry point only.
  *
- * @param {'headerTop' | 'nav'} placement
- *   headerTop — sign-in link, top-right row 1 (signed out only)
- *   nav       — account chip, last item in nav row 2 (signed in only)
+ * @param {'headerTop' | 'utility'} placement
+ *   headerTop — sign-in link row 1 when signed out; optional signed-in fallback
+ *   utility   — account control in homepage utility row (signed in only)
+ * @param {boolean} [showSignedInFallback]
+ *   When true with headerTop, render signed-in account on row 1 (pages without utility row).
  */
-export default function AccountMenu({ placement = 'nav' }) {
+export default function AccountMenu({ placement = 'utility', showSignedInFallback = false }) {
   const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [open, setOpen] = useState(false);
@@ -54,7 +68,9 @@ export default function AccountMenu({ placement = 'nav' }) {
     );
   }
 
-  if (placement !== 'nav') return null;
+  const showInUtility = placement === 'utility';
+  const showInHeaderTop = placement === 'headerTop' && showSignedInFallback;
+  if (!showInUtility && !showInHeaderTop) return null;
 
   const email = user?.email || 'Account';
 
@@ -68,11 +84,12 @@ export default function AccountMenu({ placement = 'nav' }) {
       <button
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
-        className={`${NAV_CHIP_CLASS} cursor-pointer`}
+        className={UTILITY_TRIGGER_CLASS}
         title="Account"
         aria-expanded={open}
         aria-haspopup="menu"
       >
+        <AccountIcon />
         Account
       </button>
 
