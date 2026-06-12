@@ -227,10 +227,8 @@ export default function RadarPage() {
     }
   }, [hasLocalFocus, centerOn, navigate]);
 
-  const mapResetViewLabel = hasLocalFocus ? 'Your Area' : 'Full View';
-  const mapResetViewTitle = hasLocalFocus
-    ? 'Return to your searched location on the map'
-    : 'Reset to default US view';
+  const mapResetViewLabel = 'Full View';
+  const mapResetViewTitle = 'Reset to default US view';
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -280,12 +278,26 @@ export default function RadarPage() {
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
 
-        {/* Map + sidebar — two-column on desktop, stacked on mobile (map first) */}
-        <section className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6">
-          {/* Left: sticky map */}
+        {/* Check Location (full width) → radar map below */}
+        <section className="space-y-4">
+          <div
+            id="radar-location-search"
+            className="jump-scroll-target rounded-xl overflow-visible border border-[antiquewhite] bg-[#1a3d2e]"
+          >
+            <ZipCodeSearch
+              stormPhase="active"
+              totalLocationCount={0}
+              onLocationsChange={() => {}}
+              onLocationClick={handleSearchLocationClick}
+              onLocate={handleGpsLocate}
+              onResolveState={setGpsStateCode}
+              onLocationResolved={setHeroLocation}
+            />
+          </div>
+
           <div
             id="radar-map"
-            className="lg:sticky lg:top-4 -mx-3 sm:-mx-4 lg:mx-0 [&_.leaflet-container]:max-lg:!h-[40vh]"
+            className="-mx-3 sm:-mx-4 lg:mx-0 [&_.leaflet-container]:max-lg:!h-[50vh]"
           >
             <StormMap
               weatherData={{}}
@@ -304,24 +316,6 @@ export default function RadarPage() {
               resetViewTitle={mapResetViewTitle}
               resetToDefaultOnClick={!hasLocalFocus}
             />
-          </div>
-
-          {/* Right: Check Location */}
-          <div className="flex flex-col gap-4 lg:gap-5">
-            <div
-              id="radar-location-search"
-              className="jump-scroll-target max-lg:rounded-xl max-lg:overflow-visible max-lg:border max-lg:border-[antiquewhite] max-lg:bg-[#1a3d2e]"
-            >
-              <ZipCodeSearch
-                stormPhase="active"
-                totalLocationCount={0}
-                onLocationsChange={() => {}}
-                onLocationClick={handleSearchLocationClick}
-                onLocate={handleGpsLocate}
-                onResolveState={setGpsStateCode}
-                onLocationResolved={setHeroLocation}
-              />
-            </div>
           </div>
         </section>
 
