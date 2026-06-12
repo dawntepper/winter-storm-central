@@ -758,9 +758,12 @@ export default function ZipCodeSearch({
   const submitButtonClass = isCompact
     ? 'px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shrink-0'
     : 'px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition-colors cursor-pointer';
+  const fieldBorderClass = 'bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500 transition-colors';
+  const fieldSizeClass = isCompact ? 'px-2.5 py-1.5 h-9' : 'px-3 py-2 h-10';
+  const fieldClass = `${fieldBorderClass} ${fieldSizeClass}`;
   const inputClass = isCompact
-    ? 'bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors'
-    : 'flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 transition-colors';
+    ? `${fieldClass} placeholder-slate-500`
+    : `flex-1 ${fieldClass} placeholder-slate-500`;
 
   const locationResult = currentLocationData && !isCardDismissed ? (
     <div className={isCompact ? 'mt-2 pt-2 border-t border-slate-700/50' : 'mt-3 pt-3 border-t border-slate-700/50'}>
@@ -832,7 +835,7 @@ export default function ZipCodeSearch({
                 closeCityDropdown();
                 setError(null);
               }}
-              className={`${isCompact ? 'w-36' : 'flex-1'} bg-slate-900 border border-slate-600 rounded-lg ${isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2'} text-white text-sm focus:outline-none focus:border-sky-500 transition-colors`}
+              className={`${isCompact ? 'w-36' : 'flex-1'} ${fieldClass} cursor-pointer`}
             >
               <option value="">Select State</option>
               {STATE_OPTIONS.map(([code, name]) => (
@@ -841,8 +844,8 @@ export default function ZipCodeSearch({
             </select>
             <div className={`relative ${isCompact ? 'w-40 sm:w-48' : 'flex-1'} min-w-0 overflow-visible`} ref={cityDropdownRef}>
               <div
-                className={`flex items-center gap-1 w-full bg-slate-900 border border-slate-600 rounded-lg ${isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2'} text-white text-sm focus-within:border-sky-500 transition-colors ${
-                  !selectedState || catalogLoading ? 'opacity-50' : ''
+                className={`flex items-center gap-1 w-full ${fieldClass} focus-within:border-sky-500 ${
+                  !selectedState || catalogLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
                 <input
@@ -872,7 +875,7 @@ export default function ZipCodeSearch({
                   disabled={!selectedState || catalogLoading}
                   placeholder={catalogLoading ? 'Loading cities…' : 'Search city…'}
                   aria-label="City name"
-                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none disabled:cursor-not-allowed"
+                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-white text-sm placeholder-slate-500 focus:outline-none cursor-text disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -980,7 +983,12 @@ export default function ZipCodeSearch({
     );
   }
 
-  const radarCardClass = 'rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 shadow-2xl';
+  const radarCardClass = `rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl ${
+    cityDropdownOpen ? 'overflow-visible relative z-10' : 'overflow-hidden'
+  }`;
+  const defaultCardClass = cityDropdownOpen
+    ? 'rounded-lg border border-slate-600 shadow-lg overflow-visible relative z-10'
+    : 'rounded-lg border border-slate-600 shadow-lg';
   const accordionHeaderClass = isRadar
     ? 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-800 to-slate-800/80 hover:from-slate-700 hover:to-slate-700/80 transition-all'
     : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all';
@@ -990,7 +998,7 @@ export default function ZipCodeSearch({
 
   return (
     <div className={isRadar ? 'space-y-2' : 'space-y-4'} ref={panelRef}>
-      <div className={isRadar ? radarCardClass : 'rounded-lg border border-slate-600 shadow-lg'}>
+      <div className={isRadar ? radarCardClass : defaultCardClass}>
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
