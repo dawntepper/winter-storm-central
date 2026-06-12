@@ -657,7 +657,10 @@ function bucketSearchSourcePage(sourcePage) {
     if (bucket === 'County Page' && normalized.includes('county')) return bucket;
   }
 
-  // State slugs from CheckAlertsNearYou (e.g. "colorado", "illinois")
+  // State slugs (legacy) and merged-card search sources
+  if (/^state_search_(zip|city|county)$/.test(normalized)) {
+    return 'State Page';
+  }
   if (/^[a-z][a-z-]+$/.test(normalized) && !normalized.includes('page')) {
     return 'State Page';
   }
@@ -1227,6 +1230,11 @@ const STATE_PAGE_FORECAST_SOURCES = new Set([
   'popular_forecasts',
   'popular_forecasts_section',
   'state_alert_page',
+  'state_forecast_list',
+  'state_forecast_cta',
+  'state_search_zip',
+  'state_search_city',
+  'state_search_county',
   'state-page-widget',
   'state-page-search',
 ]);

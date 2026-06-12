@@ -14,8 +14,7 @@ import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
 import EssentialsCard from './EssentialsCard';
-import StateForecastWidget, { PopularForecastsSection } from './StateForecastWidget';
-import CheckAlertsNearYou from './CheckAlertsNearYou';
+import LocalForecastsAndAlerts from './LocalForecastsAndAlerts';
 import AlertDetailModal from './AlertDetailModal';
 import AlertsByCategory from './AlertsByCategory';
 import PageHeaderNav from './PageHeaderNav';
@@ -495,11 +494,6 @@ export default function StateAlertsPage() {
               stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
               currentStateSlug={stateSlug}
             />
-            <PopularForecastsSection
-              stateSlug={stateSlug}
-              stateName={stateData.name}
-              stateCode={stateAbbr}
-            />
           </section>
 
           {/* RIGHT COLUMN: Storms + Alerts — scrolls with page */}
@@ -537,17 +531,10 @@ export default function StateAlertsPage() {
               )}
             </section>
 
-            {/* Forecast launcher — directly below alert groups */}
-            <StateForecastWidget
+            <LocalForecastsAndAlerts
               stateSlug={stateSlug}
               stateName={stateData.name}
               stateCode={stateAbbr}
-            />
-
-            <CheckAlertsNearYou
-              stateCode={stateAbbr}
-              stateSlug={stateSlug}
-              stateName={stateData.name}
               allAlerts={alertsData?.allAlerts || []}
               alertsLoading={alertsLoading}
               onLocationFocus={handleLocationFocus}

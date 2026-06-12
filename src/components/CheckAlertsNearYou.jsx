@@ -34,10 +34,17 @@ function severityClasses(severity) {
 const selectClass =
   'w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500 cursor-pointer disabled:cursor-not-allowed';
 
+function searchSourcePage(matchType) {
+  if (matchType === 'zip') return FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP;
+  if (matchType === 'city') return FORECAST_SOURCE_PAGES.STATE_SEARCH_CITY;
+  if (matchType === 'county') return FORECAST_SOURCE_PAGES.STATE_SEARCH_COUNTY;
+  return null;
+}
+
 /**
- * ZIP + county/city dropdown search for state alert pages (state-scoped).
+ * ZIP + county/city search controls and results — embeddable in LocalForecastsAndAlerts.
  */
-export default function CheckAlertsNearYou({
+export function LocationSearchPanel({
   stateCode,
   stateSlug,
   stateName,
@@ -57,6 +64,7 @@ export default function CheckAlertsNearYou({
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [lastMatchType, setLastMatchType] = useState(null);
   const [countyAlerts, setCountyAlerts] = useState([]);
   const [nearbyCities, setNearbyCities] = useState([]);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -104,6 +112,7 @@ export default function CheckAlertsNearYou({
 
   const applyResult = async (resolved, matchType, queryLabel) => {
     setResult(resolved);
+    setLastMatchType(matchType);
     setCountyAlerts(resolved.alerts || []);
     const linked = resolved.county ? await getCitiesForCounty(resolved.county.id) : [];
     setNearbyCities(linked);
@@ -129,7 +138,7 @@ export default function CheckAlertsNearYou({
       cityId: resolved.city?.id,
       countyId: resolved.county?.id,
       zipCode: resolved.zip,
-      pageContext: stateSlug,
+      pageContext: searchSourcePage(matchType) || stateSlug,
       resultCount: (resolved.alerts || []).length,
       success: true,
       resolvedType: matchType,
@@ -180,7 +189,7 @@ export default function CheckAlertsNearYou({
         await trackLocationSearchNotFound({
           query: trimmed,
           stateCode,
-          pageContext: stateSlug,
+          pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP,
         });
         return;
       }
@@ -225,7 +234,7 @@ export default function CheckAlertsNearYou({
         await trackLocationSearchNotFound({
           query: selectedCounty?.name || String(countyId),
           stateCode,
-          pageContext: stateSlug,
+          pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_COUNTY,
         });
         return;
       }
@@ -273,7 +282,7 @@ export default function CheckAlertsNearYou({
         await trackLocationSearchNotFound({
           query: trimmed,
           stateCode,
-          pageContext: stateSlug,
+          pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_CITY,
         });
         return;
       }
@@ -318,16 +327,8 @@ export default function CheckAlertsNearYou({
     : stateSlug;
 
   return (
-    <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-      <h2 className="text-base font-semibold text-white mb-1">
-        <span aria-hidden="true" className="mr-1">🚨</span>
-        Check Alerts Near You
-      </h2>
-      <p className="text-xs text-slate-500 mb-4">
-        Search by ZIP, county, or city in {stateName}
-      </p>
-
-      <div className="space-y-3 mb-4">
+    <>
+      <div className="space-y-3">
         <form onSubmit={handleZipSubmit} className="space-y-2">
           <label htmlFor="zip-search" className="block text-xs font-medium text-slate-400">
             ZIP code
@@ -510,7 +511,7 @@ export default function CheckAlertsNearYou({
       </div>
 
       {result?.county && (
-        <div className="space-y-4 pt-4 border-t border-slate-700">
+        <div className="space-y-4 pt-4 mt-4 border-t border-slate-700">
           <div>
             <p className="text-sm text-slate-400">Showing alerts for</p>
             <p className="text-base font-semibold text-white mt-0.5">
@@ -601,6 +602,7 @@ export default function CheckAlertsNearYou({
                 setSelectedCountyId('');
                 setCityQuery('');
                 setResult(null);
+                setLastMatchType(null);
                 setCountyAlerts([]);
                 setNearbyCities([]);
                 setError('');
@@ -660,7 +662,9 @@ export default function CheckAlertsNearYou({
                   resolvedStateSlug,
                   result.zip ? 'zip' : result.city ? 'city' : 'state-default',
                   {
-                    sourcePage: FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD,
+                    sourcePage:
+                      searchSourcePage(lastMatchType) ||
+                      FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD,
                     ...(result.city
                       ? { city: result.city.name, citySlug: result.city.slug }
                       : {}),
@@ -674,6 +678,6 @@ export default function CheckAlertsNearYou({
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

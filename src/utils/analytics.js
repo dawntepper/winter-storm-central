@@ -1272,10 +1272,16 @@ export function trackForecastLocationChanged(source, { stateCode } = {}) {
 
 /** source_page values for forecast clicks on state alert surfaces. */
 export const FORECAST_SOURCE_PAGES = {
+  /** @deprecated Legacy — rolled up with state_forecast_* in admin */
   FORECASTS_CONDITIONS_CARD: 'forecasts_conditions_card',
   POPULAR_FORECASTS: 'popular_forecasts',
   CITY_PAGE: 'city_page',
   STATE_ALERT_PAGE: 'state_alert_page',
+  STATE_FORECAST_LIST: 'state_forecast_list',
+  STATE_FORECAST_CTA: 'state_forecast_cta',
+  STATE_SEARCH_ZIP: 'state_search_zip',
+  STATE_SEARCH_CITY: 'state_search_city',
+  STATE_SEARCH_COUNTY: 'state_search_county',
 };
 
 /**
