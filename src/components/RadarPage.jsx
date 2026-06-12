@@ -3,20 +3,21 @@
  * SEO-optimized page for "weather radar" searches
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap, { RADAR_COLOR_SCHEMES } from './StormMap';
+import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
+import CheckAlertsNearYou from './CheckAlertsNearYou';
 import { setHomepageMetaTags } from '../data/homepageMeta';
-import { fetchCountyGeoJSON } from '../services/geoLocationService';
-import { ABBR_TO_SLUG } from '../data/stateConfig';
+import { fetchCountyGeoJSON, fetchCountyHighlight } from '../services/geoLocationService';
+import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
-import { trackRadarTypeChange, trackRadarColorSchemeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { trackRadarTypeChange, trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -157,7 +158,6 @@ export default function RadarPage() {
 
   // Radar controls
   const [radarType, setRadarType] = useState('precipitation');
-  const [colorScheme, setColorScheme] = useState(4);
   const [showInfo, setShowInfo] = useState(false);
   const [heroLocation, setHeroLocation] = useState(null);
 
@@ -168,11 +168,61 @@ export default function RadarPage() {
   const [gpsStateCode, setGpsStateCode] = useState(null);
   // "Your area" county polygon (GeoJSON Feature) once GPS coords resolve.
   const [userArea, setUserArea] = useState(null);
+  // Map focus from Check Alerts Near You county/city search.
+  const [searchFocus, setSearchFocus] = useState(null);
+  const areaReqRef = useRef(0);
+
+  const effectiveStateCode = gpsStateCode || heroLocation?.region || null;
+  const effectiveStateSlug = effectiveStateCode ? ABBR_TO_SLUG[effectiveStateCode] : null;
+  const effectiveStateName = effectiveStateCode ? STATE_NAMES[effectiveStateCode] : null;
 
   const handleGpsLocate = (c) => {
+    areaReqRef.current += 1;
+    setSearchFocus(null);
     setGpsCenter(c);
     fetchCountyGeoJSON(c.lat, c.lon).then(setUserArea);
   };
+
+  const handleAlertsLocationFocus = useCallback(({ lat, lon, zoom = 8, county }) => {
+    const reqId = ++areaReqRef.current;
+    const interimLat = county?.lat ?? lat;
+    const interimLon = county?.lon ?? lon;
+
+    setSearchFocus({
+      centerOn:
+        interimLat != null && interimLon != null
+          ? { lat: interimLat, lon: interimLon, zoom, id: Date.now() }
+          : null,
+      highlightArea: null,
+    });
+
+    fetchCountyHighlight(county ?? { lat: interimLat, lon: interimLon }).then(
+      ({ feature, lat: cLat, lon: cLon }) => {
+        if (reqId !== areaReqRef.current) return;
+        setSearchFocus((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            ...(cLat != null && cLon != null
+              ? { centerOn: { lat: cLat, lon: cLon, zoom, id: Date.now() } }
+              : {}),
+            highlightArea: feature,
+          };
+        });
+      },
+    );
+
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        document.querySelector('#radar-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
+
+  const handleAlertsClearFocus = useCallback(() => {
+    areaReqRef.current += 1;
+    setSearchFocus(null);
+  }, []);
 
   const handleChangeLocation = () => {
     window.dispatchEvent(new CustomEvent('checkLocationExpand'));
@@ -198,6 +248,9 @@ export default function RadarPage() {
     const zoom = Number.isFinite(zoomParam) ? zoomParam : 8;
     return { id: `radar-${lat}-${lon}`, lat, lon, zoom };
   }, [searchParams]);
+
+  const displayCenterOn = searchFocus?.centerOn ?? gpsCenter ?? centerOn;
+  const displayHighlightArea = searchFocus?.highlightArea ?? userArea;
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -245,13 +298,13 @@ export default function RadarPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
+      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
 
-        {/* Radar Controls — info help sits with type/scheme controls */}
-        <section>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            {/* Layer Type */}
-            <div className="flex-1">
+        {/* Map + sidebar — two-column on desktop, stacked on mobile (map first) */}
+        <section className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,420px)] xl:grid-cols-[1fr_minmax(0,480px)] gap-4 lg:gap-6">
+          {/* Left: radar controls + sticky map */}
+          <div className="space-y-3 sm:space-y-4">
+            <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Radar Type</label>
                 <button
@@ -274,7 +327,7 @@ export default function RadarPage() {
                 {LAYER_TYPES.map(type => (
                   <button
                     key={type.id}
-                    onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: gpsStateCode }); }}
+                    onClick={() => { setRadarType(type.id); trackRadarTypeChange(type.id, { stateCode: effectiveStateCode }); }}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
                       radarType === type.id
                         ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
@@ -286,64 +339,72 @@ export default function RadarPage() {
                   </button>
                 ))}
               </div>
+              {showInfo && (
+                <div className="mt-2 p-3 bg-slate-800/60 rounded-lg border border-slate-700">
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Live precipitation and infrared radar from NOAA, refreshing about every 5 minutes.
+                    NWS alert overlays refresh every 10 minutes (every 2 minutes during urgent warnings).
+                    Toggle radar on the map, zoom for local detail, or switch layers above.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Color Scheme - only for precipitation */}
-            {radarType === 'precipitation' && (
-              <div className="sm:w-56">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Color Scheme</label>
-                <select
-                  value={String(colorScheme)}
-                  onChange={(e) => { const val = Number(e.target.value); setColorScheme(val); trackRadarColorSchemeChange(RADAR_COLOR_SCHEMES[val]); }}
-                  className="w-full px-3 py-2 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-sm cursor-pointer focus:outline-none focus:border-sky-500"
-                >
-                  {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div
+              id="radar-map"
+              className="lg:sticky lg:top-4 -mx-3 sm:-mx-4 lg:mx-0 [&_.leaflet-container]:max-lg:!h-[40vh]"
+            >
+              <StormMap
+                weatherData={{}}
+                stormPhase="active"
+                userLocations={[]}
+                alerts={mapAlerts}
+                isHero
+                radarLayerType={radarType}
+                radarColorScheme={4}
+                centerOn={displayCenterOn}
+                selectedStateCode={effectiveStateCode}
+                highlightArea={displayHighlightArea}
+                onAreaClick={handleAreaClick}
+                onResetView={searchFocus ? handleAlertsClearFocus : undefined}
+                showResetView={Boolean(searchFocus)}
+                resetViewLabel="Clear Search"
+                resetViewTitle="Return to your location view"
+                resetToDefaultOnClick={false}
+              />
+            </div>
           </div>
 
-          {showInfo && (
-            <div className="mt-2 p-3 bg-slate-800/60 rounded-lg border border-slate-700">
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Live precipitation and infrared radar from NOAA, refreshing about every 5 minutes.
-                NWS alert overlays refresh every 10 minutes (every 2 minutes during urgent warnings).
-                Toggle radar on the map, zoom for local detail, or switch layers above.
-              </p>
+          {/* Right: location search + state-scoped alert lookup */}
+          <div className="flex flex-col gap-4 lg:gap-5">
+            <div
+              id="radar-location-search"
+              className="jump-scroll-target rounded-xl overflow-visible"
+              style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}
+            >
+              <ZipCodeSearch
+                stormPhase="active"
+                totalLocationCount={0}
+                onLocationsChange={() => {}}
+                onLocationClick={() => {}}
+                onLocate={handleGpsLocate}
+                onResolveState={setGpsStateCode}
+                onLocationResolved={setHeroLocation}
+              />
             </div>
-          )}
-        </section>
 
-        {/* Map — primary focus, no duplicate state dropdown in map chrome */}
-        <section>
-          <StormMap
-            weatherData={{}}
-            stormPhase="active"
-            userLocations={[]}
-            alerts={mapAlerts}
-            isHero
-            radarLayerType={radarType}
-            radarColorScheme={colorScheme}
-            centerOn={gpsCenter || centerOn}
-            selectedStateCode={gpsStateCode}
-            highlightArea={userArea}
-            onAreaClick={handleAreaClick}
-          />
-        </section>
-
-        {/* Collapsed location picker — expands when hero Change Location is clicked */}
-        <section id="radar-location-search" className="jump-scroll-target rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
-          <ZipCodeSearch
-            stormPhase="active"
-            totalLocationCount={0}
-            onLocationsChange={() => {}}
-            onLocationClick={() => {}}
-            onLocate={handleGpsLocate}
-            onResolveState={setGpsStateCode}
-            onLocationResolved={setHeroLocation}
-          />
+            {effectiveStateCode && effectiveStateSlug && effectiveStateName && (
+              <CheckAlertsNearYou
+                stateCode={effectiveStateCode}
+                stateSlug={effectiveStateSlug}
+                stateName={effectiveStateName}
+                allAlerts={alertsData?.allAlerts || []}
+                alertsLoading={alertsLoading}
+                onLocationFocus={handleAlertsLocationFocus}
+                onClearFocus={handleAlertsClearFocus}
+              />
+            )}
+          </div>
         </section>
 
         {/* Active Storms — below radar utility content */}
