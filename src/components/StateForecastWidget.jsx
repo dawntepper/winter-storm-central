@@ -7,8 +7,7 @@ import {
   trackForecastLinkClick,
   trackForecastStateClick,
 } from '../utils/analytics';
-
-const GENERIC_FORECAST_ICON = '☀️';
+import { FORECAST_NAV_ICON } from '../utils/getForecastIcon';
 
 const forecastCardClassName =
   'group flex items-center gap-3 w-full px-4 py-3 bg-slate-900/60 hover:bg-sky-500/15 border border-slate-700 hover:border-sky-400/70 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/15 cursor-pointer text-sm text-slate-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60';
@@ -19,14 +18,16 @@ const forecastCardClassName =
 export function ForecastDestinationCard({
   to,
   label,
-  icon = GENERIC_FORECAST_ICON,
+  icon = FORECAST_NAV_ICON,
   onClick,
 }) {
   return (
     <Link to={to} onClick={onClick} className={forecastCardClassName}>
-      <span className="text-xl flex-shrink-0" aria-hidden="true">
-        {icon}
-      </span>
+      {icon ? (
+        <span className="text-xl flex-shrink-0" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
       <span className="flex-1 min-w-0 font-semibold truncate">{label}</span>
       <span
         aria-hidden="true"

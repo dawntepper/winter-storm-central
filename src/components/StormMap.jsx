@@ -8,6 +8,7 @@ import { getCitySlugForLocation } from '../utils/cityLookup';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
+import { getForecastIcon } from '../utils/getForecastIcon';
 import {
   trackRadarToggle,
   trackRadarOpened,
@@ -152,25 +153,6 @@ const glowColors = {
   ice: 'rgba(232, 121, 249, 0.4)',
   mixed: 'rgba(167, 139, 250, 0.4)',
   none: 'rgba(100, 116, 139, 0.3)'
-};
-
-// Weather condition to icon mapping
-const getWeatherIcon = (condition) => {
-  if (!condition) return '⛅';
-  const c = condition.toLowerCase();
-  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
-  if (c.includes('cold') || c.includes('freez')) return '🥶';
-  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
-  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
-  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
-  if (c.includes('wind') || c.includes('breez')) return '💨';
-  if (c.includes('cloudy') || c.includes('overcast')) {
-    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
-    return '☁️';
-  }
-  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
-  if (c.includes('partly')) return '⛅';
-  return '⛅';
 };
 
 // Create custom label icon with zoom-aware offset
@@ -1821,7 +1803,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-lg">{getWeatherIcon(hoveredUserLocation.conditions?.shortForecast)}</span>
+                <span className="text-lg">{getForecastIcon(hoveredUserLocation.conditions?.shortForecast)}</span>
                 <div>
                   {(() => {
                     const m = (hoveredUserLocation.name || '').match(/^(.*?),\s*([A-Z]{2})$/);

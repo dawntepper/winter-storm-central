@@ -19,6 +19,9 @@ const devGeoApi = () => ({
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), devGeoApi()],
+  test: {
+    globals: false,
+  },
   server: {
     // Proxy admin + other Netlify functions when running `netlify dev` on :8888.
     // Use `netlify dev` for storm admin DB saves — `npm run dev` alone cannot serve functions.

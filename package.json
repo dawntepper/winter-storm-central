@@ -9,6 +9,7 @@
     "build:app": "vite build",
     "build:seo": "node scripts/generate-state-pages.js && node scripts/generate-city-pages.js && node scripts/generate-storm-pages.js && node scripts/generate-forecast-pages.js && node scripts/generate-static-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
+    "test": "vitest run",
     "preview": "vite preview",
     "test:dedup": "node scripts/test-dedup.js",
     "generate-favicons": "node scripts/generate-favicons.js",
@@ -49,6 +50,7 @@
     "tailwindcss": "^4.1.18",
     "topojson-client": "^3.1.0",
     "us-atlas": "^3.0.1",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^3.2.4"
   }
 }

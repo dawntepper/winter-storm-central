@@ -25,6 +25,7 @@ import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
 import { trackLocationSearch } from './services/locationCatalogService';
 import { setHomepageMetaTags } from './data/homepageMeta';
+import { getForecastIcon } from './utils/getForecastIcon';
 import {
   startSessionTracking,
   stopSessionTracking,
@@ -47,34 +48,6 @@ import {
 
 const SEARCH_LOCATIONS_KEY = 'winterStorm_userLocations';
 const ALERT_LOCATIONS_KEY = 'winterStorm_alertLocations';
-
-// Weather condition to icon mapping
-const getWeatherIcon = (condition) => {
-  if (!condition) return '⛅';
-  const c = condition.toLowerCase();
-
-  // Snow
-  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
-  // Thunderstorms
-  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
-  // Rain
-  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
-  // Fog/Mist
-  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
-  // Windy
-  if (c.includes('wind') || c.includes('breez')) return '💨';
-  // Cloudy
-  if (c.includes('cloudy') || c.includes('overcast')) {
-    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
-    return '☁️';
-  }
-  // Clear/Sunny
-  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
-  // Partly conditions
-  if (c.includes('partly')) return '⛅';
-
-  return '⛅'; // Default
-};
 
 function LoadingState() {
   return (
@@ -739,7 +712,7 @@ export default function App() {
             onClick={() => handleViewedLocationClick(loc)}
             className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
           >
-            <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+            <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
             <span className="truncate">{loc.name}</span>
           </button>
           <span className="text-slate-500 flex-shrink-0">•</span>
@@ -1002,7 +975,7 @@ export default function App() {
                               onClick={() => handleViewedLocationClick(loc)}
                               className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                             >
-                              <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                              <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
                               <span className="truncate">{loc.name}</span>
                             </button>
                             <span className="text-slate-500 flex-shrink-0">•</span>
@@ -1055,7 +1028,7 @@ export default function App() {
                               onClick={() => handleViewedLocationClick(loc)}
                               className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                             >
-                              <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                              <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
                               <span className="truncate">{loc.name}</span>
                             </button>
                             <span className="text-slate-500 flex-shrink-0">•</span>
@@ -1253,7 +1226,7 @@ export default function App() {
                                 onClick={() => handleViewedLocationClick(loc)}
                                 className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                               >
-                                <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                                <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
                                 <span className="truncate">{loc.name}</span>
                               </button>
                               <span className="text-slate-500 flex-shrink-0">•</span>
@@ -1304,7 +1277,7 @@ export default function App() {
                                 onClick={() => handleViewedLocationClick(loc)}
                                 className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
                               >
-                                <span className="flex-shrink-0">{getWeatherIcon(loc.conditions?.shortForecast)}</span>
+                                <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
                                 <span className="truncate">{loc.name}</span>
                               </button>
                               <span className="text-slate-500 flex-shrink-0">•</span>

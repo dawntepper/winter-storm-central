@@ -8,6 +8,7 @@ import {
   trackLocationSearchNotFound,
 } from '../services/locationCatalogService';
 import { reverseGeocode } from '../services/geoLocationService';
+import { getForecastIcon } from '../utils/getForecastIcon';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -205,32 +206,13 @@ const dangerBadges = {
   safe: null
 };
 
-// Weather icon helper
-const getWeatherIcon = (condition) => {
-  if (!condition) return '⛅';
-  const c = condition.toLowerCase();
-  if (c.includes('snow') || c.includes('flurr') || c.includes('blizzard')) return '❄️';
-  if (c.includes('cold') || c.includes('freez')) return '🥶';
-  if (c.includes('thunder') || c.includes('tstorm') || c.includes('storm')) return '⛈️';
-  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧️';
-  if (c.includes('fog') || c.includes('mist') || c.includes('haz')) return '🌫️';
-  if (c.includes('wind') || c.includes('breez')) return '💨';
-  if (c.includes('cloudy') || c.includes('overcast')) {
-    if (c.includes('partly') || c.includes('mostly sunny')) return '⛅';
-    return '☁️';
-  }
-  if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return '☀️';
-  if (c.includes('partly')) return '⛅';
-  return '⛅';
-};
-
 function UserLocationCard({ data, isOnMap, onToggleMap, onRemove, onDismiss, stormPhase }) {
   return (
     <div className="rounded-xl px-4 py-3 border border-slate-700 bg-slate-800">
       {/* Single-line layout: City • Alert • Forecast • Add to Map • X */}
       <div className="flex items-center gap-3 overflow-x-auto">
         <span className="font-semibold text-white whitespace-nowrap">
-          {getWeatherIcon(data.conditions?.shortForecast)} {data.name}
+          {getForecastIcon(data.conditions?.shortForecast)} {data.name}
         </span>
         <span className="text-slate-500">•</span>
         {data.alertInfo ? (
@@ -834,7 +816,7 @@ export default function ZipCodeSearch({
           }}
           className="font-semibold text-white whitespace-nowrap hover:text-emerald-300 transition-colors cursor-pointer"
         >
-          {getWeatherIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
+          {getForecastIcon(currentLocationData.conditions?.shortForecast)} {currentLocationData.name}
         </button>
         <span className="text-slate-500">•</span>
         {currentLocationData.alertInfo ? (

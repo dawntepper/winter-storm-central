@@ -23,6 +23,7 @@ import { getForecastForCoords } from '../services/forecastService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { ForecastHourly, ForecastDaily } from './ForecastSections';
 import { trackForecastLinkClick } from '../utils/analytics';
+import { getForecastIcon } from '../utils/getForecastIcon';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import AlertSignupBar from './AlertSignupBar';
@@ -641,6 +642,8 @@ function CityForecastSection({ city }) {
 
   if (!forecast) return null;
 
+  const forecastLinkIcon = getForecastIcon(forecast?.current?.shortForecast);
+
   return (
     <section className="space-y-4">
       <ForecastHourly
@@ -655,7 +658,11 @@ function CityForecastSection({ city }) {
           onClick={() => trackForecastLinkClick('city-page', city.state_slug, 'city')}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/50 hover:border-sky-400/70 text-sky-300 hover:text-sky-200 text-sm font-semibold rounded-lg transition-all duration-150 hover:shadow-md hover:shadow-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
         >
-          <span aria-hidden="true" className="text-base">🌤️</span>
+          {forecastLinkIcon ? (
+            <span aria-hidden="true" className="text-base">
+              {forecastLinkIcon}
+            </span>
+          ) : null}
           View full forecast for {city.city}
           <span aria-hidden="true">→</span>
         </Link>
