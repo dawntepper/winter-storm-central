@@ -477,6 +477,23 @@ function ErrorBanner({ error, onDismiss }) {
   );
 }
 
+function StorageNotice({ message, onDismiss }) {
+  if (!message) return null;
+  return (
+    <div className="bg-amber-900/20 border border-amber-500/40 rounded-lg p-3 text-amber-200 text-sm flex items-start justify-between gap-3">
+      <div>
+        <strong className="text-amber-100">History storage unavailable.</strong>{' '}
+        {message} You can still generate summaries below; they just won&apos;t be saved to history until Blobs is configured.
+      </div>
+      {onDismiss && (
+        <button onClick={onDismiss} className="text-amber-300 hover:text-white cursor-pointer flex-shrink-0">
+          Dismiss
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AdminWeatherSummaryInner() {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || '');
   const [index, setIndex] = useState(null);
@@ -486,6 +503,7 @@ function AdminWeatherSummaryInner() {
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState(null);
+  const [storageNotice, setStorageNotice] = useState(null);
   const [emptyResult, setEmptyResult] = useState(null);
 
   const clearTokenAndReprompt = () => {
@@ -506,6 +524,9 @@ function AdminWeatherSummaryInner() {
       return;
     }
     setIndex(json.index);
+    if (json.storage_unavailable) {
+      setStorageNotice(json.storage_error || 'Netlify Blobs is not configured or returned an auth error.');
+    }
   };
 
   const fetchSummary = async (date) => {
@@ -519,6 +540,10 @@ function AdminWeatherSummaryInner() {
     if (!ok) {
       if (status === 401) clearTokenAndReprompt();
       else setError(json?.error || `HTTP ${status}`);
+      return;
+    }
+    if (json.storage_unavailable || !json.summary) {
+      setStorageNotice(json.storage_error || 'Could not load that summary from history storage.');
       return;
     }
     setCurrentSummary(json.summary);
@@ -543,9 +568,9 @@ function AdminWeatherSummaryInner() {
     setCurrentSummary(json.summary);
     setSelectedDate(json.summary.date);
     if (json.storage_error) {
-      setError(`Saved locally but storage warned: ${json.storage_error}`);
+      setStorageNotice(json.storage_error);
     }
-    // Refresh history so the new entry appears
+    // Refresh history so the new entry appears (no-op if storage is down)
     fetchIndex();
   };
 
@@ -592,6 +617,7 @@ function AdminWeatherSummaryInner() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
+        <StorageNotice message={storageNotice} onDismiss={() => setStorageNotice(null)} />
 
         <GenerateForm token={token} generating={generating} onGenerate={handleGenerate} />
 

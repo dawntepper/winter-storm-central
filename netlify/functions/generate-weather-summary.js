@@ -13,6 +13,11 @@
  *   ANTHROPIC_API_KEY     — Anthropic API key (sk-ant-...)
  *   ADMIN_FUNCTION_TOKEN  — shared secret; frontend sends as x-admin-token
  *
+ * Optional (history persistence via Netlify Blobs):
+ *   NETLIFY_BLOBS_TOKEN   — Personal Access Token with Blobs scope (app.netlify.com/user/applications)
+ *   NETLIFY_SITE_ID       — auto-injected on Netlify; only needed for local `netlify dev` without Blobs context
+ *   Without valid Blobs auth, generation still works — only history save/load is skipped.
+ *
  * Request body (JSON):
  *   {
  *     "tone_preset":   "standard" | "urgent" | "conversational",
@@ -249,16 +254,25 @@ async function fetchActiveAlerts() {
 // ============================================================================
 
 function summariesStore() {
-  // Functions v1 (exports.handler) don't get BLOBS_CONTEXT auto-injected by
-  // Netlify's runtime, and `netlify dev` doesn't inject it either. Fall back
-  // to explicit credentials when both are present — matches the pattern in
-  // lib/dedup-store.js so local dev + prod both work.
+  // Use explicit credentials only when NETLIFY_BLOBS_TOKEN is set. Netlify
+  // auto-injects SITE_ID in production; pairing it with NETLIFY_API_TOKEN (a
+  // deploy/build token without Blobs scope) causes 401 on every blob read.
+  // When no Blobs PAT is configured, let the SDK auto-detect deploy context.
+  const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
   const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN;
-  if (siteID && token) {
-    return getStore({ name: BLOB_STORE_NAME, siteID, token });
+  if (blobsToken && siteID) {
+    return getStore({ name: BLOB_STORE_NAME, siteID, token: blobsToken });
   }
   return getStore(BLOB_STORE_NAME);
+}
+
+function storageErrorMessage(err) {
+  return err?.message || String(err);
+}
+
+function isStorageUnavailableError(err) {
+  const msg = storageErrorMessage(err);
+  return /401|403|MissingBlobsEnvironment|Unauthorized|internal error/i.test(msg);
 }
 
 function summaryKeyForDate(date) {
@@ -542,7 +556,25 @@ async function handleGet(event) {
     const index = await readIndex();
     return jsonResponse(200, { ok: true, index });
   } catch (err) {
-    return jsonResponse(500, { error: `Storage read failed: ${err.message}` });
+    const storageError = storageErrorMessage(err);
+    // History is optional — degrade gracefully so generation still works.
+    if (!date) {
+      return jsonResponse(200, {
+        ok: true,
+        index: emptyIndex(),
+        storage_unavailable: true,
+        storage_error: storageError,
+      });
+    }
+    if (isStorageUnavailableError(err)) {
+      return jsonResponse(200, {
+        ok: true,
+        summary: null,
+        storage_unavailable: true,
+        storage_error: storageError,
+      });
+    }
+    return jsonResponse(500, { error: `Storage read failed: ${storageError}` });
   }
 }
 
@@ -575,7 +607,15 @@ async function handlePatch(event) {
   try {
     summary = await readSummary(date);
   } catch (err) {
-    return jsonResponse(500, { error: `Storage read failed: ${err.message}` });
+    const storageError = storageErrorMessage(err);
+    if (isStorageUnavailableError(err)) {
+      return jsonResponse(503, {
+        error: 'Summary history storage is unavailable. Set NETLIFY_BLOBS_TOKEN in Netlify env vars.',
+        storage_unavailable: true,
+        storage_error: storageError,
+      });
+    }
+    return jsonResponse(500, { error: `Storage read failed: ${storageError}` });
   }
   if (!summary) {
     return jsonResponse(404, { error: `No summary stored for ${date}` });
