@@ -314,7 +314,6 @@ export default function RadarPage() {
               onResetView={handleMapResetView}
               resetViewLabel={mapResetViewLabel}
               resetViewTitle={mapResetViewTitle}
-              resetToDefaultOnClick={!hasLocalFocus}
             />
           </div>
         </section>
