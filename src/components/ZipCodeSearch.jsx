@@ -811,7 +811,7 @@ export default function ZipCodeSearch({
                       return;
                     }
                     if (selectedState && !catalogLoading && catalogCities.length > 0) {
-                      setCityDropdownShowAll(!cityQuery.trim());
+                      setCityDropdownShowAll(true);
                       setCityDropdownOpen(true);
                     }
                   }}

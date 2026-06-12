@@ -392,7 +392,7 @@ export default function CheckAlertsNearYou({
                     return;
                   }
                   if (!catalogLoading && !searching && cities.length > 0) {
-                    setCityDropdownShowAll(!cityQuery.trim());
+                    setCityDropdownShowAll(true);
                     setCityDropdownOpen(true);
                   }
                 }}
