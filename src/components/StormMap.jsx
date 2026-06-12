@@ -1432,7 +1432,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               <StateAlertsDropdown
                 source={stateNavSource}
                 currentStateSlug={currentStateSlug}
-                className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors flex-shrink-0 max-w-[9.5rem] sm:max-w-none truncate"
+                className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
               />
             )}
           </div>
