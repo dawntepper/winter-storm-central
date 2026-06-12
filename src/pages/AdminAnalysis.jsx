@@ -14,6 +14,7 @@ import CollapsibleAnalysisSection, {
 } from '../components/admin/CollapsibleAnalysisSection';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import OperationsCenter from '../components/admin/OperationsCenter';
+import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
 
 const DATE_RANGES = [
@@ -1071,6 +1072,7 @@ function AdminAnalysisInner() {
           </>
         )}
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }
