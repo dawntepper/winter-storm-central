@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCitiesForStateSlug } from '../data/cityCatalog';
 import { formatHighLowTemps, useCityForecastTemps } from '../hooks/useCityForecastTemps';
@@ -12,6 +12,17 @@ import { FORECAST_NAV_ICON, getForecastIcon } from '../utils/getForecastIcon';
 
 const forecastCardClassName =
   'group flex items-center gap-3 w-full px-4 py-3 bg-slate-900/60 hover:bg-sky-500/15 border border-slate-700 hover:border-sky-400/70 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/15 cursor-pointer text-sm text-slate-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60';
+
+const citySelectClass =
+  'w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500 cursor-pointer';
+
+function formatCityForecastOptionLabel(city, tempsBySlug) {
+  const temps = tempsBySlug[city.slug];
+  const icon = getForecastIcon(temps?.shortForecast);
+  const tempLabel = formatHighLowTemps(temps?.highTemp, temps?.lowTemp);
+  const parts = [icon, city.city, tempLabel].filter(Boolean);
+  return parts.join(' ');
+}
 
 /**
  * Full-width forecast destination card — city or state CTA.
@@ -121,6 +132,15 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
 
   const cities = getCitiesForStateSlug(stateSlug);
   const tempsBySlug = useCityForecastTemps(cities);
+  const [selectedCitySlug, setSelectedCitySlug] = useState(() => cities[0]?.slug ?? '');
+
+  useEffect(() => {
+    const stateCities = getCitiesForStateSlug(stateSlug);
+    setSelectedCitySlug(stateCities[0]?.slug ?? '');
+  }, [stateSlug]);
+
+  const selectedCity =
+    cities.find((c) => c.slug === selectedCitySlug) ?? cities[0] ?? null;
 
   const handleZipSubmit = (e) => {
     e.preventDefault();
@@ -143,18 +163,47 @@ export default function StateForecastWidget({ stateSlug, stateName, stateCode })
         Hourly + 7-day outlook from NWS — tap a city for details
       </p>
 
-      {cities.length > 0 && (
+      {cities.length === 1 && (
+        <div className="mb-4">
+          <CityForecastDestinationCard
+            city={cities[0]}
+            stateSlug={stateSlug}
+            stateCode={stateCode}
+            sourcePage={FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD}
+            tempsBySlug={tempsBySlug}
+          />
+        </div>
+      )}
+
+      {cities.length > 1 && selectedCity && (
         <div className="space-y-2 mb-4">
-          {cities.map((c) => (
-            <CityForecastDestinationCard
-              key={c.slug}
-              city={c}
-              stateSlug={stateSlug}
-              stateCode={stateCode}
-              sourcePage={FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD}
-              tempsBySlug={tempsBySlug}
-            />
-          ))}
+          <div>
+            <label
+              htmlFor={`city-forecast-select-${stateSlug}`}
+              className="block text-[11px] text-slate-500 uppercase tracking-wide mb-1.5"
+            >
+              Select City Forecast
+            </label>
+            <select
+              id={`city-forecast-select-${stateSlug}`}
+              value={selectedCity.slug}
+              onChange={(e) => setSelectedCitySlug(e.target.value)}
+              className={citySelectClass}
+            >
+              {cities.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {formatCityForecastOptionLabel(c, tempsBySlug)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <CityForecastDestinationCard
+            city={selectedCity}
+            stateSlug={stateSlug}
+            stateCode={stateCode}
+            sourcePage={FORECAST_SOURCE_PAGES.FORECASTS_CONDITIONS_CARD}
+            tempsBySlug={tempsBySlug}
+          />
         </div>
       )}
 
