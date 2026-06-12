@@ -3,7 +3,9 @@ import {
   parseSlugCityState,
   parseCityStateLabel,
   CITY_PROMOTION_THRESHOLD,
+  savedLocationAlertsPath,
 } from './locationCatalogService.js';
+import { getCitySlugForLocation } from '../utils/cityLookup.js';
 
 describe('parseSlugCityState', () => {
   it('parses city-state slugs', () => {
@@ -40,5 +42,26 @@ describe('parseCityStateLabel', () => {
 describe('CITY_PROMOTION_THRESHOLD', () => {
   it('is a positive integer for static page promotion docs', () => {
     expect(CITY_PROMOTION_THRESHOLD).toBeGreaterThan(0);
+  });
+});
+
+describe('savedLocationAlertsPath', () => {
+  it('uses stored path when present', () => {
+    expect(savedLocationAlertsPath({ cityAlertsPath: '/alerts/city/foo-co' })).toBe('/alerts/city/foo-co');
+  });
+
+  it('links catalog cities from static index', () => {
+    const slug = getCitySlugForLocation('Miami, FL');
+    if (slug) {
+      expect(savedLocationAlertsPath({ name: 'Miami, FL' })).toBe(`/alerts/${slug}`);
+    }
+  });
+
+  it('links user-generated slugs to catalog city route', () => {
+    expect(savedLocationAlertsPath({ name: '80301', citySlug: 'boulder-co' })).toBe('/alerts/city/boulder-co');
+  });
+
+  it('returns null for non-city labels', () => {
+    expect(savedLocationAlertsPath({ name: 'Near me (40.01, -105.27)' })).toBeNull();
   });
 });

@@ -23,7 +23,7 @@ import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
-import { trackLocationSearch, recordSaveDemandFromLocationLabel } from './services/locationCatalogService';
+import { trackLocationSearch, ensureCityFromSavedLocation, savedLocationAlertsPath } from './services/locationCatalogService';
 import { setHomepageMetaTags } from './data/homepageMeta';
 import { getForecastIcon } from './utils/getForecastIcon';
 import {
@@ -621,7 +621,22 @@ export default function App() {
       locs.forEach((l) => {
         if (l?.lat != null && l?.lon != null) {
           saved.addToAccount({ name: l.name, lat: l.lat, lon: l.lon, zip: l.zip });
-          if (l.name) recordSaveDemandFromLocationLabel(l.name);
+          if (l.name && !l.citySlug) {
+            ensureCityFromSavedLocation({
+              label: l.name,
+              lat: l.lat,
+              lon: l.lon,
+            }).then((result) => {
+              if (!result?.slug) return;
+              setSearchLocations((prev) =>
+                prev.map((loc) =>
+                  loc.id === l.id
+                    ? { ...loc, citySlug: result.slug, cityAlertsPath: result.path }
+                    : loc
+                )
+              );
+            });
+          }
         }
       });
     }
@@ -698,6 +713,33 @@ export default function App() {
     removeAccountByGeo(location?.lat, location?.lon);
   };
 
+  // Render location name as city page link when available, else map-center button.
+  const renderSavedLocationName = (loc, className) => {
+    const cityPath = savedLocationAlertsPath(loc);
+    const content = (
+      <>
+        <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
+        <span className="truncate">{loc.name}</span>
+      </>
+    );
+    if (cityPath) {
+      return (
+        <Link to={cityPath} className={className}>
+          {content}
+        </Link>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => handleViewedLocationClick(loc)}
+        className={className}
+      >
+        {content}
+      </button>
+    );
+  };
+
   // Render a "Your Locations" row for an account pin (merge-down). Mirrors the
   // search/alert rows; striping index passed in so it continues the list.
   const renderAccountRow = (loc, index) => (
@@ -709,13 +751,10 @@ export default function App() {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <button
-            onClick={() => handleViewedLocationClick(loc)}
-            className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
-          >
-            <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
-            <span className="truncate">{loc.name}</span>
-          </button>
+          {renderSavedLocationName(
+            loc,
+            'text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate'
+          )}
           <span className="text-slate-500 flex-shrink-0">•</span>
           <span className="text-xs text-emerald-400 truncate flex-shrink-0">✓ Saved</span>
         </div>
@@ -972,13 +1011,10 @@ export default function App() {
                         {/* Line 1: Icon + City • Alert Status + × */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <button
-                              onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
-                            >
-                              <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
-                              <span className="truncate">{loc.name}</span>
-                            </button>
+                            {renderSavedLocationName(
+                              loc,
+                              'text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate'
+                            )}
                             <span className="text-slate-500 flex-shrink-0">•</span>
                             {loc.alertInfo ? (
                               <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo.event}</span>
@@ -1025,13 +1061,10 @@ export default function App() {
                         {/* Line 1: Icon + City • Alert Status + × */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <button
-                              onClick={() => handleViewedLocationClick(loc)}
-                              className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
-                            >
-                              <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
-                              <span className="truncate">{loc.name}</span>
-                            </button>
+                            {renderSavedLocationName(
+                              loc,
+                              'text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate'
+                            )}
                             <span className="text-slate-500 flex-shrink-0">•</span>
                             <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
                           </div>
@@ -1223,13 +1256,10 @@ export default function App() {
                           {/* Line 1: Icon + City • Alert Status + × */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <button
-                                onClick={() => handleViewedLocationClick(loc)}
-                                className="text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
-                              >
-                                <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
-                                <span className="truncate">{loc.name}</span>
-                              </button>
+                              {renderSavedLocationName(
+                                loc,
+                                'text-sm text-gray-200 hover:text-emerald-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate'
+                              )}
                               <span className="text-slate-500 flex-shrink-0">•</span>
                               {loc.alertInfo ? (
                                 <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo.event}</span>
@@ -1274,13 +1304,10 @@ export default function App() {
                           {/* Line 1: Icon + City • Alert Status + × */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <button
-                                onClick={() => handleViewedLocationClick(loc)}
-                                className="text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate"
-                              >
-                                <span className="flex-shrink-0">{getForecastIcon(loc.conditions?.shortForecast)}</span>
-                                <span className="truncate">{loc.name}</span>
-                              </button>
+                              {renderSavedLocationName(
+                                loc,
+                                'text-sm text-gray-200 hover:text-amber-300 cursor-pointer text-left font-semibold flex items-center gap-1.5 truncate'
+                              )}
                               <span className="text-slate-500 flex-shrink-0">•</span>
                               <span className="text-xs text-orange-400 truncate flex-shrink-0">⚠️ {loc.alertInfo?.event || 'Weather Alert'}</span>
                             </div>

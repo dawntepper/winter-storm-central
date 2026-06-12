@@ -6,7 +6,7 @@ import {
   resolveCityByName,
   trackLocationSearch,
   trackLocationSearchNotFound,
-  recordSaveDemandFromLocationLabel,
+  ensureCityFromSavedLocation,
 } from '../services/locationCatalogService';
 import { reverseGeocode } from '../services/geoLocationService';
 import { getForecastIcon } from '../utils/getForecastIcon';
@@ -572,6 +572,33 @@ export default function ZipCodeSearch({
     fetchLocationWeather(cleanZip);
   };
 
+  const applyCityLinkToSavedLocation = (locationId, result) => {
+    if (!result?.slug) return;
+    setSavedLocations((prev) => {
+      const entry = prev[locationId];
+      if (!entry?.data) return prev;
+      const updated = {
+        ...prev,
+        [locationId]: {
+          ...entry,
+          data: {
+            ...entry.data,
+            citySlug: result.slug,
+            cityAlertsPath: result.path,
+          },
+        },
+      };
+      localStorage.setItem(LOCATIONS_KEY, JSON.stringify(updated));
+      if (onLocationsChange) {
+        const onMapLocations = Object.values(updated)
+          .filter((loc) => loc.onMap)
+          .map((loc) => loc.data);
+        onLocationsChange(onMapLocations);
+      }
+      return updated;
+    });
+  };
+
   const handleToggleMap = (locationId, checked) => {
     const locationData = (currentLocationData?.zip === locationId || currentLocationData?.id === `user-${locationId}`)
       ? currentLocationData
@@ -585,7 +612,11 @@ export default function ZipCodeSearch({
         locationName: locationData.name,
         previousCount: totalLocationCount
       });
-      recordSaveDemandFromLocationLabel(locationData.name);
+      ensureCityFromSavedLocation({
+        label: locationData.name,
+        lat: locationData.lat,
+        lon: locationData.lon,
+      }).then((result) => applyCityLinkToSavedLocation(locationId, result));
     } else {
       trackLocationRemoved({
         trigger: SAVE_TRIGGERS.CHECK_LOCATION_BUTTON,

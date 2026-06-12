@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { citySlug, countySlug } from '../lib/locationSlug';
 import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
 import { reverseGeocode } from './geoLocationService';
+import { getCitySlugForLocation } from '../utils/cityLookup';
 import { getOrCreateVisitorIds } from '../utils/visitorIds';
 import {
   trackLocationSearchSuccess,
@@ -106,13 +107,62 @@ export function parseCityStateLabel(label) {
 
 /** Record save demand from a "City, ST" location label. */
 export async function recordSaveDemandFromLocationLabel(label) {
-  const parsed = parseCityStateLabel(label);
-  if (!parsed) return;
-  await recordCityDemandIfUncataloged({
-    cityName: parsed.name,
-    stateCode: parsed.stateCode,
-    source: 'save',
-  });
+  await ensureCityFromSavedLocation({ label });
+}
+
+/**
+ * On save of a city-shaped location: ensure a catalog row exists (user-generated
+ * when needed), record uncataloged demand, return slug/path for linking.
+ * Returns null for non-city labels (e.g. GPS "Near me") or when creation fails.
+ */
+export async function ensureCityFromSavedLocation({ name, stateCode, lat, lon, label }) {
+  let cityName = name;
+  let st = stateCode ? normalizeStateCode(stateCode) : null;
+
+  if ((!cityName || !st) && label) {
+    const parsed = parseCityStateLabel(label);
+    if (parsed) {
+      cityName = parsed.name;
+      st = parsed.stateCode;
+    }
+  }
+
+  if (!cityName || !st) return null;
+
+  let city = await lookupCity(cityName, st);
+
+  if (!city) {
+    await recordCityDemand({ cityName, stateCode: st, source: 'save' });
+    const latNum = lat != null ? Number(lat) : NaN;
+    const lonNum = lon != null ? Number(lon) : NaN;
+    if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
+      city = await ensureUserGeneratedCity({
+        name: cityName,
+        stateCode: st,
+        lat: latNum,
+        lon: lonNum,
+      });
+    } else {
+      city = await autoCreateCityFromGeocode(cityName, st);
+    }
+  }
+
+  if (!city) return null;
+
+  return {
+    slug: city.slug,
+    path: cityAlertsPath(city.slug, city.hasStaticPage),
+    hasStaticPage: city.hasStaticPage,
+  };
+}
+
+/** Resolve a city alerts page path for a saved location object. */
+export function savedLocationAlertsPath(loc) {
+  if (loc?.cityAlertsPath) return loc.cityAlertsPath;
+  const richSlug = getCitySlugForLocation(loc?.name);
+  if (richSlug) return cityAlertsPath(richSlug, true);
+  if (loc?.citySlug) return cityAlertsPath(loc.citySlug, false);
+  return null;
 }
 
 /** Record alert signup demand from a ZIP code (resolves city via Zippopotam). */
