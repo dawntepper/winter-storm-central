@@ -281,7 +281,7 @@ function AdminAnalysisInner() {
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
               <h2 className="text-xl font-bold text-white mb-1">Missing Location Searches</h2>
               <p className="text-sm text-slate-400 mb-4">
-                Failed searches grouped by query and state — catalog gap research.
+                Failed searches from missing_location_searches (all time) or location_search_events (date filter).
               </p>
               <DataTable
                 columns={[
@@ -356,7 +356,7 @@ function AdminAnalysisInner() {
             <section className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6">
               <h2 className="text-xl font-bold text-white mb-1">County Alert Views</h2>
               <p className="text-sm text-slate-400 mb-4">
-                Counties ranked by alert page views.
+                Counties ranked by alert page views from county_alert_views (paired with county_alert_view product events).
               </p>
               <DataTable
                 columns={[

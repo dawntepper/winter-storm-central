@@ -98,18 +98,33 @@ function groupSearchEvents(rows, { successFilter } = {}) {
 }
 
 async function fetchMissingLocationSearches(supabase, since) {
-  let query = supabase
-    .from('location_search_events')
-    .select('query, state_code, created_at, success')
-    .eq('success', false)
-    .limit(5000);
+  // missing_location_searches view groups failed searches by query + state_code.
+  // Apply date filter on base table when a range is selected (view is all-time).
+  if (since) {
+    let query = supabase
+      .from('location_search_events')
+      .select('query, state_code, created_at, success')
+      .eq('success', false)
+      .limit(5000);
+    query = applySince(query, 'created_at', since);
+    const { data, error } = await query;
+    if (error) throw error;
+    return groupSearchEvents(data).slice(0, 50);
+  }
 
-  query = applySince(query, 'created_at', since);
-
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from('missing_location_searches')
+    .select('query, state_context, search_count, last_searched')
+    .limit(50);
   if (error) throw error;
 
-  return groupSearchEvents(data).slice(0, 50);
+  return (data || []).map((row) => ({
+    query: row.query,
+    state_context: row.state_context,
+    state_code: row.state_context,
+    search_count: Number(row.search_count) || 0,
+    last_searched: row.last_searched,
+  }));
 }
 
 const LOCATION_SOURCE_BUCKETS = {

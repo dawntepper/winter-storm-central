@@ -13,6 +13,24 @@ import {
   trackLocationSearchNotFound as trackLocationSearchNotFoundEvent,
 } from '../utils/analytics';
 
+/** Optional signed-in user id for analytics rows (null for anonymous). */
+async function getOptionalUserId() {
+  if (!supabase) return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function analyticsIdentityFields(ids, userId) {
+  const fields = {};
+  if (ids?.visitorId) fields.visitor_id = ids.visitorId;
+  if (userId) fields.user_id = userId;
+  return fields;
+}
+
 const COUNTY_SELECT = 'id, slug, name, state_code, state_name, fips_code, lat, lon';
 const CITY_SELECT = 'id, slug, name, state_code, state_name, lat, lon, population';
 
@@ -651,7 +669,7 @@ export async function trackLocationSearch(event) {
 
   if (!supabase) return;
   // No .select() — anon has INSERT but not SELECT RLS; RETURNING would fail.
-  const ids = getOrCreateVisitorIds();
+  const [ids, userId] = await Promise.all([getOrCreateVisitorIds(), getOptionalUserId()]);
   const payload = {
     query: query || '',
     state_code: stateCode || null,
@@ -661,8 +679,8 @@ export async function trackLocationSearch(event) {
     resolved_zip: zipCode || null,
     success,
     resolved_type: resolved,
+    ...analyticsIdentityFields(ids, userId),
   };
-  if (ids?.visitorId) payload.visitor_id = ids.visitorId;
 
   const { error } = await supabase.from('location_search_events').insert(payload);
   if (error) {
@@ -715,11 +733,25 @@ export async function trackCountyAlertView(event) {
   });
 
   if (!recorded || !supabase || !countyId) return;
+
+  const [ids, userId] = await Promise.all([getOrCreateVisitorIds(), getOptionalUserId()]);
   const { error } = await supabase.from('county_alert_views').insert({
     county_id: countyId,
     state_code: stateCode || null,
     alert_count: alertCount ?? 0,
-    source: source || null,
+    source_page: source || null,
+    ...analyticsIdentityFields(ids, userId),
   });
-  if (error) console.warn('trackCountyAlertView insert:', error.message);
+  if (error) {
+    console.warn('trackCountyAlertView insert:', error.message);
+    return;
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[countyAlertView] inserted', {
+      countyId,
+      stateCode: stateCode || null,
+      source: source || null,
+    });
+  }
 }
