@@ -313,8 +313,15 @@ export default function StateAlertsPage() {
 
   const handleMapResetView = useCallback(() => {
     areaReqRef.current += 1;
-    setMapFocus(null);
-  }, []);
+    if (mapFocus) {
+      setMapFocus(null);
+    }
+  }, [mapFocus]);
+
+  const mapResetViewLabel = mapFocus ? 'State View' : 'Full View';
+  const mapResetViewTitle = mapFocus
+    ? `Show all of ${stateData?.name ?? 'this state'} on the map`
+    : 'Reset to default US view';
 
   // Filter alerts for this state
   const stateAlerts = useMemo(() => {
@@ -480,8 +487,9 @@ export default function StateAlertsPage() {
               centerOn={displayMapCenter}
               highlightArea={mapFocus?.highlightArea ?? null}
               onResetView={handleMapResetView}
-              resetViewLabel="State View"
-              resetViewTitle={`Show all of ${stateData.name} on the map`}
+              resetViewLabel={mapResetViewLabel}
+              resetViewTitle={mapResetViewTitle}
+              resetToDefaultOnClick={!mapFocus}
               selectedStateCode={stateAbbr}
               radarLayerType="precipitation"
               radarColorScheme={4}
