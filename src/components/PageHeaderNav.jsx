@@ -15,12 +15,15 @@ import {
  * @param {string} props.source  NAV_SOURCES value attributed to clicks
  *   from this header instance (e.g. 'state_page_state_dropdown',
  *   'forecast_page_state_dropdown').
- * @param {boolean} [props.showStateDropdown=true]  Set false on state alert
- *   pages where the selector lives in the radar card header instead.
+ * @param {boolean} [props.showStateDropdown=true]  Set false only when no
+ *   state selector should appear in this header row.
+ * @param {string|null} [props.currentStateSlug]  Active state slug on state
+ *   alert pages — passed through to StateAlertsDropdown for pin styling.
  */
 export default function PageHeaderNav({
   source = NAV_SOURCES.HEADER_NAVIGATION,
   showStateDropdown = true,
+  currentStateSlug = null,
 }) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
@@ -39,7 +42,7 @@ export default function PageHeaderNav({
       </Link>
       {showStateDropdown && (
         <span className="relative inline-flex items-center">
-          <StateAlertsDropdown source={source} />
+          <StateAlertsDropdown source={source} currentStateSlug={currentStateSlug} />
         </span>
       )}
     </div>

@@ -425,7 +425,7 @@ export default function StateAlertsPage() {
           </div>
           <PageHeaderNav
             source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
-            showStateDropdown={false}
+            currentStateSlug={stateSlug}
           />
         </div>
       </header>
