@@ -8,6 +8,85 @@ import { citySlug, countySlug } from '../lib/locationSlug';
 import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
 import { reverseGeocode } from './geoLocationService';
 import { getCitySlugForLocation } from '../utils/cityLookup';
+import { getAllCities } from '../data/cityCatalog';
+import citiesIndex from '../content/cities/index.json';
+
+const RICH_CITY_SLUGS = new Set((citiesIndex.cities || []).map((c) => c.slug));
+
+/** Great-circle distance in miles (for nearest-city fallback). */
+export function haversineMiles(lat1, lon1, lat2, lon2) {
+  const R = 3958.8;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function cityPagePath(slug, hasStaticPage = false) {
+  return cityAlertsPath(slug, hasStaticPage || RICH_CITY_SLUGS.has(slug));
+}
+
+async function collectCityCandidates(stateCode) {
+  const bySlug = new Map();
+
+  if (stateCode) {
+    const catalogCities = await getCitiesForState(stateCode);
+    for (const city of catalogCities) {
+      if (!Number.isFinite(city.lat) || !Number.isFinite(city.lon)) continue;
+      bySlug.set(city.slug, {
+        citySlug: city.slug,
+        cityName: city.name,
+        stateCode: city.stateCode,
+        lat: city.lat,
+        lon: city.lon,
+        hasRichPage: Boolean(city.hasStaticPage || RICH_CITY_SLUGS.has(city.slug)),
+      });
+    }
+  }
+
+  for (const city of getAllCities()) {
+    if (stateCode && city.state_abbr !== stateCode) continue;
+    if (!Number.isFinite(city.lat) || !Number.isFinite(city.lon)) continue;
+    if (!RICH_CITY_SLUGS.has(city.slug)) continue;
+    bySlug.set(city.slug, {
+      citySlug: city.slug,
+      cityName: city.city,
+      stateCode: city.state_abbr,
+      lat: city.lat,
+      lon: city.lon,
+      hasRichPage: true,
+    });
+  }
+
+  return [...bySlug.values()];
+}
+
+async function findNearestCityWithPage(lat, lon, stateCode) {
+  const candidates = await collectCityCandidates(stateCode);
+  if (candidates.length === 0) return null;
+
+  let best = null;
+  let bestDist = Infinity;
+  for (const candidate of candidates) {
+    const dist = haversineMiles(lat, lon, candidate.lat, candidate.lon);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = candidate;
+    }
+  }
+
+  if (!best) return null;
+  return {
+    path: cityPagePath(best.citySlug, best.hasRichPage),
+    citySlug: best.citySlug,
+    cityName: best.cityName,
+    stateCode: best.stateCode,
+    displayName: `${best.cityName}, ${best.stateCode}`,
+    distanceMiles: bestDist,
+  };
+}
 import { getOrCreateVisitorIds } from '../utils/visitorIds';
 import {
   trackLocationSearchSuccess,
@@ -909,6 +988,105 @@ export function getStateSlugForCode(stateCode) {
 
 export function cityAlertsPath(citySlug, hasRichPage) {
   return hasRichPage ? `/alerts/${citySlug}` : `/alerts/city/${citySlug}`;
+}
+
+/**
+ * Resolve a city weather page from GPS coordinates.
+ * Creates catalog cities when supported; falls back to nearest supported city.
+ */
+export async function resolveCityPageFromCoords(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return {
+      navigationSuccess: false,
+      path: null,
+      citySlug: null,
+      cityName: null,
+      stateCode: null,
+      lat,
+      lon,
+      displayName: 'Your current location',
+      resolvedVia: 'none',
+      fallbackMessage: 'We found your location, but a city page is not available yet.',
+    };
+  }
+
+  const place = await reverseGeocode(lat, lon);
+  const stateCode = place?.region ? normalizeStateCode(place.region) : null;
+
+  if (place?.city && stateCode) {
+    const richSlug = getCitySlugForLocation(`${place.city}, ${stateCode}`);
+    if (richSlug) {
+      return {
+        navigationSuccess: true,
+        path: cityPagePath(richSlug, true),
+        citySlug: richSlug,
+        cityName: place.city,
+        stateCode,
+        lat,
+        lon,
+        displayName: `${place.city}, ${stateCode}`,
+        resolvedVia: 'static_index',
+        fallbackMessage: null,
+      };
+    }
+
+    let city = await lookupCity(place.city, stateCode);
+    if (!city) {
+      await recordCityDemand({ cityName: place.city, stateCode, source: 'search' });
+      city = await ensureUserGeneratedCity({
+        name: place.city,
+        stateCode,
+        lat,
+        lon,
+      });
+    }
+
+    if (city) {
+      return {
+        navigationSuccess: true,
+        path: cityPagePath(city.slug, city.hasStaticPage),
+        citySlug: city.slug,
+        cityName: city.name,
+        stateCode: city.stateCode,
+        lat,
+        lon,
+        displayName: `${city.name}, ${city.stateCode}`,
+        resolvedVia: 'catalog',
+        fallbackMessage: null,
+      };
+    }
+  }
+
+  const nearest = await findNearestCityWithPage(lat, lon, stateCode);
+  if (nearest) {
+    return {
+      navigationSuccess: true,
+      path: nearest.path,
+      citySlug: nearest.citySlug,
+      cityName: nearest.cityName,
+      stateCode: nearest.stateCode,
+      lat,
+      lon,
+      displayName: nearest.displayName,
+      resolvedVia: 'nearest',
+      fallbackMessage: null,
+    };
+  }
+
+  return {
+    navigationSuccess: false,
+    path: null,
+    citySlug: null,
+    cityName: place?.city || null,
+    stateCode,
+    lat,
+    lon,
+    displayName: place?.city && stateCode
+      ? `${place.city}, ${stateCode}`
+      : 'Your current location',
+    resolvedVia: 'none',
+    fallbackMessage: 'We found your location, but a city page is not available yet.',
+  };
 }
 
 /**

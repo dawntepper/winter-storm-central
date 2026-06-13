@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { US_STATES } from '../data/stateConfig';
 import { getForecastForCoords } from '../services/forecastService';
-import { cityAlertsPath } from '../services/locationCatalogService';
+import { cityAlertsPath, resolveCityPageFromCoords } from '../services/locationCatalogService';
 import ForecastLocationPicker from './ForecastLocationPicker';
 import { ForecastCurrent, ForecastHourly, ForecastDaily } from './ForecastSections';
 import { getTimeOfDayClass } from './ForecastVisuals';
@@ -12,12 +12,16 @@ import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
 import ContactLink from './ContactLink';
 import CityActiveAlertBanner from './city/CityActiveAlertBanner';
+import CityPageAlertStatus from './city/CityPageAlertStatus';
 import CityAlertsSection from './city/CityAlertsSection';
 import CityRadarSection from './city/CityRadarSection';
 import { sortAlertsBySeverity } from '../utils/alertRanking';
 import {
   trackCityWeatherPageView,
   trackForecastLocationChanged,
+  trackUseMyLocationClick,
+  trackCityPageLocationChanged,
+  trackCityAlertStatusClick,
   NAV_SOURCES,
 } from '../utils/analytics';
 import citiesIndex from '../content/cities/index.json';
@@ -59,6 +63,7 @@ export default function ForecastCityLayout({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mapStateView, setMapStateView] = useState(false);
+  const [locationFallback, setLocationFallback] = useState(null);
 
   useEffect(() => {
     setCoords({
@@ -66,7 +71,8 @@ export default function ForecastCityLayout({
       lon,
       displayName: `${cityName}, ${stateCode}`,
     });
-  }, [lat, lon, cityName, stateCode]);
+    setLocationFallback(null);
+  }, [lat, lon, cityName, stateCode, citySlug]);
 
   const sortedAlerts = useMemo(
     () => (Array.isArray(alerts) ? sortAlertsBySeverity(alerts) : alerts),
@@ -123,12 +129,58 @@ export default function ForecastCityLayout({
   }, [coords]);
 
   const handleLocationSelect = (pick) => {
-    trackForecastLocationChanged(pick.source);
+    trackForecastLocationChanged(pick.source, { stateCode });
     if (pick.source === 'city' && pick.citySlug && pick.citySlug !== citySlug) {
       navigate(cityAlertsPath(pick.citySlug, RICH_CITY_SLUGS.has(pick.citySlug)));
       return;
     }
+    setLocationFallback(null);
     setCoords({ lat: pick.lat, lon: pick.lon, displayName: pick.displayName });
+  };
+
+  const handleGeolocate = async ({ lat, lon }) => {
+    const resolved = await resolveCityPageFromCoords(lat, lon);
+
+    trackUseMyLocationClick({
+      sourcePage: 'city_weather_page',
+      currentCity: cityName,
+      currentState: stateCode,
+      resolvedCity: resolved.cityName,
+      resolvedState: resolved.stateCode,
+      navigationSuccess: resolved.navigationSuccess,
+    });
+
+    if (resolved.navigationSuccess && resolved.path) {
+      if (resolved.citySlug !== citySlug) {
+        trackCityPageLocationChanged({
+          fromCity: cityName,
+          fromState: stateCode,
+          toCity: resolved.cityName,
+          toState: resolved.stateCode,
+          source: 'use_my_location',
+        });
+        navigate(resolved.path);
+        return;
+      }
+      setLocationFallback(null);
+      setCoords({
+        lat: resolved.lat,
+        lon: resolved.lon,
+        displayName: resolved.displayName,
+      });
+      return;
+    }
+
+    setLocationFallback(resolved.fallbackMessage);
+    setCoords({
+      lat: resolved.lat,
+      lon: resolved.lon,
+      displayName: resolved.displayName,
+    });
+  };
+
+  const handleAlertStatusClick = ({ city, state, alertCount }) => {
+    trackCityAlertStatusClick({ city, state, alertCount });
   };
 
   const todClass = forecast?.location?.timeZone
@@ -201,6 +253,13 @@ export default function ForecastCityLayout({
           <p className="text-sm text-slate-400 mt-0.5">
             Hourly outlook, 7-day forecast, and live radar — direct from NWS.
           </p>
+          <CityPageAlertStatus
+            alerts={sortedAlerts}
+            loading={alertsLoading || alerts === null}
+            cityName={cityName}
+            stateCode={stateCode}
+            onStatusClick={handleAlertStatusClick}
+          />
         </div>
       </div>
 
@@ -214,6 +273,18 @@ export default function ForecastCityLayout({
           <TornadoWarningBanner alert={tornadoWarning} />
         )}
 
+        {locationFallback && (
+          <div
+            role="status"
+            className="bg-amber-500/10 border border-amber-500/30 text-amber-100 rounded-lg p-4 text-sm space-y-1"
+          >
+            <p>{locationFallback}</p>
+            <p className="text-xs text-amber-200/80">
+              The map below shows your location. Use city or ZIP search in the picker, or save this spot if you have an account.
+            </p>
+          </div>
+        )}
+
         <div className="lg:grid lg:grid-cols-[2fr_1fr] gap-4 space-y-4 lg:space-y-0">
           <ForecastLocationPicker
             stateSlug={stateSlug}
@@ -221,6 +292,7 @@ export default function ForecastCityLayout({
             currentLabel={coords?.displayName || 'Loading…'}
             selectedCitySlug={citySlug}
             onSelect={handleLocationSelect}
+            onGeolocate={handleGeolocate}
           />
           {forecast ? (
             <ForecastCurrent

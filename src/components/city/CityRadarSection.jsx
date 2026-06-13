@@ -48,7 +48,7 @@ export default function CityRadarSection({
   }, [cityName, citySlug, stateCode, analyticsSource, hasAlerts]);
 
   return (
-    <div ref={sectionRef} className="min-h-0">
+    <div ref={sectionRef} id="city-radar-section" className="min-h-0">
       {children}
     </div>
   );

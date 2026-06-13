@@ -1358,6 +1358,68 @@ export function trackForecastCityClick({
  * City weather page view — Plausible "City Weather Page View" +
  * product_events.city_weather_page_view.
  */
+/**
+ * Use My Location on a city weather page — Plausible "Use My Location Click".
+ */
+export function trackUseMyLocationClick({
+  sourcePage = 'city_weather_page',
+  currentCity,
+  currentState,
+  resolvedCity,
+  resolvedState,
+  navigationSuccess,
+}) {
+  track('Use My Location Click', {
+    source_page: sourcePage,
+    current_city: currentCity || 'unknown',
+    current_state: currentState || 'unknown',
+    resolved_city: resolvedCity || 'unknown',
+    resolved_state: resolvedState || 'unknown',
+    navigation_success: navigationSuccess ? 'yes' : 'no',
+  });
+  trackLocationChange({
+    source: 'use_my_location',
+    stateCode: resolvedState || currentState,
+    metadata: {
+      source_page: sourcePage,
+      current_city: currentCity,
+      resolved_city: resolvedCity,
+      navigation_success: Boolean(navigationSuccess),
+      context: 'city_weather_page',
+    },
+  });
+}
+
+/**
+ * City page navigation after Use My Location — Plausible "City Page Location Changed".
+ */
+export function trackCityPageLocationChanged({
+  fromCity,
+  fromState,
+  toCity,
+  toState,
+  source = 'use_my_location',
+}) {
+  track('City Page Location Changed', {
+    from_city: fromCity || 'unknown',
+    from_state: fromState || 'unknown',
+    to_city: toCity || 'unknown',
+    to_state: toState || 'unknown',
+    source,
+  });
+}
+
+/**
+ * Alert status chip click on a city weather page — Plausible "City Alert Status Click".
+ */
+export function trackCityAlertStatusClick({ city, state, alertCount }) {
+  track('City Alert Status Click', {
+    city: city || 'unknown',
+    state: state || 'unknown',
+    alert_count: alertCount ?? 0,
+  });
+}
+
 export function trackCityWeatherPageView({ stateCode, city, citySlug, hasAlerts, hasForecastData, source }) {
   const resolvedSource = resolveSource(source);
   const recorded = recordProductEvent(PRODUCT_EVENTS.CITY_WEATHER_PAGE_VIEW, {
@@ -1649,6 +1711,9 @@ export default {
   trackForecastCityClick,
   trackForecastStateClick,
   trackCityWeatherPageView,
+  trackUseMyLocationClick,
+  trackCityPageLocationChanged,
+  trackCityAlertStatusClick,
   trackCityRadarViewed,
   trackForecastSectionViewed,
   FORECAST_SOURCE_PAGES,

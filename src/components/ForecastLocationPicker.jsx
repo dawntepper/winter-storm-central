@@ -17,6 +17,7 @@ export default function ForecastLocationPicker({
   currentLabel,
   selectedCitySlug,
   onSelect,
+  onGeolocate,
 }) {
   const [mode, setMode] = useState('city'); // 'city' | 'zip'
   const [zipInput, setZipInput] = useState('');
@@ -72,14 +73,23 @@ export default function ForecastLocationPicker({
     }
     setGeoStatus('fetching');
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeoStatus('idle');
-        onSelect({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          displayName: 'Your current location',
-          source: 'geolocation',
-        });
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        try {
+          if (onGeolocate) {
+            await onGeolocate({ lat, lon });
+          } else {
+            onSelect({
+              lat,
+              lon,
+              displayName: 'Your current location',
+              source: 'geolocation',
+            });
+          }
+        } finally {
+          setGeoStatus('idle');
+        }
       },
       () => {
         setGeoStatus('denied');
