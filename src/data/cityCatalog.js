@@ -20,6 +20,8 @@
  * the dropdown is never empty. ZIP entry remains the universal fallback.
  */
 
+import { compareCityNames } from '../utils/sortCities';
+
 const cityModules = import.meta.glob('../content/cities/*.json', { eager: true });
 
 // Strip the index.json (it's a summary, not a city entry) and surface only
@@ -88,7 +90,7 @@ const BY_STATE_SLUG = ALL_CITIES.reduce((acc, c) => {
 
 // Sort each state's city list alphabetically by display name for stable dropdowns.
 for (const list of Object.values(BY_STATE_SLUG)) {
-  list.sort((a, b) => a.city.localeCompare(b.city));
+  list.sort(compareCityNames);
 }
 
 export function getCityBySlug(slug) {

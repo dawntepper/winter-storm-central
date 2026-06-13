@@ -9,6 +9,7 @@ import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
 import { reverseGeocode } from './geoLocationService';
 import { getCitySlugForLocation } from '../utils/cityLookup';
 import { getAllCities } from '../data/cityCatalog';
+import { sortCitiesByName } from '../utils/sortCities';
 import citiesIndex from '../content/cities/index.json';
 
 const RICH_CITY_SLUGS = new Set((citiesIndex.cities || []).map((c) => c.slug));
@@ -884,13 +885,12 @@ export async function getCitiesForState(stateCode) {
   const { data, error } = await supabase
     .from('cities')
     .select(CITY_SELECT)
-    .eq('state_code', st)
-    .order('population', { ascending: false, nullsFirst: false });
+    .eq('state_code', st);
   if (error) {
     console.warn('getCitiesForState:', error.message);
     return [];
   }
-  return (data || []).map(mapCity).filter(Boolean);
+  return sortCitiesByName((data || []).map(mapCity).filter(Boolean));
 }
 
 /**
@@ -997,10 +997,11 @@ export async function getCitiesForCounty(countyId) {
     console.warn('getCitiesForCounty:', error.message);
     return [];
   }
-  return (data || [])
-    .map((row) => mapCity(row.cities))
-    .filter(Boolean)
-    .sort((a, b) => (b.population || 0) - (a.population || 0));
+  return sortCitiesByName(
+    (data || [])
+      .map((row) => mapCity(row.cities))
+      .filter(Boolean),
+  );
 }
 
 /**

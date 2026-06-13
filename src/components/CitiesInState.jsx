@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import citiesIndex from '../content/cities/index.json';
+import { compareCityNames } from '../utils/sortCities';
 
 // Eager-load full city JSON so callers can read lat/lon without an extra fetch.
 const cityModules = import.meta.glob('../content/cities/*.json', { eager: true });
@@ -19,7 +20,7 @@ for (const c of citiesIndex.cities || []) {
 }
 // Sort each state's list alphabetically
 for (const abbr of Object.keys(CITIES_BY_STATE)) {
-  CITIES_BY_STATE[abbr].sort((a, b) => a.city.localeCompare(b.city));
+  CITIES_BY_STATE[abbr].sort(compareCityNames);
 }
 
 export function citiesForState(stateAbbr) {
