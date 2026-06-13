@@ -665,6 +665,18 @@ export function trackStormPublished({ stormSlug, stormType, source }) {
 }
 
 /**
+ * Admin created a catalog city from the missing-search recommendations panel.
+ */
+export function trackAdminCityCreated({ cityName, stateCode, source, alreadyExists }) {
+  track('Admin City Created', {
+    city: cityName,
+    state: stateCode,
+    source: source || 'admin',
+    already_exists: Boolean(alreadyExists),
+  });
+}
+
+/**
  * Admin added or saved an emergency info entry for a storm.
  */
 export function trackEmergencyInfoAdded({ stormSlug, stormType, category, isOfficial }) {
@@ -1679,6 +1691,7 @@ export default {
   trackStormPreviewed,
   trackStormPublished,
   trackEmergencyInfoAdded,
+  trackAdminCityCreated,
   trackRadarLinkClick,
   trackStormRadarClick,
   trackRadarTypeChange,

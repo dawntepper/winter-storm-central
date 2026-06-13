@@ -368,6 +368,46 @@ export async function autoCreateCityFromGeocode(cityName, stateCode) {
   });
 }
 
+/**
+ * Admin one-click catalog city creation from missing-search recommendations.
+ * Uses Census geocode + ensure_user_generated_city RPC (same path as search/save).
+ */
+export async function createCatalogCityFromAdmin({ cityName, stateCode }) {
+  const st = normalizeStateCode(stateCode);
+  const trimmed = String(cityName || '').trim();
+  if (!trimmed || !st) {
+    return { ok: false, error: 'City name and state are required' };
+  }
+  if (!supabase) {
+    return { ok: false, error: 'Supabase is not configured' };
+  }
+
+  const existing = await lookupCity(trimmed, st);
+  if (existing) {
+    return {
+      ok: true,
+      alreadyExists: true,
+      city: existing,
+      path: cityAlertsPath(existing.slug, existing.hasStaticPage),
+    };
+  }
+
+  const city = await autoCreateCityFromGeocode(trimmed, st);
+  if (!city) {
+    return {
+      ok: false,
+      error: `Could not geocode "${trimmed}, ${st}". Check the city name and state.`,
+    };
+  }
+
+  return {
+    ok: true,
+    alreadyExists: false,
+    city,
+    path: cityAlertsPath(city.slug, city.hasStaticPage),
+  };
+}
+
 /** Load city by slug, auto-creating from slug parse + geocode when missing. */
 export async function getCityBySlugWithFallback(slug) {
   const fromDb = await getCityBySlug(slug);

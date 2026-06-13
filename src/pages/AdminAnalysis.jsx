@@ -21,6 +21,7 @@ import LocationPreferenceCard from '../components/admin/LocationPreferenceCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import MostVisitedPages from '../components/admin/MostVisitedPages';
 import OperationsCenter from '../components/admin/OperationsCenter';
+import RecommendedCitiesToAdd from '../components/admin/RecommendedCitiesToAdd';
 import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import SortableDataTable from '../components/admin/SortableDataTable';
 import StickyDateRangePicker, { DateRangeButtons } from '../components/admin/StickyDateRangePicker';
@@ -664,24 +665,7 @@ function AdminAnalysisInner() {
                 )}
               </div>
 
-              {(missing?.recommendedCities?.length ?? 0) > 0 && (
-                <div className="mb-5">
-                  <SubsectionTitle>Recommended Cities To Add</SubsectionTitle>
-                  <div className="flex flex-wrap gap-2">
-                    {missing.recommendedCities.map((city) => (
-                      <span
-                        key={`${city.query}-${city.state}`}
-                        className="inline-flex items-center gap-1.5 text-sm bg-amber-900/30 border border-amber-700/40 text-amber-100 px-3 py-1.5 rounded-lg"
-                      >
-                        {city.label}
-                        <span className="text-amber-400/80 text-xs">
-                          ({formatNumber(city.searchCount)} searches)
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <RecommendedCitiesToAdd cities={missing?.recommendedCities} />
 
               <ExpandableBlock
                 title={`Top missing searches (${missingSearches.length})`}
