@@ -21,7 +21,6 @@ import LocationPreferenceCard from '../components/admin/LocationPreferenceCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import MostVisitedPages from '../components/admin/MostVisitedPages';
 import OperationsCenter from '../components/admin/OperationsCenter';
-import RecommendedCitiesToAdd from '../components/admin/RecommendedCitiesToAdd';
 import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import SortableDataTable from '../components/admin/SortableDataTable';
 import StickyDateRangePicker, { DateRangeButtons } from '../components/admin/StickyDateRangePicker';
@@ -374,8 +373,6 @@ function AdminAnalysisInner() {
   const radar = data?.radar;
   const forecastEngagement = data?.forecastEngagement;
   const journeys = data?.userJourneys;
-  const missing = data?.missingLocationSearches;
-  const missingSearches = missing?.searches ?? (Array.isArray(missing) ? missing : []);
   const countyViews = data?.countyAlertViews;
   const metricTrends = data?.metricTrends;
   const expansionOpportunities = data?.expansionOpportunities;
@@ -384,7 +381,6 @@ function AdminAnalysisInner() {
   const countyAlertOpportunities = data?.countyAlertOpportunities;
   const analyticsHealth = data?.analyticsHealth;
   const needsAttention = data?.needsAttention;
-  const hasMissingSearches = missingSearches.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -633,65 +629,10 @@ function AdminAnalysisInner() {
             <CollapsibleAnalysisSection
               id="location-searches"
               title="Location Searches"
-              description="Missing searches, search performance, and location source breakdown."
+              description="Search performance, location source breakdown, and user preferences."
               expanded={sectionsExpanded['location-searches']}
               onToggle={() => toggleSection('location-searches')}
             >
-              <div
-                className={`rounded-xl p-5 sm:p-6 border mb-6 ${
-                  hasMissingSearches
-                    ? 'bg-amber-950/20 border-amber-600/50'
-                    : 'bg-slate-900/60 border-slate-700'
-                }`}
-              >
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                    Missing Location Searches
-                    {hasMissingSearches && (
-                      <span className="text-xs font-semibold uppercase tracking-wide text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
-                        Action needed
-                      </span>
-                    )}
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    Failed searches from missing_location_searches (all time) or location_search_events (date filter).
-                  </p>
-                </div>
-                {hasMissingSearches && (
-                  <div className="text-sm font-semibold text-amber-300 tabular-nums">
-                    {formatNumber(missing?.totalFailed)} failed searches
-                  </div>
-                )}
-              </div>
-
-              <RecommendedCitiesToAdd cities={missing?.recommendedCities} />
-
-              <ExpandableBlock
-                title={`Top missing searches (${missingSearches.length})`}
-                defaultOpen={hasMissingSearches}
-              >
-                <DataTable
-                  columns={[
-                    { key: 'query', label: 'Query' },
-                    { key: 'state_context', label: 'State', render: (r) => r.state_context || '—' },
-                    {
-                      key: 'search_count',
-                      label: 'Count',
-                      render: (r) => formatNumber(r.search_count),
-                    },
-                    {
-                      key: 'last_searched',
-                      label: 'Last searched',
-                      render: (r) => formatDate(r.last_searched),
-                    },
-                  ]}
-                  rows={missingSearches}
-                  emptyMessage="No failed location searches in this period."
-                />
-              </ExpandableBlock>
-              </div>
-
               <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6 mb-6">
               <SectionHeader
                 title="Location Search Performance"

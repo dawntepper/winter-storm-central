@@ -1,3 +1,5 @@
+import RecommendedCitiesToAdd from './RecommendedCitiesToAdd';
+
 function formatNumber(n) {
   if (n == null) return '—';
   return n.toLocaleString();
@@ -31,14 +33,28 @@ export default function ExpansionOpportunities({ data }) {
   const hasFailed = (data.failedSearches?.length ?? 0) > 0;
   const hasCities = (data.topCities?.length ?? 0) > 0;
   const hasCityDemand = (data.cityDemand?.length ?? 0) > 0;
+  const needsAction = hasFailed || hasCities;
 
   return (
-    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-5 sm:p-6">
+    <div
+      className={`rounded-xl p-5 sm:p-6 border ${
+        needsAction
+          ? 'bg-amber-950/20 border-amber-600/50'
+          : 'bg-slate-900/60 border-slate-700'
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-lg font-bold text-white mb-1">Expansion Opportunities</h3>
+          <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+            Expansion Opportunities
+            {needsAction && (
+              <span className="text-xs font-semibold uppercase tracking-wide text-amber-400 bg-amber-900/40 px-2 py-0.5 rounded">
+                Action needed
+              </span>
+            )}
+          </h3>
           <p className="text-sm text-slate-400">
-            Failed searches, city demand signals, county gaps, and catalog expansion from user behavior.
+            Failed searches, one-click catalog cities, city demand signals, and county gaps from user behavior.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
@@ -108,30 +124,17 @@ export default function ExpansionOpportunities({ data }) {
       )}
 
       {hasCities && (
-        <div className="mb-5">
-          <h4 className="text-sm font-semibold text-slate-300 mb-3">Top cities to add</h4>
-          <div className="space-y-2">
-            {data.topCities.map((city) => (
-              <div
-                key={`${city.query}-${city.state}`}
-                className="flex flex-wrap items-center justify-between gap-2 bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-white">{city.label}</span>
-                  <span className="text-xs text-slate-500 tabular-nums">
-                    {formatNumber(city.searchCount)} searches
-                  </span>
-                </div>
-                <SuggestionBadge text={city.suggestion} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <RecommendedCitiesToAdd cities={data.topCities} />
       )}
 
       {hasFailed && (
         <div className="mb-5">
-          <h4 className="text-sm font-semibold text-slate-300 mb-3">Failed searches</h4>
+          <h4 className="text-sm font-semibold text-slate-300 mb-3">
+            Missing location searches ({data.failedSearches.length})
+          </h4>
+          <p className="text-xs text-slate-500 mb-3">
+            Failed searches from missing_location_searches (all time) or location_search_events (date filter).
+          </p>
           <div className="overflow-x-auto -mx-1">
             <table className="w-full text-sm">
               <thead>
@@ -139,15 +142,17 @@ export default function ExpansionOpportunities({ data }) {
                   <th className="py-2 pr-4 font-medium">Query</th>
                   <th className="py-2 pr-4 font-medium">State</th>
                   <th className="py-2 pr-4 font-medium">Count</th>
+                  <th className="py-2 pr-4 font-medium">Last searched</th>
                   <th className="py-2 pr-4 font-medium">Suggestion</th>
                 </tr>
               </thead>
               <tbody className="text-slate-200">
-                {data.failedSearches.slice(0, 8).map((row) => (
+                {data.failedSearches.map((row) => (
                   <tr key={`${row.query}-${row.state}`} className="border-b border-slate-800/80">
                     <td className="py-2 pr-4">{row.query}</td>
                     <td className="py-2 pr-4">{row.state || '—'}</td>
                     <td className="py-2 pr-4 tabular-nums">{formatNumber(row.searchCount)}</td>
+                    <td className="py-2 pr-4 text-slate-400">{formatDate(row.lastSearched)}</td>
                     <td className="py-2 pr-4">
                       <SuggestionBadge text={row.suggestion} />
                     </td>

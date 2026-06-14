@@ -94,7 +94,7 @@ export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
                     to={done.path}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-emerald-300 hover:text-emerald-200 underline underline-offset-2"
+                    className="font-medium text-emerald-300 hover:text-emerald-200 underline underline-offset-2 cursor-pointer"
                   >
                     {done.label}
                   </Link>
@@ -109,12 +109,13 @@ export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
                 type="button"
                 onClick={() => handleCreate(city)}
                 disabled={Boolean(creatingKey)}
+                aria-label={`Add ${city.label} to catalog`}
                 className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
                   isCreating
                     ? 'bg-amber-900/20 border-amber-600/30 text-amber-200/70 cursor-wait'
                     : creatingKey
                       ? 'bg-amber-900/15 border-amber-700/25 text-amber-200/50 cursor-not-allowed'
-                      : 'bg-amber-900/30 border-amber-700/40 text-amber-100 hover:bg-amber-800/40 hover:border-amber-600/50'
+                      : 'bg-amber-900/30 border-amber-700/40 text-amber-100 hover:bg-amber-800/40 hover:border-amber-600/50 cursor-pointer'
                 }`}
               >
                 {isCreating ? (
