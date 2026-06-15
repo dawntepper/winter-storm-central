@@ -4,6 +4,7 @@ import { citiesForState } from '../CitiesInState';
 import { getCitiesForStateSlug } from '../../data/cityCatalog';
 import { getCitiesForState, cityAlertsPath } from '../../services/locationCatalogService';
 import { trackPopularLocationClicked } from '../../utils/analytics';
+import { sortCitiesByName } from '../../utils/sortCities';
 import citiesIndex from '../../content/cities/index.json';
 
 const RICH_CITY_SLUGS = new Set((citiesIndex.cities || []).map((c) => c.slug));
@@ -59,13 +60,12 @@ export default function PopularLocations({ stateAbbr, stateCode, stateSlug, stat
       if (cancelled) return;
 
       const seen = new Set(staticCities.map((c) => c.slug));
-      const merged = [
+      const merged = sortCitiesByName([
         ...staticCities.map(mapStaticCity),
         ...catalog
           .filter((c) => c.slug && !seen.has(c.slug))
-          .sort((a, b) => (b.population || 0) - (a.population || 0))
           .map(mapCatalogCity),
-      ];
+      ]);
 
       setLocations(merged.slice(0, MAX_PILLS));
     })();
