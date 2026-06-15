@@ -29,13 +29,15 @@ function mapCatalogCity(c) {
  */
 export function useStateCityLocations(stateAbbr, stateCode, stateSlug, maxCount = 12) {
   const [locations, setLocations] = useState(() =>
-    citiesForState(stateAbbr).slice(0, maxCount).map(mapStaticCity),
+    sortCitiesByName(citiesForState(stateAbbr).map(mapStaticCity)).slice(0, maxCount),
   );
 
   useEffect(() => {
     const staticCities = citiesForState(stateAbbr);
     if (staticCities.length >= 4) {
-      setLocations(staticCities.slice(0, maxCount).map(mapStaticCity));
+      setLocations(
+        sortCitiesByName(staticCities.map(mapStaticCity)).slice(0, maxCount),
+      );
       return;
     }
 
