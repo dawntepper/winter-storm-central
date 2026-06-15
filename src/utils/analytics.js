@@ -772,6 +772,45 @@ export function trackStateNearbyClick({ fromState, toState }) {
 }
 
 /**
+ * Quick action tapped on a state alert page (radar, search, counties).
+ */
+export function trackStateQuickActionClicked({ state, actionType }) {
+  track('State Quick Action Clicked', {
+    state: state || 'unknown',
+    action_type: actionType,
+  });
+}
+
+/**
+ * Popular location pill clicked on a state alert page.
+ */
+export function trackPopularLocationClicked({ state, city }) {
+  track('Popular Location Clicked', {
+    state: state || 'unknown',
+    city: city || 'unknown',
+  });
+}
+
+/**
+ * User began typing in the prominent state-page location search.
+ */
+export function trackStatePageSearchStarted({ state }) {
+  track('State Page Search Started', {
+    state: state || 'unknown',
+  });
+}
+
+/**
+ * State-page location search resolved to a city or county destination.
+ */
+export function trackStatePageSearchSuccess({ state, destinationType }) {
+  track('State Page Search Success', {
+    state: state || 'unknown',
+    destination_type: destinationType,
+  });
+}
+
+/**
  * Track click on a state from browse-by-state grid
  */
 export function trackBrowseByStateClick({ stateCode, source }) {
@@ -1701,6 +1740,10 @@ export default {
   trackStateAlertsPageView,
   trackStateAlertDetailView,
   trackStateNearbyClick,
+  trackStateQuickActionClicked,
+  trackPopularLocationClicked,
+  trackStatePageSearchStarted,
+  trackStatePageSearchSuccess,
   trackBrowseByStateClick,
   trackStateSelectorUsed,
   // Navigation source tracking

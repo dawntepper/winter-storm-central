@@ -20,6 +20,14 @@ import AlertsByCategory from './AlertsByCategory';
 import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
 import { AlertListSkeleton, Skeleton } from './Skeletons';
+import StateQuickActions from './state/StateQuickActions';
+import StateLocationSearch from './state/StateLocationSearch';
+import CountyDiscoveryLink from './state/CountyDiscoveryLink';
+import PopularLocations from './state/PopularLocations';
+import StateEmptyAlerts from './state/StateEmptyAlerts';
+import RadarPromotionCard from './state/RadarPromotionCard';
+import StateCountyBrowse from './state/StateCountyBrowse';
+import RelatedWeatherLinks from './state/RelatedWeatherLinks';
 
 // Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
 // states get the tornado variant. TX gets its own variant. All other states
@@ -270,6 +278,24 @@ export default function StateAlertsPage() {
   // Map focus from "Check Alerts Near You" search
   const [mapFocus, setMapFocus] = useState(null);
   const areaReqRef = useRef(0);
+  const locationSearchRef = useRef(null);
+
+  const scrollToSection = useCallback((sectionId) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const scrollToRadar = useCallback(() => {
+    scrollToSection('state-alerts-map');
+  }, [scrollToSection]);
+
+  const focusLocationSearch = useCallback(() => {
+    scrollToSection('state-location-search');
+    window.setTimeout(() => locationSearchRef.current?.focusInput(), 300);
+  }, [scrollToSection]);
+
+  const scrollToCounties = useCallback(() => {
+    scrollToSection('state-counties');
+  }, [scrollToSection]);
 
   const handleLocationFocus = useCallback(({ lat, lon, zoom = 8, alerts, county }) => {
     const reqId = ++areaReqRef.current;
@@ -462,10 +488,26 @@ export default function StateAlertsPage() {
               Last updated: {new Date(lastUpdated).toLocaleTimeString()}
             </p>
           )}
+          <StateQuickActions
+            stateCode={stateAbbr}
+            onRadar={scrollToRadar}
+            onSearch={focusLocationSearch}
+            onCounties={scrollToCounties}
+          />
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <div className="space-y-3">
+          <StateLocationSearch
+            ref={locationSearchRef}
+            stateCode={stateAbbr}
+          />
+          <CountyDiscoveryLink
+            stateName={stateData.name}
+            onBrowseCounties={scrollToCounties}
+          />
+        </div>
 
         {/* Two-column layout: Map (left) + Alerts sidebar (right) on desktop */}
         <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
@@ -514,14 +556,11 @@ export default function StateAlertsPage() {
               {alertsLoading ? (
                 <AlertListSkeleton count={4} showHeader={false} />
               ) : stateAlerts.length === 0 ? (
-                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-5 py-8 text-center">
-                  <p className="text-lg font-medium text-emerald-400 mb-1">
-                    No active weather alerts for {stateData.name}
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Check back for updates on severe weather conditions. Alerts are updated in real-time from the NWS.
-                  </p>
-                </div>
+                <StateEmptyAlerts
+                  stateName={stateData.name}
+                  onViewRadar={scrollToRadar}
+                  onSearchLocation={focusLocationSearch}
+                />
               ) : (
                 <AlertsByCategory
                   alerts={stateAlerts}
@@ -550,6 +589,17 @@ export default function StateAlertsPage() {
             />
           </div>
         </div>
+
+        <RadarPromotionCard stateName={stateData.name} onOpenRadar={scrollToRadar} />
+
+        <PopularLocations
+          stateAbbr={stateAbbr}
+          stateCode={stateAbbr}
+          stateSlug={stateSlug}
+          stateName={stateData.name}
+        />
+
+        <StateCountyBrowse stateCode={stateAbbr} stateName={stateData.name} />
 
         {/* City directory */}
         <CityDirectory stateAbbr={stateAbbr} stateName={stateData.name} />
@@ -604,6 +654,14 @@ export default function StateAlertsPage() {
             </div>
           </div>
         </section>
+
+        <RelatedWeatherLinks
+          stateName={stateData.name}
+          stateSlug={stateSlug}
+          stateCode={stateAbbr}
+          onStateRadar={scrollToRadar}
+          onStateCounties={scrollToCounties}
+        />
 
         {/* CTA */}
         <section className="text-center py-4">
