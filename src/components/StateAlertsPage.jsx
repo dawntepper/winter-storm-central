@@ -438,12 +438,13 @@ export default function StateAlertsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Radar map + right rail — 2-column desktop */}
         <div className="lg:grid lg:grid-cols-[1fr_minmax(0,300px)] lg:gap-4 xl:gap-5 items-start">
-          <div className="min-w-0 space-y-4">
-            <section
-              id="state-alerts-map"
-              className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 relative -mx-4 sm:-mx-6 lg:mx-0 before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px]"
-            >
-              <StormMap
+          <div className="min-w-0 w-full self-start h-fit space-y-4">
+            <div className="w-full h-fit">
+              <section
+                id="state-alerts-map"
+                className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 relative -mx-4 sm:-mx-6 lg:mx-0 before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px]"
+              >
+                <StormMap
                 weatherData={{}}
                 stormPhase="active"
                 userLocations={[]}
@@ -462,7 +463,8 @@ export default function StateAlertsPage() {
                 stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
                 currentStateSlug={stateSlug}
               />
-            </section>
+              </section>
+            </div>
 
             <PopularLocations
               stateAbbr={stateAbbr}

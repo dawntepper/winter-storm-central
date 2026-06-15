@@ -30,7 +30,7 @@ export default function StateCountyBrowse({ stateCode, stateName }) {
 
   if (loading) {
     return (
-      <section id="state-counties" className="scroll-mt-4">
+      <section id="state-counties" className="relative z-20">
         <h2 className="text-lg font-semibold text-white mb-2">{stateName} Counties</h2>
         <p className="text-sm text-slate-500">Loading counties…</p>
       </section>
@@ -42,7 +42,7 @@ export default function StateCountyBrowse({ stateCode, stateName }) {
   const visible = showAll ? counties : counties.slice(0, INITIAL_SHOW);
 
   return (
-    <section id="state-counties" className="scroll-mt-4">
+    <section id="state-counties" className="relative z-20">
       <h2 className="text-lg font-semibold text-white mb-2">{stateName} Counties</h2>
       <p className="text-sm text-slate-400 mb-4">
         County-level NWS alerts across {stateName}.
