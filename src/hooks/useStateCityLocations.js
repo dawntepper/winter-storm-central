@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { citiesForState } from '../components/CitiesInState';
-import { getCitiesForStateSlug } from '../data/cityCatalog';
 import { getCitiesForState, cityAlertsPath } from '../services/locationCatalogService';
-import { sortCitiesByPopulation } from '../utils/sortCities';
+import { buildPopularStateLocations } from '../utils/popularStateCities';
 import citiesIndex from '../content/cities/index.json';
 
 const RICH_CITY_SLUGS = new Set((citiesIndex.cities || []).map((c) => c.slug));
@@ -19,32 +18,15 @@ for (const [path, mod] of Object.entries(cityModules)) {
   }
 }
 
-function mapStaticCity(c) {
-  return {
-    slug: c.slug,
-    name: c.city,
-    population: POPULATION_BY_SLUG[c.slug] ?? 0,
-    path: `/alerts/${c.slug}`,
-  };
-}
-
-function mapCatalogCity(c) {
-  const hasRich = c.hasStaticPage || RICH_CITY_SLUGS.has(c.slug);
-  return {
-    slug: c.slug,
-    name: c.name || c.city,
-    population: Number(c.population) || 0,
-    path: cityAlertsPath(c.slug, hasRich),
-  };
-}
-
-function mapCatalogFillCity(c) {
-  return {
-    slug: c.slug,
-    name: c.city,
-    population: POPULATION_BY_SLUG[c.slug] ?? 0,
-    path: RICH_CITY_SLUGS.has(c.slug) ? `/alerts/${c.slug}` : cityAlertsPath(c.slug, false),
-  };
+function buildLocations(staticCities, catalogCities, maxCount) {
+  return buildPopularStateLocations({
+    staticCities,
+    catalogCities,
+    richCitySlugs: RICH_CITY_SLUGS,
+    populationFromRichJson: POPULATION_BY_SLUG,
+    cityAlertsPath,
+    maxCount,
+  });
 }
 
 /**
@@ -52,43 +34,20 @@ function mapCatalogFillCity(c) {
  * Sorted by population (largest first); city_demand is admin-only so not used here.
  */
 export function useStateCityLocations(stateAbbr, stateCode, stateSlug, maxCount = 8) {
+  const staticCities = citiesForState(stateAbbr);
   const [locations, setLocations] = useState(() =>
-    sortCitiesByPopulation(citiesForState(stateAbbr).map(mapStaticCity)).slice(0, maxCount),
+    buildLocations(staticCities, [], maxCount),
   );
 
   useEffect(() => {
-    const staticCities = citiesForState(stateAbbr);
-    if (staticCities.length >= 4) {
-      setLocations(
-        sortCitiesByPopulation(staticCities.map(mapStaticCity)).slice(0, maxCount),
-      );
-      return;
-    }
+    const staticList = citiesForState(stateAbbr);
+    setLocations(buildLocations(staticList, [], maxCount));
 
     let cancelled = false;
     (async () => {
-      const catalogFill = getCitiesForStateSlug(stateSlug);
-      if (catalogFill.length > 0 && staticCities.length === 0) {
-        if (!cancelled) {
-          setLocations(
-            sortCitiesByPopulation(catalogFill.map(mapCatalogFillCity)).slice(0, maxCount),
-          );
-        }
-        return;
-      }
-
       const catalog = await getCitiesForState(stateCode);
       if (cancelled) return;
-
-      const seen = new Set(staticCities.map((c) => c.slug));
-      const merged = sortCitiesByPopulation([
-        ...staticCities.map(mapStaticCity),
-        ...catalog
-          .filter((c) => c.slug && !seen.has(c.slug))
-          .map(mapCatalogCity),
-      ]);
-
-      setLocations(merged.slice(0, maxCount));
+      setLocations(buildLocations(staticList, catalog, maxCount));
     })();
 
     return () => {
