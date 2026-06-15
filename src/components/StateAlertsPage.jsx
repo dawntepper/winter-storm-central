@@ -20,7 +20,8 @@ import AlertsByCategory from './AlertsByCategory';
 import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
 import { AlertListSkeleton, Skeleton } from './Skeletons';
-import StateQuickActions from './state/StateQuickActions';
+import StateActionCards from './state/StateActionCards';
+import StateUseMyLocationBar from './state/StateUseMyLocationBar';
 import StateLocationSearch from './state/StateLocationSearch';
 import CountyDiscoveryLink from './state/CountyDiscoveryLink';
 import PopularLocations from './state/PopularLocations';
@@ -488,12 +489,14 @@ export default function StateAlertsPage() {
               Last updated: {new Date(lastUpdated).toLocaleTimeString()}
             </p>
           )}
-          <StateQuickActions
+          <StateActionCards
             stateCode={stateAbbr}
+            stateName={stateData.name}
             onRadar={scrollToRadar}
             onSearch={focusLocationSearch}
             onCounties={scrollToCounties}
           />
+          <StateUseMyLocationBar stateCode={stateAbbr} />
         </div>
       </div>
 

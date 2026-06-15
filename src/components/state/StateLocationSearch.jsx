@@ -3,16 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   resolveLocationSearch,
   cityAlertsPath,
-  resolveCityPageFromCoords,
   trackLocationSearch,
   trackLocationSearchNotFound,
 } from '../../services/locationCatalogService';
 import {
   trackStatePageSearchStarted,
   trackStatePageSearchSuccess,
-  trackUseMyLocationClick,
-  trackCityPageLocationChanged,
-  trackGeolocationUsed,
   FORECAST_SOURCE_PAGES,
 } from '../../utils/analytics';
 import citiesIndex from '../../content/cities/index.json';
@@ -33,7 +29,6 @@ const StateLocationSearch = forwardRef(function StateLocationSearch(
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
-  const [gpsStatus, setGpsStatus] = useState('idle');
 
   useImperativeHandle(ref, () => ({
     focusInput() {
@@ -107,63 +102,6 @@ const StateLocationSearch = forwardRef(function StateLocationSearch(
     }
   };
 
-  const handleUseMyLocation = useCallback(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGpsStatus('unsupported');
-      return;
-    }
-    setGpsStatus('locating');
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        trackGeolocationUsed();
-        try {
-          const resolved = await resolveCityPageFromCoords(latitude, longitude);
-          trackUseMyLocationClick({
-            sourcePage: FORECAST_SOURCE_PAGES.STATE_ALERT_PAGE,
-            currentCity: null,
-            currentState: stateCode,
-            resolvedCity: resolved.cityName,
-            resolvedState: resolved.stateCode,
-            navigationSuccess: resolved.navigationSuccess,
-          });
-
-          if (resolved.navigationSuccess && resolved.path) {
-            trackCityPageLocationChanged({
-              fromCity: null,
-              fromState: stateCode,
-              toCity: resolved.cityName,
-              toState: resolved.stateCode,
-              source: 'use_my_location',
-            });
-            navigate(resolved.path);
-            setGpsStatus('idle');
-            return;
-          }
-
-          setError(resolved.fallbackMessage || 'Could not find a city page near you.');
-        } catch (err) {
-          console.warn('Use My Location failed:', err);
-          setError('Could not resolve your location — try searching instead.');
-        }
-        setGpsStatus('idle');
-      },
-      (err) => {
-        setGpsStatus(err.code === 1 ? 'denied' : 'error');
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
-    );
-  }, [navigate, stateCode]);
-
-  const gpsMessage =
-    gpsStatus === 'unsupported'
-      ? 'Geolocation unavailable on this device.'
-      : gpsStatus === 'denied'
-        ? 'Location access blocked in browser settings.'
-        : gpsStatus === 'error'
-          ? 'Could not get your location — try again.'
-          : null;
-
   return (
     <section
       id="state-location-search"
@@ -196,21 +134,6 @@ const StateLocationSearch = forwardRef(function StateLocationSearch(
           >
             {searching ? 'Searching…' : 'Search'}
           </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleUseMyLocation}
-            disabled={gpsStatus === 'locating'}
-            aria-label="Use my device location"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-lg bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer"
-          >
-            <span aria-hidden="true">🎯</span>
-            {gpsStatus === 'locating' ? 'Locating…' : 'Use My Location'}
-          </button>
-          {gpsMessage && (
-            <span className="text-xs text-amber-400">{gpsMessage}</span>
-          )}
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}
       </form>
