@@ -1,14 +1,13 @@
 /**
  * State Alerts Page Component
  * Shows NWS weather alerts filtered for a specific US state,
- * with a radar map zoomed to that state and links to nearby states.
+ * with a radar map zoomed to that state.
  */
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import { ALERT_CATEGORIES } from '../services/noaaAlertsService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
@@ -47,12 +46,10 @@ const STATE_ESSENTIALS_VARIANTS = {
   AR: 'state-tornado',
 };
 import {
-  US_STATES, SLUG_TO_ABBR, STATE_NAMES, NEARBY_STATES, ABBR_TO_SLUG, getStateUrl
+  US_STATES, SLUG_TO_ABBR
 } from '../data/stateConfig';
 import {
   trackStateAlertsPageView,
-  trackStateNearbyClick,
-  setNavSource,
   NAV_SOURCES
 } from '../utils/analytics';
 
@@ -164,93 +161,6 @@ function ActiveStormsForState({ stateAbbr }) {
 }
 
 // =============================================
-// NEARBY STATES
-// =============================================
-
-function NearbyStateAlertsViz({ stateAbbr, alertCountsByState, allAlerts }) {
-  const navigate = useNavigate();
-  const nearby = NEARBY_STATES[stateAbbr] || [];
-  if (nearby.length === 0) return null;
-
-  const stateName = STATE_NAMES[stateAbbr] || stateAbbr;
-
-  // Build sorted list with category info
-  const stateRows = nearby
-    .map(abbr => {
-      const name = STATE_NAMES[abbr];
-      const slug = ABBR_TO_SLUG[abbr];
-      const count = alertCountsByState[abbr] || 0;
-      if (!name || !slug) return null;
-
-      // Find dominant category for this state
-      const stateAlerts = (allAlerts || []).filter(a => a.state === abbr);
-      const catCounts = {};
-      for (const a of stateAlerts) {
-        const cat = a.category || 'severe';
-        catCounts[cat] = (catCounts[cat] || 0) + 1;
-      }
-      const topCategories = Object.entries(catCounts).sort(([, a], [, b]) => b - a);
-      const topCatId = topCategories[0]?.[0];
-      const topCat = topCatId ? ALERT_CATEGORIES[topCatId] : null;
-      const barColor = topCat?.color || '#64748b';
-
-      // Top 3 category icons
-      const catIcons = topCategories.slice(0, 3).map(([catId]) => {
-        const cat = ALERT_CATEGORIES[catId];
-        return cat ? cat.icon : null;
-      }).filter(Boolean);
-
-      return { abbr, name, slug, count, barColor, catIcons };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.count - a.count);
-
-  const maxCount = Math.max(...stateRows.map(s => s.count), 1);
-
-  return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-      <div className="px-4 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20">
-        <h3 className="text-sm font-semibold text-emerald-400">States Near {stateName}</h3>
-      </div>
-      <div className="p-4 space-y-1.5">
-        {stateRows.map(st => (
-          <button
-            key={st.abbr}
-            onClick={() => {
-              trackStateNearbyClick({ fromState: stateAbbr, toState: st.abbr });
-              navigate(`/alerts/${st.slug}`);
-            }}
-            className="group w-full flex items-center gap-2 hover:bg-slate-700/30 rounded px-1 -mx-1 py-0.5 transition-colors cursor-pointer text-left"
-          >
-            <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-1">
-              <span className="w-7">{st.abbr}</span>
-              {st.catIcons.map((icon, i) => (
-                <span key={i} className="text-[8px] leading-none">{icon}</span>
-              ))}
-            </span>
-            <div className="flex-1 h-4 bg-slate-700/40 rounded-sm overflow-hidden relative">
-              {st.count > 0 && (
-                <div
-                  className="absolute inset-y-0 left-0 rounded-sm transition-all"
-                  style={{
-                    width: `${(st.count / maxCount) * 100}%`,
-                    backgroundColor: st.barColor,
-                    opacity: 0.7,
-                  }}
-                />
-              )}
-            </div>
-            <span className="text-xs text-slate-400 w-7 text-right tabular-nums">
-              {st.count}
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// =============================================
 // MAIN PAGE COMPONENT
 // =============================================
 
@@ -305,18 +215,6 @@ export default function StateAlertsPage() {
     () => (stateAbbr ? citiesWithCoordsForState(stateAbbr) : []),
     [stateAbbr]
   );
-
-  // Compute alert counts by state (for nearby states badges)
-  const alertCountsByState = useMemo(() => {
-    if (!alertsData?.allAlerts) return {};
-    const counts = {};
-    for (const alert of alertsData.allAlerts) {
-      if (alert.state) {
-        counts[alert.state] = (counts[alert.state] || 0) + 1;
-      }
-    }
-    return counts;
-  }, [alertsData]);
 
   // Set meta tags
   useEffect(() => {
@@ -499,18 +397,11 @@ export default function StateAlertsPage() {
                 />
               ) : null}
             </section>
-
-            <NearbyStateAlertsViz
-              stateAbbr={stateAbbr}
-              alertCountsByState={alertCountsByState}
-              allAlerts={alertsData?.allAlerts}
-            />
           </div>
         </div>
 
         <LocalForecastsAndAlerts
           stateSlug={stateSlug}
-          stateName={stateData.name}
           stateCode={stateAbbr}
         />
 

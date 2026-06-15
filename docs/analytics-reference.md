@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-06-10.
+Last reviewed: 2026-06-15.
 
 ---
 
@@ -17,6 +17,11 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `Radar Page View` | `/radar` mount — includes `source` and `state_context` |
 | `Map Region Click` | Homepage StateHeatmap + MostImpactedStates clicks (unified — see below) |
 | `State Alerts Page View` | Any state alert page mount |
+| `State Quick Action Clicked` | Hero action cards on state pages — `action`: `radar`, `city`, or `county` |
+| `Popular Location Clicked` | Popular location shortcut on state page — `state`, `city` |
+| `Use My Location Clicked` | State-page GPS button — `state` |
+| `State City Selected` | City combobox on state page — `state`, `city` |
+| `State County Selected` | County combobox on state page — `state`, `county` |
 | `Storm Page View` | Any storm event page mount |
 | `Storm Banner Click` | Active storm banner on homepage |
 | `Radar Link Click` | Click intent to navigate to `/radar` |
@@ -137,6 +142,32 @@ Map Region Click
   state          state abbr ("FL", "TX", etc.)
   source         "heatmap" | "most_impacted_list"
 ```
+
+### State alert page events
+
+```
+State Quick Action Clicked
+  state          state abbr ("CT", "FL", etc.)
+  action         "radar" | "city" | "county"
+
+Popular Location Clicked
+  state          state abbr
+  city           city name label
+
+Use My Location Clicked
+  state          state abbr
+
+State City Selected
+  state          state abbr
+  city           selected city name
+
+State County Selected
+  state          state abbr
+  county         selected county name (without " County" suffix)
+```
+
+Hero cards scroll to on-page sections (radar map, Find Local Weather, county browse).
+Popular locations and catalog selectors navigate to city/county alert pages.
 
 ### Location events
 

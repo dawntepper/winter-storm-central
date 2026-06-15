@@ -117,7 +117,7 @@ export default function StateActionCards({ stateCode, stateName, onRadar, onSele
         title="Select City"
         subtitle="Get alerts and forecasts for your location"
         onClick={() => {
-          track('select_city');
+          track('city');
           onSelectCity?.();
         }}
       />
@@ -127,7 +127,7 @@ export default function StateActionCards({ stateCode, stateName, onRadar, onSele
         title="Counties"
         subtitle={`Browse alerts by ${stateName} county`}
         onClick={() => {
-          track('counties');
+          track('county');
           onCounties?.();
         }}
       />

@@ -774,10 +774,10 @@ export function trackStateNearbyClick({ fromState, toState }) {
 /**
  * Quick action tapped on a state alert page (radar, search, counties).
  */
-export function trackStateQuickActionClicked({ state, actionType }) {
+export function trackStateQuickActionClicked({ state, actionType, action }) {
   track('State Quick Action Clicked', {
     state: state || 'unknown',
-    action_type: actionType,
+    action: action || actionType || 'unknown',
   });
 }
 
