@@ -540,7 +540,7 @@ function AdminAnalysisInner() {
             <CollapsibleAnalysisSection
               id="returning-visitors"
               title="Returning Visitors"
-              description="Session data from visitor_sessions. Date filter applies to session created_at."
+              description="Session data from visitor_sessions (since Jun 11, 2026). Compare total sessions to Plausible goal Visitor Session Started; unique visitors to Plausible Visitors. Date filter uses created_at (UTC on server)."
               expanded={sectionsExpanded['returning-visitors']}
               onToggle={() => toggleSection('returning-visitors')}
               headerExtra={

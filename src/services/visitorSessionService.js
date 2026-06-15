@@ -15,8 +15,11 @@ import {
 } from '../utils/analytics';
 
 const SESSION_REGISTERED_KEY = 'stormtracking_session_registered';
+/** Set after first successful insert — avoids RPC round-trip before insert (bounce loss). */
+const PRIOR_SESSION_KEY = 'stormtracking_has_prior_session';
 
 const HEARTBEAT_DEBOUNCE_MS = 30_000;
+const INSERT_RETRY_MS = 500;
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
 let heartbeatTimer = null;
@@ -57,16 +60,21 @@ function getReferrer() {
   return ref ? ref.slice(0, 500) : null;
 }
 
-async function checkIsReturning(visitorId) {
-  if (!supabase) return false;
-  const { data, error } = await supabase.rpc('is_returning_visitor', {
-    p_visitor_id: visitorId,
-  });
-  if (error) {
-    console.warn('visitor session returning check:', error.message);
+/** Local returning check — must not block insert on a network round-trip. */
+function checkIsReturningLocal() {
+  try {
+    return localStorage.getItem(PRIOR_SESSION_KEY) === '1';
+  } catch {
     return false;
   }
-  return Boolean(data);
+}
+
+function markPriorSession() {
+  try {
+    localStorage.setItem(PRIOR_SESSION_KEY, '1');
+  } catch {
+    // ignore — insert already succeeded
+  }
 }
 
 async function insertVisitorSession({
@@ -104,6 +112,12 @@ async function insertVisitorSession({
   }
 
   return true;
+}
+
+async function insertVisitorSessionWithRetry(payload) {
+  if (await insertVisitorSession(payload)) return true;
+  await new Promise((resolve) => setTimeout(resolve, INSERT_RETRY_MS));
+  return insertVisitorSession(payload);
 }
 
 /** Update last_seen for the current browser session (session_id scoped). */
@@ -158,8 +172,8 @@ async function registerVisitorSessionOnce() {
   const source = parseSource();
   const deviceType = getDeviceType();
 
-  const isReturning = await checkIsReturning(visitorId);
-  const inserted = await insertVisitorSession({
+  const isReturning = checkIsReturningLocal();
+  const inserted = await insertVisitorSessionWithRetry({
     visitorId,
     sessionId,
     isReturning,
@@ -171,6 +185,7 @@ async function registerVisitorSessionOnce() {
 
   if (!inserted) return false;
 
+  markPriorSession();
   sessionStorage.setItem(SESSION_REGISTERED_KEY, '1');
 
   const visitorType = isReturning ? 'returning' : 'new';
