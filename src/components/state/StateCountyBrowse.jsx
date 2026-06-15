@@ -59,7 +59,7 @@ export default function StateCountyBrowse({ stateCode, stateName }) {
                 source: 'state-page-county-browse',
               })
             }
-            className="text-sm px-3 py-2 bg-transparent hover:bg-slate-800/40 border border-slate-600 hover:border-violet-400/50 rounded-full text-slate-300 hover:text-white transition-colors truncate text-center"
+            className="text-sm px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/40 hover:border-violet-400/65 rounded-full text-violet-200 hover:text-white transition-colors truncate text-center"
             title={`${county.name} County`}
           >
             {county.name}
