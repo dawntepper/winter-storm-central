@@ -792,6 +792,35 @@ export function trackPopularLocationClicked({ state, city }) {
 }
 
 /**
+ * Use My Location tapped on a state alert page.
+ */
+export function trackStateUseMyLocationClicked({ state }) {
+  track('Use My Location Clicked', {
+    state: state || 'unknown',
+  });
+}
+
+/**
+ * Catalog city selected on a state alert page.
+ */
+export function trackStateCitySelected({ state, city }) {
+  track('State City Selected', {
+    state: state || 'unknown',
+    city: city || 'unknown',
+  });
+}
+
+/**
+ * Catalog county selected on a state alert page.
+ */
+export function trackStateCountySelected({ state, county }) {
+  track('State County Selected', {
+    state: state || 'unknown',
+    county: county || 'unknown',
+  });
+}
+
+/**
  * User began typing in the prominent state-page location search.
  */
 export function trackStatePageSearchStarted({ state }) {
@@ -1742,6 +1771,9 @@ export default {
   trackStateNearbyClick,
   trackStateQuickActionClicked,
   trackPopularLocationClicked,
+  trackStateUseMyLocationClicked,
+  trackStateCitySelected,
+  trackStateCountySelected,
   trackStatePageSearchStarted,
   trackStatePageSearchSuccess,
   trackBrowseByStateClick,

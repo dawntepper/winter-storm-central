@@ -9,7 +9,6 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import { ALERT_CATEGORIES } from '../services/noaaAlertsService';
-import { fetchCountyHighlight } from '../services/geoLocationService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import StormMap from './StormMap';
 import { CityDirectory, citiesWithCoordsForState } from './CitiesInState';
@@ -22,11 +21,9 @@ import PageBackNav from './PageBackNav';
 import { AlertListSkeleton, Skeleton } from './Skeletons';
 import StateActionCards from './state/StateActionCards';
 import StateUseMyLocationBar from './state/StateUseMyLocationBar';
-import StateLocationSearch from './state/StateLocationSearch';
-import CountyDiscoveryLink from './state/CountyDiscoveryLink';
+import StateFindLocalWeather from './state/StateFindLocalWeather';
 import PopularLocations from './state/PopularLocations';
 import StateEmptyAlerts from './state/StateEmptyAlerts';
-import RadarPromotionCard from './state/RadarPromotionCard';
 import StateCountyBrowse from './state/StateCountyBrowse';
 import RelatedWeatherLinks from './state/RelatedWeatherLinks';
 
@@ -56,7 +53,6 @@ import {
 import {
   trackStateAlertsPageView,
   trackStateNearbyClick,
-  trackRadarLinkClick,
   setNavSource,
   NAV_SOURCES
 } from '../utils/analytics';
@@ -261,7 +257,6 @@ function NearbyStateAlertsViz({ stateAbbr, alertCountsByState, allAlerts }) {
 
 export default function StateAlertsPage() {
   const { slug: stateSlug } = useParams();
-  const navigate = useNavigate();
   const stateAbbr = SLUG_TO_ABBR[stateSlug];
   const stateData = stateAbbr ? US_STATES[stateSlug] : null;
 
@@ -270,16 +265,10 @@ export default function StateAlertsPage() {
     alerts: alertsData,
     loading: alertsLoading,
     lastUpdated,
-    refresh: refreshAlerts
   } = useExtremeWeather(true);
 
   // Alert detail modal
   const [selectedAlert, setSelectedAlert] = useState(null);
-
-  // Map focus from "Check Alerts Near You" search
-  const [mapFocus, setMapFocus] = useState(null);
-  const areaReqRef = useRef(0);
-  const locationSearchRef = useRef(null);
 
   const scrollToSection = useCallback((sectionId) => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -289,64 +278,13 @@ export default function StateAlertsPage() {
     scrollToSection('state-alerts-map');
   }, [scrollToSection]);
 
-  const focusLocationSearch = useCallback(() => {
-    scrollToSection('state-location-search');
-    window.setTimeout(() => locationSearchRef.current?.focusInput(), 300);
+  const scrollToLocalWeather = useCallback(() => {
+    scrollToSection('state-local-weather');
   }, [scrollToSection]);
 
   const scrollToCounties = useCallback(() => {
     scrollToSection('state-counties');
   }, [scrollToSection]);
-
-  const handleLocationFocus = useCallback(({ lat, lon, zoom = 8, alerts, county }) => {
-    const reqId = ++areaReqRef.current;
-    const interimLat = county?.lat ?? lat;
-    const interimLon = county?.lon ?? lon;
-
-    setMapFocus({
-      centerOn:
-        interimLat != null && interimLon != null
-          ? { lat: interimLat, lon: interimLon, zoom, id: Date.now() }
-          : null,
-      mapAlerts: alerts,
-      highlightArea: null,
-    });
-
-    fetchCountyHighlight(county ?? { lat: interimLat, lon: interimLon }).then(
-      ({ feature, lat: cLat, lon: cLon }) => {
-        if (reqId !== areaReqRef.current) return;
-        setMapFocus((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            ...(cLat != null && cLon != null
-              ? { centerOn: { lat: cLat, lon: cLon, zoom, id: Date.now() } }
-              : {}),
-            highlightArea: feature,
-          };
-        });
-      },
-    );
-
-    const isMobile = window.innerWidth < 1024;
-    if (isMobile) {
-      setTimeout(() => {
-        document.querySelector('#state-alerts-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  }, []);
-
-  const handleMapResetView = useCallback(() => {
-    areaReqRef.current += 1;
-    if (mapFocus) {
-      setMapFocus(null);
-    }
-  }, [mapFocus]);
-
-  const mapResetViewLabel = mapFocus ? 'State View' : 'Full View';
-  const mapResetViewTitle = mapFocus
-    ? `Show all of ${stateData?.name ?? 'this state'} on the map`
-    : 'Reset to default US view';
 
   // Filter alerts for this state
   const stateAlerts = useMemo(() => {
@@ -354,15 +292,14 @@ export default function StateAlertsPage() {
     return alertsData.allAlerts.filter(a => a.state === stateAbbr);
   }, [alertsData, stateAbbr]);
 
-  // Default: all state alerts on map. After Check Alerts Near You search: scoped only.
-  const displayMapAlerts = mapFocus ? (mapFocus.mapAlerts ?? []) : stateAlerts;
-  const displayMapCenter =
-    mapFocus?.centerOn ?? {
-      lat: stateData?.center[0],
-      lon: stateData?.center[1],
-      zoom: (stateData?.zoom ?? 7) - 1,
-      id: `state-${stateAbbr}`,
-    };
+  // Default: all state alerts on map.
+  const displayMapAlerts = stateAlerts;
+  const displayMapCenter = {
+    lat: stateData?.center[0],
+    lon: stateData?.center[1],
+    zoom: (stateData?.zoom ?? 7) - 1,
+    id: `state-${stateAbbr}`,
+  };
 
   // Cities in this state with dedicated pages — rendered as clickable map markers
   const stateCityMarkers = useMemo(
@@ -493,7 +430,7 @@ export default function StateAlertsPage() {
             stateCode={stateAbbr}
             stateName={stateData.name}
             onRadar={scrollToRadar}
-            onSearch={focusLocationSearch}
+            onSelectCity={scrollToLocalWeather}
             onCounties={scrollToCounties}
           />
           <StateUseMyLocationBar stateCode={stateAbbr} />
@@ -501,16 +438,12 @@ export default function StateAlertsPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="space-y-3">
-          <StateLocationSearch
-            ref={locationSearchRef}
-            stateCode={stateAbbr}
-          />
-          <CountyDiscoveryLink
-            stateName={stateData.name}
-            onBrowseCounties={scrollToCounties}
-          />
-        </div>
+        <PopularLocations
+          stateAbbr={stateAbbr}
+          stateCode={stateAbbr}
+          stateSlug={stateSlug}
+          stateName={stateData.name}
+        />
 
         {/* Two-column layout: Map (left) + Alerts sidebar (right) on desktop */}
         <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
@@ -528,11 +461,11 @@ export default function StateAlertsPage() {
               cityMarkers={stateCityMarkers}
               isHero
               centerOn={displayMapCenter}
-              highlightArea={mapFocus?.highlightArea ?? null}
-              onResetView={handleMapResetView}
-              resetViewLabel={mapResetViewLabel}
-              resetViewTitle={mapResetViewTitle}
-              resetToDefaultOnClick={!mapFocus}
+              highlightArea={null}
+              onResetView={undefined}
+              resetViewLabel="Full View"
+              resetViewTitle="Reset to default US view"
+              resetToDefaultOnClick
               selectedStateCode={stateAbbr}
               radarLayerType="precipitation"
               radarColorScheme={4}
@@ -562,7 +495,7 @@ export default function StateAlertsPage() {
                 <StateEmptyAlerts
                   stateName={stateData.name}
                   onViewRadar={scrollToRadar}
-                  onSearchLocation={focusLocationSearch}
+                  onSelectCity={scrollToLocalWeather}
                 />
               ) : (
                 <AlertsByCategory
@@ -577,11 +510,11 @@ export default function StateAlertsPage() {
               stateSlug={stateSlug}
               stateName={stateData.name}
               stateCode={stateAbbr}
-              allAlerts={alertsData?.allAlerts || []}
-              alertsLoading={alertsLoading}
-              onLocationFocus={handleLocationFocus}
-              onClearFocus={handleMapResetView}
-              onViewAlert={setSelectedAlert}
+            />
+
+            <StateFindLocalWeather
+              stateCode={stateAbbr}
+              stateName={stateData.name}
             />
 
             {/* Nearby State Alerts Visualization */}
@@ -592,15 +525,6 @@ export default function StateAlertsPage() {
             />
           </div>
         </div>
-
-        <RadarPromotionCard stateName={stateData.name} onOpenRadar={scrollToRadar} />
-
-        <PopularLocations
-          stateAbbr={stateAbbr}
-          stateCode={stateAbbr}
-          stateSlug={stateSlug}
-          stateName={stateData.name}
-        />
 
         <StateCountyBrowse stateCode={stateAbbr} stateName={stateData.name} />
 

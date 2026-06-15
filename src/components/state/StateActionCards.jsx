@@ -21,14 +21,14 @@ function RadarIcon({ className }) {
   );
 }
 
-function SearchIcon({ className }) {
+function CityIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth={2}
-        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        strokeWidth={1.75}
+        d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 9h.01M15 9h.01M9 13h.01M15 13h.01"
       />
     </svg>
   );
@@ -94,7 +94,7 @@ function ActionCard({ theme, icon: Icon, title, subtitle, onClick }) {
 /**
  * Prominent above-the-fold action cards for state alert pages.
  */
-export default function StateActionCards({ stateCode, stateName, onRadar, onSearch, onCounties }) {
+export default function StateActionCards({ stateCode, stateName, onRadar, onSelectCity, onCounties }) {
   const track = (actionType) => {
     trackStateQuickActionClicked({ state: stateCode, actionType });
   };
@@ -113,12 +113,12 @@ export default function StateActionCards({ stateCode, stateName, onRadar, onSear
       />
       <ActionCard
         theme="blue"
-        icon={SearchIcon}
-        title="Search City"
+        icon={CityIcon}
+        title="Select City"
         subtitle="Get alerts and forecasts for your location"
         onClick={() => {
-          track('search');
-          onSearch?.();
+          track('select_city');
+          onSelectCity?.();
         }}
       />
       <ActionCard

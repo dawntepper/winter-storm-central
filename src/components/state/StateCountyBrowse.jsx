@@ -47,7 +47,7 @@ export default function StateCountyBrowse({ stateCode, stateName }) {
       <p className="text-sm text-slate-400 mb-4">
         County-level NWS alerts across {stateName}.
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="flex flex-wrap gap-2">
         {visible.map((county) => (
           <Link
             key={county.id}
@@ -59,7 +59,7 @@ export default function StateCountyBrowse({ stateCode, stateName }) {
                 source: 'state-page-county-browse',
               })
             }
-            className="text-sm px-3 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-sky-500/40 rounded-lg text-slate-300 hover:text-white transition-colors truncate"
+            className="text-sm px-3 py-2 bg-transparent hover:bg-slate-800/40 border border-slate-600 hover:border-violet-400/50 rounded-full text-slate-300 hover:text-white transition-colors truncate text-center"
             title={`${county.name} County`}
           >
             {county.name}

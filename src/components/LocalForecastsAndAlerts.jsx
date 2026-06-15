@@ -6,8 +6,6 @@ import {
   FORECAST_SOURCE_PAGES,
   trackForecastStateClick,
 } from '../utils/analytics';
-import { getForecastIcon } from '../utils/getForecastIcon';
-import { LocationSearchPanel } from './CheckAlertsNearYou';
 import {
   CityForecastDestinationCard,
   citySelectClass,
@@ -15,18 +13,12 @@ import {
 } from './StateForecastWidget';
 
 /**
- * Combined right-rail card: popular city forecasts, location alert search,
- * and state-level forecast CTA for state alert pages.
+ * Right-rail card: popular city forecasts and state-level forecast CTA.
  */
 export default function LocalForecastsAndAlerts({
   stateSlug,
   stateName,
   stateCode,
-  allAlerts = [],
-  alertsLoading = false,
-  onLocationFocus,
-  onClearFocus,
-  onViewAlert,
 }) {
   const cities = getCitiesForStateSlug(stateSlug);
   const tempsBySlug = useCityForecastTemps(cities);
@@ -44,11 +36,10 @@ export default function LocalForecastsAndAlerts({
     <section className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex flex-col">
       <h2 className="text-sm font-semibold text-white mb-1">Local Forecasts &amp; Alerts</h2>
       <p className="text-[11px] text-slate-500 mb-4">
-        Forecasts for major {stateName} cities and any location statewide.
+        Forecasts for major {stateName} cities.
       </p>
 
-      {/* Section 1: Popular Forecasts */}
-      <div className="order-1">
+      <div>
         {cities.length === 1 && (
           <CityForecastDestinationCard
             city={cities[0]}
@@ -92,25 +83,7 @@ export default function LocalForecastsAndAlerts({
         )}
       </div>
 
-      {/* Section 2: Location Search */}
-      <div className="order-2 mt-5 pt-5 border-t border-slate-700">
-        <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-3">
-          Check another location
-        </h3>
-        <LocationSearchPanel
-          stateCode={stateCode}
-          stateSlug={stateSlug}
-          stateName={stateName}
-          allAlerts={allAlerts}
-          alertsLoading={alertsLoading}
-          onLocationFocus={onLocationFocus}
-          onClearFocus={onClearFocus}
-          onViewAlert={onViewAlert}
-        />
-      </div>
-
-      {/* Section 3: State Forecast CTA */}
-      <div className="order-3 mt-4">
+      <div className="mt-4">
         <Link
           to={`/forecast/${stateSlug}`}
           onClick={() =>

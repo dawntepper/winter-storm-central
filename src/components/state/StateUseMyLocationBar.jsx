@@ -1,12 +1,4 @@
-import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { resolveCityPageFromCoords } from '../../services/locationCatalogService';
-import {
-  trackUseMyLocationClick,
-  trackCityPageLocationChanged,
-  trackGeolocationUsed,
-  FORECAST_SOURCE_PAGES,
-} from '../../utils/analytics';
+import useStatePageGeolocation from './useStatePageGeolocation';
 
 function CrosshairIcon({ className }) {
   return (
@@ -32,102 +24,37 @@ function NavigationIcon({ className }) {
 }
 
 /**
- * Full-width "Use My Location" bar for state alert pages.
+ * Prominent above-the-fold "Use My Location" bar for state alert pages.
  */
 export default function StateUseMyLocationBar({ stateCode }) {
-  const navigate = useNavigate();
-  const [gpsStatus, setGpsStatus] = useState('idle');
-  const [error, setError] = useState('');
-
-  const handleUseMyLocation = useCallback(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGpsStatus('unsupported');
-      return;
-    }
-    setError('');
-    setGpsStatus('locating');
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        trackGeolocationUsed();
-        try {
-          const resolved = await resolveCityPageFromCoords(latitude, longitude);
-          trackUseMyLocationClick({
-            sourcePage: FORECAST_SOURCE_PAGES.STATE_ALERT_PAGE,
-            currentCity: null,
-            currentState: stateCode,
-            resolvedCity: resolved.cityName,
-            resolvedState: resolved.stateCode,
-            navigationSuccess: resolved.navigationSuccess,
-          });
-
-          if (resolved.navigationSuccess && resolved.path) {
-            trackCityPageLocationChanged({
-              fromCity: null,
-              fromState: stateCode,
-              toCity: resolved.cityName,
-              toState: resolved.stateCode,
-              source: 'use_my_location',
-            });
-            navigate(resolved.path);
-            setGpsStatus('idle');
-            return;
-          }
-
-          setError(resolved.fallbackMessage || 'Could not find a city page near you.');
-        } catch (err) {
-          console.warn('Use My Location failed:', err);
-          setError('Could not resolve your location — try searching instead.');
-        }
-        setGpsStatus('idle');
-      },
-      (err) => {
-        setGpsStatus(err.code === 1 ? 'denied' : 'error');
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
-    );
-  }, [navigate, stateCode]);
-
-  const gpsMessage =
-    gpsStatus === 'unsupported'
-      ? 'Geolocation unavailable on this device.'
-      : gpsStatus === 'denied'
-        ? 'Location access blocked in browser settings.'
-        : gpsStatus === 'error'
-          ? 'Could not get your location — try again.'
-          : null;
-
-  const isLocating = gpsStatus === 'locating';
+  const { handleUseMyLocation, isLocating, error, gpsMessage } = useStatePageGeolocation(stateCode);
 
   return (
-    <section className="mt-3" aria-label="Use my location">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3.5 sm:px-5 sm:py-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-400">
-            <CrosshairIcon className="h-5 w-5" />
+    <section className="mt-4" aria-label="Use my location">
+      <button
+        type="button"
+        onClick={handleUseMyLocation}
+        disabled={isLocating}
+        className="flex w-full flex-col gap-4 rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-600/20 to-sky-500/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5 text-left transition-colors hover:border-sky-400/60 hover:from-sky-600/25 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-500/25 text-sky-300">
+            <CrosshairIcon className="h-6 w-6" />
           </span>
-          <div className="hidden h-8 w-px shrink-0 bg-slate-600 sm:block" aria-hidden="true" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-            <p className="shrink-0 text-sm sm:text-base font-bold text-white">Use My Location</p>
-            <div className="hidden h-5 w-px shrink-0 bg-slate-600 sm:block" aria-hidden="true" />
-            <p className="min-w-0 text-xs sm:text-sm text-slate-400 leading-snug">
+          <div className="min-w-0">
+            <p className="text-base sm:text-lg font-bold text-white">Use My Location</p>
+            <p className="mt-0.5 text-sm text-slate-300 leading-snug">
               Get weather alerts and forecasts for your exact location
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleUseMyLocation}
-          disabled={isLocating}
-          aria-label="Use my device location"
-          className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
-        >
+        <span className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-lg bg-sky-600 px-5 py-3.5 text-sm font-semibold text-white sm:min-w-[11rem]">
           <NavigationIcon className="h-4 w-4" />
           {isLocating ? 'Locating…' : 'Use My Location'}
-        </button>
-      </div>
+        </span>
+      </button>
       {(gpsMessage || error) && (
-        <p className="mt-2 text-xs sm:text-sm text-amber-400">{error || gpsMessage}</p>
+        <p className="mt-2 text-xs sm:text-sm text-amber-400 px-1">{error || gpsMessage}</p>
       )}
     </section>
   );

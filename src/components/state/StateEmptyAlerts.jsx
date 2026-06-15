@@ -1,7 +1,7 @@
 /**
  * Empty statewide alert messaging with helpful next-step actions.
  */
-export default function StateEmptyAlerts({ stateName, onViewRadar, onSearchLocation }) {
+export default function StateEmptyAlerts({ stateName, onViewRadar, onSelectCity }) {
   return (
     <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-5 py-8 text-center">
       <p className="text-lg font-medium text-emerald-400 mb-2">
@@ -20,10 +20,10 @@ export default function StateEmptyAlerts({ stateName, onViewRadar, onSearchLocat
         </button>
         <button
           type="button"
-          onClick={onSearchLocation}
+          onClick={onSelectCity}
           className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
         >
-          Search a Location
+          Select a City
         </button>
       </div>
     </div>

@@ -90,7 +90,7 @@ export default function PopularLocations({ stateAbbr, stateCode, stateSlug, stat
             onClick={() =>
               trackPopularLocationClicked({ state: stateCode, city: loc.name })
             }
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-sky-500/50 rounded-full text-sm font-medium text-white hover:text-sky-300 transition-colors"
+            className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 rounded-full text-sm font-semibold text-white shadow-sm shadow-sky-900/30 transition-colors"
           >
             {loc.name}
           </Link>

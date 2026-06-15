@@ -49,22 +49,14 @@ export function CityDirectory({ stateAbbr, stateName }) {
       <p className="text-sm text-slate-400 mb-4">
         Live alerts and current conditions for major {stateName} cities.
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="columns-2 sm:columns-3 lg:columns-4 gap-x-6">
         {cities.map((c) => (
           <Link
             key={c.slug}
             to={`/alerts/${c.slug}`}
-            className="group flex items-center justify-between bg-slate-800 hover:bg-slate-800/80 border border-slate-700 hover:border-sky-500/50 rounded-lg px-3 py-2.5 transition-all duration-200"
+            className="block py-1.5 text-sm text-sky-400 hover:text-sky-300 hover:underline transition-colors break-inside-avoid"
           >
-            <span className="text-sm font-medium text-white group-hover:text-sky-300 transition-colors">
-              {c.city}
-            </span>
-            <span
-              aria-hidden="true"
-              className="text-sky-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 text-sm"
-            >
-              &rarr;
-            </span>
+            {c.city}
           </Link>
         ))}
       </div>
