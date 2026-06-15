@@ -22,7 +22,7 @@ import { AlertListSkeleton, Skeleton } from './Skeletons';
 import StateActionCards from './state/StateActionCards';
 import StateUseMyLocationBar from './state/StateUseMyLocationBar';
 import StateFindLocalWeather from './state/StateFindLocalWeather';
-import PopularLocations from './state/PopularLocations';
+import StateCityRail from './state/StateCityRail';
 import StateEmptyAlerts from './state/StateEmptyAlerts';
 import StateCountyBrowse from './state/StateCountyBrowse';
 import RelatedWeatherLinks from './state/RelatedWeatherLinks';
@@ -438,43 +438,52 @@ export default function StateAlertsPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <PopularLocations
-          stateAbbr={stateAbbr}
-          stateCode={stateAbbr}
-          stateSlug={stateSlug}
-          stateName={stateData.name}
-        />
+        {/* City rail | radar | alerts — desktop; mobile stacks rail above map */}
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-[auto_1fr_minmax(0,300px)] lg:gap-4 xl:gap-5 items-start">
+          <StateCityRail
+            layout="horizontal"
+            stateAbbr={stateAbbr}
+            stateCode={stateAbbr}
+            stateSlug={stateSlug}
+            className="lg:hidden"
+          />
 
-        {/* Two-column layout: Map (left) + Alerts sidebar (right) on desktop */}
-        <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-6 items-start">
-
-          {/* LEFT COLUMN: Map — sticky while scrolling alerts (mobile + desktop) */}
-          <section
-            id="state-alerts-map"
-            className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 -mx-4 sm:-mx-6 lg:mx-0 [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden"
-          >
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[]}
-              alerts={displayMapAlerts}
-              cityMarkers={stateCityMarkers}
-              isHero
-              centerOn={displayMapCenter}
-              highlightArea={null}
-              onResetView={undefined}
-              resetViewLabel="Full View"
-              resetViewTitle="Reset to default US view"
-              resetToDefaultOnClick
-              selectedStateCode={stateAbbr}
-              radarLayerType="precipitation"
-              radarColorScheme={4}
-              stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
-              currentStateSlug={stateSlug}
+          {/* City rail + map — sticky while scrolling alerts */}
+          <div className="lg:col-span-2 sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 lg:grid lg:grid-cols-[auto_1fr] lg:gap-3 lg:items-start before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden">
+            <StateCityRail
+              layout="vertical"
+              stateAbbr={stateAbbr}
+              stateCode={stateAbbr}
+              stateSlug={stateSlug}
+              className="hidden lg:flex"
             />
-          </section>
+            <section
+              id="state-alerts-map"
+              className="relative -mx-4 sm:-mx-6 lg:mx-0 min-w-0 [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px]"
+            >
+              <StormMap
+                weatherData={{}}
+                stormPhase="active"
+                userLocations={[]}
+                alerts={displayMapAlerts}
+                cityMarkers={stateCityMarkers}
+                isHero
+                centerOn={displayMapCenter}
+                highlightArea={null}
+                onResetView={undefined}
+                resetViewLabel="Full View"
+                resetViewTitle="Reset to default US view"
+                resetToDefaultOnClick
+                selectedStateCode={stateAbbr}
+                radarLayerType="precipitation"
+                radarColorScheme={4}
+                stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
+                currentStateSlug={stateSlug}
+              />
+            </section>
+          </div>
 
-          {/* RIGHT COLUMN: Storms + Alerts — scrolls with page */}
+          {/* Alerts sidebar — scrolls with page */}
           <div className="space-y-4 mt-6 lg:mt-0">
 
             {/* Active Storm Events */}
