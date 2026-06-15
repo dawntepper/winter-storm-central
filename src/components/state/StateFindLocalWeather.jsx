@@ -108,20 +108,20 @@ export default function StateFindLocalWeather({ stateCode, stateName }) {
   return (
     <section
       id="state-local-weather"
-      className="scroll-mt-4 bg-slate-800/50 border border-slate-700 rounded-xl p-4"
+      className="scroll-mt-4 bg-slate-800/50 border border-slate-700 rounded-xl p-3.5"
       aria-label="Find local weather"
     >
-      <h2 className="text-sm font-semibold text-white mb-1">Find Local Weather</h2>
-      <p className="text-[11px] text-slate-500 mb-4">
+      <h2 className="text-sm font-semibold text-white mb-0.5">Find Local Weather</h2>
+      <p className="text-[11px] text-slate-500 mb-3">
         Jump to alerts and forecasts for a location in {stateName}.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <button
           type="button"
           onClick={handleUseMyLocation}
           disabled={isLocating}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
         >
           <span aria-hidden="true">📍</span>
           <NavigationIcon className="h-4 w-4" />

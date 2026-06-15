@@ -436,59 +436,66 @@ export default function StateAlertsPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Radar map + alerts sidebar — 2-column desktop */}
+        {/* Radar map + right rail — 2-column desktop */}
         <div className="lg:grid lg:grid-cols-[1fr_minmax(0,300px)] lg:gap-4 xl:gap-5 items-start">
-          <section
-            id="state-alerts-map"
-            className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 relative -mx-4 sm:-mx-6 lg:mx-0 min-w-0 before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px]"
-          >
-            <StormMap
-              weatherData={{}}
-              stormPhase="active"
-              userLocations={[]}
-              alerts={displayMapAlerts}
-              cityMarkers={stateCityMarkers}
-              isHero
-              centerOn={displayMapCenter}
-              highlightArea={null}
-              onResetView={undefined}
-              resetViewLabel="Full View"
-              resetViewTitle="Reset to default US view"
-              resetToDefaultOnClick
-              selectedStateCode={stateAbbr}
-              radarLayerType="precipitation"
-              radarColorScheme={4}
-              stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
-              currentStateSlug={stateSlug}
+          <div className="min-w-0 space-y-4">
+            <section
+              id="state-alerts-map"
+              className="sticky z-10 top-[calc(env(safe-area-inset-top,0px)+4px)] lg:top-4 relative -mx-4 sm:-mx-6 lg:mx-0 before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900 lg:before:hidden [&_.leaflet-container]:!h-[40vh] lg:[&_.leaflet-container]:!h-[500px]"
+            >
+              <StormMap
+                weatherData={{}}
+                stormPhase="active"
+                userLocations={[]}
+                alerts={displayMapAlerts}
+                cityMarkers={stateCityMarkers}
+                isHero
+                centerOn={displayMapCenter}
+                highlightArea={null}
+                onResetView={undefined}
+                resetViewLabel="Full View"
+                resetViewTitle="Reset to default US view"
+                resetToDefaultOnClick
+                selectedStateCode={stateAbbr}
+                radarLayerType="precipitation"
+                radarColorScheme={4}
+                stateNavSource={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
+                currentStateSlug={stateSlug}
+              />
+            </section>
+
+            <PopularLocations
+              stateAbbr={stateAbbr}
+              stateCode={stateAbbr}
+              stateSlug={stateSlug}
+              stateName={stateData.name}
             />
-          </section>
+          </div>
 
           <div className="space-y-4 mt-6 lg:mt-0">
+            <StateEmptyAlerts
+              alertCount={stateAlerts.length}
+              lastUpdated={lastUpdated}
+              loading={alertsLoading}
+            />
+
+            <StateFindLocalWeather
+              stateCode={stateAbbr}
+              stateName={stateData.name}
+            />
+
             <ActiveStormsForState stateAbbr={stateAbbr} />
 
             <section id="state-alerts">
-              <h2 className="text-lg font-semibold text-white mb-3">
-                Active Weather Alerts in {stateData.name}
-                {!alertsLoading && (
-                  <span className="text-sm font-normal text-slate-400 ml-2">({stateAlerts.length})</span>
-                )}
-              </h2>
-
               {alertsLoading ? (
                 <AlertListSkeleton count={4} showHeader={false} />
-              ) : stateAlerts.length === 0 ? (
-                <StateEmptyAlerts
-                  stateName={stateData.name}
-                  onViewRadar={scrollToRadar}
-                  onSelectCity={scrollToLocalWeather}
-                />
-              ) : (
+              ) : stateAlerts.length > 0 ? (
                 <AlertsByCategory
                   alerts={stateAlerts}
                   stateCode={stateAbbr}
                   onViewDetail={setSelectedAlert}
                 />
-              )}
+              ) : null}
             </section>
 
             <NearbyStateAlertsViz
@@ -498,18 +505,6 @@ export default function StateAlertsPage() {
             />
           </div>
         </div>
-
-        <PopularLocations
-          stateAbbr={stateAbbr}
-          stateCode={stateAbbr}
-          stateSlug={stateSlug}
-          stateName={stateData.name}
-        />
-
-        <StateFindLocalWeather
-          stateCode={stateAbbr}
-          stateName={stateData.name}
-        />
 
         <LocalForecastsAndAlerts
           stateSlug={stateSlug}

@@ -11,3 +11,15 @@ export function compareCityNames(a, b) {
 export function sortCitiesByName(cities) {
   return [...cities].sort(compareCityNames);
 }
+
+/** Descending by population; ties fall back to name order. */
+export function compareCitiesByPopulation(a, b) {
+  const popA = Number(a?.population) || 0;
+  const popB = Number(b?.population) || 0;
+  if (popB !== popA) return popB - popA;
+  return compareCityNames(a, b);
+}
+
+export function sortCitiesByPopulation(cities) {
+  return [...cities].sort(compareCitiesByPopulation);
+}
