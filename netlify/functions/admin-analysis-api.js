@@ -522,11 +522,28 @@ function normalizeMissingSearchKey(query, stateCode) {
   return `${String(query || '').trim().toLowerCase()}::${String(stateCode || '').trim().toUpperCase()}`;
 }
 
+const DISMISSED_MISSING_SEARCHES_MIGRATION_HINT =
+  'Apply supabase/migrations/016_dismissed_missing_searches_and_rpc_until.sql in the Supabase SQL editor (or run migration 016 via Supabase CLI).';
+
+function isDismissedMissingSearchesTableMissing(error) {
+  if (!error) return false;
+  if (error.code === '42P01' || error.code === 'PGRST205') return true;
+  return String(error.message || '').includes('dismissed_missing_searches');
+}
+
 async function fetchDismissedMissingSearchKeys(supabase) {
   const { data, error } = await supabase
     .from('dismissed_missing_searches')
     .select('query, state_code');
-  if (error) throw error;
+  if (error) {
+    if (isDismissedMissingSearchesTableMissing(error)) {
+      console.warn(
+        'dismissed_missing_searches table not found; expansion dismissals disabled until migration 016 is applied'
+      );
+      return new Set();
+    }
+    throw error;
+  }
   return new Set(
     (data || []).map((row) => normalizeMissingSearchKey(row.query, row.state_code))
   );
@@ -559,7 +576,16 @@ async function dismissMissingSearch(supabase, { query, stateCode }) {
     },
     { onConflict: 'query,state_code' }
   );
-  if (error) throw error;
+  if (error) {
+    if (isDismissedMissingSearchesTableMissing(error)) {
+      const err = new Error(
+        `Dismiss is unavailable until migration 016 is applied. ${DISMISSED_MISSING_SEARCHES_MIGRATION_HINT}`
+      );
+      err.statusCode = 503;
+      throw err;
+    }
+    throw error;
+  }
   return { ok: true };
 }
 
