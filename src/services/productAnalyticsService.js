@@ -28,6 +28,7 @@
  * | radar_toggled               | none            | every toggle |
  * | radar_type_changed          | none            | every type pick |
  * | radar_location_changed      | debounce        | radar_loc:{state}:{type} (2s) |
+ * | radar_state_resolved        | session_once    | radar_state_resolved |
  *
  * session_once  — one emit per browser tab session (sessionStorage flag).
  * visit_cooldown — at most once per key within COOLDOWN_MS; blocks StrictMode/
@@ -65,6 +66,7 @@ export const PRODUCT_EVENTS = {
   STORM_ALERTS_CLICKED: 'storm_alerts_clicked',
   STORM_LOCATION_SAVED: 'storm_location_saved',
   STORM_SIGNIN_STARTED: 'storm_signin_started',
+  RADAR_STATE_RESOLVED: 'radar_state_resolved',
 };
 
 export const RADAR_EVENTS = {
@@ -153,6 +155,10 @@ const PRODUCT_DEDUPE_RULES = {
   [PRODUCT_EVENTS.STORM_SIGNIN_STARTED]: {
     type: 'session_once',
     key: ({ metadata }) => `storm_signin:${metadata?.storm_slug || 'unknown'}`,
+  },
+  [PRODUCT_EVENTS.RADAR_STATE_RESOLVED]: {
+    type: 'session_once',
+    key: () => 'radar_state_resolved',
   },
 };
 

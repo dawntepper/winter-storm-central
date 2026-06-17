@@ -9,7 +9,49 @@ import {
   recordRadarEvent,
   PRODUCT_EVENTS,
   RADAR_EVENTS,
+  normalizeRadarStateCode,
+  RADAR_STATE_NATIONAL,
 } from '../services/productAnalyticsService';
+
+const RADAR_OPENED_AT_KEY = 'stormtracking_radar_opened_at';
+const RADAR_OPENED_UNRESOLVED_KEY = 'stormtracking_radar_opened_unresolved';
+
+export const RADAR_RESOLUTION_SOURCES = {
+  GPS: 'gps',
+  SEARCH: 'search',
+  DEEP_LINK: 'deep_link',
+  SAVED_LOCATION: 'saved_location',
+  MANUAL_STATE_SELECT: 'manual_state_select',
+};
+
+function readRadarSessionValue(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeRadarSessionValue(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Silent — analytics never breaks the app
+  }
+}
+
+function noteRadarOpenedTimestamp() {
+  if (!readRadarSessionValue(RADAR_OPENED_AT_KEY)) {
+    writeRadarSessionValue(RADAR_OPENED_AT_KEY, String(Date.now()));
+  }
+}
+
+function markRadarOpenedUnresolved(stateCode) {
+  const normalized = normalizeRadarStateCode(stateCode);
+  if (normalized === RADAR_STATE_NATIONAL) {
+    writeRadarSessionValue(RADAR_OPENED_UNRESOLVED_KEY, '1');
+  }
+}
 import { SLUG_TO_ABBR } from '../data/stateConfig';
 
 // Session tracking state
@@ -261,7 +303,7 @@ export function trackRadarToggle(isEnabled, { stateCode, radarType } = {}) {
     radarType,
   });
   if (isEnabled) {
-    recordRadarEvent(RADAR_EVENTS.OPENED, { stateCode, radarType });
+    trackRadarOpened({ stateCode, radarType });
   }
   track('Radar Toggled', {
     state: isEnabled ? 'on' : 'off'
@@ -272,7 +314,38 @@ export function trackRadarToggle(isEnabled, { stateCode, radarType } = {}) {
  * Radar overlay first shown (map mount or toggle on).
  */
 export function trackRadarOpened({ stateCode, radarType } = {}) {
+  noteRadarOpenedTimestamp();
+  markRadarOpenedUnresolved(stateCode);
   recordRadarEvent(RADAR_EVENTS.OPENED, { stateCode, radarType });
+}
+
+/**
+ * Radar session gained a state after opening unresolved (US sentinel).
+ * Fires at most once per session when radar opened without a state first.
+ */
+export function trackRadarStateResolved({ stateCode, source } = {}) {
+  const normalized = normalizeRadarStateCode(stateCode);
+  if (normalized === RADAR_STATE_NATIONAL) return false;
+  if (readRadarSessionValue(RADAR_OPENED_UNRESOLVED_KEY) !== '1') return false;
+
+  const openedAt = Number(readRadarSessionValue(RADAR_OPENED_AT_KEY));
+  const secondsAfterOpen = Number.isFinite(openedAt)
+    ? Math.max(0, Math.round((Date.now() - openedAt) / 1000))
+    : 0;
+
+  const recorded = recordProductEvent(PRODUCT_EVENTS.RADAR_STATE_RESOLVED, {
+    stateCode: normalized,
+    metadata: {
+      source: source || 'gps',
+      seconds_after_open: secondsAfterOpen,
+    },
+  });
+
+  if (recorded) {
+    writeRadarSessionValue(RADAR_OPENED_UNRESOLVED_KEY, '0');
+  }
+
+  return recorded;
 }
 
 /**
@@ -1888,6 +1961,7 @@ export default {
   trackAlertAddedToMap,
   trackRadarToggle,
   trackRadarOpened,
+  trackRadarStateResolved,
   trackRadarLocationChanged,
   trackAlertsToggle,
   trackMapReset,

@@ -42,6 +42,8 @@ import {
   trackRadarLinkClick,
   trackBrowseByStateClick,
   trackHomepageView,
+  trackRadarStateResolved,
+  RADAR_RESOLUTION_SOURCES,
   setNavSource,
   NAV_SOURCES,
   SAVE_TRIGGERS
@@ -320,6 +322,7 @@ export default function App() {
   const [highlightedAlertId, setHighlightedAlertId] = useState(null); // Alert ID to highlight on map (hover)
   const [selectedAlertId, setSelectedAlertId] = useState(null); // Alert ID for selected/clicked state (green marker)
   const [selectedStateCode, setSelectedStateCode] = useState(null); // State code to highlight in alert cards
+  const radarResolveSourceRef = useRef(null);
   const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
   const [alertFilter, setAlertFilter] = useState(null); // null = national, "PA" = state filter
   const [heroLocation, setHeroLocation] = useState(null); // IP/GPS label for NearMeHeader
@@ -848,6 +851,7 @@ export default function App() {
   // Handle clicking a viewed location to re-center map and show marker
   const handleViewedLocationClick = (location) => {
     if (location.lat && location.lon) {
+      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.SAVED_LOCATION;
       setMapCenterOn({ lat: location.lat, lon: location.lon, id: Date.now() });
       focusCounty(location.lat, location.lon);
       // Show preview marker with the location name
@@ -863,10 +867,12 @@ export default function App() {
 
       const locationLabel = location.name || location.location || '';
       const stateMatch = locationLabel.match(/,\s*([A-Za-z]{2})\s*$/);
+      const resolvedState = location.region || stateMatch?.[1]?.toUpperCase() || null;
+      if (resolvedState) setSelectedStateCode(resolvedState);
       trackLocationSearch({
         query: locationLabel,
         matchType: 'saved_location',
-        stateCode: location.region || stateMatch?.[1]?.toUpperCase() || null,
+        stateCode: resolvedState,
         pageContext: 'homepage-saved-locations',
         success: true,
         resolvedType: 'saved_location',
@@ -895,9 +901,25 @@ export default function App() {
   };
 
   const handleHeroLocate = (c) => {
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.GPS;
     setMapCenterOn(c);
     focusCounty(c.lat, c.lon);
   };
+
+  const handleResolveState = (stateCode) => {
+    if (!radarResolveSourceRef.current) {
+      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.GPS;
+    }
+    setSelectedStateCode(stateCode);
+  };
+
+  useEffect(() => {
+    if (!selectedStateCode) return;
+    trackRadarStateResolved({
+      stateCode: selectedStateCode,
+      source: radarResolveSourceRef.current || RADAR_RESOLUTION_SOURCES.GPS,
+    });
+  }, [selectedStateCode]);
 
   // Handle hovering over an alert in the sidebar (highlight on map)
   const handleHoverAlert = (alertId) => {
@@ -912,6 +934,7 @@ export default function App() {
   // Handle clicking a searched location name to zoom map
   const handleSearchLocationClick = (locationData) => {
     if (locationData.lat && locationData.lon) {
+      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.SEARCH;
       setMapCenterOn({ lat: locationData.lat, lon: locationData.lon, id: Date.now() });
       focusCounty(locationData.lat, locationData.lon);
       // Show preview marker
@@ -925,6 +948,9 @@ export default function App() {
       // Track
       trackLocationViewedOnMap(locationData.name);
 
+      const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
+      if (stateMatch) setSelectedStateCode(stateMatch[1]);
+
       // On mobile, scroll to the map
       const isMobile = window.innerWidth < 1024;
       if (isMobile) {
@@ -937,6 +963,7 @@ export default function App() {
 
   // Handle state zoom - center map on state centroid
   const handleStateZoom = (stateCode) => {
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.MANUAL_STATE_SELECT;
     const coords = STATE_CENTROIDS[stateCode];
     if (coords) {
       setMapCenterOn({ lat: coords.lat, lon: coords.lon, zoom: 5, id: Date.now() });
@@ -988,7 +1015,7 @@ export default function App() {
           onResolved={setHeroLocation}
           onLocate={handleHeroLocate}
           onChangeLocation={handleChangeLocation}
-          onResolveState={setSelectedStateCode}
+          onResolveState={handleResolveState}
         />
 
         {/* Stale Data Warning */}
@@ -1030,7 +1057,7 @@ export default function App() {
               onLocationClick={handleSearchLocationClick}
               initialLocation={initialLocation}
               onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
-              onResolveState={setSelectedStateCode}
+              onResolveState={handleResolveState}
               onLocationResolved={setHeroLocation}
             />
           </div>
@@ -1276,7 +1303,7 @@ export default function App() {
                 onLocationClick={handleSearchLocationClick}
                 initialLocation={initialLocation}
                 onLocate={(c) => { setMapCenterOn(c); focusCounty(c.lat, c.lon); }}
-                onResolveState={setSelectedStateCode}
+                onResolveState={handleResolveState}
                 onLocationResolved={setHeroLocation}
               />
             </div>

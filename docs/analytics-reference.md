@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-06-15.
+Last reviewed: 2026-06-17.
 
 ---
 
@@ -455,6 +455,48 @@ MOST_IMPACTED_LIST          "most_impacted_list"
 
 ---
 
+## Supabase product + radar events
+
+These rows land in `product_events` / `radar_events` via `productAnalyticsService.js`. They power the admin Product Analysis dashboard.
+
+### Radar events (`radar_events`)
+
+```
+radar_opened
+  state_code     2-letter abbr or US sentinel when no state at open time (unchanged)
+  radar_type     e.g. "precipitation"
+
+radar_location_changed / radar_type_changed / radar_toggled
+  (unchanged — see productAnalyticsService.js dedupe table)
+```
+
+`radar_opened` still fires immediately on map mount. When no state is known yet, `state_code` is stored as `US` (national sentinel) — this is an **unresolved** session, not proof the user chose a national view.
+
+### Radar state resolution (`product_events`)
+
+```
+radar_state_resolved
+  state_code           2-letter abbr (resolved state)
+  metadata.source      gps | search | deep_link | saved_location | manual_state_select
+  metadata.seconds_after_open   seconds from first radar_opened in session to resolve
+```
+
+Fires **once per session** when a radar session that opened unresolved (`US`) later gains a state (homepage map, `/radar`, etc.). Does not fire when radar opens with a state already attached (e.g. state alert pages).
+
+Admin dashboard labels the `US` sentinel as **Unresolved Location** (subtitle: default US view).
+
+### RADAR_RESOLUTION_SOURCES
+
+```
+GPS                    "gps"                     GPS / Use My Location
+SEARCH                 "search"                  ZIP or city search resolved a state
+DEEP_LINK              "deep_link"               /radar?lat=&lon= deep link
+SAVED_LOCATION         "saved_location"          Saved pin re-centered map
+MANUAL_STATE_SELECT    "manual_state_select"     State zoom / manual state pick on map
+```
+
+---
+
 ## How source-stashing works
 
 Every navigation event records HOW the user got there via a `source` prop. The mechanism:
@@ -490,5 +532,6 @@ No change needed in the destination page — it already reads the flag.
 ## Related files
 
 - `src/utils/analytics.js` — implementation (canonical source of truth)
+- `src/services/productAnalyticsService.js` — Supabase product + radar funnel writes
 - `src/data/affiliateProducts.js` — `productId` values used by Affiliate Click / Essentials Card Click events
 - `src/config/featureFlags.js` — `AFFILIATE_LINKS_ENABLED` gating

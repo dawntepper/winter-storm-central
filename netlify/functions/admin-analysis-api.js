@@ -1244,6 +1244,170 @@ async function fetchRadarEngagement(supabase, since) {
   };
 }
 
+const RADAR_RESOLUTION_SOURCE_LABELS = {
+  gps: 'GPS',
+  search: 'Search',
+  deep_link: 'Deep Link',
+  saved_location: 'Saved Location',
+  manual_state_select: 'Manual State Selection',
+};
+
+const ALERT_VIEW_EVENTS = new Set(['state_alert_page_view', 'county_alert_view']);
+
+function buildRadarAttributionFunnel(sessionEvents) {
+  const radarOpenedSessions = new Set();
+  for (const row of sessionEvents) {
+    if (row.kind === 'radar_opened') radarOpenedSessions.add(row.session_id);
+  }
+
+  const base = radarOpenedSessions.size || 1;
+  const steps = [
+    { step: 1, eventName: 'radar_opened', label: 'Radar Opened' },
+    { step: 2, eventName: 'radar_state_resolved', label: 'State Resolved' },
+    { step: 3, eventName: 'alert_viewed', label: 'Alert Viewed' },
+    { step: 4, eventName: 'save_location', label: 'Location Saved' },
+  ];
+
+  const counts = steps.map((step, index) => {
+    let sessions = 0;
+    if (index === 0) {
+      sessions = radarOpenedSessions.size;
+    } else {
+      for (const sessionId of radarOpenedSessions) {
+        const events = sessionEvents
+          .filter((row) => row.session_id === sessionId)
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const openedAt = events.find((row) => row.kind === 'radar_opened')?.created_at;
+        if (!openedAt) continue;
+        const openedMs = new Date(openedAt).getTime();
+        const hasStep = events.some((row) => {
+          if (new Date(row.created_at).getTime() < openedMs) return false;
+          if (step.eventName === 'radar_state_resolved') return row.kind === 'radar_state_resolved';
+          if (step.eventName === 'alert_viewed') return ALERT_VIEW_EVENTS.has(row.kind);
+          if (step.eventName === 'save_location') return row.kind === 'save_location';
+          return false;
+        });
+        if (hasStep) sessions += 1;
+      }
+    }
+    return { ...step, sessions };
+  });
+
+  return counts.map((step, index) => {
+    const prevSessions = index === 0 ? step.sessions : counts[index - 1].sessions;
+    const dropoffPct =
+      index === 0
+        ? 0
+        : prevSessions > 0
+          ? Math.round((1 - step.sessions / prevSessions) * 1000) / 10
+          : 0;
+    const completionPct = base > 0 ? Math.round((step.sessions / base) * 1000) / 10 : 0;
+    return { ...step, completionPct, dropoffPct };
+  });
+}
+
+async function fetchRadarAttributionAnalytics(supabase, since) {
+  let radarOpensQuery = supabase
+    .from('radar_events')
+    .select('session_id, visitor_id, state_code, created_at')
+    .eq('event_type', 'radar_opened')
+    .limit(10000);
+  radarOpensQuery = applySince(radarOpensQuery, 'created_at', since);
+
+  let productQuery = supabase
+    .from('product_events')
+    .select('session_id, visitor_id, event_name, created_at, metadata')
+    .in('event_name', [
+      'radar_view',
+      'radar_state_resolved',
+      'state_alert_page_view',
+      'county_alert_view',
+      'save_location',
+    ])
+    .limit(10000);
+  productQuery = applySince(productQuery, 'created_at', since);
+
+  const [radarOpensRes, productRes] = await Promise.all([radarOpensQuery, productQuery]);
+  if (radarOpensRes.error) throw radarOpensRes.error;
+  if (productRes.error) throw productRes.error;
+
+  const radarOpens = radarOpensRes.data || [];
+  const productEvents = productRes.data || [];
+
+  const visitorIds = new Set();
+  const resolvedSessions = new Set();
+  const unresolvedUsSessions = new Set();
+  const sourceCounts = new Map();
+
+  const sessionEvents = [];
+
+  for (const row of radarOpens) {
+    visitorIds.add(row.visitor_id);
+    sessionEvents.push({
+      session_id: row.session_id,
+      visitor_id: row.visitor_id,
+      kind: 'radar_opened',
+      created_at: row.created_at,
+    });
+    if ((row.state_code || 'US') === 'US') {
+      unresolvedUsSessions.add(row.session_id);
+    }
+  }
+
+  for (const row of productEvents) {
+    if (row.event_name === 'radar_view') {
+      visitorIds.add(row.visitor_id);
+    }
+    if (row.event_name === 'radar_state_resolved') {
+      resolvedSessions.add(row.session_id);
+      unresolvedUsSessions.delete(row.session_id);
+      const source = row.metadata?.source || 'unknown';
+      sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
+      sessionEvents.push({
+        session_id: row.session_id,
+        visitor_id: row.visitor_id,
+        kind: 'radar_state_resolved',
+        created_at: row.created_at,
+      });
+    } else {
+      sessionEvents.push({
+        session_id: row.session_id,
+        visitor_id: row.visitor_id,
+        kind: row.event_name,
+        created_at: row.created_at,
+      });
+    }
+  }
+
+  const resolvedCount = resolvedSessions.size;
+  const unresolvedCount = unresolvedUsSessions.size;
+  const resolutionDenominator = resolvedCount + unresolvedCount;
+  const resolutionRatePct =
+    resolutionDenominator > 0
+      ? Math.round((resolvedCount / resolutionDenominator) * 1000) / 10
+      : null;
+
+  const sourceBreakdown = Array.from(sourceCounts.entries())
+    .map(([source, count]) => ({
+      source,
+      label: RADAR_RESOLUTION_SOURCE_LABELS[source] || source.replace(/_/g, ' '),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const funnel = buildRadarAttributionFunnel(sessionEvents);
+
+  return {
+    radarVisitors: visitorIds.size,
+    radarOpens: radarOpens.length,
+    resolvedSessions: resolvedCount,
+    unresolvedSessions: unresolvedCount,
+    resolutionRatePct,
+    sourceBreakdown,
+    funnel,
+  };
+}
+
 const STATE_PAGE_FORECAST_SOURCES = new Set([
   'forecasts_conditions_card',
   'weather_forecast_card',
@@ -1427,7 +1591,7 @@ async function fetchUserJourneys(supabase, since) {
 
 function formatRadarStateLabel(stateCode) {
   const code = stateCode;
-  if (!code || code === 'unknown' || code === 'US') return 'National';
+  if (!code || code === 'unknown' || code === 'US') return 'Unresolved Location';
   return code;
 }
 
@@ -2290,6 +2454,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     forecastEngagement,
     cityDemand,
     stormEventsBase,
+    radarAttribution,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -2300,6 +2465,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchCountyAlertViews(supabase, since),
     fetchSavedLocations(supabase, since),
     fetchRadarEngagement(supabase, since),
+    fetchRadarAttributionAnalytics(supabase, since),
     fetchUserJourneys(supabase, since),
     fetchAnalyticsHealth(supabase),
     fetchPreviousPeriodMetrics(supabase, dateRange),
@@ -2427,6 +2593,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     radar: {
       ...radar,
       trend: metricTrends.radarOpens,
+      attribution: radarAttribution,
     },
     forecastEngagement: {
       ...forecastEngagement,

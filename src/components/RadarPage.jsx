@@ -16,7 +16,7 @@ import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
-import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -156,6 +156,7 @@ export default function RadarPage() {
   const areaReqRef = useRef(0);
 
   const effectiveStateCode = gpsStateCode || heroLocation?.region || null;
+  const radarResolveSourceRef = useRef(null);
 
   const focusCounty = useCallback((lat, lon) => {
     if (lat == null || lon == null) return;
@@ -174,6 +175,7 @@ export default function RadarPage() {
   }, []);
 
   const handleGpsLocate = useCallback((c) => {
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.GPS;
     setGpsCenter(c);
     focusCounty(c.lat, c.lon);
     scrollMapIntoView();
@@ -181,6 +183,7 @@ export default function RadarPage() {
 
   const handleSearchLocationClick = useCallback((locationData) => {
     if (locationData.lat == null || locationData.lon == null) return;
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.SEARCH;
     setLocationSummary(locationData);
     setGpsCenter({ lat: locationData.lat, lon: locationData.lon, zoom: 9, id: Date.now() });
     focusCounty(locationData.lat, locationData.lon);
@@ -213,6 +216,27 @@ export default function RadarPage() {
     const zoom = Number.isFinite(zoomParam) ? zoomParam : 8;
     return { id: `radar-${lat}-${lon}`, lat, lon, zoom };
   }, [searchParams]);
+
+  useEffect(() => {
+    if (centerOn && !gpsCenter) {
+      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.DEEP_LINK;
+    }
+  }, [centerOn, gpsCenter]);
+
+  const handleGpsResolveState = useCallback((stateCode) => {
+    if (!radarResolveSourceRef.current) {
+      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.GPS;
+    }
+    setGpsStateCode(stateCode);
+  }, []);
+
+  useEffect(() => {
+    if (!effectiveStateCode) return;
+    trackRadarStateResolved({
+      stateCode: effectiveStateCode,
+      source: radarResolveSourceRef.current || RADAR_RESOLUTION_SOURCES.GPS,
+    });
+  }, [effectiveStateCode]);
 
   const displayCenterOn = gpsCenter ?? centerOn;
   const displayHighlightArea = userArea;
@@ -289,7 +313,7 @@ export default function RadarPage() {
             onResolved={setHeroLocation}
             onLocate={handleGpsLocate}
             onChangeLocation={handleChangeLocation}
-            onResolveState={setGpsStateCode}
+            onResolveState={handleGpsResolveState}
             locationContext={heroLocationContext}
           />
         </div>
@@ -309,7 +333,7 @@ export default function RadarPage() {
               onLocationsChange={() => {}}
               onLocationClick={handleSearchLocationClick}
               onLocate={handleGpsLocate}
-              onResolveState={setGpsStateCode}
+              onResolveState={handleGpsResolveState}
               onLocationResolved={setHeroLocation}
             />
           </div>

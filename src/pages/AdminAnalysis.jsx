@@ -53,9 +53,9 @@ function formatDate(iso) {
   }
 }
 
-function StatCard({ label, value, hint, trend }) {
+function StatCard({ label, value, hint, trend, title }) {
   return (
-    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4" title={title}>
       <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">{label}</div>
       <div className="text-2xl font-bold text-white">{value}</div>
       {trend && (
@@ -117,10 +117,30 @@ const FUNNEL_LABELS = {
   county_to_radar: 'State Alerts → County Search → County Alert → Radar',
 };
 
+const RADAR_UNRESOLVED_TOOLTIP =
+  'National represents radar sessions where no state was attached at the time the radar opened. It does not necessarily indicate that the user selected a national radar view.';
+
+const RADAR_RESOLUTION_SOURCE_LABELS = {
+  gps: 'GPS',
+  search: 'Search',
+  deep_link: 'Deep Link',
+  saved_location: 'Saved Location',
+  manual_state_select: 'Manual State Selection',
+};
+
 function formatRadarState(row) {
   const code = row.state_code;
-  if (!code || code === 'unknown' || code === 'US') return 'National';
+  if (!code || code === 'unknown' || code === 'US') return 'Unresolved Location';
   return code;
+}
+
+function LabelWithHint({ label, hint }) {
+  return (
+    <span className="inline-flex items-center gap-1" title={hint}>
+      {label}
+      {hint && <span className="text-slate-500 cursor-help" aria-hidden="true">ⓘ</span>}
+    </span>
+  );
 }
 
 function SectionHeader({ title, description, viewMode, onViewModeChange, showToggle = true }) {
@@ -397,6 +417,7 @@ function AdminAnalysisInner() {
   const countyDiscovery = data?.countyDiscovery;
   const sl = data?.savedLocations;
   const radar = data?.radar;
+  const radarAttribution = radar?.attribution;
   const forecastEngagement = data?.forecastEngagement;
   const journeys = data?.userJourneys;
   const countyViews = data?.countyAlertViews;
@@ -947,7 +968,7 @@ function AdminAnalysisInner() {
             <CollapsibleAnalysisSection
               id="radar-engagement"
               title="Radar Engagement"
-              description="Radar opens, types, and location views from radar_events."
+              description="Radar opens, types, location views, and state resolution attribution."
               expanded={sectionsExpanded['radar-engagement']}
               onToggle={() => toggleSection('radar-engagement')}
               headerExtra={
@@ -957,6 +978,124 @@ function AdminAnalysisInner() {
                 />
               }
             >
+              {radarAttribution && (
+                <>
+                  <SubsectionTitle>Radar attribution</SubsectionTitle>
+                  <p className="text-xs text-slate-500 mb-3" title={RADAR_UNRESOLVED_TOOLTIP}>
+                    Tracks when radar sessions resolve from the default US view to a specific state.
+                    <span className="text-slate-600"> Unresolved Location = default US view at open.</span>
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mb-6">
+                    <StatCard
+                      label="Radar visitors"
+                      value={formatNumber(radarAttribution.radarVisitors)}
+                      hint="Unique visitors with radar_opened or radar_view"
+                    />
+                    <StatCard
+                      label="Radar opens"
+                      value={formatNumber(radarAttribution.radarOpens)}
+                      trend={metricTrends?.radarOpens}
+                    />
+                    <StatCard
+                      label="Resolved sessions"
+                      value={formatNumber(radarAttribution.resolvedSessions)}
+                      hint="radar_state_resolved"
+                    />
+                    <StatCard
+                      label={
+                        <LabelWithHint label="Unresolved sessions" hint={RADAR_UNRESOLVED_TOOLTIP} />
+                      }
+                      value={formatNumber(radarAttribution.unresolvedSessions)}
+                      hint="radar_opened US, no resolve"
+                      title={RADAR_UNRESOLVED_TOOLTIP}
+                    />
+                    <StatCard
+                      label="Resolution rate"
+                      value={formatPct(radarAttribution.resolutionRatePct)}
+                      hint="Resolved ÷ (resolved + unresolved)"
+                    />
+                  </div>
+                  {(radarAttribution.sourceBreakdown?.length ?? 0) > 0 && (
+                    <div className="mb-6">
+                      <SubsectionTitle>Resolution source breakdown</SubsectionTitle>
+                      {viewModes.radarEngagement === 'visual' ? (
+                        <AdminBarChart
+                          data={radarAttribution.sourceBreakdown}
+                          dataKey="count"
+                          nameKey="label"
+                          maxItems={8}
+                          compact
+                          emptyMessage="No resolution sources in this period."
+                        />
+                      ) : (
+                        <DataTable
+                          columns={[
+                            {
+                              key: 'label',
+                              label: 'Source',
+                              render: (r) => r.label || RADAR_RESOLUTION_SOURCE_LABELS[r.source] || r.source,
+                            },
+                            {
+                              key: 'count',
+                              label: 'Resolutions',
+                              render: (r) => formatNumber(r.count),
+                            },
+                          ]}
+                          rows={radarAttribution.sourceBreakdown}
+                          emptyMessage="No resolution sources in this period."
+                        />
+                      )}
+                    </div>
+                  )}
+                  {(radarAttribution.funnel?.length ?? 0) > 0 && (
+                    <div className="mb-6">
+                      <SubsectionTitle>Radar funnel</SubsectionTitle>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Radar Opened → State Resolved → Alert Viewed → Location Saved (sequential, same session)
+                      </p>
+                      {viewModes.radarEngagement === 'visual' ? (
+                        <AdminFunnel
+                          stepStats={(radarAttribution.funnel || []).map((step) => ({
+                            step: step.step,
+                            eventName: step.label,
+                            sessions: step.sessions,
+                            completionPct: step.completionPct,
+                            dropoffPct: step.dropoffPct,
+                          }))}
+                          formatEventName={(name) => name}
+                          emptyMessage="No radar funnel data in this period."
+                          compact
+                        />
+                      ) : (
+                        <DataTable
+                          columns={[
+                            { key: 'step', label: 'Step' },
+                            { key: 'label', label: 'Stage' },
+                            {
+                              key: 'sessions',
+                              label: 'Sessions',
+                              render: (r) => formatNumber(r.sessions),
+                            },
+                            {
+                              key: 'completionPct',
+                              label: 'Completion',
+                              render: (r) => formatPct(r.completionPct),
+                            },
+                            {
+                              key: 'dropoffPct',
+                              label: 'Drop-off',
+                              render: (r) => formatPct(r.dropoffPct),
+                            },
+                          ]}
+                          rows={radarAttribution.funnel || []}
+                          emptyMessage="No radar funnel data in this period."
+                        />
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+              <SubsectionTitle>Opens &amp; engagement</SubsectionTitle>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
                 <StatCard
                   label="Total radar opens"
@@ -968,7 +1107,9 @@ function AdminAnalysisInner() {
                   value={formatNumber(radar?.insights?.avgOpensPerSession)}
                 />
                 <StatCard
-                  label="Top state"
+                  label={
+                    <LabelWithHint label="Top state" hint={RADAR_UNRESOLVED_TOOLTIP} />
+                  }
                   value={
                     radar?.insights?.topState
                       ? formatRadarState({ state_code: radar.insights.topState.stateCode })
@@ -976,7 +1117,14 @@ function AdminAnalysisInner() {
                   }
                   hint={
                     radar?.insights?.topState
-                      ? `${formatNumber(radar.insights.topState.openCount)} opens`
+                      ? `${formatNumber(radar.insights.topState.openCount)} opens${
+                          radar.insights.topState.stateCode === 'US' ? ' · default US view' : ''
+                        }`
+                      : undefined
+                  }
+                  title={
+                    radar?.insights?.topState?.stateCode === 'US'
+                      ? RADAR_UNRESOLVED_TOOLTIP
                       : undefined
                   }
                 />
