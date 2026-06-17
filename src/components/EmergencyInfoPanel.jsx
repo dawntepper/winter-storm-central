@@ -9,6 +9,7 @@ import {
   trackEmergencyInfoPanelViewed,
   trackEmergencyInfoLinkClicked
 } from '../utils/analytics';
+import TwitterEmbed, { isTweetUrl } from './TwitterEmbed';
 
 function formatTimestamp(iso) {
   if (!iso) return null;
@@ -75,6 +76,10 @@ function EmergencyEntryCard({ entry, stormSlug, stormType }) {
         </p>
       )}
 
+      {isTweetUrl(entry.socialUrl) && (
+        <TwitterEmbed tweetUrl={entry.socialUrl} />
+      )}
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
         {entry.sourceName && entry.sourceUrl && (
           <a
@@ -89,7 +94,7 @@ function EmergencyEntryCard({ entry, stormSlug, stormType }) {
             <span className="sr-only"> (opens in new tab)</span>
           </a>
         )}
-        {entry.socialUrl && (
+        {entry.socialUrl && !isTweetUrl(entry.socialUrl) && (
           <a
             href={entry.socialUrl}
             target="_blank"

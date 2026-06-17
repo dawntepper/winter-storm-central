@@ -1003,7 +1003,7 @@ function StormForm({
                         entries[index] = { ...entry, socialUrl: e.target.value, updatedAt: new Date().toISOString() };
                         handleChange('emergencyEntries', entries);
                       }}
-                      placeholder="Social URL (optional)"
+                      placeholder="X/Twitter post URL (embeds on storm page) or other social link"
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
                     />
                     <div className="flex flex-wrap items-center gap-4">
