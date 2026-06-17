@@ -25,7 +25,7 @@ import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import SortableDataTable from '../components/admin/SortableDataTable';
 import StickyDateRangePicker, { DateRangeButtons } from '../components/admin/StickyDateRangePicker';
 import TrendIndicator from '../components/admin/TrendIndicator';
-import { fetchAdminAnalysis } from '../lib/adminAnalysisRepo';
+import { fetchAdminAnalysis, dismissMissingSearch } from '../lib/adminAnalysisRepo';
 
 function formatNumber(n) {
   if (n == null) return '—';
@@ -346,6 +346,30 @@ function AdminAnalysisInner() {
     }
   }, []);
 
+  const handleDismissMissingSearch = useCallback(async ({ query, state }) => {
+    await dismissMissingSearch({ query, stateCode: state });
+    setData((prev) => {
+      if (!prev?.expansionOpportunities) return prev;
+      const matchKey = (row) =>
+        `${row.query}-${row.state || ''}` === `${query}-${state || ''}`;
+      const removed = prev.expansionOpportunities.failedSearches.find(matchKey);
+      const removedCount = removed?.searchCount ?? 0;
+      const filterRow = (row) => !matchKey(row);
+      return {
+        ...prev,
+        expansionOpportunities: {
+          ...prev.expansionOpportunities,
+          failedSearches: prev.expansionOpportunities.failedSearches.filter(filterRow),
+          topCities: prev.expansionOpportunities.topCities.filter(filterRow),
+          totalFailed: Math.max(
+            0,
+            (prev.expansionOpportunities.totalFailed ?? 0) - removedCount
+          ),
+        },
+      };
+    });
+  }, []);
+
   useEffect(() => {
     load(dateRange);
   }, [dateRange, load]);
@@ -531,7 +555,10 @@ function AdminAnalysisInner() {
                       needsAttention={needsAttention}
                       variant="mobile-accordion"
                     />
-                    <ExpansionOpportunities data={expansionOpportunities} />
+                    <ExpansionOpportunities
+                      data={expansionOpportunities}
+                      onDismissMissingSearch={handleDismissMissingSearch}
+                    />
                     <CountyAlertOpportunities data={countyAlertOpportunities} />
                     <MostVisitedPages data={mostVisitedPages} dateRange={dateRange} />
                   </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import RecommendedCitiesToAdd from './RecommendedCitiesToAdd';
 
 function formatNumber(n) {
@@ -27,8 +28,23 @@ function SuggestionBadge({ text }) {
   );
 }
 
-export default function ExpansionOpportunities({ data }) {
+export default function ExpansionOpportunities({ data, onDismissMissingSearch }) {
+  const [dismissingKey, setDismissingKey] = useState(null);
+
   if (!data) return null;
+
+  const dismissKey = (row) => `${row.query}-${row.state || ''}`;
+
+  const handleDismiss = async (row) => {
+    if (!onDismissMissingSearch) return;
+    const key = dismissKey(row);
+    setDismissingKey(key);
+    try {
+      await onDismissMissingSearch({ query: row.query, state: row.state });
+    } finally {
+      setDismissingKey(null);
+    }
+  };
 
   const hasFailed = (data.failedSearches?.length ?? 0) > 0;
   const hasCities = (data.topCities?.length ?? 0) > 0;
@@ -124,7 +140,10 @@ export default function ExpansionOpportunities({ data }) {
       )}
 
       {hasCities && (
-        <RecommendedCitiesToAdd cities={data.topCities} />
+        <RecommendedCitiesToAdd
+          cities={data.topCities}
+          onDismiss={onDismissMissingSearch}
+        />
       )}
 
       {hasFailed && (
@@ -144,6 +163,11 @@ export default function ExpansionOpportunities({ data }) {
                   <th className="py-2 pr-4 font-medium">Count</th>
                   <th className="py-2 pr-4 font-medium">Last searched</th>
                   <th className="py-2 pr-4 font-medium">Suggestion</th>
+                  {onDismissMissingSearch && (
+                    <th className="py-2 pr-2 font-medium w-10">
+                      <span className="sr-only">Dismiss</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="text-slate-200">
@@ -156,6 +180,20 @@ export default function ExpansionOpportunities({ data }) {
                     <td className="py-2 pr-4">
                       <SuggestionBadge text={row.suggestion} />
                     </td>
+                    {onDismissMissingSearch && (
+                      <td className="py-2 pr-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDismiss(row)}
+                          disabled={dismissingKey === dismissKey(row)}
+                          aria-label={`Dismiss ${row.query}${row.state ? `, ${row.state}` : ''}`}
+                          title="Dismiss invalid entry"
+                          className="inline-flex items-center justify-center w-7 h-7 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-wait transition-colors"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

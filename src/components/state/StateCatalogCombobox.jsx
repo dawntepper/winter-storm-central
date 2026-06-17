@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { filterCatalogByPrefix } from '../../utils/catalogFilter';
 
 const selectShellClass =
   'flex items-center gap-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm focus-within:border-sky-500';
@@ -28,9 +29,7 @@ export default function StateCatalogCombobox({
 
   const filtered = !query.trim()
     ? options
-    : options.filter((opt) =>
-        formatOption(opt).toLowerCase().includes(query.trim().toLowerCase()),
-      );
+    : filterCatalogByPrefix(query, options, formatOption);
 
   useEffect(() => {
     setHighlightIndex(0);

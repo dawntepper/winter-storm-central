@@ -10,6 +10,7 @@ import {
 } from '../services/locationCatalogService';
 import { reverseGeocode } from '../services/geoLocationService';
 import { getForecastIcon } from '../utils/getForecastIcon';
+import { filterCatalogByPrefix } from '../utils/catalogFilter';
 
 const LOCATIONS_KEY = 'winterStorm_userLocations';
 
@@ -724,9 +725,7 @@ export default function ZipCodeSearch({
 
   const filteredCities = cityDropdownShowAll || !cityQuery.trim()
     ? catalogCities
-    : catalogCities.filter((city) =>
-        city.name.toLowerCase().includes(cityQuery.trim().toLowerCase())
-      );
+    : filterCatalogByPrefix(cityQuery, catalogCities, (city) => city.name);
 
   const closeCityDropdown = () => {
     setCityDropdownOpen(false);

@@ -12,8 +12,24 @@ function cityKey(city) {
   return `${city.query}-${city.state}`;
 }
 
-export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
+function DismissButton({ label, onDismiss, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onDismiss}
+      disabled={disabled}
+      aria-label={label}
+      title="Dismiss invalid entry"
+      className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-700/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+    >
+      ×
+    </button>
+  );
+}
+
+export default function RecommendedCitiesToAdd({ cities, onCityCreated, onDismiss }) {
   const [creatingKey, setCreatingKey] = useState(null);
+  const [dismissingKey, setDismissingKey] = useState(null);
   const [resolved, setResolved] = useState(() => new Map());
   const [errors, setErrors] = useState(() => new Map());
 
@@ -65,6 +81,17 @@ export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
     }
   };
 
+  const handleDismiss = async (city) => {
+    const key = cityKey(city);
+    if (!onDismiss || dismissingKey) return;
+    setDismissingKey(key);
+    try {
+      await onDismiss({ query: city.query, state: city.state });
+    } finally {
+      setDismissingKey(null);
+    }
+  };
+
   return (
     <div className="mb-5">
       <h4 className="text-sm font-semibold text-slate-300 mb-3">Recommended Cities To Add</h4>
@@ -77,6 +104,7 @@ export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
           const key = cityKey(city);
           const done = resolved.get(key);
           const isCreating = creatingKey === key;
+          const isDismissing = dismissingKey === key;
           const error = errors.get(key);
 
           if (done) {
@@ -105,36 +133,45 @@ export default function RecommendedCitiesToAdd({ cities, onCityCreated }) {
 
           return (
             <div key={key} className="flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={() => handleCreate(city)}
-                disabled={Boolean(creatingKey)}
-                aria-label={`Add ${city.label} to catalog`}
-                className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                  isCreating
-                    ? 'bg-amber-900/20 border-amber-600/30 text-amber-200/70 cursor-wait'
-                    : creatingKey
-                      ? 'bg-amber-900/15 border-amber-700/25 text-amber-200/50 cursor-not-allowed'
-                      : 'bg-amber-900/30 border-amber-700/40 text-amber-100 hover:bg-amber-800/40 hover:border-amber-600/50 cursor-pointer'
-                }`}
-              >
-                {isCreating ? (
-                  <>
-                    <span
-                      className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-300 rounded-full animate-spin"
-                      aria-hidden="true"
-                    />
-                    Creating…
-                  </>
-                ) : (
-                  <>
-                    {city.label}
-                    <span className="text-amber-400/80 text-xs">
-                      ({formatNumber(city.searchCount)} searches)
-                    </span>
-                  </>
+              <div className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleCreate(city)}
+                  disabled={Boolean(creatingKey) || isDismissing}
+                  aria-label={`Add ${city.label} to catalog`}
+                  className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                    isCreating
+                      ? 'bg-amber-900/20 border-amber-600/30 text-amber-200/70 cursor-wait'
+                      : creatingKey || isDismissing
+                        ? 'bg-amber-900/15 border-amber-700/25 text-amber-200/50 cursor-not-allowed'
+                        : 'bg-amber-900/30 border-amber-700/40 text-amber-100 hover:bg-amber-800/40 hover:border-amber-600/50 cursor-pointer'
+                  }`}
+                >
+                  {isCreating ? (
+                    <>
+                      <span
+                        className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-300 rounded-full animate-spin"
+                        aria-hidden="true"
+                      />
+                      Creating…
+                    </>
+                  ) : (
+                    <>
+                      {city.label}
+                      <span className="text-amber-400/80 text-xs">
+                        ({formatNumber(city.searchCount)} searches)
+                      </span>
+                    </>
+                  )}
+                </button>
+                {onDismiss && (
+                  <DismissButton
+                    label={`Dismiss ${city.label}`}
+                    onDismiss={() => handleDismiss(city)}
+                    disabled={Boolean(creatingKey) || isDismissing}
+                  />
                 )}
-              </button>
+              </div>
               {error && (
                 <p className="text-xs text-red-400 max-w-xs" role="alert">
                   {error}

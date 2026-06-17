@@ -17,6 +17,10 @@ const {
   buildMorningBriefPrompt,
   buildOperationsCenterPrompt,
 } = require('./lib/analysis-ai-payload');
+const {
+  computeTrend,
+  getPreviousPeriodBounds,
+} = require('../../shared/admin-metric-trends');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASSWORD;
 
@@ -79,33 +83,6 @@ function getSinceDate(dateRange) {
   }
 }
 
-/** Previous equivalent period bounds for period-over-period trends. */
-function getPreviousPeriodBounds(dateRange) {
-  const now = new Date();
-  switch (dateRange) {
-    case 'today': {
-      const until = new Date(now);
-      until.setHours(0, 0, 0, 0);
-      const since = new Date(until);
-      since.setDate(since.getDate() - 1);
-      return { since: since.toISOString(), until: until.toISOString() };
-    }
-    case '7d': {
-      const until = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const since = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-      return { since: since.toISOString(), until: until.toISOString() };
-    }
-    case '30d': {
-      const until = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const since = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-      return { since: since.toISOString(), until: until.toISOString() };
-    }
-    case 'all':
-    default:
-      return null;
-  }
-}
-
 function applySince(query, column, since) {
   if (!since) return query;
   return query.gte(column, since);
@@ -120,24 +97,6 @@ function applyPeriod(query, column, since, until) {
   let q = applySince(query, column, since);
   q = applyUntil(q, column, until);
   return q;
-}
-
-function computeTrend(current, previous) {
-  const cur = Number(current) || 0;
-  const prev = Number(previous) || 0;
-  if (cur === 0 && prev === 0) {
-    return { direction: 'flat', changePct: 0, current: cur, previous: prev };
-  }
-  if (prev === 0) {
-    return { direction: 'up', changePct: 100, current: cur, previous: prev };
-  }
-  const changePct = Math.round(((cur - prev) / prev) * 1000) / 10;
-  return {
-    direction: changePct > 1 ? 'up' : changePct < -1 ? 'down' : 'flat',
-    changePct,
-    current: cur,
-    previous: prev,
-  };
 }
 
 async function countRowsSince(supabase, table, since) {
@@ -268,9 +227,9 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
     saveQuery,
     countyQuery,
     forecastClicksQuery,
-    supabase.rpc('admin_radar_engagement_stats', { p_since: since }),
-    supabase.rpc('admin_returning_visitor_stats', { p_since: since }),
-    supabase.rpc('admin_location_search_stats', { p_since: since }),
+    supabase.rpc('admin_radar_engagement_stats', { p_since: since, p_until: until }),
+    supabase.rpc('admin_returning_visitor_stats', { p_since: since, p_until: until }),
+    supabase.rpc('admin_location_search_stats', { p_since: since, p_until: until }),
   ]);
 
   if (visitorsRes.error) throw visitorsRes.error;
@@ -282,21 +241,8 @@ async function fetchPreviousPeriodMetrics(supabase, dateRange) {
   if (returningRes.error) throw returningRes.error;
   if (searchStatsRes.error) throw searchStatsRes.error;
 
-  // Filter radar to previous period only (RPC uses p_since only)
-  let radarOpens = radarRes.data?.totalOpens ?? 0;
-  if (until) {
-    let radarCountQuery = supabase
-      .from('radar_events')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_type', 'radar_opened');
-    radarCountQuery = applyPeriod(radarCountQuery, 'created_at', since, until);
-    const { count, error } = await radarCountQuery;
-    if (error) throw error;
-    radarOpens = count ?? 0;
-  }
-
   return {
-    radarOpens,
+    radarOpens: radarRes.data?.totalOpens ?? 0,
     forecastClicks: forecastClicksRes.count ?? 0,
     returningVisitors: returningRes.data?.returning_visitors ?? 0,
     locationSearches: searchesRes.count ?? 0,
@@ -572,7 +518,53 @@ function buildRecommendedCities(searches) {
   });
 }
 
+function normalizeMissingSearchKey(query, stateCode) {
+  return `${String(query || '').trim().toLowerCase()}::${String(stateCode || '').trim().toUpperCase()}`;
+}
+
+async function fetchDismissedMissingSearchKeys(supabase) {
+  const { data, error } = await supabase
+    .from('dismissed_missing_searches')
+    .select('query, state_code');
+  if (error) throw error;
+  return new Set(
+    (data || []).map((row) => normalizeMissingSearchKey(row.query, row.state_code))
+  );
+}
+
+function filterDismissedMissingSearches(rows, dismissedKeys) {
+  if (!dismissedKeys?.size) return rows;
+  return (rows || []).filter(
+    (row) =>
+      !dismissedKeys.has(
+        normalizeMissingSearchKey(row.query, row.state_context || row.state_code)
+      )
+  );
+}
+
+async function dismissMissingSearch(supabase, { query, stateCode }) {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  const normalizedState = String(stateCode || '').trim().toUpperCase();
+  if (!normalizedQuery) {
+    const err = new Error('query is required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { error } = await supabase.from('dismissed_missing_searches').upsert(
+    {
+      query: normalizedQuery,
+      state_code: normalizedState,
+      dismissed_at: new Date().toISOString(),
+    },
+    { onConflict: 'query,state_code' }
+  );
+  if (error) throw error;
+  return { ok: true };
+}
+
 async function fetchMissingLocationSearches(supabase, since) {
+  const dismissedKeys = await fetchDismissedMissingSearchKeys(supabase);
   let rows;
 
   // missing_location_searches view groups failed searches by query + state_code.
@@ -602,6 +594,8 @@ async function fetchMissingLocationSearches(supabase, since) {
       last_searched: row.last_searched,
     }));
   }
+
+  rows = filterDismissedMissingSearches(rows, dismissedKeys);
 
   return {
     searches: rows,
@@ -2231,6 +2225,14 @@ exports.handler = async (event) => {
       const analytics = await fetchAllAnalytics(supabase, period);
       const morningBrief = body.morningBrief || null;
       const result = await generateOperationsCenter(analytics, period, morningBrief);
+      return jsonResponse(200, result);
+    }
+
+    if (body.action === 'dismiss-missing-search') {
+      const result = await dismissMissingSearch(supabase, {
+        query: body.query,
+        stateCode: body.stateCode,
+      });
       return jsonResponse(200, result);
     }
 

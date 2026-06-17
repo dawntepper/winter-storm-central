@@ -109,3 +109,14 @@ export async function fetchOperationsAnalysis(period) {
     period,
   });
 }
+
+/**
+ * Dismiss a misspelled/invalid missing location search from expansion opportunities.
+ */
+export async function dismissMissingSearch({ query, stateCode }) {
+  return postAdminAnalysis({
+    action: 'dismiss-missing-search',
+    query,
+    stateCode,
+  });
+}
