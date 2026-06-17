@@ -7,5 +7,9 @@
 # API calls → Netlify Functions
 /api/*  /.netlify/functions/:splat  200
 
+# Plausible Analytics proxy (first-party paths — must be before SPA catch-all)
+/app-assets/js/script.js  https://plausible.io/js/pa-FKdcykjvEN6q_wMdvAIZa.js  200
+/app-assets/api/event     https://plausible.io/api/event  200
+
 # SPA routing - serve index.html for all other routes
 /*    /index.html   200
