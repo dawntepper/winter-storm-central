@@ -7,6 +7,7 @@ export const ANALYSIS_SECTIONS = [
   { id: 'county-alert-views', label: 'Counties' },
   { id: 'saved-locations', label: 'Saved' },
   { id: 'radar-engagement', label: 'Radar' },
+  { id: 'storm-events', label: 'Storms' },
   { id: 'user-journeys', label: 'Journeys' },
 ];
 

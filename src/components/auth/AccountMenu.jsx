@@ -32,8 +32,9 @@ function AccountIcon() {
  *   utility   — account control in homepage utility row (signed in only)
  * @param {boolean} [showSignedInFallback]
  *   When true with headerTop, render signed-in account on row 1 (pages without utility row).
+ * @param {() => void} [onSignInOpen] Optional callback when sign-in modal opens.
  */
-export default function AccountMenu({ placement = 'utility', showSignedInFallback = false }) {
+export default function AccountMenu({ placement = 'utility', showSignedInFallback = false, onSignInOpen }) {
   const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [open, setOpen] = useState(false);
@@ -57,7 +58,10 @@ export default function AccountMenu({ placement = 'utility', showSignedInFallbac
     return (
       <>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            onSignInOpen?.();
+            setShowModal(true);
+          }}
           className="text-xs sm:text-sm text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer whitespace-nowrap"
           title="Sign in with email"
         >

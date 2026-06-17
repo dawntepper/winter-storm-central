@@ -36,6 +36,7 @@ Domain tables carry richer columns (`resolved_*`, `source_page`, `alert_count`) 
 | County Alert Views | `county_alert_views` (+ `counties` join) | Filter: `created_at` |
 | Radar Engagement | `radar_events` / `admin_radar_engagement_stats` | Opens, types, location changes |
 | User Journeys | `product_events` / `admin_product_funnel_stats`, `admin_top_journey_paths` | Funnel steps are product event names only |
+| Storm Events | `product_events` (storm_* events) + `visitor_sessions` landing `/storm/*` | Admin `/admin/analysis` Storm Events section |
 | Saved Locations | `user_locations` / `admin_saved_location_stats` | Signed-in users only |
 
 ## Entry points → `location_search_events`

@@ -20,6 +20,7 @@ import HealthStatusCard from '../components/admin/HealthStatusCard';
 import LocationPreferenceCard from '../components/admin/LocationPreferenceCard';
 import MorningBriefCard from '../components/admin/MorningBriefCard';
 import MostVisitedPages from '../components/admin/MostVisitedPages';
+import StormEventsCard from '../components/admin/StormEventsCard';
 import OperationsCenter from '../components/admin/OperationsCenter';
 import ScrollToTopButton from '../components/admin/ScrollToTopButton';
 import SortableDataTable from '../components/admin/SortableDataTable';
@@ -153,6 +154,7 @@ const DEFAULT_VIEW_MODES = {
   locationPreference: 'visual',
   savedLocations: 'visual',
   userJourneys: 'table',
+  stormEvents: 'visual',
 };
 
 
@@ -405,6 +407,7 @@ function AdminAnalysisInner() {
   const countyAlertOpportunities = data?.countyAlertOpportunities;
   const analyticsHealth = data?.analyticsHealth;
   const needsAttention = data?.needsAttention;
+  const stormEvents = data?.stormEvents;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -1169,6 +1172,22 @@ function AdminAnalysisInner() {
                 rows={journeys?.topPaths || []}
                 emptyMessage="No journey paths in this period."
               />
+            </CollapsibleAnalysisSection>
+
+            <CollapsibleAnalysisSection
+              id="storm-events"
+              title="Storm Events"
+              description="Storm page engagement, funnel, radar attribution, and retention from product_events."
+              expanded={sectionsExpanded['storm-events']}
+              onToggle={() => toggleSection('storm-events')}
+              headerExtra={
+                <AdminChartToggle
+                  value={viewModes.stormEvents}
+                  onChange={(mode) => setViewMode('stormEvents', mode)}
+                />
+              }
+            >
+              <StormEventsCard data={stormEvents} viewMode={viewModes.stormEvents} />
             </CollapsibleAnalysisSection>
               </>
             )}

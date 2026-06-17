@@ -38,6 +38,7 @@ import {
   trackLocationViewedOnMap,
   trackLocationRemoved,
   trackStormBannerClick,
+  trackStormBannerViewed,
   trackRadarLinkClick,
   trackBrowseByStateClick,
   trackHomepageView,
@@ -211,6 +212,22 @@ function StormEventBanner() {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    if (loading || events.length === 0) return;
+    const sorted = [...events].sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (b.status === 'active' && a.status !== 'active') return 1;
+      return new Date(a.startDate) - new Date(b.startDate);
+    });
+    const primary = sorted[0];
+    if (!primary?.slug) return;
+    trackStormBannerViewed({
+      stormSlug: primary.slug,
+      stormType: primary.type,
+      source: NAV_SOURCES.HOMEPAGE_BANNER,
+    });
+  }, [loading, events]);
+
   // Don't show anything while loading or if no active events
   if (loading || events.length === 0) return null;
 
@@ -238,6 +255,7 @@ function StormEventBanner() {
         trackStormBannerClick({
           stormSlug: primaryEvent.slug,
           stormName: primaryEvent.title,
+          stormType: primaryEvent.type,
           source: NAV_SOURCES.HOMEPAGE_BANNER
         });
         setNavSource(NAV_SOURCES.HOMEPAGE_BANNER);

@@ -3,12 +3,15 @@
  * Individual page for tracking specific weather events (e.g., Winter Storm Fern, Nor'easter)
  */
 
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense, useCallback } from 'react';
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import PageBackNav from './PageBackNav';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
+import AccountMenu from './auth/AccountMenu';
+import { fetchCurrentConditions } from '../utils/fetchCurrentConditions';
+import useSavedLocations, { readLocalLocations } from '../hooks/useSavedLocations';
 import { getStormEventBySlug } from '../services/stormEventsService';
 import { isAdminSessionActive } from '../lib/adminAuth';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
@@ -23,11 +26,18 @@ import {
   trackStormAlertDetailView,
   trackStormPageEntry,
   trackStormRadarClick,
+  trackStormAlertsClicked,
+  trackStormLocationSaved,
+  trackStormSignInStarted,
+  trackLocationAddedFromAlert,
   trackRadarLinkClick,
   trackBrowseByStateClick,
   setNavSource,
-  NAV_SOURCES
+  NAV_SOURCES,
+  SAVE_TRIGGERS,
 } from '../utils/analytics';
+
+const ALERT_LOCATIONS_KEY = 'winterStorm_alertLocations';
 
 const EmergencyInfoPanel = lazy(() => import('./EmergencyInfoPanel'));
 
@@ -999,6 +1009,58 @@ export default function StormEventPage() {
   const [selectedStateCode, setSelectedStateCode] = useState(null);  // For highlighted state border
   const [mapCenterOn, setMapCenterOn] = useState(null);
   const mobileMapRef = useRef(null);  // Ref for scrolling to map on mobile
+  const saved = useSavedLocations();
+
+  const handleAddAlertToMap = useCallback((alert, trigger = SAVE_TRIGGERS.STORM_PAGE_MAP) => {
+    if (!alert?.lat || !alert?.lon || !event) return;
+
+    const previousCount = readLocalLocations().length;
+    let wasAdded = false;
+
+    try {
+      const stored = localStorage.getItem(ALERT_LOCATIONS_KEY);
+      const prev = stored ? JSON.parse(stored) : [];
+      const exists = prev.some((loc) => loc.name === alert.location);
+      if (!exists) {
+        wasAdded = true;
+        const newLocation = {
+          id: `alert-${alert.id}`,
+          name: alert.location,
+          lat: alert.lat,
+          lon: alert.lon,
+          alertInfo: {
+            event: alert.event,
+            headline: alert.headline,
+            category: alert.category,
+          },
+        };
+        localStorage.setItem(ALERT_LOCATIONS_KEY, JSON.stringify([...prev, newLocation]));
+      }
+    } catch (err) {
+      console.warn('Storm page save location failed:', err);
+      return;
+    }
+
+    if (!wasAdded) return;
+
+    trackLocationAddedFromAlert({
+      locationName: alert.location,
+      category: alert.category,
+      previousCount,
+    });
+    trackStormLocationSaved({
+      stormSlug: event.slug,
+      stormType: event.type,
+      trigger,
+      source: NAV_SOURCES.STORM_PAGE_LINK,
+    });
+
+    if (saved.isAuthenticated) {
+      saved.addToAccount({ name: alert.location, lat: alert.lat, lon: alert.lon });
+    }
+
+    fetchCurrentConditions(alert.lat, alert.lon).catch(() => {});
+  }, [event, saved]);
 
   // Get alerts data
   const {
@@ -1180,7 +1242,22 @@ export default function StormEventPage() {
 
           {/* Nav Links & Share */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
+            <Link
+              to="/alerts"
+              onClick={() => {
+                if (event) {
+                  trackStormAlertsClicked({
+                    stormSlug: event.slug,
+                    stormType: event.type,
+                    destination: '/alerts',
+                    source: NAV_SOURCES.STORM_PAGE_LINK,
+                  });
+                }
+              }}
+              className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors"
+            >
+              Live Alerts
+            </Link>
             <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
             <select
               defaultValue=""
@@ -1188,6 +1265,14 @@ export default function StormEventPage() {
                 if (e.target.value) {
                   const abbr = US_STATES[e.target.value]?.abbr;
                   if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.STORM_PAGE_STATE_DROPDOWN });
+                  if (event) {
+                    trackStormAlertsClicked({
+                      stormSlug: event.slug,
+                      stormType: event.type,
+                      destination: `/alerts/${e.target.value}`,
+                      source: NAV_SOURCES.STORM_PAGE_STATE_DROPDOWN,
+                    });
+                  }
                   setNavSource(NAV_SOURCES.STORM_PAGE_STATE_DROPDOWN);
                   navigate(`/alerts/${e.target.value}`);
                   e.target.value = '';
@@ -1201,6 +1286,19 @@ export default function StormEventPage() {
               ))}
             </select>
             <ShareButton event={event} />
+            <AccountMenu
+              placement="headerTop"
+              showSignedInFallback
+              onSignInOpen={() => {
+                if (event) {
+                  trackStormSignInStarted({
+                    stormSlug: event.slug,
+                    stormType: event.type,
+                    source: NAV_SOURCES.SIGN_IN_MODAL,
+                  });
+                }
+              }}
+            />
           </div>
         </div>
       </header>
@@ -1306,7 +1404,14 @@ export default function StormEventPage() {
             </div>
             <Link
               to="/radar"
-              onClick={() => { trackStormRadarClick({ stormSlug: event.slug, source: NAV_SOURCES.STORM_PAGE_RADAR_LINK }); setNavSource(NAV_SOURCES.STORM_PAGE_RADAR_LINK); }}
+              onClick={() => {
+                trackStormRadarClick({
+                  stormSlug: event.slug,
+                  stormType: event.type,
+                  source: NAV_SOURCES.STORM_PAGE_RADAR_LINK,
+                });
+                setNavSource(NAV_SOURCES.STORM_PAGE_RADAR_LINK);
+              }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
             >
               <span>📡</span> View Full Radar Map
@@ -1431,6 +1536,7 @@ export default function StormEventPage() {
                     centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
                     selectedAlertId={selectedAlertId}
                     selectedStateCode={selectedStateCode}
+                    onAddAlertToMap={handleAddAlertToMap}
                   />
                 </div>
 
@@ -1467,10 +1573,11 @@ export default function StormEventPage() {
                         userLocations={[]}
                         alerts={mapAlerts}
                         isHero
-                        centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
-                        selectedAlertId={selectedAlertId}
-                        selectedStateCode={selectedStateCode}
-                      />
+                    centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                    selectedAlertId={selectedAlertId}
+                    selectedStateCode={selectedStateCode}
+                    onAddAlertToMap={handleAddAlertToMap}
+                  />
                     </div>
                     <ActiveAlertsPanel
                       filteredAlerts={filteredAlerts}
@@ -1500,10 +1607,11 @@ export default function StormEventPage() {
                       userLocations={[]}
                       alerts={mapAlerts}
                       isHero
-                      centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
-                      selectedAlertId={selectedAlertId}
-                      selectedStateCode={selectedStateCode}
-                    />
+                    centerOn={mapCenterOn || (event.mapCenter ? { ...event.mapCenter, zoom: event.mapZoom || 5, id: 'initial' } : null)}
+                    selectedAlertId={selectedAlertId}
+                    selectedStateCode={selectedStateCode}
+                    onAddAlertToMap={handleAddAlertToMap}
+                  />
                   </div>
                   <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
                     <ActiveAlertsPanel

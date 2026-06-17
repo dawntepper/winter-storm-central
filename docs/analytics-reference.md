@@ -24,6 +24,13 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | `State County Selected` | County combobox on state page — `state`, `county` |
 | `Storm Page View` | Any storm event page mount |
 | `Storm Banner Click` | Active storm banner on homepage |
+| `storm_banner_viewed` | Active storm banner impression on homepage |
+| `storm_banner_clicked` | Storm banner click (parallel product_events row) |
+| `storm_page_viewed` | Storm event page mount (parallel product_events row) |
+| `storm_radar_opened` | Radar CTA from storm page |
+| `storm_alerts_clicked` | Live Alerts or state dropdown from storm page |
+| `storm_location_saved` | Save location from storm page map popup |
+| `storm_signin_started` | Sign-in modal opened from storm page |
 | `Radar Link Click` | Click intent to navigate to `/radar` |
 | `Browse By State Click` | State dropdown selection, "Weather Near Me" state chip, or county-polygon click (see `source`) |
 | `Storm Radar Click` | "View Full Radar Map" CTA on storm pages |
@@ -112,12 +119,23 @@ Storm Page View
 
 Radar Page View
   source         a value from NAV_SOURCES
+  source_page    homepage | storm_page | state | city | county | other
   state_context  "national" (or a state slug if state-scoped radar is added later)
 
 Storm Banner Click
   stormSlug
   stormName
   source         a value from NAV_SOURCES (homepage_banner today)
+
+storm_banner_viewed / storm_banner_clicked / storm_page_viewed / storm_radar_opened /
+storm_alerts_clicked / storm_location_saved / storm_signin_started
+  storm_slug     storm slug, e.g. "tropical-storm-arthur-2026"
+  storm_type     e.g. "tropical", "winter_storm", "severe_weather"
+  visitor_type   "new" | "returning" (from st_visitor localStorage)
+  source         NAV_SOURCES value when applicable
+  destination    alerts path (storm_alerts_clicked only)
+  trigger        save trigger (storm_location_saved only)
+  source_page    "storm_page" on storm_radar_opened
 
 Radar Link Click
   source         a value from NAV_SOURCES

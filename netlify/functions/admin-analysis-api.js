@@ -1965,6 +1965,310 @@ async function fetchSavedLocations(supabase, since) {
   };
 }
 
+const STORM_PRODUCT_EVENT_NAMES = [
+  'storm_banner_viewed',
+  'storm_banner_clicked',
+  'storm_page_viewed',
+  'storm_radar_opened',
+  'storm_alerts_clicked',
+  'storm_location_saved',
+  'storm_signin_started',
+];
+
+function humanizeStormSlug(slug) {
+  if (!slug) return 'Unknown Storm';
+  return String(slug)
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function bucketStormTrafficSource(referrer, metadata = {}) {
+  const ref = String(referrer || metadata.source || '').toLowerCase().trim();
+  if (!ref || ref === '(direct)' || ref === 'direct') return 'Direct';
+  if (ref.includes('bing.')) return 'Bing';
+  if (ref.includes('google.')) return 'Google';
+  if (ref.includes('chatgpt.') || ref.includes('openai.') || ref.includes('copilot.')) {
+    return 'ChatGPT';
+  }
+  const socials = ['instagram.', 'facebook.', 'twitter.', 'x.com', 't.co', 'threads.', 'linkedin.', 'reddit.'];
+  if (socials.some((s) => ref.includes(s))) return 'Social';
+  if (ref.includes('stormtracking')) return 'Internal';
+  return 'Other';
+}
+
+function bucketRadarSourcePageValue(value) {
+  const s = String(value || '').toLowerCase();
+  if (s === 'homepage' || s.includes('homepage')) return 'homepage';
+  if (s === 'storm_page' || s.includes('storm_page')) return 'storm_page';
+  if (s === 'state' || s.includes('state')) return 'state';
+  if (s === 'city' || s.includes('city')) return 'city';
+  if (s === 'county' || s.includes('county')) return 'county';
+  return 'other';
+}
+
+function buildStormFunnel(globalHomepageViews, stormEventCounts) {
+  const steps = [
+    { step: 1, eventName: 'homepage_view', label: 'Homepage' },
+    { step: 2, eventName: 'storm_banner_viewed', label: 'Banner Viewed' },
+    { step: 3, eventName: 'storm_banner_clicked', label: 'Banner Clicked' },
+    { step: 4, eventName: 'storm_page_viewed', label: 'Storm Page Viewed' },
+    { step: 5, eventName: 'storm_radar_opened', label: 'Radar Opened' },
+    { step: 6, eventName: 'storm_location_saved', label: 'Location Saved' },
+  ];
+
+  const counts = steps.map((step) => ({
+    ...step,
+    sessions:
+      step.eventName === 'homepage_view'
+        ? globalHomepageViews
+        : stormEventCounts[step.eventName] || 0,
+  }));
+
+  const base = counts[0]?.sessions || 1;
+  return counts.map((s, i) => {
+    const prevSessions = i === 0 ? s.sessions : counts[i - 1].sessions;
+    const dropoffPct =
+      i === 0
+        ? 0
+        : prevSessions > 0
+          ? Math.round((1 - s.sessions / prevSessions) * 1000) / 10
+          : 0;
+    const completionPct = base > 0 ? Math.round((s.sessions / base) * 1000) / 10 : 0;
+    return { ...s, completionPct, dropoffPct };
+  });
+}
+
+function computeStormRetention(firstStormVisitByVisitor, sessions) {
+  const sameDay = new Set();
+  const nextDay = new Set();
+  const sevenDay = new Set();
+
+  for (const [visitorId, firstAt] of firstStormVisitByVisitor) {
+    const firstDate = firstAt.slice(0, 10);
+    for (const session of sessions) {
+      if (session.visitor_id !== visitorId) continue;
+      if (session.created_at <= firstAt) continue;
+      const sessionDate = session.created_at.slice(0, 10);
+      const dayDiff = Math.round(
+        (new Date(`${sessionDate}T12:00:00Z`).getTime() - new Date(`${firstDate}T12:00:00Z`).getTime()) /
+          86400000
+      );
+      if (dayDiff === 0) sameDay.add(visitorId);
+      if (dayDiff === 1) nextDay.add(visitorId);
+      if (dayDiff >= 1 && dayDiff <= 7) sevenDay.add(visitorId);
+    }
+  }
+
+  const total = firstStormVisitByVisitor.size || 0;
+  const pct = (n) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
+
+  return {
+    totalStormVisitors: total,
+    sameDay: sameDay.size,
+    sameDayPct: pct(sameDay.size),
+    nextDay: nextDay.size,
+    nextDayPct: pct(nextDay.size),
+    sevenDay: sevenDay.size,
+    sevenDayPct: pct(sevenDay.size),
+  };
+}
+
+async function fetchStormEventsAnalytics(supabase, since, until = null) {
+  const eventNames = [...STORM_PRODUCT_EVENT_NAMES, 'homepage_view', 'radar_view'];
+
+  let eventsQuery = supabase
+    .from('product_events')
+    .select('visitor_id, session_id, event_name, metadata, page_path, created_at')
+    .in('event_name', eventNames)
+    .limit(20000);
+  eventsQuery = applyPeriod(eventsQuery, 'created_at', since, until);
+
+  let sessionsQuery = supabase
+    .from('visitor_sessions')
+    .select('visitor_id, session_id, landing_page, referrer, is_returning, first_seen, last_seen, created_at')
+    .like('landing_page', '/storm/%')
+    .limit(20000);
+  sessionsQuery = applyPeriod(sessionsQuery, 'created_at', since, until);
+
+  let allSessionsQuery = supabase
+    .from('visitor_sessions')
+    .select('visitor_id, created_at')
+    .limit(50000);
+  allSessionsQuery = applyPeriod(allSessionsQuery, 'created_at', since, until);
+
+  const [eventsRes, stormSessionsRes, allSessionsRes, stormsRes] = await Promise.all([
+    eventsQuery,
+    sessionsQuery,
+    allSessionsQuery,
+    supabase.from('storms').select('slug, title, type, status'),
+  ]);
+
+  if (eventsRes.error) throw eventsRes.error;
+  if (stormSessionsRes.error) throw stormSessionsRes.error;
+  if (allSessionsRes.error) throw allSessionsRes.error;
+
+  const stormsBySlug = new Map((stormsRes.data || []).map((row) => [row.slug, row]));
+  const events = eventsRes.data || [];
+  const globalHomepageViews = events.filter((r) => r.event_name === 'homepage_view').length;
+
+  const stormStats = new Map();
+  function ensureStorm(slug) {
+    const key = slug || '_unknown';
+    if (!stormStats.has(key)) {
+      const dbStorm = stormsBySlug.get(slug);
+      stormStats.set(key, {
+        stormSlug: slug || 'unknown',
+        stormName: dbStorm?.title || humanizeStormSlug(slug),
+        stormType: dbStorm?.type || null,
+        events: {},
+        visitors: new Set(),
+        returningVisitors: new Set(),
+        lastActivity: null,
+      });
+    }
+    return stormStats.get(key);
+  }
+
+  for (const row of events) {
+    if (!STORM_PRODUCT_EVENT_NAMES.includes(row.event_name)) continue;
+    const meta = row.metadata || {};
+    const slug = meta.storm_slug;
+    const storm = ensureStorm(slug);
+    storm.events[row.event_name] = (storm.events[row.event_name] || 0) + 1;
+    if (row.visitor_id) {
+      storm.visitors.add(row.visitor_id);
+      if (meta.visitor_type === 'returning' || row.metadata?.visitor_type === 'returning') {
+        storm.returningVisitors.add(row.visitor_id);
+      }
+    }
+    if (!storm.lastActivity || row.created_at > storm.lastActivity) {
+      storm.lastActivity = row.created_at;
+    }
+  }
+
+  const topStorms = Array.from(stormStats.values())
+    .map((s) => ({
+      stormSlug: s.stormSlug,
+      stormName: s.stormName,
+      stormType: s.stormType,
+      views: s.events.storm_page_viewed || 0,
+      radarOpens: s.events.storm_radar_opened || 0,
+      saves: s.events.storm_location_saved || 0,
+      returningVisitors: s.returningVisitors.size,
+      lastActivity: s.lastActivity,
+    }))
+    .sort((a, b) => b.views - a.views || (b.lastActivity || '').localeCompare(a.lastActivity || ''));
+
+  const focusStorm = topStorms[0] || null;
+  const focusSlug = focusStorm?.stormSlug;
+  const focus = focusSlug ? ensureStorm(focusSlug) : null;
+
+  const stormLandingSessions = (stormSessionsRes.data || []).filter(
+    (s) => !focusSlug || s.landing_page?.includes(`/storm/${focusSlug}`)
+  );
+
+  let avgTimeOnPageSeconds = null;
+  if (stormLandingSessions.length > 0) {
+    const durations = stormLandingSessions
+      .map((s) => {
+        const start = new Date(s.first_seen).getTime();
+        const end = new Date(s.last_seen).getTime();
+        return Math.max(0, (end - start) / 1000);
+      })
+      .filter((d) => d > 0);
+    if (durations.length > 0) {
+      avgTimeOnPageSeconds = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+    }
+  }
+
+  const overview = {
+    pageViews: focus?.events.storm_page_viewed || 0,
+    uniqueVisitors: focus?.visitors.size || 0,
+    returningVisitors: focus?.returningVisitors.size || 0,
+    returningRate:
+      focus && focus.visitors.size > 0
+        ? Math.round((focus.returningVisitors.size / focus.visitors.size) * 1000) / 10
+        : 0,
+    avgTimeOnPageSeconds,
+    radarOpens: focus?.events.storm_radar_opened || 0,
+    alertClicks: focus?.events.storm_alerts_clicked || 0,
+    locationSaves: focus?.events.storm_location_saved || 0,
+    signIns: focus?.events.storm_signin_started || 0,
+    bannerViews: focus?.events.storm_banner_viewed || 0,
+    bannerClicks: focus?.events.storm_banner_clicked || 0,
+  };
+
+  const trafficMap = new Map();
+  for (const session of stormLandingSessions) {
+    const bucket = bucketStormTrafficSource(session.referrer);
+    trafficMap.set(bucket, (trafficMap.get(bucket) || 0) + 1);
+  }
+  const trafficTotal = Array.from(trafficMap.values()).reduce((a, b) => a + b, 0) || 1;
+  const trafficSources = Array.from(trafficMap.entries())
+    .map(([source, count]) => ({
+      source,
+      count,
+      pct: Math.round((count / trafficTotal) * 1000) / 10,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const funnel = buildStormFunnel(globalHomepageViews, focus?.events || {});
+
+  const radarSourceMap = new Map();
+  for (const row of events) {
+    if (row.event_name === 'storm_radar_opened') {
+      radarSourceMap.set('storm_page', (radarSourceMap.get('storm_page') || 0) + 1);
+    } else if (row.event_name === 'radar_view') {
+      const bucket = bucketRadarSourcePageValue(row.metadata?.source_page || row.metadata?.source);
+      radarSourceMap.set(bucket, (radarSourceMap.get(bucket) || 0) + 1);
+    }
+  }
+  const radarOpensBySource = Array.from(radarSourceMap.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const firstStormVisitByVisitor = new Map();
+  for (const row of events) {
+    if (row.event_name !== 'storm_page_viewed' || !row.visitor_id) continue;
+    const slug = row.metadata?.storm_slug;
+    if (focusSlug && slug !== focusSlug) continue;
+    const existing = firstStormVisitByVisitor.get(row.visitor_id);
+    if (!existing || row.created_at < existing) {
+      firstStormVisitByVisitor.set(row.visitor_id, row.created_at);
+    }
+  }
+
+  const retention = computeStormRetention(firstStormVisitByVisitor, allSessionsRes.data || []);
+
+  const activeStorm = focusStorm
+    ? {
+        slug: focusStorm.stormSlug,
+        name: focusStorm.stormName,
+        type: focusStorm.stormType,
+      }
+    : null;
+
+  const summary = activeStorm
+    ? `${activeStorm.name} generated ${overview.uniqueVisitors} visitors, ${overview.radarOpens} radar opens, ${overview.locationSaves} saved locations, and a returning visitor rate of ${overview.returningRate}%.`
+    : null;
+
+  return {
+    activeStorm,
+    focusSlug,
+    overview,
+    trafficSources,
+    funnel,
+    radarOpensBySource,
+    topStorms,
+    retention,
+    summary,
+    note: avgTimeOnPageSeconds == null
+      ? 'Avg time on page estimated from visitor_sessions first_seen/last_seen when storm page is the landing page.'
+      : null,
+  };
+}
+
 async function fetchAllAnalytics(supabase, dateRange) {
   const since = getSinceDate(dateRange);
 
@@ -1985,6 +2289,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     countyAlertOpportunities,
     forecastEngagement,
     cityDemand,
+    stormEventsBase,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
@@ -2002,7 +2307,31 @@ async function fetchAllAnalytics(supabase, dateRange) {
     fetchCountyAlertOpportunities(supabase, since),
     fetchForecastEngagement(supabase, since),
     fetchCityDemand(supabase, since),
+    fetchStormEventsAnalytics(supabase, since),
   ]);
+
+  const bounds = getPreviousPeriodBounds(dateRange);
+  const stormEventsPrevious = bounds
+    ? await fetchStormEventsAnalytics(supabase, bounds.since, bounds.until)
+    : null;
+
+  const stormEvents = {
+    ...stormEventsBase,
+    trends: stormEventsPrevious
+      ? {
+          pageViews: computeTrend(stormEventsBase.overview?.pageViews, stormEventsPrevious.overview?.pageViews),
+          uniqueVisitors: computeTrend(
+            stormEventsBase.overview?.uniqueVisitors,
+            stormEventsPrevious.overview?.uniqueVisitors
+          ),
+          radarOpens: computeTrend(stormEventsBase.overview?.radarOpens, stormEventsPrevious.overview?.radarOpens),
+          locationSaves: computeTrend(
+            stormEventsBase.overview?.locationSaves,
+            stormEventsPrevious.overview?.locationSaves
+          ),
+        }
+      : null,
+  };
 
   const weatherContext = await generateRadarWeatherContext(radarBase);
   const radar = {
@@ -2104,6 +2433,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
       trend: metricTrends.forecastClicks,
     },
     userJourneys,
+    stormEvents,
   };
 }
 

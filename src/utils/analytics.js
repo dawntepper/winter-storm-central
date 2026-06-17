@@ -456,6 +456,17 @@ function bucketDaysSince(days) {
  *   visit_count            bucketed session count ('1', '2', '3-5', '6-10', '11+')
  *   days_since_first_visit bucketed recency ('0', '1-7', '8-30', '31-90', '90+')
  */
+/** Read new vs returning without firing the Visitor event. */
+export function getVisitorType() {
+  if (typeof window === 'undefined') return 'new';
+  try {
+    const stored = JSON.parse(localStorage.getItem(VISITOR_KEY));
+    return stored && stored.firstSeen ? 'returning' : 'new';
+  } catch {
+    return 'new';
+  }
+}
+
 export function trackVisitorType() {
   if (typeof window === 'undefined') return;
   try {
@@ -519,20 +530,77 @@ export function trackReturningVisitor({ source, landingPage } = {}) {
 // STORM PAGE EVENTS
 // ============================================
 
+function stormEventProps({ stormSlug, stormType, source, extra = {} }) {
+  const props = {
+    storm_slug: stormSlug,
+    storm_type: stormType || 'unknown',
+    visitor_type: getVisitorType(),
+    ...extra,
+  };
+  if (source) props.source = source;
+  return props;
+}
+
+function recordStormProductEvent(eventName, { stormSlug, stormType, source, pagePath, extraMetadata = {} } = {}) {
+  return recordProductEvent(eventName, {
+    pagePath,
+    metadata: {
+      storm_slug: stormSlug,
+      storm_type: stormType || 'unknown',
+      visitor_type: getVisitorType(),
+      source: source || null,
+      ...extraMetadata,
+    },
+  });
+}
+
+/**
+ * Active storm banner shown on homepage.
+ */
+export function trackStormBannerViewed({ stormSlug, stormType, source } = {}) {
+  const resolvedSource = source || NAV_SOURCES.HOMEPAGE_BANNER;
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_BANNER_VIEWED, {
+    stormSlug,
+    stormType,
+    source: resolvedSource,
+  });
+  if (!recorded) return;
+  track('storm_banner_viewed', stormEventProps({ stormSlug, stormType, source: resolvedSource }));
+}
+
 /**
  * Track storm page view with storm details.
  * Pass `source` explicitly when called from a known handler, or omit to let
  * the helper resolve it from the stashed nav source / referrer.
  */
 export function trackStormPageView({ stormName, stormSlug, stormType, stormStatus, affectedStates, source }) {
+  const resolvedSource = resolveSource(source);
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_PAGE_VIEWED, {
+    stormSlug,
+    stormType,
+    source: resolvedSource,
+    extraMetadata: {
+      storm_name: stormName,
+      storm_status: stormStatus,
+      affected_states: affectedStates,
+    },
+  });
   track('Storm Page View', {
     stormName,
     stormSlug,
     stormType,
     stormStatus,
-    affectedStates, // comma-separated string
-    source: resolveSource(source)
+    affectedStates,
+    source: resolvedSource,
   });
+  if (recorded) {
+    track('storm_page_viewed', stormEventProps({
+      stormSlug,
+      stormType,
+      source: resolvedSource,
+      extra: { storm_status: stormStatus },
+    }));
+  }
 }
 
 /**
@@ -579,12 +647,81 @@ export function trackStormPageRefresh({ stormSlug, timeSinceLastView }) {
 /**
  * Track storm banner click (homepage → storm page)
  */
-export function trackStormBannerClick({ stormSlug, stormName, source }) {
+export function trackStormBannerClick({ stormSlug, stormName, stormType, source }) {
+  const resolvedSource = source || NAV_SOURCES.HOMEPAGE_BANNER;
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_BANNER_CLICKED, {
+    stormSlug,
+    stormType,
+    source: resolvedSource,
+    extraMetadata: { storm_name: stormName },
+  });
   track('Storm Banner Click', {
     stormSlug,
     stormName,
-    source
+    source: resolvedSource,
   });
+  if (recorded) {
+    track('storm_banner_clicked', stormEventProps({
+      stormSlug,
+      stormType,
+      source: resolvedSource,
+    }));
+  }
+}
+
+/**
+ * Alerts CTA from storm page (Live Alerts link or state dropdown).
+ */
+export function trackStormAlertsClicked({ stormSlug, stormType, destination, source }) {
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_ALERTS_CLICKED, {
+    stormSlug,
+    stormType,
+    source,
+    extraMetadata: { destination },
+  });
+  if (!recorded) return;
+  track('storm_alerts_clicked', stormEventProps({
+    stormSlug,
+    stormType,
+    source,
+    extra: { destination },
+  }));
+}
+
+/**
+ * Saved location from storm page map popup.
+ */
+export function trackStormLocationSaved({ stormSlug, stormType, trigger, source }) {
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_LOCATION_SAVED, {
+    stormSlug,
+    stormType,
+    source,
+    extraMetadata: { trigger },
+  });
+  if (!recorded) return;
+  track('storm_location_saved', stormEventProps({
+    stormSlug,
+    stormType,
+    source,
+    extra: { trigger },
+  }));
+}
+
+/**
+ * Sign-in modal opened from a storm event page.
+ */
+export function trackStormSignInStarted({ stormSlug, stormType, source }) {
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_SIGNIN_STARTED, {
+    stormSlug,
+    stormType,
+    source: source || NAV_SOURCES.SIGN_IN_MODAL,
+  });
+  if (!recorded) return;
+  track('storm_signin_started', stormEventProps({
+    stormSlug,
+    stormType,
+    source: source || NAV_SOURCES.SIGN_IN_MODAL,
+  }));
 }
 
 /**
@@ -702,8 +839,23 @@ export function trackRadarLinkClick(source) {
 /**
  * Track click on "View Full Radar Map" from storm event pages
  */
-export function trackStormRadarClick({ stormSlug, source }) {
-  track('Storm Radar Click', { stormSlug, source });
+export function trackStormRadarClick({ stormSlug, stormType, source }) {
+  const resolvedSource = source || NAV_SOURCES.STORM_PAGE_RADAR_LINK;
+  const recorded = recordStormProductEvent(PRODUCT_EVENTS.STORM_RADAR_OPENED, {
+    stormSlug,
+    stormType,
+    source: resolvedSource,
+    extraMetadata: { source_page: 'storm_page' },
+  });
+  track('Storm Radar Click', { stormSlug, source: resolvedSource });
+  if (recorded) {
+    track('storm_radar_opened', stormEventProps({
+      stormSlug,
+      stormType,
+      source: resolvedSource,
+      extra: { source_page: 'storm_page' },
+    }));
+  }
 }
 
 // ============================================
@@ -1120,6 +1272,7 @@ export const SAVE_TRIGGERS = {
   ALERT_ADD_TO_MAP: 'alert_add_to_map',
   MAP_ALERT_POPUP: 'map_alert_popup',
   MAP_LOCATION_PIN_CLICK: 'map_location_pin_click',
+  STORM_PAGE_MAP: 'storm_page_map',
   CITY_PAGE: 'city_page',
   AUTO_GEOLOCATE: 'auto_geolocate',
 };
@@ -1209,19 +1362,37 @@ function normalizeSlug(value) {
  * existing 'Radar Link Click' which fires on the click intent).
  * stateContext defaults to 'national'; supports a future state-scoped radar.
  */
+function bucketRadarSourcePage(source) {
+  const s = String(source || '').toLowerCase();
+  if (s.includes('homepage')) return 'homepage';
+  if (s.includes('storm_page')) return 'storm_page';
+  if (s.includes('city')) return 'city';
+  if (s.includes('county')) return 'county';
+  if (s.includes('state_page') || s.startsWith('state_') || s.includes('state-page')) {
+    return 'state';
+  }
+  return 'other';
+}
+
 export function trackRadarPageView(source, stateContext = 'national') {
   const resolvedSource = resolveSource(source);
+  const sourcePage = bucketRadarSourcePage(resolvedSource);
   const stateCode = stateContext && stateContext !== 'national'
     ? String(stateContext).toUpperCase().slice(0, 2)
     : null;
   const recorded = recordProductEvent(PRODUCT_EVENTS.RADAR_VIEW, {
     stateCode: /^[A-Z]{2}$/.test(stateCode || '') ? stateCode : null,
-    metadata: { source: resolvedSource, state_context: normalizeSlug(stateContext) },
+    metadata: {
+      source: resolvedSource,
+      source_page: sourcePage,
+      state_context: normalizeSlug(stateContext),
+    },
   });
   if (!recorded) return;
   track('Radar Page View', {
     source: resolvedSource,
-    state_context: normalizeSlug(stateContext)
+    source_page: sourcePage,
+    state_context: normalizeSlug(stateContext),
   });
 }
 
@@ -1742,16 +1913,21 @@ export default {
   startSessionTracking,
   stopSessionTracking,
   trackVisitorType,
+  getVisitorType,
   trackVisitorSessionStarted,
   trackReturningVisitor,
   testAllTracking,
   // Storm page events
+  trackStormBannerViewed,
   trackStormPageView,
   trackStormAlertExpanded,
   trackStormShare,
   trackStormMapInteraction,
   trackStormPageRefresh,
   trackStormBannerClick,
+  trackStormAlertsClicked,
+  trackStormLocationSaved,
+  trackStormSignInStarted,
   trackStormAlertDetailView,
   trackStormPageEntry,
   trackEmergencyInfoPanelViewed,

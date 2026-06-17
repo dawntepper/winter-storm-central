@@ -58,6 +58,13 @@ export const PRODUCT_EVENTS = {
   SAVE_LOCATION: 'save_location',
   SIGN_IN: 'sign_in',
   LOCATIONS_SYNCED: 'locations_synced',
+  STORM_BANNER_VIEWED: 'storm_banner_viewed',
+  STORM_BANNER_CLICKED: 'storm_banner_clicked',
+  STORM_PAGE_VIEWED: 'storm_page_viewed',
+  STORM_RADAR_OPENED: 'storm_radar_opened',
+  STORM_ALERTS_CLICKED: 'storm_alerts_clicked',
+  STORM_LOCATION_SAVED: 'storm_location_saved',
+  STORM_SIGNIN_STARTED: 'storm_signin_started',
 };
 
 export const RADAR_EVENTS = {
@@ -131,6 +138,22 @@ const PRODUCT_DEDUPE_RULES = {
   },
   [PRODUCT_EVENTS.STATE_SELECTOR_USED]: { type: 'none' },
   [PRODUCT_EVENTS.SAVE_LOCATION]: { type: 'none' },
+  [PRODUCT_EVENTS.STORM_BANNER_VIEWED]: {
+    type: 'session_once',
+    key: ({ metadata }) => `storm_banner_view:${metadata?.storm_slug || 'unknown'}`,
+  },
+  [PRODUCT_EVENTS.STORM_BANNER_CLICKED]: { type: 'none' },
+  [PRODUCT_EVENTS.STORM_PAGE_VIEWED]: {
+    type: 'visit_cooldown',
+    key: ({ metadata }) => `storm_page:${metadata?.storm_slug || 'unknown'}`,
+  },
+  [PRODUCT_EVENTS.STORM_RADAR_OPENED]: { type: 'none' },
+  [PRODUCT_EVENTS.STORM_ALERTS_CLICKED]: { type: 'none' },
+  [PRODUCT_EVENTS.STORM_LOCATION_SAVED]: { type: 'none' },
+  [PRODUCT_EVENTS.STORM_SIGNIN_STARTED]: {
+    type: 'session_once',
+    key: ({ metadata }) => `storm_signin:${metadata?.storm_slug || 'unknown'}`,
+  },
 };
 
 const RADAR_DEDUPE_RULES = {
