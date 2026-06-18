@@ -136,10 +136,12 @@ const ZoomContext = createContext(5.5);
 // Center of the storm coverage area - responsive defaults
 // Desktop default frames the lower-48 closeup (Alaska/Hawaii still on the map,
 // just outside the initial viewport — users can pan/zoom to them).
-const CENTER_DESKTOP = [39.5, -96]; // Geographic center of the contiguous US
-const CENTER_MOBILE = [42.0, -100];  // Centered for mobile
-const ZOOM_DESKTOP = 4.2;  // One step tighter — CONUS closeup, no Alaska in frame
-const ZOOM_MOBILE = 2.8;   // Zoomed out more on mobile to see full coverage
+// Desktop default frames the lower-48; center sits slightly south of the
+// geographic midpoint so less Canada is in view on /radar without scrolling.
+const CENTER_DESKTOP = [37.8, -96];
+const CENTER_MOBILE = [38.5, -98];
+const ZOOM_DESKTOP = 4.35;
+const ZOOM_MOBILE = 3.0;
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
