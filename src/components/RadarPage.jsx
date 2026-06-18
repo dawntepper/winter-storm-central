@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap from './StormMap';
+import StormMap, { BASEMAP_BRIGHTNESS_VARIANTS, DEFAULT_BASEMAP_BRIGHTNESS } from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
@@ -152,6 +152,7 @@ export default function RadarPage() {
   const [heroLocation, setHeroLocation] = useState(null);
   const [locationSummary, setLocationSummary] = useState(null);
   const [radarType, setRadarType] = useState('precipitation');
+  const [basemapVariant, setBasemapVariant] = useState('a');
 
   // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.
@@ -281,6 +282,8 @@ export default function RadarPage() {
     };
   }, [locationSummary, effectiveStateCode, heroLocation, mapAlerts]);
 
+  const basemapBrightness = BASEMAP_BRIGHTNESS_VARIANTS[basemapVariant]?.value ?? DEFAULT_BASEMAP_BRIGHTNESS;
+
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
     setRadarMetaTags();
@@ -345,7 +348,8 @@ export default function RadarPage() {
             />
           </div>
 
-          <div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Radar Type</label>
             <div className="flex gap-1.5">
               {LAYER_TYPES.map((type) => (
@@ -366,6 +370,21 @@ export default function RadarPage() {
                 </button>
               ))}
             </div>
+            </div>
+
+            <div className="sm:w-40 shrink-0">
+              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Basemap Brightness</label>
+              <select
+                value={basemapVariant}
+                onChange={(e) => setBasemapVariant(e.target.value)}
+                className="w-full px-2 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs cursor-pointer focus:outline-none focus:border-sky-500"
+                aria-label="Compare basemap brightness variants"
+              >
+                {Object.entries(BASEMAP_BRIGHTNESS_VARIANTS).map(([key, variant]) => (
+                  <option key={key} value={key}>{variant.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div
@@ -380,6 +399,7 @@ export default function RadarPage() {
               isHero
               radarLayerType={radarType}
               radarColorScheme={4}
+              basemapBrightness={basemapBrightness}
               centerOn={displayCenterOn}
               selectedStateCode={effectiveStateCode}
               highlightArea={displayHighlightArea}

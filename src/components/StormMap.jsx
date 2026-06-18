@@ -453,8 +453,15 @@ export const BASEMAP_STYLES = {
   },
 };
 
-// GIBS WMTS time dimension. Computed timestamps often 404 when the frame
-// isn't published yet; "default" resolves to the latest available imagery.
+// Basemap brightness lift for dark CARTO tiles (tile pane only — radar/alerts unchanged).
+export const BASEMAP_BRIGHTNESS_VARIANTS = {
+  original: { label: 'Original', value: 1 },
+  a: { label: '+10%', value: 1.1 },
+  b: { label: '+15%', value: 1.15 },
+};
+export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.a.value;
+
+// GIBS WMTS time dimension.
 const GIBS_TIME = 'default';
 
 // Radar/satellite layer component
@@ -1002,6 +1009,45 @@ const STATE_HOVER_CARD_H_EST = 140;
 const HOVER_CARD_PAD = 8;
 const HOVER_CARD_GAP = 14;
 
+const STATE_HOVER_CARD_GAP = 6;
+
+/** State popup sits beside the cursor (below-right) so the path to click stays short. */
+function getStateHoverCardStyle(x, y, containerEl) {
+  if (!containerEl || x == null || y == null) return null;
+
+  const rect = containerEl.getBoundingClientRect();
+  const viewX = rect.left + x;
+  const viewY = rect.top + y;
+  const gap = STATE_HOVER_CARD_GAP;
+
+  let left = viewX + gap;
+  let top = viewY + gap;
+
+  if (left + STATE_HOVER_CARD_W > rect.right - HOVER_CARD_PAD) {
+    left = viewX - STATE_HOVER_CARD_W - gap;
+  }
+  if (top + STATE_HOVER_CARD_H_EST > rect.bottom - HOVER_CARD_PAD) {
+    top = viewY - STATE_HOVER_CARD_H_EST - gap;
+  }
+
+  left = Math.min(
+    Math.max(left, rect.left + HOVER_CARD_PAD),
+    rect.right - STATE_HOVER_CARD_W - HOVER_CARD_PAD,
+  );
+  top = Math.min(
+    Math.max(top, rect.top + HOVER_CARD_PAD),
+    rect.bottom - STATE_HOVER_CARD_H_EST - HOVER_CARD_PAD,
+  );
+
+  return {
+    position: 'fixed',
+    left,
+    top,
+    transform: 'none',
+    zIndex: 3000,
+  };
+}
+
 /** Keep hover cards inside the map and above radar tiles; flip below cursor when needed. */
 function getHoverCardStyle(x, y, containerEl, cardWidth = HOVER_CARD_W, cardHeightEst = HOVER_CARD_H_EST) {
   if (!containerEl || x == null || y == null) return null;
@@ -1100,6 +1146,25 @@ function StateInteractivePane() {
       pane.style.zIndex = 450;
     }
   }, [map]);
+
+  return null;
+}
+
+/** Brightens only the raster basemap tiles — not radar, borders, or markers. */
+function BasemapBrightnessFilter({ brightness = DEFAULT_BASEMAP_BRIGHTNESS }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const pane = map.getPane('tilePane');
+    if (!pane) return;
+
+    const level = Number(brightness);
+    pane.style.filter = !level || level === 1 ? '' : `brightness(${level})`;
+
+    return () => {
+      pane.style.filter = '';
+    };
+  }, [map, brightness]);
 
   return null;
 }
@@ -1355,7 +1420,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle = 'dark', stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle = 'dark', basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
   const navigate = useNavigate();
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
@@ -1589,9 +1654,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
-  // Handle state polygon hover — popup position is fixed at first entry (like alerts).
+  // Handle state polygon hover — popup anchored near cursor; grace period blocks neighbor states.
   const handleStateHover = (stateCode, event) => {
     if (pinnedAlertRef.current) return;
+
+    // Leaving polygon toward popup crosses neighbors — keep current state until grace ends.
+    if (hoveredStateCode && hideAlertTimeoutRef.current) {
+      return;
+    }
 
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
@@ -1610,6 +1680,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(stateCode);
+    stateHoverLockedRef.current = false;
   };
 
   const handleStateLeave = () => {
@@ -1617,7 +1688,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     hideAlertTimeoutRef.current = setTimeout(() => {
       setHoveredStateCode(null);
       setHoverCardPosition(null);
-    }, 200);
+    }, 400);
   };
 
   const handleStateClick = (stateCode, event) => {
@@ -1633,6 +1704,20 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       event.originalEvent.stopPropagation?.();
     }
     navigate(`/alerts/${slug}`);
+  };
+
+  const handleStateCardEnter = () => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+      hideAlertTimeoutRef.current = null;
+    }
+    stateHoverLockedRef.current = true;
+  };
+
+  const handleStateCardLeave = () => {
+    stateHoverLockedRef.current = false;
+    setHoveredStateCode(null);
+    setHoverCardPosition(null);
   };
 
   // Handle card hover (keep it visible)
@@ -1719,12 +1804,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   const stateHoverCardStyle = useMemo(() => {
     if (!hoverCardPosition || !mapContainerRef.current) return null;
-    return getHoverCardStyle(
+    return getStateHoverCardStyle(
       hoverCardPosition.x,
       hoverCardPosition.y,
       mapContainerRef.current,
-      STATE_HOVER_CARD_W,
-      STATE_HOVER_CARD_H_EST,
     );
   }, [hoverCardPosition]);
 
@@ -1896,6 +1979,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url={basemap.url}
           />
+          <BasemapBrightnessFilter brightness={basemapBrightness} />
 
           {/* State borders + radar overlay */}
           <StateInteractivePane />
@@ -2251,8 +2335,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <div
             className="bg-white rounded-xl shadow-2xl border border-slate-200 p-2.5"
             style={{ ...stateHoverCardStyle, pointerEvents: 'auto', width: STATE_HOVER_CARD_W }}
-            onMouseEnter={handleCardEnter}
-            onMouseLeave={handleCardLeave}
+            onMouseEnter={handleStateCardEnter}
+            onMouseLeave={handleStateCardLeave}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
@@ -2269,7 +2353,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 </div>
               </div>
               <button
-                onClick={handleCardLeave}
+                onClick={handleStateCardLeave}
                 className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
