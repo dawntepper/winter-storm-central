@@ -458,8 +458,9 @@ export const BASEMAP_BRIGHTNESS_VARIANTS = {
   original: { label: 'Original', value: 1 },
   a: { label: '+10%', value: 1.1 },
   b: { label: '+15%', value: 1.15 },
+  c: { label: '+20%', value: 1.2 },
 };
-export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.a.value;
+export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.c.value;
 
 // GIBS WMTS time dimension.
 const GIBS_TIME = 'default';
@@ -1194,6 +1195,7 @@ function UsStatesOutline({
   basemapStyle,
   selectedStateCode,
   hoveredStateCode,
+  pinnedStateCode,
   onStateHover,
   onStateLeave,
   onStateClick,
@@ -1209,6 +1211,7 @@ function UsStatesOutline({
         key={`state-outline-${code}`}
         data={data}
         pane={STATE_INTERACTIVE_PANE}
+        interactive={!pinnedStateCode || code === pinnedStateCode}
         style={{
           color: '#ffffff',
           weight: isSelected ? 2.75 : (isHovered ? 2.25 : (isLightBasemap ? 1.75 : 1.5)),
@@ -1654,12 +1657,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
-  // Handle state polygon hover — popup anchored near cursor; grace period blocks neighbor states.
+  // Handle state polygon hover — popup anchored near cursor; other states disabled while open.
   const handleStateHover = (stateCode, event) => {
     if (pinnedAlertRef.current) return;
 
-    // Leaving polygon toward popup crosses neighbors — keep current state until grace ends.
-    if (hoveredStateCode && hideAlertTimeoutRef.current) {
+    if (hoveredStateCode && stateCode !== hoveredStateCode) {
       return;
     }
 
@@ -1680,7 +1682,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(stateCode);
-    stateHoverLockedRef.current = false;
   };
 
   const handleStateLeave = () => {
@@ -1990,6 +1991,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             basemapStyle={basemapStyle}
             selectedStateCode={selectedStateCode}
             hoveredStateCode={hoveredStateCode}
+            pinnedStateCode={hoveredStateCode}
             onStateHover={handleStateHover}
             onStateLeave={handleStateLeave}
             onStateClick={handleStateClick}
