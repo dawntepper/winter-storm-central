@@ -21,7 +21,6 @@ import { AlertListSkeleton, Skeleton } from './Skeletons';
 import StateActionCards from './state/StateActionCards';
 import StateFindLocalWeather from './state/StateFindLocalWeather';
 import PopularLocations from './state/PopularLocations';
-import StateEmptyAlerts from './state/StateEmptyAlerts';
 import StateCountyBrowse from './state/StateCountyBrowse';
 import RelatedWeatherLinks from './state/RelatedWeatherLinks';
 
@@ -373,12 +372,6 @@ export default function StateAlertsPage() {
           </div>
 
           <div className="space-y-4 mt-6 lg:mt-0">
-            <StateEmptyAlerts
-              alertCount={stateAlerts.length}
-              lastUpdated={lastUpdated}
-              loading={alertsLoading}
-            />
-
             <StateFindLocalWeather
               stateCode={stateAbbr}
               stateName={stateData.name}
