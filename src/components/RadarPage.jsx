@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap, { RADAR_COLOR_SCHEMES, BASEMAP_STYLES } from './StormMap';
+import StormMap, { BASEMAP_STYLES } from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
@@ -16,7 +16,7 @@ import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
-import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, trackRadarTypeChange, trackRadarColorSchemeChange, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, trackRadarTypeChange, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -152,7 +152,6 @@ export default function RadarPage() {
   const [heroLocation, setHeroLocation] = useState(null);
   const [locationSummary, setLocationSummary] = useState(null);
   const [radarType, setRadarType] = useState('precipitation');
-  const [colorScheme, setColorScheme] = useState(4);
   const [basemapStyle, setBasemapStyle] = useState('dark');
 
   // GPS center from hero locate / location search. Takes precedence over
@@ -371,25 +370,6 @@ export default function RadarPage() {
               </div>
             </div>
 
-            {radarType === 'precipitation' && (
-              <div className="sm:w-44 shrink-0">
-                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Color Scheme</label>
-                <select
-                  value={colorScheme}
-                  onChange={(e) => {
-                    const next = Number(e.target.value);
-                    setColorScheme(next);
-                    trackRadarColorSchemeChange(next);
-                  }}
-                  className="w-full px-2 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs cursor-pointer focus:outline-none focus:border-sky-500"
-                >
-                  {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <div className="sm:w-36 shrink-0">
               <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Map Style</label>
               <select
@@ -415,7 +395,7 @@ export default function RadarPage() {
               alerts={mapAlerts}
               isHero
               radarLayerType={radarType}
-              radarColorScheme={colorScheme}
+              radarColorScheme={4}
               basemapStyle={basemapStyle}
               centerOn={displayCenterOn}
               selectedStateCode={effectiveStateCode}

@@ -441,7 +441,7 @@ export const BASEMAP_STYLES = {
   },
   light: {
     label: 'Light',
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
   },
   voyager: {
     label: 'Voyager',
@@ -970,11 +970,33 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
+// Subtle state borders on the basemap (all states). Selected state gets a stronger overlay.
+function UsStatesOutline({ basemapStyle, selectedStateCode }) {
+  const style = basemapStyle === 'light'
+    ? { color: '#334155', weight: 1.5, opacity: 0.65, fillOpacity: 0 }
+    : basemapStyle === 'voyager'
+      ? { color: '#475569', weight: 1.35, opacity: 0.58, fillOpacity: 0 }
+      : { color: '#cbd5e1', weight: 1.25, opacity: 0.5, fillOpacity: 0 };
+
+  return Object.entries(STATE_GEOJSON).map(([code, data]) => {
+    if (code === selectedStateCode) return null;
+    return (
+      <GeoJSON
+        key={`state-outline-${code}`}
+        data={data}
+        interactive={false}
+        style={style}
+      />
+    );
+  });
+}
+
 // Highlighted state border outline when a state is selected
-function StateBorderHighlight({ stateCode }) {
+function StateBorderHighlight({ stateCode, basemapStyle = 'dark' }) {
   if (!stateCode || !STATE_GEOJSON[stateCode]) return null;
 
   const geoData = STATE_GEOJSON[stateCode];
+  const isLight = basemapStyle === 'light';
 
   return (
     <GeoJSON
@@ -982,11 +1004,11 @@ function StateBorderHighlight({ stateCode }) {
       data={geoData}
       interactive={false}
       style={{
-        color: '#ffffff',
-        weight: 3,
-        opacity: 0.9,
-        fillColor: '#ffffff',
-        fillOpacity: 0.06,
+        color: isLight ? '#0f172a' : '#ffffff',
+        weight: isLight ? 3.5 : 3,
+        opacity: 0.95,
+        fillColor: isLight ? '#0f172a' : '#ffffff',
+        fillOpacity: isLight ? 0.08 : 0.06,
       }}
     />
   );
@@ -1616,11 +1638,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             url={basemap.url}
           />
 
-          {/* Radar overlay */}
+          {/* State borders + radar overlay */}
+          <UsStatesOutline basemapStyle={basemapStyle} selectedStateCode={selectedStateCode} />
           <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} onLoadingChange={setRadarLoading} />
 
           {/* State border highlight */}
-          <StateBorderHighlight stateCode={selectedStateCode} />
+          <StateBorderHighlight stateCode={selectedStateCode} basemapStyle={basemapStyle} />
 
           {/* "Your area" county highlight (drawn over the state outline) */}
           <FitBoundsToHighlight geojson={highlightArea} />
