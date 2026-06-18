@@ -988,6 +988,48 @@ function formatStateLabel(stateCode) {
   return `${name} (${stateCode})`;
 }
 
+const HOVER_CARD_W = 288;
+const HOVER_CARD_H_EST = 220;
+const HOVER_CARD_PAD = 8;
+const HOVER_CARD_GAP = 14;
+
+/** Keep hover cards inside the map and above radar tiles; flip below cursor when needed. */
+function getHoverCardStyle(x, y, containerEl) {
+  if (!containerEl || x == null || y == null) return null;
+
+  const rect = containerEl.getBoundingClientRect();
+  const viewX = rect.left + x;
+  const viewY = rect.top + y;
+  const left = Math.min(
+    Math.max(viewX - HOVER_CARD_W / 2, rect.left + HOVER_CARD_PAD),
+    rect.right - HOVER_CARD_W - HOVER_CARD_PAD,
+  );
+
+  const spaceAbove = y - HOVER_CARD_GAP;
+  const spaceBelow = containerEl.offsetHeight - y - HOVER_CARD_GAP;
+  const showAbove = spaceAbove >= HOVER_CARD_H_EST || spaceAbove >= spaceBelow;
+
+  if (showAbove) {
+    const top = Math.max(rect.top + HOVER_CARD_PAD, viewY - HOVER_CARD_GAP);
+    return {
+      position: 'fixed',
+      left,
+      top,
+      transform: 'translateY(-100%)',
+      zIndex: 3000,
+    };
+  }
+
+  const top = Math.min(viewY + HOVER_CARD_GAP, rect.bottom - HOVER_CARD_H_EST - HOVER_CARD_PAD);
+  return {
+    position: 'fixed',
+    left,
+    top,
+    transform: 'none',
+    zIndex: 3000,
+  };
+}
+
 // Pane above radar tiles so state polygons receive pointer events.
 function StateInteractivePane() {
   const map = useMap();
@@ -1614,6 +1656,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   const basemap = BASEMAP_STYLES[basemapStyle] || BASEMAP_STYLES.dark;
 
+  const hoverCardStyle = useMemo(() => {
+    if (!hoverCardPosition || !mapContainerRef.current) return null;
+    return getHoverCardStyle(
+      hoverCardPosition.x,
+      hoverCardPosition.y,
+      mapContainerRef.current,
+    );
+  }, [hoverCardPosition]);
+
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
@@ -1750,7 +1801,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
-      <div ref={mapContainerRef} className={`relative ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+      <div ref={mapContainerRef} className={`relative overflow-visible z-10 ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         {!mapReady && <MapSkeleton />}
         <MapContainer
           center={initialCenter}
@@ -1859,21 +1910,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         )}
 
         {/* Gradient overlay at edges for polish */}
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none z-[1]">
           <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-900/30 to-transparent"></div>
           <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-900/30 to-transparent"></div>
         </div>
 
         {/* Alert hover card overlay */}
-        {hoveredAlert && hoverCardPosition && (
+        {hoveredAlert && hoverCardStyle && (
           <div
-            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
-            style={{
-              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
-              top: Math.max(hoverCardPosition.y - 12, 8),
-              transform: 'translateY(-100%)',
-              pointerEvents: 'auto'
-            }}
+            className="bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72"
+            style={{ ...hoverCardStyle, pointerEvents: 'auto', width: HOVER_CARD_W }}
             onMouseEnter={handleCardEnter}
             onMouseLeave={handleCardLeave}
           >
@@ -2000,15 +2046,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         )}
 
         {/* User location hover card overlay */}
-        {hoveredUserLocation && hoverCardPosition && (
+        {hoveredUserLocation && hoverCardStyle && (
           <div
-            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
-            style={{
-              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
-              top: Math.max(hoverCardPosition.y - 12, 8),
-              transform: 'translateY(-100%)',
-              pointerEvents: 'auto'
-            }}
+            className="bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72"
+            style={{ ...hoverCardStyle, pointerEvents: 'auto', width: HOVER_CARD_W }}
             onMouseEnter={handleCardEnter}
             onMouseLeave={handleCardLeave}
           >
@@ -2138,18 +2179,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         )}
 
         {/* State hover card overlay */}
-        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && hoverCardPosition && (
+        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && hoverCardStyle && (
           <div
-            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
-            style={{
-              left: Math.min(
-                Math.max(hoverCardPosition.x - 144, 8),
-                (mapContainerRef.current?.offsetWidth || 300) - 296,
-              ),
-              top: Math.max(hoverCardPosition.y - 12, 8),
-              transform: 'translateY(-100%)',
-              pointerEvents: 'auto',
-            }}
+            className="bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72"
+            style={{ ...hoverCardStyle, pointerEvents: 'auto', width: HOVER_CARD_W }}
             onMouseEnter={handleCardEnter}
             onMouseLeave={handleCardLeave}
           >
