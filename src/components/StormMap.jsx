@@ -461,10 +461,10 @@ export const BASEMAP_BRIGHTNESS_VARIANTS = {
   b: { label: '+15%', value: 1.15 },
   c: { label: '+20%', value: 1.2 },
   d: { label: '+28%', value: 1.28 },
-  production: { label: 'Production', value: 1.18 },
+  production: { label: 'Production', value: 1.2 },
 };
 export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.production.value;
-export const DEFAULT_BASEMAP_CONTRAST = 1.14;
+export const DEFAULT_BASEMAP_CONTRAST = 1.16;
 
 // Atmospheric filter stack — deep navy/slate marine-chart feel (tilePane only).
 export const BASEMAP_ATMOSPHERE = {
@@ -476,8 +476,8 @@ export const BASEMAP_ATMOSPHERE = {
 // Map chrome — container bg + overlay opacities (not applied to radar/alerts).
 export const MAP_ATMOSPHERE_CHROME = {
   containerBg: '#0f172a',       // deep navy behind tiles while loading
-  vignetteOpacity: 0.55,        // radial edge darkening
-  textureOpacity: 0.35,         // subtle cool gradient wash
+  vignetteOpacity: 0.62,        // radial edge darkening
+  textureOpacity: 0.4,          // subtle cool gradient wash
 };
 
 // Decorative geographic labels — national zoom only, below radar/state labels.
@@ -1209,26 +1209,32 @@ function BasemapTileEnhancement({
   const isDarkBasemap = basemapStyle === 'dark';
 
   useEffect(() => {
-    const pane = map.getPane('tilePane');
-    if (!pane) return;
+    const applyFilter = () => {
+      const pane = map.getPane('tilePane');
+      if (!pane) return;
 
-    if (!isDarkBasemap) {
-      pane.style.filter = '';
-      return undefined;
-    }
+      if (!isDarkBasemap) {
+        pane.style.filter = '';
+        return;
+      }
 
-    const filters = [];
-    const level = Number(brightness);
-    const contrastLevel = Number(contrast);
-    if (level && level !== 1) filters.push(`brightness(${level})`);
-    if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
-    if (saturation != null && saturation !== 1) filters.push(`saturate(${saturation})`);
-    if (sepia) filters.push(`sepia(${sepia})`);
-    if (hueRotate) filters.push(`hue-rotate(${hueRotate}deg)`);
-    pane.style.filter = filters.length ? filters.join(' ') : '';
+      const filters = [];
+      const level = Number(brightness);
+      const contrastLevel = Number(contrast);
+      if (level && level !== 1) filters.push(`brightness(${level})`);
+      if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
+      if (saturation != null && saturation !== 1) filters.push(`saturate(${saturation})`);
+      if (sepia) filters.push(`sepia(${sepia})`);
+      if (hueRotate) filters.push(`hue-rotate(${hueRotate}deg)`);
+      pane.style.filter = filters.length ? filters.join(' ') : '';
+    };
+
+    applyFilter();
+    map.whenReady(applyFilter);
 
     return () => {
-      pane.style.filter = '';
+      const pane = map.getPane('tilePane');
+      if (pane) pane.style.filter = '';
     };
   }, [map, isDarkBasemap, brightness, contrast, saturation, sepia, hueRotate]);
 
@@ -1255,7 +1261,7 @@ function TerrainHintLayer({ basemapStyle }) {
     }
 
     const layer = L.tileLayer(TERRAIN_HINT_URL, {
-      opacity: 0.28,
+      opacity: 0.32,
       pane: TERRAIN_HINT_PANE,
       attribution: '',
     });
@@ -2222,7 +2228,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
         {/* Atmospheric overlays — vignette + cool texture wash (pointer-events-none) */}
         {basemapStyle === 'dark' && (
-          <div className="storm-map-atmosphere absolute inset-0 pointer-events-none z-[1]" aria-hidden="true">
+          <div className="storm-map-atmosphere absolute inset-0 pointer-events-none z-[15]" aria-hidden="true">
             <div
               className="storm-map-atmosphere-texture absolute inset-0"
               style={{ opacity: MAP_ATMOSPHERE_CHROME.textureOpacity }}
