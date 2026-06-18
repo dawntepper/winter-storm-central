@@ -5,7 +5,7 @@ import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { savedLocationAlertsPath } from '../services/locationCatalogService';
-import { ABBR_TO_SLUG } from '../data/stateConfig';
+import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
 import { getForecastIcon } from '../utils/getForecastIcon';
@@ -19,6 +19,8 @@ import {
   trackMapAlertClicked,
   trackAlertDetailView,
   trackGeolocationUsed,
+  trackMapRegionClick,
+  MAP_REGION_SOURCES,
   setNavSource,
   NAV_SOURCES,
   SAVE_TRIGGERS
@@ -458,6 +460,7 @@ const GIBS_TIME = 'default';
 // - satellite: NASA GIBS GOES-East GeoColor (true color day, IR night)
 // - infrared: NASA GIBS GOES-East Clean Infrared (cloud tops)
 const RADAR_PANE = 'radar-overlay';
+const STATE_INTERACTIVE_PANE = 'state-interactive';
 
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
@@ -970,38 +973,98 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
-// Subtle state borders on the basemap (all states). Selected state gets a stronger overlay.
-function UsStatesOutline({ basemapStyle, selectedStateCode }) {
-  const style = basemapStyle === 'light'
-    ? { color: '#334155', weight: 1.5, opacity: 0.65, fillOpacity: 0 }
-    : basemapStyle === 'voyager'
-      ? { color: '#475569', weight: 1.35, opacity: 0.58, fillOpacity: 0 }
-      : { color: '#cbd5e1', weight: 1.25, opacity: 0.5, fillOpacity: 0 };
+function getStateSlug(stateCode) {
+  return ABBR_TO_SLUG[stateCode] || (stateCode === 'DC' ? 'district-of-columbia' : null);
+}
+
+function formatStateLabel(stateCode) {
+  const name = STATE_NAMES[stateCode] || stateCode;
+  return `${name} (${stateCode})`;
+}
+
+// Pane above radar tiles so state polygons receive pointer events.
+function StateInteractivePane() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map.getPane(STATE_INTERACTIVE_PANE)) {
+      const pane = map.createPane(STATE_INTERACTIVE_PANE);
+      pane.style.zIndex = 450;
+    }
+  }, [map]);
+
+  return null;
+}
+
+// Subtle dark underlay so white borders stay visible on light basemaps.
+function StateOutlineShadow({ basemapStyle }) {
+  if (basemapStyle !== 'light' && basemapStyle !== 'voyager') return null;
+
+  return Object.entries(STATE_GEOJSON).map(([code, data]) => (
+    <GeoJSON
+      key={`state-shadow-${code}`}
+      data={data}
+      interactive={false}
+      style={{
+        color: '#0f172a',
+        weight: 3,
+        opacity: 0.28,
+        fillOpacity: 0,
+      }}
+    />
+  ));
+}
+
+// White state borders — interactive for hover/click. Rendered above radar so
+// empty state areas still receive pointer events; alert markers sit higher.
+function UsStatesOutline({
+  basemapStyle,
+  selectedStateCode,
+  hoveredStateCode,
+  onStateHover,
+  onStateLeave,
+  onStateClick,
+}) {
+  const isLightBasemap = basemapStyle === 'light' || basemapStyle === 'voyager';
 
   return Object.entries(STATE_GEOJSON).map(([code, data]) => {
-    if (code === selectedStateCode) return null;
+    const isSelected = code === selectedStateCode;
+    const isHovered = code === hoveredStateCode;
+
     return (
       <GeoJSON
         key={`state-outline-${code}`}
         data={data}
-        interactive={false}
-        style={style}
+        pane={STATE_INTERACTIVE_PANE}
+        style={{
+          color: '#ffffff',
+          weight: isSelected ? 2.75 : (isHovered ? 2.25 : (isLightBasemap ? 1.75 : 1.5)),
+          opacity: isSelected ? 1 : (isHovered ? 0.98 : (isLightBasemap ? 0.92 : 0.85)),
+          fillColor: '#ffffff',
+          fillOpacity: isHovered ? 0.1 : (isSelected ? 0.04 : 0),
+        }}
+        eventHandlers={{
+          mouseover: (e) => onStateHover(code, e),
+          mouseout: onStateLeave,
+          click: (e) => onStateClick(code, e),
+        }}
       />
     );
   });
 }
 
-// Highlighted state border outline when a state is selected
+// Highlighted state border outline when a state is selected (visual only — events pass through)
 function StateBorderHighlight({ stateCode, basemapStyle = 'dark' }) {
   if (!stateCode || !STATE_GEOJSON[stateCode]) return null;
 
   const geoData = STATE_GEOJSON[stateCode];
-  const isLight = basemapStyle === 'light';
+  const isLight = basemapStyle === 'light' || basemapStyle === 'voyager';
 
   return (
     <GeoJSON
       key={stateCode}
       data={geoData}
+      pane={STATE_INTERACTIVE_PANE}
       interactive={false}
       style={{
         color: isLight ? '#0f172a' : '#ffffff',
@@ -1185,6 +1248,7 @@ function isAlertLocationSaved(alert, userLocations) {
 }
 
 export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle = 'dark', stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+  const navigate = useNavigate();
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1248,6 +1312,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const catRowRef = useRef(null);
   const [hoveredAlert, setHoveredAlert] = useState(null);
   const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
+  const [hoveredStateCode, setHoveredStateCode] = useState(null);
   const [hoverCardPosition, setHoverCardPosition] = useState(null);
   const [modalAlert, setModalAlert] = useState(null); // For the full alert modal
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -1269,6 +1334,15 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     for (const id of CATEGORY_ORDER) counts[id] = 0;
     for (const alert of alerts) {
       if (counts[alert.category] !== undefined) counts[alert.category]++;
+    }
+    return counts;
+  }, [alerts]);
+
+  const stateAlertCounts = useMemo(() => {
+    const counts = {};
+    for (const alert of alerts) {
+      if (!alert.state) continue;
+      counts[alert.state] = (counts[alert.state] || 0) + 1;
     }
     return counts;
   }, [alerts]);
@@ -1323,7 +1397,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
-    setHoveredUserLocation(null); // Clear any hovered user location
+    setHoveredUserLocation(null);
+    setHoveredStateCode(null);
     setHoveredAlert(alert);
 
     // Get position relative to map container
@@ -1358,6 +1433,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     pinnedAlertRef.current = true;
     setHoveredUserLocation(null);
+    setHoveredStateCode(null);
     setHoveredAlert(alert);
     if (mapContainerRef.current && event) {
       setHoverCardPosition({
@@ -1381,7 +1457,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
-    setHoveredAlert(null); // Clear any hovered alert
+    setHoveredAlert(null);
+    setHoveredStateCode(null);
     setHoveredUserLocation(location);
 
     // Get position relative to map container
@@ -1401,6 +1478,47 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
+  // Handle state polygon hover
+  const handleStateHover = (stateCode, event) => {
+    if (pinnedAlertRef.current) return;
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    setHoveredAlert(null);
+    setHoveredUserLocation(null);
+    setHoveredStateCode(stateCode);
+
+    if (mapContainerRef.current && event) {
+      setHoverCardPosition({
+        x: event.containerPoint.x,
+        y: event.containerPoint.y,
+      });
+    }
+  };
+
+  const handleStateLeave = () => {
+    if (pinnedAlertRef.current) return;
+    hideAlertTimeoutRef.current = setTimeout(() => {
+      setHoveredStateCode(null);
+      setHoverCardPosition(null);
+    }, 200);
+  };
+
+  const handleStateClick = (stateCode, event) => {
+    if (hideAlertTimeoutRef.current) {
+      clearTimeout(hideAlertTimeoutRef.current);
+    }
+    const slug = getStateSlug(stateCode);
+    if (!slug) return;
+    trackMapRegionClick(stateCode, MAP_REGION_SOURCES.STORM_MAP);
+    setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
+    if (event?.originalEvent) {
+      event.originalEvent.preventDefault?.();
+      event.originalEvent.stopPropagation?.();
+    }
+    navigate(`/alerts/${slug}`);
+  };
+
   // Handle card hover (keep it visible)
   const handleCardEnter = () => {
     if (hideAlertTimeoutRef.current) {
@@ -1413,6 +1531,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     pinnedAlertRef.current = false;
     setHoveredAlert(null);
     setHoveredUserLocation(null);
+    setHoveredStateCode(null);
     setHoverCardPosition(null);
   };
 
@@ -1639,8 +1758,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           />
 
           {/* State borders + radar overlay */}
-          <UsStatesOutline basemapStyle={basemapStyle} selectedStateCode={selectedStateCode} />
+          <StateInteractivePane />
+          <StateOutlineShadow basemapStyle={basemapStyle} />
           <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} onLoadingChange={setRadarLoading} />
+          <UsStatesOutline
+            basemapStyle={basemapStyle}
+            selectedStateCode={selectedStateCode}
+            hoveredStateCode={hoveredStateCode}
+            onStateHover={handleStateHover}
+            onStateLeave={handleStateLeave}
+            onStateClick={handleStateClick}
+          />
 
           {/* State border highlight */}
           <StateBorderHighlight stateCode={selectedStateCode} basemapStyle={basemapStyle} />
@@ -1979,6 +2107,60 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               >
                 View Alert Details →
               </button>
+            )}
+          </div>
+        )}
+
+        {/* State hover card overlay */}
+        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && hoverCardPosition && (
+          <div
+            className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
+            style={{
+              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
+              top: Math.max(hoverCardPosition.y - 12, 8),
+              transform: 'translateY(-100%)',
+              pointerEvents: 'auto',
+            }}
+            onMouseEnter={handleCardEnter}
+            onMouseLeave={handleCardLeave}
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🗺️</span>
+                <div>
+                  <h4 className="font-semibold text-slate-800 text-sm">
+                    {formatStateLabel(hoveredStateCode)}
+                  </h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {(stateAlertCounts[hoveredStateCode] || 0) === 1
+                      ? '1 active alert'
+                      : `${stateAlertCounts[hoveredStateCode] || 0} active alerts`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCardLeave}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {getStateSlug(hoveredStateCode) ? (
+              <Link
+                to={`/alerts/${getStateSlug(hoveredStateCode)}`}
+                className="block w-full text-center py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  trackMapRegionClick(hoveredStateCode, MAP_REGION_SOURCES.STORM_MAP);
+                  setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
+                }}
+              >
+                View State Alerts →
+              </Link>
+            ) : (
+              <p className="text-xs text-slate-500 text-center">No state alerts page available</p>
             )}
           </div>
         )}

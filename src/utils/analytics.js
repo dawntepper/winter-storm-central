@@ -1356,6 +1356,7 @@ export const SAVE_TRIGGERS = {
 export const MAP_REGION_SOURCES = {
   HEATMAP: 'heatmap',
   MOST_IMPACTED_LIST: 'most_impacted_list',
+  STORM_MAP: 'storm_map',
 };
 
 const NAV_SOURCE_KEY = 'st_nav_source';
