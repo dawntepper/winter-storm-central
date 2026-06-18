@@ -1045,6 +1045,7 @@ function UsStatesOutline({
         }}
         eventHandlers={{
           mouseover: (e) => onStateHover(code, e),
+          mousemove: (e) => onStateHover(code, e),
           mouseout: onStateLeave,
           click: (e) => onStateClick(code, e),
         }}
@@ -1326,6 +1327,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const mapContainerRef = useRef(null);
   const hideAlertTimeoutRef = useRef(null);
   const pinnedAlertRef = useRef(false);
+  const stateHoverLockedRef = useRef(false);
   const cities = Object.values(weatherData);
 
   // Count alerts per category
@@ -1478,27 +1480,41 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
-  // Handle state polygon hover
+  // Handle state polygon hover — cursor-anchored popup with sticky state until
+  // mouse leaves both polygon and popup (prevents crossing neighbors on the way).
   const handleStateHover = (stateCode, event) => {
     if (pinnedAlertRef.current) return;
+
+    if (hoveredStateCode && hoveredStateCode !== stateCode) {
+      if (stateHoverLockedRef.current || hideAlertTimeoutRef.current) {
+        return;
+      }
+    }
+
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
+      hideAlertTimeoutRef.current = null;
     }
+
+    const point = event?.containerPoint;
+    if (point && mapContainerRef.current) {
+      setHoverCardPosition({ x: point.x, y: point.y });
+    }
+
+    if (hoveredStateCode === stateCode) {
+      return;
+    }
+
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(stateCode);
-
-    if (mapContainerRef.current && event) {
-      setHoverCardPosition({
-        x: event.containerPoint.x,
-        y: event.containerPoint.y,
-      });
-    }
+    stateHoverLockedRef.current = true;
   };
 
   const handleStateLeave = () => {
     if (pinnedAlertRef.current) return;
     hideAlertTimeoutRef.current = setTimeout(() => {
+      stateHoverLockedRef.current = false;
       setHoveredStateCode(null);
       setHoverCardPosition(null);
     }, 200);
@@ -1529,6 +1545,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   // Handle card leave
   const handleCardLeave = () => {
     pinnedAlertRef.current = false;
+    stateHoverLockedRef.current = false;
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
@@ -2116,9 +2133,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <div
             className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
             style={{
-              left: Math.min(Math.max(hoverCardPosition.x - 144, 8), (mapContainerRef.current?.offsetWidth || 300) - 296),
-              top: Math.max(hoverCardPosition.y - 12, 8),
-              transform: 'translateY(-100%)',
+              left: Math.min(
+                Math.max(hoverCardPosition.x + 12, 8),
+                (mapContainerRef.current?.offsetWidth || 300) - 296,
+              ),
+              top: Math.min(
+                Math.max(hoverCardPosition.y + 12, 8),
+                (mapContainerRef.current?.offsetHeight || 300) - 140,
+              ),
               pointerEvents: 'auto',
             }}
             onMouseEnter={handleCardEnter}

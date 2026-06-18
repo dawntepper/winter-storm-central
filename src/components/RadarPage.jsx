@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap, { BASEMAP_STYLES } from './StormMap';
+import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
@@ -152,7 +152,6 @@ export default function RadarPage() {
   const [heroLocation, setHeroLocation] = useState(null);
   const [locationSummary, setLocationSummary] = useState(null);
   const [radarType, setRadarType] = useState('precipitation');
-  const [basemapStyle, setBasemapStyle] = useState('dark');
 
   // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.
@@ -346,41 +345,26 @@ export default function RadarPage() {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <div className="flex-1 min-w-0">
-              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Radar Type</label>
-              <div className="flex gap-1.5">
-                {LAYER_TYPES.map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      setRadarType(type.id);
-                      trackRadarTypeChange(type.id, { stateCode: effectiveStateCode });
-                    }}
-                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
-                      radarType === type.id
-                        ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="sm:w-36 shrink-0">
-              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Map Style</label>
-              <select
-                value={basemapStyle}
-                onChange={(e) => setBasemapStyle(e.target.value)}
-                className="w-full px-2 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs cursor-pointer focus:outline-none focus:border-sky-500"
-              >
-                {Object.entries(BASEMAP_STYLES).map(([id, style]) => (
-                  <option key={id} value={id}>{style.label}</option>
-                ))}
-              </select>
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Radar Type</label>
+            <div className="flex gap-1.5">
+              {LAYER_TYPES.map((type) => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => {
+                    setRadarType(type.id);
+                    trackRadarTypeChange(type.id, { stateCode: effectiveStateCode });
+                  }}
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    radarType === type.id
+                      ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -396,7 +380,6 @@ export default function RadarPage() {
               isHero
               radarLayerType={radarType}
               radarColorScheme={4}
-              basemapStyle={basemapStyle}
               centerOn={displayCenterOn}
               selectedStateCode={effectiveStateCode}
               highlightArea={displayHighlightArea}
