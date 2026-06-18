@@ -453,14 +453,32 @@ export const BASEMAP_STYLES = {
   },
 };
 
-// Basemap brightness lift for dark CARTO tiles (tile pane only — radar/alerts unchanged).
+// Basemap tile enhancement for dark CARTO tiles (tile pane only — radar/alerts unchanged).
 export const BASEMAP_BRIGHTNESS_VARIANTS = {
   original: { label: 'Original', value: 1 },
   a: { label: '+10%', value: 1.1 },
   b: { label: '+15%', value: 1.15 },
   c: { label: '+20%', value: 1.2 },
+  d: { label: '+28%', value: 1.28 },
 };
-export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.c.value;
+export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.d.value;
+export const DEFAULT_BASEMAP_CONTRAST = 1.05;
+
+// State outline — cool gray-blue for orientation without dominating radar/alerts.
+const STATE_BORDER_COLOR_DARK = '#9fb0c4';
+const STATE_BORDER_COLOR_LIGHT = '#64748b';
+const STATE_BORDER_COLOR_SELECTED_DARK = '#b8c8d8';
+const STATE_FILL_COLOR = '#9fb0c4';
+const STATE_BORDER_OPACITY = {
+  default: 0.22,
+  hover: 0.38,
+  selected: 0.58,
+};
+const STATE_FILL_OPACITY = {
+  default: 0,
+  hover: 0.13,
+  selected: 0.06,
+};
 
 // GIBS WMTS time dimension.
 const GIBS_TIME = 'default';
@@ -1151,8 +1169,11 @@ function StateInteractivePane() {
   return null;
 }
 
-/** Brightens only the raster basemap tiles — not radar, borders, or markers. */
-function BasemapBrightnessFilter({ brightness = DEFAULT_BASEMAP_BRIGHTNESS }) {
+/** Brightness + contrast on raster basemap tiles only — not radar, borders, or markers. */
+function BasemapTileEnhancement({
+  brightness = DEFAULT_BASEMAP_BRIGHTNESS,
+  contrast = DEFAULT_BASEMAP_CONTRAST,
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -1160,12 +1181,16 @@ function BasemapBrightnessFilter({ brightness = DEFAULT_BASEMAP_BRIGHTNESS }) {
     if (!pane) return;
 
     const level = Number(brightness);
-    pane.style.filter = !level || level === 1 ? '' : `brightness(${level})`;
+    const contrastLevel = Number(contrast);
+    const filters = [];
+    if (level && level !== 1) filters.push(`brightness(${level})`);
+    if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
+    pane.style.filter = filters.length ? filters.join(' ') : '';
 
     return () => {
       pane.style.filter = '';
     };
-  }, [map, brightness]);
+  }, [map, brightness, contrast]);
 
   return null;
 }
@@ -1189,7 +1214,7 @@ function StateOutlineShadow({ basemapStyle }) {
   ));
 }
 
-// White state borders — interactive for hover/click. Rendered above radar so
+// Cool gray-blue state borders — interactive for hover/click. Rendered above radar so
 // empty state areas still receive pointer events; alert markers sit higher.
 function UsStatesOutline({
   basemapStyle,
@@ -1201,6 +1226,7 @@ function UsStatesOutline({
   onStateClick,
 }) {
   const isLightBasemap = basemapStyle === 'light' || basemapStyle === 'voyager';
+  const borderColor = isLightBasemap ? STATE_BORDER_COLOR_LIGHT : STATE_BORDER_COLOR_DARK;
 
   return Object.entries(STATE_GEOJSON).map(([code, data]) => {
     const isSelected = code === selectedStateCode;
@@ -1213,11 +1239,15 @@ function UsStatesOutline({
         pane={STATE_INTERACTIVE_PANE}
         interactive={!pinnedStateCode || code === pinnedStateCode}
         style={{
-          color: '#ffffff',
-          weight: isSelected ? 2.75 : (isHovered ? 2.25 : (isLightBasemap ? 1.75 : 1.5)),
-          opacity: isSelected ? 1 : (isHovered ? 0.98 : (isLightBasemap ? 0.92 : 0.85)),
-          fillColor: '#ffffff',
-          fillOpacity: isHovered ? 0.1 : (isSelected ? 0.04 : 0),
+          color: borderColor,
+          weight: isSelected ? 2.5 : (isHovered ? 2 : (isLightBasemap ? 1.75 : 1.5)),
+          opacity: isSelected
+            ? STATE_BORDER_OPACITY.selected
+            : (isHovered ? STATE_BORDER_OPACITY.hover : STATE_BORDER_OPACITY.default),
+          fillColor: STATE_FILL_COLOR,
+          fillOpacity: isHovered
+            ? STATE_FILL_OPACITY.hover
+            : (isSelected ? STATE_FILL_OPACITY.selected : STATE_FILL_OPACITY.default),
         }}
         eventHandlers={{
           mouseover: (e) => onStateHover(code, e),
@@ -1243,11 +1273,11 @@ function StateBorderHighlight({ stateCode, basemapStyle = 'dark' }) {
       pane={STATE_INTERACTIVE_PANE}
       interactive={false}
       style={{
-        color: isLight ? '#0f172a' : '#ffffff',
-        weight: isLight ? 3.5 : 3,
-        opacity: 0.95,
-        fillColor: isLight ? '#0f172a' : '#ffffff',
-        fillOpacity: isLight ? 0.08 : 0.06,
+        color: isLight ? '#0f172a' : STATE_BORDER_COLOR_SELECTED_DARK,
+        weight: isLight ? 3.5 : 2.75,
+        opacity: isLight ? 0.95 : STATE_BORDER_OPACITY.selected,
+        fillColor: isLight ? '#0f172a' : STATE_FILL_COLOR,
+        fillOpacity: isLight ? 0.08 : 0.08,
       }}
     />
   );
@@ -1980,7 +2010,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url={basemap.url}
           />
-          <BasemapBrightnessFilter brightness={basemapBrightness} />
+          <BasemapTileEnhancement brightness={basemapBrightness} />
 
           {/* State borders + radar overlay */}
           <StateInteractivePane />
