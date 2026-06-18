@@ -1045,7 +1045,6 @@ function UsStatesOutline({
         }}
         eventHandlers={{
           mouseover: (e) => onStateHover(code, e),
-          mousemove: (e) => onStateHover(code, e),
           mouseout: onStateLeave,
           click: (e) => onStateClick(code, e),
         }}
@@ -1480,8 +1479,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
-  // Handle state polygon hover — cursor-anchored popup with sticky state until
-  // mouse leaves both polygon and popup (prevents crossing neighbors on the way).
+  // Handle state polygon hover — popup position is fixed at first entry (like alerts).
   const handleStateHover = (stateCode, event) => {
     if (pinnedAlertRef.current) return;
 
@@ -1496,13 +1494,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       hideAlertTimeoutRef.current = null;
     }
 
+    if (hoveredStateCode === stateCode) {
+      return;
+    }
+
     const point = event?.containerPoint;
     if (point && mapContainerRef.current) {
       setHoverCardPosition({ x: point.x, y: point.y });
-    }
-
-    if (hoveredStateCode === stateCode) {
-      return;
     }
 
     setHoveredAlert(null);
@@ -1539,6 +1537,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const handleCardEnter = () => {
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
+    }
+    if (hoveredStateCode) {
+      stateHoverLockedRef.current = true;
     }
   };
 
@@ -2134,13 +2135,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             className="absolute bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72 z-[1000]"
             style={{
               left: Math.min(
-                Math.max(hoverCardPosition.x + 12, 8),
+                Math.max(hoverCardPosition.x - 144, 8),
                 (mapContainerRef.current?.offsetWidth || 300) - 296,
               ),
-              top: Math.min(
-                Math.max(hoverCardPosition.y + 12, 8),
-                (mapContainerRef.current?.offsetHeight || 300) - 140,
-              ),
+              top: Math.max(hoverCardPosition.y - 12, 8),
+              transform: 'translateY(-100%)',
               pointerEvents: 'auto',
             }}
             onMouseEnter={handleCardEnter}
