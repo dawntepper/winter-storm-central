@@ -461,6 +461,9 @@ const GIBS_TIME = 'default';
 // - infrared: NASA GIBS GOES-East Clean Infrared (cloud tops)
 const RADAR_PANE = 'radar-overlay';
 const STATE_INTERACTIVE_PANE = 'state-interactive';
+// CircleMarker defaults to overlayPane (z-index 400), below state-interactive (450).
+// Alert dots must use markerPane so they receive pointer events above state polygons.
+const MAP_MARKER_PANE = 'markerPane';
 
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
@@ -823,6 +826,7 @@ function UserLocationMarker({ location, stormPhase, isMobile = false, onHover, o
       <CircleMarker
         center={position}
         radius={baseRadius}
+        pane={MAP_MARKER_PANE}
         pathOptions={{
           fillColor: '#475569',
           fillOpacity: 0.9,
@@ -941,6 +945,7 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
       <CircleMarker
         center={position}
         radius={selected ? selectedGlowRadius : (highlighted ? 18 : 12)}
+        pane={MAP_MARKER_PANE}
         pathOptions={{
           fillColor: color,
           fillOpacity: selected
@@ -957,6 +962,7 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
       <CircleMarker
         center={position}
         radius={selected ? 10 : (highlighted ? 9 : 7)}
+        pane={MAP_MARKER_PANE}
         pathOptions={{
           fillColor: isTornadoWatch && !selected ? 'transparent' : color,
           fillOpacity: isTornadoWatch && !selected ? 0 : 0.9,
@@ -1400,6 +1406,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
+    stateHoverLockedRef.current = false;
     setHoveredAlert(alert);
 
     // Get position relative to map container
@@ -1435,6 +1442,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     pinnedAlertRef.current = true;
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
+    stateHoverLockedRef.current = false;
     setHoveredAlert(alert);
     if (mapContainerRef.current && event) {
       setHoverCardPosition({
@@ -1481,7 +1489,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   // Handle state polygon hover — popup position is fixed at first entry (like alerts).
   const handleStateHover = (stateCode, event) => {
-    if (pinnedAlertRef.current) return;
+    if (pinnedAlertRef.current || hoveredAlert) return;
 
     if (hoveredStateCode && hoveredStateCode !== stateCode) {
       if (stateHoverLockedRef.current || hideAlertTimeoutRef.current) {
