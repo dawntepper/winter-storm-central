@@ -152,7 +152,7 @@ export default function RadarPage() {
   const [heroLocation, setHeroLocation] = useState(null);
   const [locationSummary, setLocationSummary] = useState(null);
   const [radarType, setRadarType] = useState('precipitation');
-  const [basemapVariant, setBasemapVariant] = useState('d');
+  const [basemapVariant, setBasemapVariant] = useState('production');
 
   // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.

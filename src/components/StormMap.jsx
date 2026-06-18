@@ -453,16 +453,43 @@ export const BASEMAP_STYLES = {
   },
 };
 
-// Basemap tile enhancement for dark CARTO tiles (tile pane only — radar/alerts unchanged).
+// Basemap tile enhancement for dark CARTO tiles (tilePane only — radar/alerts unchanged).
+// Brightness variants are for /radar dev tuning; production uses `production` + BASEMAP_ATMOSPHERE.
 export const BASEMAP_BRIGHTNESS_VARIANTS = {
   original: { label: 'Original', value: 1 },
   a: { label: '+10%', value: 1.1 },
   b: { label: '+15%', value: 1.15 },
   c: { label: '+20%', value: 1.2 },
   d: { label: '+28%', value: 1.28 },
+  production: { label: 'Production', value: 1.18 },
 };
-export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.d.value;
-export const DEFAULT_BASEMAP_CONTRAST = 1.05;
+export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.production.value;
+export const DEFAULT_BASEMAP_CONTRAST = 1.14;
+
+// Atmospheric filter stack — deep navy/slate marine-chart feel (tilePane only).
+export const BASEMAP_ATMOSPHERE = {
+  saturation: 0.88,   // slightly muted so radar/alerts pop
+  sepia: 0.06,        // whisper of warmth (Windy/ForeFlight tone)
+  hueRotate: -6,      // nudge cooler for land/water separation
+};
+
+// Map chrome — container bg + overlay opacities (not applied to radar/alerts).
+export const MAP_ATMOSPHERE_CHROME = {
+  containerBg: '#0f172a',       // deep navy behind tiles while loading
+  vignetteOpacity: 0.55,        // radial edge darkening
+  textureOpacity: 0.35,         // subtle cool gradient wash
+};
+
+// Decorative geographic labels — national zoom only, below radar/state labels.
+const GEOGRAPHIC_FEATURE_LABELS = [
+  { name: 'Great Lakes', position: [45.5, -84.0] },
+  { name: 'Gulf of Mexico', position: [26.5, -90.0] },
+  { name: 'Rocky Mountains', position: [40.0, -110.0] },
+  { name: 'Appalachian Mountains', position: [36.5, -81.0] },
+];
+const GEOGRAPHIC_LABEL_MAX_ZOOM = 5;
+const GEOGRAPHIC_LABEL_COLOR = 'rgba(148, 163, 184, 0.35)';
+const GEOGRAPHIC_LABEL_PANE = 'geographic-labels';
 
 // State outline — cool gray-blue for orientation without dominating radar/alerts.
 const STATE_BORDER_COLOR_DARK = '#9fb0c4';
@@ -470,13 +497,13 @@ const STATE_BORDER_COLOR_LIGHT = '#64748b';
 const STATE_BORDER_COLOR_SELECTED_DARK = '#b8c8d8';
 const STATE_FILL_COLOR = '#9fb0c4';
 const STATE_BORDER_OPACITY = {
-  default: 0.22,
-  hover: 0.38,
-  selected: 0.58,
+  default: 0.18,
+  hover: 0.32,
+  selected: 0.52,
 };
 const STATE_FILL_OPACITY = {
   default: 0,
-  hover: 0.13,
+  hover: 0.07,
   selected: 0.06,
 };
 
@@ -1169,30 +1196,126 @@ function StateInteractivePane() {
   return null;
 }
 
-/** Brightness + contrast on raster basemap tiles only — not radar, borders, or markers. */
+/** Brightness + atmospheric filters on raster basemap tiles only — not radar, borders, or markers. */
 function BasemapTileEnhancement({
+  basemapStyle = 'dark',
   brightness = DEFAULT_BASEMAP_BRIGHTNESS,
   contrast = DEFAULT_BASEMAP_CONTRAST,
+  saturation = BASEMAP_ATMOSPHERE.saturation,
+  sepia = BASEMAP_ATMOSPHERE.sepia,
+  hueRotate = BASEMAP_ATMOSPHERE.hueRotate,
 }) {
   const map = useMap();
+  const isDarkBasemap = basemapStyle === 'dark';
 
   useEffect(() => {
     const pane = map.getPane('tilePane');
     if (!pane) return;
 
+    if (!isDarkBasemap) {
+      pane.style.filter = '';
+      return undefined;
+    }
+
+    const filters = [];
     const level = Number(brightness);
     const contrastLevel = Number(contrast);
-    const filters = [];
     if (level && level !== 1) filters.push(`brightness(${level})`);
     if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
+    if (saturation != null && saturation !== 1) filters.push(`saturate(${saturation})`);
+    if (sepia) filters.push(`sepia(${sepia})`);
+    if (hueRotate) filters.push(`hue-rotate(${hueRotate}deg)`);
     pane.style.filter = filters.length ? filters.join(' ') : '';
 
     return () => {
       pane.style.filter = '';
     };
-  }, [map, brightness, contrast]);
+  }, [map, isDarkBasemap, brightness, contrast, saturation, sepia, hueRotate]);
 
   return null;
+}
+
+// Subtle terrain hint — CARTO nolabels over basemap with soft-light blend for depth.
+const TERRAIN_HINT_PANE = 'terrain-hint';
+const TERRAIN_HINT_URL = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+
+function TerrainHintLayer({ basemapStyle }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (basemapStyle !== 'dark') return undefined;
+
+    let pane = map.getPane(TERRAIN_HINT_PANE);
+    if (!pane) {
+      pane = map.createPane(TERRAIN_HINT_PANE);
+      pane.style.zIndex = 205;
+      pane.style.mixBlendMode = 'soft-light';
+      pane.style.pointerEvents = 'none';
+      pane.classList.add('terrain-hint-pane');
+    }
+
+    const layer = L.tileLayer(TERRAIN_HINT_URL, {
+      opacity: 0.28,
+      pane: TERRAIN_HINT_PANE,
+      attribution: '',
+    });
+    layer.addTo(map);
+
+    return () => {
+      map.removeLayer(layer);
+    };
+  }, [map, basemapStyle]);
+
+  return null;
+}
+
+function GeographicLabelsPane() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map.getPane(GEOGRAPHIC_LABEL_PANE)) {
+      const pane = map.createPane(GEOGRAPHIC_LABEL_PANE);
+      pane.style.zIndex = 320;
+    }
+  }, [map]);
+
+  return null;
+}
+
+function GeographicFeatureLabels({ zoomLevel }) {
+  if (zoomLevel > GEOGRAPHIC_LABEL_MAX_ZOOM) return null;
+
+  const fontSize = zoomLevel >= 4 ? 10 : 11;
+
+  return GEOGRAPHIC_FEATURE_LABELS.map(({ name, position }) => {
+    const icon = L.divIcon({
+      className: 'geographic-label-wrapper',
+      html: `<div class="geographic-label" style="
+        color: ${GEOGRAPHIC_LABEL_COLOR};
+        font-size: ${fontSize}px;
+        font-weight: 500;
+        font-style: italic;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        user-select: none;
+        text-shadow: 0 1px 4px rgba(15, 23, 42, 0.8);
+      ">${name}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    return (
+      <Marker
+        key={`geo-label-${name}`}
+        position={position}
+        icon={icon}
+        pane={GEOGRAPHIC_LABEL_PANE}
+        interactive={false}
+      />
+    );
+  });
 }
 
 // Subtle dark underlay so white borders stay visible on light basemaps.
@@ -1978,7 +2101,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
-      <div ref={mapContainerRef} className={`relative overflow-visible z-10 ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+      <div ref={mapContainerRef} className={`relative overflow-visible z-10 storm-map-shell ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         {!mapReady && <MapSkeleton />}
         <MapContainer
           center={initialCenter}
@@ -1988,8 +2111,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               ? '100%'
               : (isHero ? (heroCompact ? '320px' : '500px') : '350px'),
             width: '100%',
+            background: basemapStyle === 'dark' ? MAP_ATMOSPHERE_CHROME.containerBg : undefined,
           }}
-          className={`z-0 ${
+          className={`z-0 storm-map-canvas${basemapStyle === 'dark' ? ' storm-map-dark' : ''} ${
             !isSidebar && isHero && heroCompact ? 'sm:!h-[360px] lg:!h-[400px]'
             : !isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]'
             : !isSidebar && !isHero ? 'sm:!h-[450px]' : ''
@@ -2010,9 +2134,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url={basemap.url}
           />
-          <BasemapTileEnhancement brightness={basemapBrightness} />
+          <TerrainHintLayer basemapStyle={basemapStyle} />
+          <BasemapTileEnhancement basemapStyle={basemapStyle} brightness={basemapBrightness} />
 
           {/* State borders + radar overlay */}
+          <GeographicLabelsPane />
           <StateInteractivePane />
           <StateLabelsPane />
           <StateOutlineShadow basemapStyle={basemapStyle} />
@@ -2031,6 +2157,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <StateBorderHighlight stateCode={selectedStateCode} basemapStyle={basemapStyle} />
 
           <ZoomContext.Provider value={zoomLevel}>
+            <GeographicFeatureLabels zoomLevel={zoomLevel} />
             <StateAbbrevLabels zoomLevel={zoomLevel} />
           </ZoomContext.Provider>
 
@@ -2093,11 +2220,21 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </div>
         )}
 
-        {/* Gradient overlay at edges for polish */}
-        <div className="absolute inset-0 pointer-events-none z-[1]">
-          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-900/30 to-transparent"></div>
-          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-900/30 to-transparent"></div>
-        </div>
+        {/* Atmospheric overlays — vignette + cool texture wash (pointer-events-none) */}
+        {basemapStyle === 'dark' && (
+          <div className="storm-map-atmosphere absolute inset-0 pointer-events-none z-[1]" aria-hidden="true">
+            <div
+              className="storm-map-atmosphere-texture absolute inset-0"
+              style={{ opacity: MAP_ATMOSPHERE_CHROME.textureOpacity }}
+            />
+            <div
+              className="storm-map-atmosphere-vignette absolute inset-0"
+              style={{ opacity: MAP_ATMOSPHERE_CHROME.vignetteOpacity }}
+            />
+            <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-slate-900/25 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-slate-900/25 to-transparent" />
+          </div>
+        )}
 
         {/* Alert hover card overlay */}
         {hoveredAlert && hoverCardStyle && (
@@ -2443,6 +2580,25 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         .radar-overlay-pane {
           transition: opacity 0.55s ease-in-out;
           opacity: 0;
+          filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.06));
+        }
+        .storm-map-dark.leaflet-container {
+          background: ${MAP_ATMOSPHERE_CHROME.containerBg};
+        }
+        .storm-map-atmosphere-texture {
+          background:
+            radial-gradient(ellipse 80% 60% at 25% 35%, rgba(30, 58, 95, 0.18) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 50% at 75% 65%, rgba(15, 23, 42, 0.22) 0%, transparent 50%),
+            linear-gradient(165deg, rgba(30, 41, 59, 0.08) 0%, transparent 40%, rgba(15, 23, 42, 0.1) 100%);
+          mix-blend-mode: soft-light;
+        }
+        .storm-map-atmosphere-vignette {
+          background: radial-gradient(ellipse at center, transparent 42%, rgba(15, 23, 42, 0.65) 100%);
+        }
+        .geographic-label-wrapper {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
         }
         .radar-spinner {
           width: 14px;
