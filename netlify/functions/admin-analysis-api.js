@@ -2446,6 +2446,7 @@ async function fetchAllAnalytics(supabase, dateRange) {
     countyAlertViews,
     savedLocations,
     radarBase,
+    radarAttribution,
     userJourneys,
     analyticsHealth,
     previousMetrics,
@@ -2454,7 +2455,6 @@ async function fetchAllAnalytics(supabase, dateRange) {
     forecastEngagement,
     cityDemand,
     stormEventsBase,
-    radarAttribution,
   ] = await Promise.all([
     fetchReturningVisitors(supabase, since),
     fetchMissingLocationSearches(supabase, since),
