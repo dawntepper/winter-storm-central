@@ -996,25 +996,27 @@ function formatStateLabel(stateCode) {
 }
 
 const HOVER_CARD_W = 288;
+const STATE_HOVER_CARD_W = 220;
 const HOVER_CARD_H_EST = 220;
+const STATE_HOVER_CARD_H_EST = 140;
 const HOVER_CARD_PAD = 8;
 const HOVER_CARD_GAP = 14;
 
 /** Keep hover cards inside the map and above radar tiles; flip below cursor when needed. */
-function getHoverCardStyle(x, y, containerEl) {
+function getHoverCardStyle(x, y, containerEl, cardWidth = HOVER_CARD_W, cardHeightEst = HOVER_CARD_H_EST) {
   if (!containerEl || x == null || y == null) return null;
 
   const rect = containerEl.getBoundingClientRect();
   const viewX = rect.left + x;
   const viewY = rect.top + y;
   const left = Math.min(
-    Math.max(viewX - HOVER_CARD_W / 2, rect.left + HOVER_CARD_PAD),
-    rect.right - HOVER_CARD_W - HOVER_CARD_PAD,
+    Math.max(viewX - cardWidth / 2, rect.left + HOVER_CARD_PAD),
+    rect.right - cardWidth - HOVER_CARD_PAD,
   );
 
   const spaceAbove = y - HOVER_CARD_GAP;
   const spaceBelow = containerEl.offsetHeight - y - HOVER_CARD_GAP;
-  const showAbove = spaceAbove >= HOVER_CARD_H_EST || spaceAbove >= spaceBelow;
+  const showAbove = spaceAbove >= cardHeightEst || spaceAbove >= spaceBelow;
 
   if (showAbove) {
     const top = Math.max(rect.top + HOVER_CARD_PAD, viewY - HOVER_CARD_GAP);
@@ -1027,7 +1029,7 @@ function getHoverCardStyle(x, y, containerEl) {
     };
   }
 
-  const top = Math.min(viewY + HOVER_CARD_GAP, rect.bottom - HOVER_CARD_H_EST - HOVER_CARD_PAD);
+  const top = Math.min(viewY + HOVER_CARD_GAP, rect.bottom - cardHeightEst - HOVER_CARD_PAD);
   return {
     position: 'fixed',
     left,
@@ -1715,6 +1717,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     );
   }, [hoverCardPosition]);
 
+  const stateHoverCardStyle = useMemo(() => {
+    if (!hoverCardPosition || !mapContainerRef.current) return null;
+    return getHoverCardStyle(
+      hoverCardPosition.x,
+      hoverCardPosition.y,
+      mapContainerRef.current,
+      STATE_HOVER_CARD_W,
+      STATE_HOVER_CARD_H_EST,
+    );
+  }, [hoverCardPosition]);
+
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
@@ -2234,10 +2247,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         )}
 
         {/* State hover card overlay */}
-        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && hoverCardStyle && (
+        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && stateHoverCardStyle && (
           <div
-            className="bg-white rounded-xl shadow-2xl border border-slate-200 p-3 w-72"
-            style={{ ...hoverCardStyle, pointerEvents: 'auto', width: HOVER_CARD_W }}
+            className="bg-white rounded-xl shadow-2xl border border-slate-200 p-2.5"
+            style={{ ...stateHoverCardStyle, pointerEvents: 'auto', width: STATE_HOVER_CARD_W }}
             onMouseEnter={handleCardEnter}
             onMouseLeave={handleCardLeave}
           >
@@ -2274,7 +2287,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                   setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
                 }}
               >
-                View State Alerts →
+                View Alerts
               </Link>
             ) : (
               <p className="text-xs text-slate-500 text-center">No state alerts page available</p>
