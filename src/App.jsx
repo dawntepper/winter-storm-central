@@ -378,6 +378,40 @@ export default function App() {
   const geoKey = (lat, lon) => `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)}`;
   const [dbConditions, setDbConditions] = useState({}); // userLocationId -> conditions
 
+  /** Remove every device-local copy of a pin so sync-on-load cannot resurrect it. */
+  const purgeLocalLocationByGeo = useCallback((lat, lon) => {
+    if (lat == null || lon == null) return;
+    const k = geoKey(lat, lon);
+
+    setSearchLocations((prev) =>
+      prev.filter((loc) => loc.lat == null || loc.lon == null || geoKey(loc.lat, loc.lon) !== k)
+    );
+    setAlertLocations((prev) =>
+      prev.filter((loc) => loc.lat == null || loc.lon == null || geoKey(loc.lat, loc.lon) !== k)
+    );
+
+    try {
+      const stored = localStorage.getItem(SEARCH_LOCATIONS_KEY);
+      if (stored) {
+        const savedLocations = JSON.parse(stored);
+        let changed = false;
+        for (const [key, entry] of Object.entries(savedLocations)) {
+          const d = entry?.data;
+          if (d?.lat != null && d?.lon != null && geoKey(d.lat, d.lon) === k) {
+            delete savedLocations[key];
+            changed = true;
+          }
+        }
+        if (changed) {
+          localStorage.setItem(SEARCH_LOCATIONS_KEY, JSON.stringify(savedLocations));
+          window.dispatchEvent(new CustomEvent('savedLocationsChanged'));
+        }
+      }
+    } catch (e) {
+      console.error('Error purging search localStorage:', e);
+    }
+  }, []);
+
   // Ensure a saved "City, ST" pin has a catalog slug/path for linking.
   const enrichSavedLocationCityLink = useCallback((loc, applyPatch) => {
     if (!loc?.name || loc.citySlug || loc.lat == null || loc.lon == null) return;
@@ -681,6 +715,7 @@ export default function App() {
           locationName: accountLoc.name,
           remainingCount: userLocations.length - 1
         });
+        purgeLocalLocationByGeo(accountLoc.lat, accountLoc.lon);
         saved.removeFromAccount(accountLoc.userLocationId);
       }
     }
@@ -706,8 +741,18 @@ export default function App() {
   }, [saved, enrichSavedLocationCityLink]);
 
   // Remove an account-backed pin (merge-down) — deletes it from the user's
-  // account; refresh() then drops it from the list/map everywhere.
+  // account and purges any matching device-local copy so sync-on-load cannot
+  // re-import it from localStorage.
   const handleRemoveAccountLocation = (userLocationId) => {
+    const match = saved.dbLocations.find((d) => d.userLocationId === userLocationId);
+    if (match) {
+      trackLocationRemoved({
+        trigger: SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE,
+        locationName: match.name,
+        remainingCount: userLocations.length - 1,
+      });
+      purgeLocalLocationByGeo(match.lat, match.lon);
+    }
     saved.removeFromAccount(userLocationId);
   };
 
@@ -732,14 +777,13 @@ export default function App() {
         locationName: location.name,
         remainingCount: userLocations.length - 1
       });
+      purgeLocalLocationByGeo(location.lat, location.lon);
+      removeAccountByGeo(location.lat, location.lon);
     }
-    setAlertLocations(prev => prev.filter(loc => loc.id !== locationId));
-    removeAccountByGeo(location?.lat, location?.lon);
   };
 
   // Handle removing a search location from map (and localStorage)
   const handleRemoveSearchLocation = (locationId, trigger = SAVE_TRIGGERS.YOUR_LOCATIONS_REMOVE) => {
-    // Find location name for tracking before removing
     const location = searchLocations.find(loc => loc.id === locationId);
     if (location) {
       trackLocationRemoved({
@@ -747,33 +791,9 @@ export default function App() {
         locationName: location.name,
         remainingCount: userLocations.length - 1
       });
+      purgeLocalLocationByGeo(location.lat, location.lon);
+      removeAccountByGeo(location.lat, location.lon);
     }
-
-    // Remove from state
-    setSearchLocations(prev => prev.filter(loc => loc.id !== locationId));
-
-    // Also update localStorage to keep ZipCodeSearch in sync
-    try {
-      const stored = localStorage.getItem(SEARCH_LOCATIONS_KEY);
-      if (stored) {
-        const savedLocations = JSON.parse(stored);
-        // Find and remove the location by matching the id
-        const locationKey = locationId.replace('user-', '');
-        if (savedLocations[locationKey]) {
-          delete savedLocations[locationKey];
-          localStorage.setItem(SEARCH_LOCATIONS_KEY, JSON.stringify(savedLocations));
-        }
-      }
-    } catch (e) {
-      console.error('Error updating localStorage:', e);
-    }
-
-    // Tell ZipCodeSearch to re-read localStorage so its in-memory copy doesn't
-    // go stale and resurrect this location on the next add.
-    window.dispatchEvent(new CustomEvent('savedLocationsChanged'));
-
-    // If signed in, also drop the matching account copy so it doesn't sync back.
-    removeAccountByGeo(location?.lat, location?.lon);
   };
 
   // Render location name as city page link when available, else map-center button.
