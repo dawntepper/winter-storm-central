@@ -5,7 +5,7 @@ import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
 import { savedLocationAlertsPath } from '../services/locationCatalogService';
-import { ABBR_TO_SLUG, STATE_NAMES } from '../data/stateConfig';
+import { ABBR_TO_SLUG, STATE_NAMES, US_STATES } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
 import { getForecastIcon } from '../utils/getForecastIcon';
@@ -466,6 +466,11 @@ const STATE_INTERACTIVE_PANE = 'state-interactive';
 // CircleMarker defaults to overlayPane (z-index 400), below state-interactive (450).
 // Alert dots must use markerPane so they receive pointer events above state polygons.
 const MAP_MARKER_PANE = 'markerPane';
+
+const STATE_ABBR_CENTERS = Object.fromEntries(
+  Object.values(US_STATES).map((state) => [state.abbr, state.center]),
+);
+const STATE_LABEL_PANE = 'state-labels';
 
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
@@ -1032,6 +1037,57 @@ function getHoverCardStyle(x, y, containerEl) {
   };
 }
 
+// Non-interactive state abbreviation hints (below alert markers).
+function StateLabelsPane() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map.getPane(STATE_LABEL_PANE)) {
+      const pane = map.createPane(STATE_LABEL_PANE);
+      pane.style.zIndex = 455;
+    }
+  }, [map]);
+
+  return null;
+}
+
+function StateAbbrevLabels({ zoomLevel }) {
+  if (zoomLevel > 6) return null;
+
+  const fontSize = zoomLevel >= 5 ? 10 : zoomLevel >= 4 ? 11 : 12;
+
+  return Object.keys(STATE_GEOJSON).map((code) => {
+    const center = STATE_ABBR_CENTERS[code];
+    if (!center) return null;
+
+    const icon = L.divIcon({
+      className: 'state-abbr-label-wrapper',
+      html: `<div class="state-abbr-label" style="
+        color: rgba(255, 255, 255, 0.82);
+        font-size: ${fontSize}px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.55);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        user-select: none;
+      ">${code}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    return (
+      <Marker
+        key={`state-abbr-${code}`}
+        position={center}
+        icon={icon}
+        pane={STATE_LABEL_PANE}
+        interactive={false}
+      />
+    );
+  });
+}
+
 // Pane above radar tiles so state polygons receive pointer events.
 function StateInteractivePane() {
   const map = useMap();
@@ -1533,13 +1589,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
   // Handle state polygon hover — popup position is fixed at first entry (like alerts).
   const handleStateHover = (stateCode, event) => {
-    if (pinnedAlertRef.current || hoveredAlert) return;
-
-    if (hoveredStateCode && hoveredStateCode !== stateCode) {
-      if (stateHoverLockedRef.current || hideAlertTimeoutRef.current) {
-        return;
-      }
-    }
+    if (pinnedAlertRef.current) return;
 
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
@@ -1558,13 +1608,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(stateCode);
-    stateHoverLockedRef.current = true;
   };
 
   const handleStateLeave = () => {
-    if (pinnedAlertRef.current) return;
+    if (pinnedAlertRef.current || stateHoverLockedRef.current) return;
     hideAlertTimeoutRef.current = setTimeout(() => {
-      stateHoverLockedRef.current = false;
       setHoveredStateCode(null);
       setHoverCardPosition(null);
     }, 200);
@@ -1838,6 +1886,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* State borders + radar overlay */}
           <StateInteractivePane />
+          <StateLabelsPane />
           <StateOutlineShadow basemapStyle={basemapStyle} />
           <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} onLoadingChange={setRadarLoading} />
           <UsStatesOutline
@@ -1851,6 +1900,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* State border highlight */}
           <StateBorderHighlight stateCode={selectedStateCode} basemapStyle={basemapStyle} />
+
+          <ZoomContext.Provider value={zoomLevel}>
+            <StateAbbrevLabels zoomLevel={zoomLevel} />
+          </ZoomContext.Provider>
 
           {/* "Your area" county highlight (drawn over the state outline) */}
           <FitBoundsToHighlight geojson={highlightArea} />
@@ -2296,6 +2349,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           border-top-color: #f8fafc;
         }
         .city-label-wrapper {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .state-abbr-label-wrapper {
           background: transparent !important;
           border: none !important;
           box-shadow: none !important;
