@@ -2433,10 +2433,17 @@ async function fetchStormEventsAnalytics(supabase, since, until = null) {
   };
 }
 
+/** Run labeled fetches in parallel — avoids Promise.all / destructuring order bugs. */
+async function parallelFetches(spec) {
+  const keys = Object.keys(spec);
+  const values = await Promise.all(keys.map((key) => spec[key]()));
+  return Object.fromEntries(keys.map((key, index) => [key, values[index]]));
+}
+
 async function fetchAllAnalytics(supabase, dateRange) {
   const since = getSinceDate(dateRange);
 
-  const [
+  const {
     returningVisitors,
     missingLocationSearches,
     locationSearch,
@@ -2455,26 +2462,26 @@ async function fetchAllAnalytics(supabase, dateRange) {
     forecastEngagement,
     cityDemand,
     stormEventsBase,
-  ] = await Promise.all([
-    fetchReturningVisitors(supabase, since),
-    fetchMissingLocationSearches(supabase, since),
-    fetchLocationSearchPerformance(supabase, since),
-    fetchLocationSources(supabase, since),
-    fetchLocationPreference(supabase, dateRange),
-    fetchCountyDiscovery(supabase, dateRange),
-    fetchCountyAlertViews(supabase, since),
-    fetchSavedLocations(supabase, since),
-    fetchRadarEngagement(supabase, since),
-    fetchRadarAttributionAnalytics(supabase, since),
-    fetchUserJourneys(supabase, since),
-    fetchAnalyticsHealth(supabase),
-    fetchPreviousPeriodMetrics(supabase, dateRange),
-    fetchMostVisitedPages(supabase, dateRange),
-    fetchCountyAlertOpportunities(supabase, since),
-    fetchForecastEngagement(supabase, since),
-    fetchCityDemand(supabase, since),
-    fetchStormEventsAnalytics(supabase, since),
-  ]);
+  } = await parallelFetches({
+    returningVisitors: () => fetchReturningVisitors(supabase, since),
+    missingLocationSearches: () => fetchMissingLocationSearches(supabase, since),
+    locationSearch: () => fetchLocationSearchPerformance(supabase, since),
+    locationSources: () => fetchLocationSources(supabase, since),
+    locationPreference: () => fetchLocationPreference(supabase, dateRange),
+    countyDiscovery: () => fetchCountyDiscovery(supabase, dateRange),
+    countyAlertViews: () => fetchCountyAlertViews(supabase, since),
+    savedLocations: () => fetchSavedLocations(supabase, since),
+    radarBase: () => fetchRadarEngagement(supabase, since),
+    radarAttribution: () => fetchRadarAttributionAnalytics(supabase, since),
+    userJourneys: () => fetchUserJourneys(supabase, since),
+    analyticsHealth: () => fetchAnalyticsHealth(supabase),
+    previousMetrics: () => fetchPreviousPeriodMetrics(supabase, dateRange),
+    mostVisitedPages: () => fetchMostVisitedPages(supabase, dateRange),
+    countyAlertOpportunities: () => fetchCountyAlertOpportunities(supabase, since),
+    forecastEngagement: () => fetchForecastEngagement(supabase, since),
+    cityDemand: () => fetchCityDemand(supabase, since),
+    stormEventsBase: () => fetchStormEventsAnalytics(supabase, since),
+  });
 
   const bounds = getPreviousPeriodBounds(dateRange);
   const stormEventsPrevious = bounds
