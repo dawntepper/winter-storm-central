@@ -441,7 +441,8 @@ export const RADAR_COLOR_SCHEMES = {
 export const BASEMAP_STYLES = {
   dark: {
     label: 'Dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    // nolabels avoids CARTO's baked-in bright admin boundaries; we draw our own borders/labels.
+    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
   },
   light: {
     label: 'Light',
@@ -461,23 +462,23 @@ export const BASEMAP_BRIGHTNESS_VARIANTS = {
   b: { label: '+15%', value: 1.15 },
   c: { label: '+20%', value: 1.2 },
   d: { label: '+28%', value: 1.28 },
-  production: { label: 'Production', value: 1.2 },
+  production: { label: 'Production', value: 1.28 },
 };
 export const DEFAULT_BASEMAP_BRIGHTNESS = BASEMAP_BRIGHTNESS_VARIANTS.production.value;
-export const DEFAULT_BASEMAP_CONTRAST = 1.16;
+export const DEFAULT_BASEMAP_CONTRAST = 1.24;
 
 // Atmospheric filter stack — deep navy/slate marine-chart feel (tilePane only).
 export const BASEMAP_ATMOSPHERE = {
-  saturation: 0.88,   // slightly muted so radar/alerts pop
-  sepia: 0.06,        // whisper of warmth (Windy/ForeFlight tone)
-  hueRotate: -6,      // nudge cooler for land/water separation
+  saturation: 0.78,   // muted so radar/alerts pop; land/water still separate
+  sepia: 0.12,        // warm marine-chart tone (Windy/ForeFlight)
+  hueRotate: -10,     // cooler slate/navy cast
 };
 
 // Map chrome — container bg + overlay opacities (not applied to radar/alerts).
 export const MAP_ATMOSPHERE_CHROME = {
   containerBg: '#0f172a',       // deep navy behind tiles while loading
-  vignetteOpacity: 0.62,        // radial edge darkening
-  textureOpacity: 0.4,          // subtle cool gradient wash
+  vignetteOpacity: 0.82,        // radial edge darkening — visible on dark basemap
+  textureOpacity: 0.55,         // cool gradient wash for depth
 };
 
 // Decorative geographic labels — national zoom only, below radar/state labels.
@@ -492,14 +493,14 @@ const GEOGRAPHIC_LABEL_COLOR = 'rgba(148, 163, 184, 0.35)';
 const GEOGRAPHIC_LABEL_PANE = 'geographic-labels';
 
 // State outline — cool gray-blue for orientation without dominating radar/alerts.
-const STATE_BORDER_COLOR_DARK = '#9fb0c4';
+const STATE_BORDER_COLOR_DARK = '#7a8fa8';
 const STATE_BORDER_COLOR_LIGHT = '#64748b';
-const STATE_BORDER_COLOR_SELECTED_DARK = '#b8c8d8';
-const STATE_FILL_COLOR = '#9fb0c4';
+const STATE_BORDER_COLOR_SELECTED_DARK = '#9fb0c4';
+const STATE_FILL_COLOR = '#7a8fa8';
 const STATE_BORDER_OPACITY = {
-  default: 0.18,
-  hover: 0.32,
-  selected: 0.52,
+  default: 0.42,
+  hover: 0.56,
+  selected: 0.72,
 };
 const STATE_FILL_OPACITY = {
   default: 0,
@@ -1231,8 +1232,12 @@ function BasemapTileEnhancement({
 
     applyFilter();
     map.whenReady(applyFilter);
+    map.on('load', applyFilter);
+    map.on('zoomend', applyFilter);
 
     return () => {
+      map.off('load', applyFilter);
+      map.off('zoomend', applyFilter);
       const pane = map.getPane('tilePane');
       if (pane) pane.style.filter = '';
     };
@@ -1261,7 +1266,7 @@ function TerrainHintLayer({ basemapStyle }) {
     }
 
     const layer = L.tileLayer(TERRAIN_HINT_URL, {
-      opacity: 0.32,
+      opacity: 0.5,
       pane: TERRAIN_HINT_PANE,
       attribution: '',
     });
@@ -1369,7 +1374,7 @@ function UsStatesOutline({
         interactive={!pinnedStateCode || code === pinnedStateCode}
         style={{
           color: borderColor,
-          weight: isSelected ? 2.5 : (isHovered ? 2 : (isLightBasemap ? 1.75 : 1.5)),
+          weight: isSelected ? 2.5 : (isHovered ? 2 : (isLightBasemap ? 1.75 : 1.75)),
           opacity: isSelected
             ? STATE_BORDER_OPACITY.selected
             : (isHovered ? STATE_BORDER_OPACITY.hover : STATE_BORDER_OPACITY.default),
@@ -2593,13 +2598,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         }
         .storm-map-atmosphere-texture {
           background:
-            radial-gradient(ellipse 80% 60% at 25% 35%, rgba(30, 58, 95, 0.18) 0%, transparent 55%),
-            radial-gradient(ellipse 70% 50% at 75% 65%, rgba(15, 23, 42, 0.22) 0%, transparent 50%),
-            linear-gradient(165deg, rgba(30, 41, 59, 0.08) 0%, transparent 40%, rgba(15, 23, 42, 0.1) 100%);
+            radial-gradient(ellipse 80% 60% at 25% 35%, rgba(30, 58, 95, 0.32) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 50% at 75% 65%, rgba(15, 23, 42, 0.38) 0%, transparent 50%),
+            linear-gradient(165deg, rgba(30, 58, 95, 0.14) 0%, transparent 40%, rgba(15, 23, 42, 0.18) 100%);
           mix-blend-mode: soft-light;
         }
         .storm-map-atmosphere-vignette {
-          background: radial-gradient(ellipse at center, transparent 42%, rgba(15, 23, 42, 0.65) 100%);
+          background: radial-gradient(ellipse at center, transparent 32%, rgba(15, 23, 42, 0.78) 100%);
         }
         .geographic-label-wrapper {
           background: transparent !important;
