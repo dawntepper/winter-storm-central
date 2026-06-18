@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
-import StormMap from './StormMap';
+import StormMap, { RADAR_COLOR_SCHEMES, BASEMAP_STYLES } from './StormMap';
 import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
@@ -16,7 +16,7 @@ import { fetchCountyGeoJSON } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
-import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, trackRadarTypeChange, trackRadarColorSchemeChange, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // Event type icons
 const typeIcons = {
@@ -132,6 +132,12 @@ function ActiveStormsHighlight() {
   );
 }
 
+// Radar overlay types. Satellite hidden — GIBS GeoColor was unreliable (404s).
+const LAYER_TYPES = [
+  { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow' },
+  { id: 'infrared', label: 'Infrared', description: 'Cloud tops' },
+];
+
 export default function RadarPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -145,6 +151,9 @@ export default function RadarPage() {
 
   const [heroLocation, setHeroLocation] = useState(null);
   const [locationSummary, setLocationSummary] = useState(null);
+  const [radarType, setRadarType] = useState('precipitation');
+  const [colorScheme, setColorScheme] = useState(4);
+  const [basemapStyle, setBasemapStyle] = useState('dark');
 
   // GPS center from hero locate / location search. Takes precedence over
   // the ?lat/?lon deep-link so an explicit tap always wins.
@@ -338,6 +347,63 @@ export default function RadarPage() {
             />
           </div>
 
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex-1 min-w-0">
+              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Radar Type</label>
+              <div className="flex gap-1.5">
+                {LAYER_TYPES.map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      setRadarType(type.id);
+                      trackRadarTypeChange(type.id, { stateCode: effectiveStateCode });
+                    }}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                      radarType === type.id
+                        ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {radarType === 'precipitation' && (
+              <div className="sm:w-44 shrink-0">
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Color Scheme</label>
+                <select
+                  value={colorScheme}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setColorScheme(next);
+                    trackRadarColorSchemeChange(next);
+                  }}
+                  className="w-full px-2 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs cursor-pointer focus:outline-none focus:border-sky-500"
+                >
+                  {Object.entries(RADAR_COLOR_SCHEMES).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="sm:w-36 shrink-0">
+              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Map Style</label>
+              <select
+                value={basemapStyle}
+                onChange={(e) => setBasemapStyle(e.target.value)}
+                className="w-full px-2 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs cursor-pointer focus:outline-none focus:border-sky-500"
+              >
+                {Object.entries(BASEMAP_STYLES).map(([id, style]) => (
+                  <option key={id} value={id}>{style.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div
             id="radar-map"
             className="-mx-3 sm:-mx-4 lg:mx-0 [&_.leaflet-container]:max-lg:!h-[50vh]"
@@ -348,8 +414,9 @@ export default function RadarPage() {
               userLocations={[]}
               alerts={mapAlerts}
               isHero
-              radarLayerType="precipitation"
-              radarColorScheme={4}
+              radarLayerType={radarType}
+              radarColorScheme={colorScheme}
+              basemapStyle={basemapStyle}
               centerOn={displayCenterOn}
               selectedStateCode={effectiveStateCode}
               highlightArea={displayHighlightArea}

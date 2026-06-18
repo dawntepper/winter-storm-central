@@ -433,6 +433,22 @@ export const RADAR_COLOR_SCHEMES = {
   8: 'Dark Sky',
 };
 
+// CARTO basemap tiles (Leaflet raster). No API key required.
+export const BASEMAP_STYLES = {
+  dark: {
+    label: 'Dark',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  },
+  light: {
+    label: 'Light',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  },
+  voyager: {
+    label: 'Voyager',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  },
+};
+
 // GIBS WMTS time dimension. Computed timestamps often 404 when the frame
 // isn't published yet; "default" resolves to the latest available imagery.
 const GIBS_TIME = 'default';
@@ -1146,7 +1162,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle = 'dark', stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
@@ -1429,6 +1445,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setTimeout(() => setGeoError(null), 3000);
   };
 
+  const basemap = BASEMAP_STYLES[basemapStyle] || BASEMAP_STYLES.dark;
+
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
@@ -1591,10 +1609,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <CenterOnLocation location={centerOn} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
-          {/* Dark Matter basemap */}
+          {/* CARTO basemap — key forces Leaflet to swap tiles when style changes */}
           <TileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            key={basemap.url}
+            attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url={basemap.url}
           />
 
           {/* Radar overlay */}
