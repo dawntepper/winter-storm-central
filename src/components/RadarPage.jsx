@@ -141,6 +141,9 @@ const LAYER_TYPES = [
   { id: 'wind', label: 'Wind', description: 'Surface wind arrows (GFS)' },
 ];
 
+const RADAR_CONTROL_PILL_CLASS =
+  'px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 min-w-[11rem] max-w-full shrink-0';
+
 export default function RadarPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -189,6 +192,16 @@ export default function RadarPage() {
     scrollMapIntoView();
   }, [focusCounty, scrollMapIntoView]);
 
+  const heroLocationFromLabel = useCallback((label, regionOverride) => {
+    const trimmed = String(label || '').trim();
+    if (!trimmed) return null;
+    const stateMatch = trimmed.match(/,\s*([A-Za-z]{2})\s*$/);
+    const region = regionOverride || stateMatch?.[1]?.toUpperCase() || null;
+    const city = stateMatch ? trimmed.replace(/,\s*[A-Za-z]{2}\s*$/, '').trim() : trimmed;
+    if (!city) return null;
+    return { city, region };
+  }, []);
+
   const handleSearchLocationClick = useCallback((locationData) => {
     if (locationData.lat == null || locationData.lon == null) return;
     radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.SEARCH;
@@ -196,9 +209,12 @@ export default function RadarPage() {
     setGpsCenter({ lat: locationData.lat, lon: locationData.lon, zoom: 9, id: Date.now() });
     focusCounty(locationData.lat, locationData.lon);
     const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
-    if (stateMatch) setGpsStateCode(stateMatch[1]);
+    const region = stateMatch?.[1] || null;
+    if (region) setGpsStateCode(region);
+    const resolvedHero = heroLocationFromLabel(locationData.name, region);
+    if (resolvedHero) setHeroLocation(resolvedHero);
     scrollMapIntoView();
-  }, [focusCounty, scrollMapIntoView]);
+  }, [focusCounty, scrollMapIntoView, heroLocationFromLabel]);
 
   const handleChangeLocation = () => {
     window.dispatchEvent(new CustomEvent('checkLocationExpand'));
@@ -237,9 +253,8 @@ export default function RadarPage() {
   }, [centerOn, gpsCenter]);
 
   const handleGpsResolveState = useCallback((stateCode) => {
-    if (!radarResolveSourceRef.current) {
-      radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.GPS;
-    }
+    // Ignore state hints from silent IP geo — only explicit search/GPS/deep-link flows set the ref.
+    if (!radarResolveSourceRef.current) return;
     setGpsStateCode(stateCode);
   }, []);
 
@@ -413,7 +428,7 @@ export default function RadarPage() {
                         setRadarType(nextType);
                         trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
                       }}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40"
+                      className={RADAR_CONTROL_PILL_CLASS}
                     >
                       <option value="" disabled>
                         Radar Layer

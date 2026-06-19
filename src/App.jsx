@@ -1049,6 +1049,7 @@ export default function App() {
         {/* Localized hero headline + primary location action + jump-to links. */}
         <NearMeHeader
           as="h2"
+          enableSilentGeo
           resolvedLocation={heroLocation}
           onResolved={setHeroLocation}
           onLocate={handleHeroLocate}

@@ -25,18 +25,20 @@ export default function NearMeHeader({
   locationContext = null,
   /** When false (default), heading stays national until GPS/search/deep-link sets a place. */
   enableSilentGeo = false,
+  /** When false, heading uses FALLBACK even if a city was resolved (e.g. map at CONUS view). */
+  locationActive = true,
   className = '',
   headingClassName = '',
 }) {
   const HeadingTag = as;
   const isRadar = variant === 'radar';
-  const FALLBACK_HEADING = variant === 'radar' ? 'Live Radar — United States' : 'Live Weather & Alerts';
+  const FALLBACK_HEADING = variant === 'radar' ? 'Live Radar — Continental US' : 'Live Weather & Alerts';
 
   const [internalResolved, setInternalResolved] = useState(null);
   const [geoDenied, setGeoDenied] = useState(false);
   const [gpsStatus, setGpsStatus] = useState('idle');
 
-  const resolved = resolvedLocation ?? internalResolved;
+  const resolved = locationActive ? (resolvedLocation ?? internalResolved) : null;
 
   const setResolved = (loc) => {
     if (onResolved) onResolved(loc);

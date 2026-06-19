@@ -260,6 +260,9 @@ function getInitialExpanded(collapseOnDesktop, defaultExpanded) {
   return defaultExpanded;
 }
 
+const RADAR_HEADER_PILL_CLASS =
+  'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 whitespace-nowrap shrink-0';
+
 export default function ZipCodeSearch({
   stormPhase,
   totalLocationCount = 0,
@@ -270,11 +273,13 @@ export default function ZipCodeSearch({
   onResolveState,
   onLocationResolved,
   variant = 'default',
+  layout = 'default',
   defaultExpanded = false,
   collapseOnDesktop = false,
 }) {
   const isCompact = variant === 'compact';
   const isRadar = variant === 'radar';
+  const isHeaderLayout = layout === 'header';
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -1070,7 +1075,7 @@ export default function ZipCodeSearch({
 
   const searchControls = (
     <>
-      <div className={`flex flex-wrap items-center gap-x-2 gap-y-2 ${isCompact ? '' : 'pt-3 mb-3'}`}>
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-2 ${isCompact || isHeaderLayout ? '' : 'pt-3 mb-3'}`}>
         {gpsButton}
         {controlSeparator}
         {modeToggle}
@@ -1093,6 +1098,46 @@ export default function ZipCodeSearch({
     return (
       <div id="radar-location-search" className="jump-scroll-target space-y-2">
         {searchControls}
+      </div>
+    );
+  }
+
+  if (isHeaderLayout) {
+    const onMapCount = Object.values(savedLocations).filter((l) => l.onMap).length;
+    return (
+      <div id="radar-location-search" className="jump-scroll-target relative" ref={panelRef}>
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={RADAR_HEADER_PILL_CLASS}
+          aria-expanded={isExpanded}
+          aria-controls="radar-location-panel"
+        >
+          <span className="text-xs" role="img" aria-label="location">📍</span>
+          Check Location
+          {!isExpanded && onMapCount > 0 && (
+            <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full">
+              {onMapCount}
+            </span>
+          )}
+          <svg
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isExpanded && (
+          <div
+            id="radar-location-panel"
+            className="absolute right-0 max-sm:left-0 top-full mt-1.5 z-50 w-[min(calc(100vw-2rem),22rem)] max-sm:w-full rounded-xl border border-slate-600/70 bg-slate-900/98 backdrop-blur-sm shadow-xl p-3"
+          >
+            {searchControls}
+          </div>
+        )}
       </div>
     );
   }

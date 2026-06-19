@@ -1,189 +1,261 @@
-# Outage fallback plan
+# StormTracking.io — Outage Response & Alerting
 
-When stormtracking.io is unreachable (redirect loop, bad deploy, DNS issue, Netlify platform outage), users should land on a static page that explains the site is temporarily down — not gone forever.
+Quick reference when **stormtracking.io** is unreachable, misbehaving, or serving bad redirects. Covers **how you get notified**, **what Netlify does and does not watch**, and **how to stand up a static fallback** while the main app is fixed.
 
-Static pages live in `public/` and ship with every production build:
-
-| File | URL | Purpose |
-|------|-----|---------|
-| `fallback.html` | `/fallback.html` | Canonical emergency page; deploy alone to GitHub Pages or a backup Netlify site |
-| `503.html` | `/503.html` | Same message; used for Netlify maintenance mode and platform-level 503 responses |
-
-Both files are self-contained (inline CSS, no JS). Vite copies `public/` to `dist/` automatically.
+> **Status of fallback assets:** `public/fallback.html` and `public/503.html` are planned but not yet in the repo. Until they land, use the standalone HTML from this doc’s [Fallback deployment](#fallback-deployment) section or deploy any minimal static “we’ll be back” page.
 
 ---
 
-## When to activate
+## Alerting
 
-- **Redirect loop** — browser shows "too many redirects" (recent example: trailing-slash vs SPA canonical URLs)
-- **Bad deploy** — blank page, build failure, or broken routing after a merge
-- **DNS / SSL issue** — domain doesn't resolve or certificate errors on primary host
-- **Planned maintenance** — you need to take the main site offline briefly
-- **Netlify platform outage** — Netlify may serve `503.html` from your publish directory when the origin is unavailable
+**Netlify alone is not enough.** Deploy-failure alerts only fire when a build fails. A **successful deploy with a broken redirect rule** (like the recent infinite 301 loop) leaves the site “up” from Netlify’s perspective while users see a blank page or browser error. You need an **external uptime monitor** that checks the live URL.
 
-For redirect loops and DNS failures, `/fallback.html` on the **primary** site won't help — users never reach it. Use a **separate host** or DNS failover (below).
+### What Netlify covers
 
----
+| Signal | Notified? | How |
+|--------|-----------|-----|
+| **Deploy failed** (build error) | Yes | Email (Pro+), Slack, HTTP webhook, GitHub commit status |
+| **Deploy succeeded** | Optional | Same channels — useful for CI visibility, not outage detection |
+| **Previously successful deploy failed** | Yes | Rare edge case (deploy later invalidated) |
+| **Builds stopped / resumed** | Yes | Email to all site members |
+| **Usage limits** (bandwidth, build minutes) | Yes | Billing email at 50% / 75% / 90% |
+| **Form submissions** | Yes | Email, Slack, webhook |
+| **Live site down / 5xx / redirect loop** | **No** | Not monitored proactively |
+| **Post-deploy “does the site actually work?”** | **No** | Use external monitor or third-party post-deploy check |
 
-## Option A: Second Netlify site (recommended)
+### What Netlify Observability is (and isn’t)
 
-Keep a tiny backup site that only serves the fallback page.
+**Observability** (`Project → Observability` in the Netlify UI) shows server-side request logs, status-code breakdowns, function errors, and bandwidth — useful **after** you know something is wrong. It does **not** page you when `/radar` starts 301-looping. Think of it as a dashboard, not an on-call system.
 
-### One-time setup
-
-1. In Netlify, create a new site (e.g. `stormtracking-status.netlify.app`).
-2. Connect the same repo **or** use manual deploy.
-3. If using the repo:
-   - **Build command:** `cp public/fallback.html dist/index.html && cp public/fallback.html dist/fallback.html`
-   - **Publish directory:** `dist` (or publish `public/` directly with build command `echo ok`)
-   - Simpler alternative: set publish directory to `public/` and add `public/index.html` as a copy of `fallback.html` on a `status` branch only.
-4. Easiest path: create a **`status` branch** with only:
-   ```
-   index.html          ← copy of public/fallback.html
-   favicon.ico         ← optional
-   ```
-5. Enable branch deploys for `status` and note the URL (`stormtracking-status.netlify.app`).
-
-### During an outage
-
-1. Confirm primary site is broken (`curl -I https://stormtracking.io`, check browser).
-2. Point **`status.stormtracking.io`** CNAME to the backup Netlify site (see DNS below), **or** share the `.netlify.app` URL directly.
-3. Post the status URL on social / update bio if needed.
-
-### After recovery
-
-1. Verify primary: `curl -I https://stormtracking.io` → `200`, homepage loads, `/radar` works.
-2. Remove or repoint the `status.stormtracking.io` CNAME if you changed DNS.
-3. Document what broke and whether `503.html` / maintenance redirect was enabled.
+Also subscribe to **[status.netlify.com](https://www.netlifystatus.com/)** (email/RSS) for platform-wide incidents — distinct from your site’s config bugs.
 
 ---
 
-## Option B: GitHub Pages
+## Recommended stack (~10 minutes)
 
-Good free backup with no tie to Netlify.
+Three layers, cheapest-first:
 
-### One-time setup
+1. **Netlify — deploy failure alerts** (catches broken builds before they ship, or when build fails)
+2. **UptimeRobot (free) — HTTP + keyword monitors** (catches live outages, redirect loops, wrong page on 200)
+3. **Optional — GitHub Actions scheduled curl** (backup if you want alerts in-repo; see [Optional GitHub health check](#optional-github-health-check))
 
-1. Create a **public** repo (e.g. `stormtracking-status`) or use GitHub Pages on a `gh-pages` branch in this repo.
-2. Copy `public/fallback.html` to the repo root as **`index.html`**.
-3. Enable GitHub Pages: Settings → Pages → deploy from `main` / root.
-4. Site will be at `https://<user>.github.io/stormtracking-status/` (or custom domain).
+### Layer 1 — Netlify deploy failure alerts
 
-### Custom domain
+#### Option A: Slack (recommended, all plans)
 
-Add `status.stormtracking.io` as custom domain in GitHub Pages settings; create DNS CNAME:
+1. Open **[app.netlify.com](https://app.netlify.com)** → select your team.
+2. **Team settings** → **Notifications** → **Slack notifications**.
+3. Connect your Slack workspace (team Owner required).
+4. **Add subscription** → event: **Deploy state changes**.
+5. Filter: **Production** (and **Deploy Previews** if you want) → states: **Failed** only (skip Succeeded to reduce noise).
+6. Pick channel (e.g. `#stormtracking-alerts`).
 
-```
-status.stormtracking.io  CNAME  <user>.github.io
-```
+Per-site override: **Site configuration** → **Notifications** → subscribe a channel to deploy events for that site only.
+
+Docs: [Netlify App for Slack](https://docs.netlify.com/extend/install-and-use/setup-guides/netlify-app-for-slack/)
+
+#### Option B: HTTP webhook (Slack incoming webhook, PagerDuty, etc.)
+
+1. **Site configuration** → **Notifications** → **Deploy notifications** → **Add notification**.
+2. Type: **HTTP POST request** (outgoing webhook).
+3. Event: **Deploy failed** (add a second notification for **Previously successful deploy failed** if desired).
+4. URL: your endpoint (e.g. Slack Incoming Webhook URL).
+5. Optional: set a **JWS secret** and verify `X-Webhook-Signature` on your receiver.
+
+Create one notification per event type.
+
+Docs: [Deploy notifications](https://docs.netlify.com/deploy/deploy-notifications/)
+
+#### Option C: Email
+
+**Project configuration** → **Notifications** → **Deploy notifications** → **Email**.
+
+> Email deploy notifications require a **Pro or Enterprise** plan. Free teams should use Slack or webhooks.
+
+#### Already on by default (GitHub-connected sites)
+
+- **GitHub commit status** on failed/successful deploys — visible on commits and PRs without extra setup.
+- Configure at **Project configuration** → **Notifications** → **Deploy notifications**.
 
 ---
 
-## DNS: status.stormtracking.io
+### Layer 2 — UptimeRobot (external uptime)
 
-Use a **subdomain** so the main apex/root record stays on Netlify.
+Free tier: **50 monitors**, **5-minute** interval, email alerts, keyword monitoring.
 
-| Record | Type | Value |
-|--------|------|-------|
-| `status.stormtracking.io` | CNAME | Backup host (Netlify subdomain or GitHub Pages) |
+#### Monitor 1 — Homepage HTTP
 
-During a full primary outage, optionally:
+| Field | Value |
+|-------|-------|
+| Type | HTTP(s) |
+| URL | `https://stormtracking.io/` |
+| Interval | 5 minutes |
+| Friendly name | `stormtracking.io — homepage` |
 
-- Tweet/post the status URL
-- Temporarily point **`www`** to backup only if apex is broken (avoid unless necessary — affects SEO and email)
+**Advanced settings:**
 
-Do **not** change apex DNS unless you understand TTL and recovery steps.
+- Request timeout: **30s** (redirect loops often time out)
+- Follow redirections: **enabled** (normal http→https is fine)
+- Alert when down after: **2 consecutive failures** (if available)
+
+#### Monitor 2 — Radar (primary user path)
+
+| Field | Value |
+|-------|-------|
+| Type | HTTP(s) |
+| URL | `https://stormtracking.io/radar` |
+| Interval | 5 minutes |
+| Friendly name | `stormtracking.io — radar` |
+
+Same advanced settings as Monitor 1.
+
+#### Monitor 3 — Keyword “is it really working?” (catches 200 with wrong body)
+
+| Field | Value |
+|-------|-------|
+| Type | Keyword |
+| URL | `https://stormtracking.io/radar` |
+| Keyword | `StormTracking` (must appear in HTML) |
+| Keyword type | Exists |
+| Interval | 5 minutes |
+
+This catches “200 OK but empty/error shell” and some mis-deploys. Avoid generic words like “Home” or “Loading”.
+
+#### Monitor 4 (optional) — Redirect-loop detector
+
+For the outage class that broke production (infinite 301s on `/radar`):
+
+1. Duplicate the `/radar` HTTP monitor.
+2. **Advanced** → uncheck **Follow redirections**.
+3. **Custom HTTP statuses** → mark **301**, **302**, **307**, **308** as **Down**.
+
+A healthy SPA rewrite returns **200** on `/radar` with no redirect chain. Unexpected 3xx on that URL opens an incident.
+
+> **Note:** Netlify SPA `/* → /index.html` should return 200, not 301. Any 3xx on `/radar` is suspicious.
+
+#### UptimeRobot setup steps
+
+1. Sign up at **[uptimerobot.com](https://uptimerobot.com)**.
+2. **Add New Monitor** for each row above.
+3. **My Settings** → **Alert Contacts** → add your email (and SMS on paid tier).
+4. Attach alert contacts to each monitor.
+5. Optional: **Integrations** → Slack (paid) or use email → Gmail filter → forward to phone.
+
+#### Other free alternatives
+
+| Service | Free tier | Notes |
+|---------|-----------|-------|
+| [Better Stack Uptime](https://betterstack.com/uptime) | 10 monitors, 3 min | Slack on free tier |
+| [Freshping](https://www.freshworks.com/website-monitoring/) | 50 checks, 1 min | Aggressive interval |
+| [HetrixTools](https://hetrixtools.com) | 15 monitors, 1 min | Uptime + blacklist |
+
+Any of these should watch `https://stormtracking.io/radar` with **non-200 = down** and, if possible, **keyword or content check**.
 
 ---
 
-## Netlify: on-site fallback (partial outages)
+### Recommended alert contacts
 
-These work when Netlify still serves static files but the SPA or redirects are broken.
+| Role | Channel | Why |
+|------|---------|-----|
+| Primary on-call | Personal email + phone (SMS via carrier gateway or UptimeRobot SMS) | Fastest for overnight |
+| Team visibility | Slack `#stormtracking-alerts` | Netlify deploy failures + optional UptimeRobot integration |
+| Platform | status.netlify.com RSS/email | Distinguish “our bug” vs “Netlify down” |
 
-### Always available URLs
+Use **two independent paths** (e.g. Netlify → Slack, UptimeRobot → email/SMS) so one integration failure doesn’t leave you blind.
 
-After deploy, verify:
+---
+
+### When an alert fires — what to do
+
+1. **Confirm scope** — check homepage, `/radar`, and `/alerts` in a private window. Compare with [status.netlify.com](https://www.netlifystatus.com/).
+2. **If deploy just failed** — open Netlify **Deploys** → failed deploy log → fix build → redeploy.
+3. **If deploy succeeded but site is broken** (redirect loop, blank page):
+   - Check **Project configuration** → **Redirects** and repo `public/_redirects` / `netlify.toml` for conflicting rules.
+   - **Rollback**: Netlify **Deploys** → last known-good deploy → **Publish deploy**.
+   - See commit `e05d7ea` area: `pretty_urls = false` in `netlify.toml` prevents trailing-slash redirect fights.
+4. **If rollback isn’t enough** — activate static fallback (below) so users see a helpful page instead of a browser error.
+5. **Before closing the incident** — confirm UptimeRobot monitors are green, spot-check mobile, then post a one-line note in Slack.
+
+---
+
+### Optional GitHub health check
+
+A scheduled workflow can curl `/radar` and fail the Action (email from GitHub). Useful as a **tertiary** check; UptimeRobot is simpler for on-call.
+
+We intentionally **did not** add `.github/workflows/uptime-check.yml` — external monitoring avoids GitHub notification noise and works even when Actions are disabled. Add a workflow later if you want in-repo audit trail.
+
+Example check (for reference only):
 
 ```bash
-curl -I https://stormtracking.io/fallback.html   # expect 200
-curl -I https://stormtracking.io/503.html        # expect 200
+curl -sfL --max-redirs 5 -o /dev/null -w "%{http_code}" https://stormtracking.io/radar | grep -q 200
 ```
-
-Static files are served **before** the SPA catch-all (`/* → /index.html`).
-
-### Maintenance mode (whole site)
-
-Uncomment the block in `netlify.toml`:
-
-```toml
-[[redirects]]
-  from = "/*"
-  to = "/503.html"
-  status = 503
-  force = true
-```
-
-Deploy, then **re-comment and redeploy** when done. This returns HTTP 503 for all routes with the custom page body.
-
-> **Note:** Netlify's automatic `503.html` handling (similar to `404.html`) applies when the platform cannot reach your deploy. A committed `503.html` ensures the message matches your branding if Netlify serves it during platform incidents. Manual maintenance mode uses the redirect above.
-
-### Netlify branch / manual deploy
-
-From [Netlify's maintenance guide](https://answers.netlify.com/t/support-guide-what-s-the-easiest-way-to-create-a-temporary-maintenance-page-for-my-site/338):
-
-1. Put `index.html` (copy of `fallback.html`) in a folder.
-2. Drag-and-drop deploy to the **production** site, or publish a `maintenance` branch deploy.
-3. Restores normal service by re-publishing the last good production deploy from the Netlify UI.
 
 ---
 
-## Verify primary is back
+## Fallback deployment
 
-Before switching DNS back or disabling maintenance:
+Use when the main Netlify app is broken and rollback isn’t immediate — redirect loops, bad deploy, or DNS issues.
 
-```bash
-# HTTP status
-curl -sI https://stormtracking.io | head -5
+### Static page (planned)
 
-# No redirect loop (should settle on 200, not endless 301/302)
-curl -sIL --max-redirs 5 https://stormtracking.io | grep -E '^HTTP|^location'
+When merged, `public/fallback.html` will be a self-contained dark-themed page with:
 
-# Key routes
-curl -sI https://stormtracking.io/radar | head -3
-curl -sI https://stormtracking.io/alerts/texas | head -3
-```
+- “StormTracking is temporarily unavailable”
+- Links: [alerts.weather.gov](https://alerts.weather.gov/), [weather.gov](https://www.weather.gov/), [rainviewer.com](https://www.rainviewer.com/)
+- Retry link to `https://stormtracking.io`
 
-Manual checks:
+`public/503.html` will be served by Netlify for platform-level 503 responses.
 
-- Homepage loads radar and alerts
-- No console errors on `/radar`
-- Sign-in / email signup not required for basic verification
+### Stand up fallback in ~15 minutes (no main site required)
+
+**Option A — Second Netlify site (simplest)**
+
+1. Create a new site: **Add new site** → **Deploy manually** (drag-and-drop `fallback.html`).
+2. Note URL: e.g. `stormtracking-status.netlify.app`.
+3. Optional custom domain: `status.stormtracking.io` → CNAME to Netlify subdomain.
+4. During outage: temporarily point `stormtracking.io` DNS to this site **or** share the status URL on social/email.
+
+**Option B — GitHub Pages**
+
+1. New repo `stormtracking-status` with `index.html` (copy of fallback).
+2. **Settings** → **Pages** → deploy from `main` / root.
+3. Custom domain `status.stormtracking.io` if desired.
+
+**Option C — DNS swap (last resort)**
+
+Only if you control DNS and need the apex domain on fallback:
+
+- Point `stormtracking.io` A/CNAME to fallback host.
+- **Document the previous Netlify DNS values** before changing.
+- Revert DNS only after monitors are green for 30+ minutes.
+
+### Verify primary site is back
+
+1. UptimeRobot (or equivalent) all green on `/` and `/radar`.
+2. Manual: homepage loads, radar map renders, `/alerts` loads.
+3. `curl -sI https://stormtracking.io/radar` → `200`, `num_redirects: 0`.
+4. Revert DNS if you pointed the apex at fallback.
 
 ---
 
-## Checklist (quick reference)
+## Quick checklist (printable)
 
-**Outage detected**
-
-- [ ] Confirm with `curl` / browser (not just one device)
-- [ ] Identify type: redirect loop / deploy / DNS / Netlify
-- [ ] Activate backup: DNS → `status.stormtracking.io`, or Netlify maintenance redirect, or publish maintenance deploy
-- [ ] Optional: share status URL
-
-**Recovery**
-
-- [ ] Fix root cause on `main`, deploy
-- [ ] Run verification commands above
-- [ ] Disable maintenance redirect / restore DNS
-- [ ] Update "Last updated" in `public/fallback.html` and `public/503.html` if messaging changed
+- [ ] Netlify Slack or webhook: **Deploy failed** → `#stormtracking-alerts`
+- [ ] UptimeRobot: `https://stormtracking.io/` HTTP monitor
+- [ ] UptimeRobot: `https://stormtracking.io/radar` HTTP monitor
+- [ ] UptimeRobot: `/radar` keyword monitor (`StormTracking`)
+- [ ] Optional: `/radar` redirect detector (don’t follow redirects, 3xx = down)
+- [ ] Subscribe to status.netlify.com
+- [ ] Know last-good deploy in Netlify (one-click rollback)
+- [ ] Fallback HTML hosted at second Netlify site or GitHub Pages (when ready)
 
 ---
 
-## Files to keep in sync
+## Related files
 
-When editing the outage message, update both:
-
-- `public/fallback.html`
-- `public/503.html`
-
-If using a standalone backup repo or `status` branch, recopy `fallback.html` → `index.html` there.
+| File | Purpose |
+|------|---------|
+| `netlify.toml` | Build, redirects, `pretty_urls` |
+| `public/_redirects` | SPA catch-all and API routes |
+| `public/fallback.html` | *(planned)* static outage page |
+| `public/503.html` | *(planned)* Netlify platform 503 page |
