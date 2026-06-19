@@ -41,6 +41,15 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Strip trailing slashes sitewide (301). Matches /path/ but not root /.
+# force = true so directory index.html files (e.g. dist/alerts/index.html)
+# don't serve /alerts/ before this rule runs. Query strings are preserved.
+[[redirects]]
+  from = "/*/"
+  to = "/:splat"
+  status = 301
+  force = true
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"

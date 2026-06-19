@@ -18,6 +18,7 @@ import AlertsRouteDispatch from './components/AlertsRouteDispatch.jsx'
 import CountyAlertsPage from './components/CountyAlertsPage.jsx'
 import CatalogCityAlertsPage from './components/CatalogCityAlertsPage.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import StripTrailingSlash from './components/StripTrailingSlash.jsx'
 import VisitorSessionTracker from './components/VisitorSessionTracker.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import AuthCallback from './components/auth/AuthCallback.jsx'
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <StripTrailingSlash />
         <VisitorSessionTracker />
         <Routes>
           <Route path="/" element={<App />} />

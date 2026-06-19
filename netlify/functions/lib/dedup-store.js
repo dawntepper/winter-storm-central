@@ -14,8 +14,8 @@
  *
  * Inside a Netlify Function, getStore() picks up the deploy context
  * automatically. For local scripts run outside `netlify dev`, set
- * NETLIFY_SITE_ID + NETLIFY_BLOBS_TOKEN (or NETLIFY_API_TOKEN) and the store
- * helper below will use them explicitly.
+ * NETLIFY_SITE_ID + NETLIFY_BLOBS_TOKEN and the store helper below will use
+ * them explicitly.
  */
 
 const { getStore } = require('@netlify/blobs');
@@ -27,18 +27,15 @@ const LOCK_KEY = 'lock';
 const DEFAULT_LOCK_TTL_MS = 10 * 60 * 1000; // 10 min, generous margin over typical 3-4 min runs
 
 function makeStore(name) {
-  // Netlify Functions v1 (legacy `exports.handler`) don't auto-inject the
-  // Blobs context the way v2 functions do, so we fall back to explicit
-  // credentials. Netlify already exposes SITE_ID automatically; only the
-  // token has to be set manually (NETLIFY_BLOBS_TOKEN = a Personal Access
-  // Token from app.netlify.com/user/applications).
+  // Use explicit credentials only when NETLIFY_BLOBS_TOKEN is set. Netlify
+  // auto-injects SITE_ID in production; pairing it with NETLIFY_API_TOKEN (a
+  // deploy/build token without Blobs scope) causes 401 on every blob read.
+  // When no Blobs PAT is configured, let the SDK auto-detect deploy context.
+  const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
   const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN;
-  if (siteID && token) {
-    return getStore({ name, siteID, token });
+  if (blobsToken && siteID) {
+    return getStore({ name, siteID, token: blobsToken });
   }
-  // Last resort: let the SDK auto-detect. Works for v2 functions and inside
-  // `netlify dev`. Throws MissingBlobsEnvironmentError if neither path works.
   return getStore(name);
 }
 

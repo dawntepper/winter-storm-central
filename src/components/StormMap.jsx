@@ -455,7 +455,6 @@ export const BASEMAP_STYLES = {
 };
 
 // Basemap tile enhancement for dark CARTO tiles (tilePane only — radar/alerts unchanged).
-// Brightness variants are for /radar dev tuning; production uses `production` + BASEMAP_ATMOSPHERE.
 export const BASEMAP_BRIGHTNESS_VARIANTS = {
   original: { label: 'Original', value: 1 },
   a: { label: '+10%', value: 1.1 },
@@ -481,15 +480,22 @@ export const MAP_ATMOSPHERE_CHROME = {
   textureOpacity: 0.55,         // cool gradient wash for depth
 };
 
-// Decorative geographic labels — national zoom only, below radar/state labels.
+// Decorative geographic labels — tiered by feature type, below radar/state labels.
+const GEOGRAPHIC_LABEL_TIERS = {
+  ocean: { maxZoom: 7, color: 'rgba(148, 163, 184, 0.58)', baseFontSize: 12 },
+  water: { maxZoom: 6, color: 'rgba(148, 163, 184, 0.55)', baseFontSize: 11 },
+  mountain: { maxZoom: 5, color: 'rgba(148, 163, 184, 0.52)', baseFontSize: 10 },
+};
 const GEOGRAPHIC_FEATURE_LABELS = [
-  { name: 'Great Lakes', position: [45.5, -84.0] },
-  { name: 'Gulf of Mexico', position: [26.5, -90.0] },
-  { name: 'Rocky Mountains', position: [40.0, -110.0] },
-  { name: 'Appalachian Mountains', position: [36.5, -81.0] },
+  { name: 'Atlantic Ocean', position: [33.0, -62.0], tier: 'ocean' },
+  { name: 'Pacific Ocean', position: [34.0, -132.0], tier: 'ocean' },
+  { name: 'Caribbean Sea', position: [16.5, -76.0], tier: 'ocean' },
+  { name: 'Great Lakes', position: [45.5, -84.0], tier: 'water' },
+  { name: 'Lake Superior', position: [47.5, -87.5], tier: 'water' },
+  { name: 'Gulf of Mexico', position: [26.5, -90.0], tier: 'water' },
+  { name: 'Rocky Mountains', position: [40.0, -110.0], tier: 'mountain' },
+  { name: 'Appalachian Mountains', position: [36.5, -81.0], tier: 'mountain' },
 ];
-const GEOGRAPHIC_LABEL_MAX_ZOOM = 5;
-const GEOGRAPHIC_LABEL_COLOR = 'rgba(148, 163, 184, 0.35)';
 const GEOGRAPHIC_LABEL_PANE = 'geographic-labels';
 
 // State outline — cool gray-blue for orientation without dominating radar/alerts.
@@ -1248,25 +1254,25 @@ function BasemapTileEnhancement({
 
 // Subtle terrain hint — CARTO nolabels over basemap with soft-light blend for depth.
 const TERRAIN_HINT_PANE = 'terrain-hint';
-const TERRAIN_HINT_URL = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+const TERRAIN_HINT_URL = BASEMAP_STYLES.dark.url;
 
-function TerrainHintLayer({ basemapStyle }) {
+function TerrainHintLayer({ basemapStyle, terrain = { enabled: true, opacity: 0.5, blendMode: 'soft-light' } }) {
   const map = useMap();
 
   useEffect(() => {
-    if (basemapStyle !== 'dark') return undefined;
+    if (basemapStyle !== 'dark' || !terrain?.enabled) return undefined;
 
     let pane = map.getPane(TERRAIN_HINT_PANE);
     if (!pane) {
       pane = map.createPane(TERRAIN_HINT_PANE);
       pane.style.zIndex = 205;
-      pane.style.mixBlendMode = 'soft-light';
       pane.style.pointerEvents = 'none';
       pane.classList.add('terrain-hint-pane');
     }
+    pane.style.mixBlendMode = terrain.blendMode || 'soft-light';
 
     const layer = L.tileLayer(TERRAIN_HINT_URL, {
-      opacity: 0.5,
+      opacity: terrain.opacity ?? 0.5,
       pane: TERRAIN_HINT_PANE,
       attribution: '',
     });
@@ -1275,7 +1281,7 @@ function TerrainHintLayer({ basemapStyle }) {
     return () => {
       map.removeLayer(layer);
     };
-  }, [map, basemapStyle]);
+  }, [map, basemapStyle, terrain?.enabled, terrain?.opacity, terrain?.blendMode]);
 
   return null;
 }
@@ -1293,16 +1299,29 @@ function GeographicLabelsPane() {
   return null;
 }
 
+function getGeographicLabelFontSize(tier, zoomLevel) {
+  const { baseFontSize } = GEOGRAPHIC_LABEL_TIERS[tier] || GEOGRAPHIC_LABEL_TIERS.water;
+  if (zoomLevel >= 7) return baseFontSize - 2;
+  if (zoomLevel >= 5) return baseFontSize - 1;
+  return baseFontSize;
+}
+
 function GeographicFeatureLabels({ zoomLevel }) {
-  if (zoomLevel > GEOGRAPHIC_LABEL_MAX_ZOOM) return null;
+  const visibleLabels = GEOGRAPHIC_FEATURE_LABELS.filter(({ tier = 'water' }) => {
+    const config = GEOGRAPHIC_LABEL_TIERS[tier];
+    return config && zoomLevel <= config.maxZoom;
+  });
 
-  const fontSize = zoomLevel >= 4 ? 10 : 11;
+  if (visibleLabels.length === 0) return null;
 
-  return GEOGRAPHIC_FEATURE_LABELS.map(({ name, position }) => {
+  return visibleLabels.map(({ name, position, tier = 'water' }) => {
+    const { color } = GEOGRAPHIC_LABEL_TIERS[tier];
+    const fontSize = getGeographicLabelFontSize(tier, zoomLevel);
+
     const icon = L.divIcon({
       className: 'geographic-label-wrapper',
       html: `<div class="geographic-label" style="
-        color: ${GEOGRAPHIC_LABEL_COLOR};
+        color: ${color};
         font-size: ${fontSize}px;
         font-weight: 500;
         font-style: italic;
@@ -1311,7 +1330,7 @@ function GeographicFeatureLabels({ zoomLevel }) {
         transform: translate(-50%, -50%);
         pointer-events: none;
         user-select: none;
-        text-shadow: 0 1px 4px rgba(15, 23, 42, 0.8);
+        text-shadow: 0 1px 6px rgba(15, 23, 42, 0.95), 0 0 10px rgba(15, 23, 42, 0.45);
       ">${name}</div>`,
       iconSize: [0, 0],
       iconAnchor: [0, 0],
@@ -2146,7 +2165,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             url={basemap.url}
           />
           <TerrainHintLayer basemapStyle={basemapStyle} />
-          <BasemapTileEnhancement basemapStyle={basemapStyle} brightness={basemapBrightness} />
+          <BasemapTileEnhancement
+            basemapStyle={basemapStyle}
+            brightness={basemapBrightness}
+            contrast={DEFAULT_BASEMAP_CONTRAST}
+            saturation={BASEMAP_ATMOSPHERE.saturation}
+            sepia={BASEMAP_ATMOSPHERE.sepia}
+            hueRotate={BASEMAP_ATMOSPHERE.hueRotate}
+          />
 
           {/* State borders + radar overlay */}
           <GeographicLabelsPane />
@@ -2594,7 +2620,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.06));
         }
         .storm-map-dark.leaflet-container {
-          background: ${MAP_ATMOSPHERE_CHROME.containerBg};
+          background: ${basemapChrome.containerBg};
         }
         .storm-map-atmosphere-texture {
           background:
@@ -2610,6 +2636,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           background: transparent !important;
           border: none !important;
           box-shadow: none !important;
+        }
+        .geographic-label {
+          -webkit-font-smoothing: antialiased;
+          text-rendering: optimizeLegibility;
         }
         .radar-spinner {
           width: 14px;
