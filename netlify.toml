@@ -46,6 +46,17 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Emergency / maintenance mode — uncomment to serve 503.html site-wide.
+# See docs/outage-fallback.md. Re-comment after recovery.
+# [[redirects]]
+#   from = "/*"
+#   to = "/503.html"
+#   status = 503
+#   force = true
+
+# Static emergency pages (public/fallback.html, public/503.html) are served
+# directly from dist/ before this SPA fallback — no extra rules needed.
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"

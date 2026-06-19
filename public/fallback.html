@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>StormTracking — Temporarily Unavailable</title>
+  <meta name="description" content="StormTracking is temporarily unavailable due to technical difficulties. We'll be back soon." />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --dim: #64748b;
+      --accent: #38bdf8;
+      --accent-dim: #0ea5e9;
+      --green: #4ade80;
+    }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Subtle radar sweep background */
+    .bg-radar {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .bg-radar::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 140vmax;
+      height: 140vmax;
+      margin: -70vmax 0 0 -70vmax;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(56, 189, 248, 0.04) 30deg,
+        transparent 60deg
+      );
+      animation: sweep 8s linear infinite;
+    }
+    .bg-radar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(56, 189, 248, 0.08), transparent 60%),
+        radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, var(--bg) 70%);
+    }
+    @keyframes sweep {
+      to { transform: rotate(360deg); }
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 24px 20px 32px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      padding: 32px 0 24px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .logo-icon::before {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .logo-icon::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .tagline {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    main { flex: 1; }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 20px;
+      margin-bottom: 24px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #fbbf24;
+      margin-bottom: 16px;
+    }
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .status-card h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 12px;
+      line-height: 1.35;
+    }
+
+    .status-card p {
+      font-size: 0.9375rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .status-card p:last-child { margin-bottom: 0; }
+
+    .reassure {
+      color: var(--green);
+      font-weight: 500;
+    }
+
+    .links-section h3 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--dim);
+      margin-bottom: 12px;
+    }
+
+    .links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .links a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .links a:hover, .links a:focus-visible {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.06);
+      outline: none;
+    }
+    .links a .arrow {
+      margin-left: auto;
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+    .links a .label { font-weight: 500; }
+    .links a .desc {
+      display: block;
+      font-size: 0.8125rem;
+      color: var(--dim);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .retry {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .retry a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--accent-dim);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .retry a:hover, .retry a:focus-visible {
+      background: var(--accent);
+      outline: none;
+    }
+
+    footer {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--dim);
+    }
+    footer p + p { margin-top: 8px; }
+
+    @media (min-width: 480px) {
+      .wrap { padding: 40px 24px 48px; }
+      h1 { font-size: 1.75rem; }
+      .status-card { padding: 28px 24px; }
+      .status-card h2 { font-size: 1.375rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bg-radar::before { animation: none; }
+      .status-badge .dot { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-radar" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-icon" aria-hidden="true"></div>
+        <div>
+          <h1>StormTracking</h1>
+          <p class="tagline">Live Weather Radar &amp; Storm Alerts</p>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="status-card">
+        <div class="status-badge">
+          <span class="dot" aria-hidden="true"></span>
+          Service disruption
+        </div>
+        <h2>We're experiencing technical difficulties</h2>
+        <p>StormTracking is temporarily unavailable. Our team is working to restore the site.</p>
+        <p class="reassure">This is not permanent — stormtracking.io will be back online as soon as we fix the issue.</p>
+      </div>
+
+      <section class="links-section" aria-labelledby="alt-links-heading">
+        <h3 id="alt-links-heading">Stay informed while you wait</h3>
+        <ul class="links">
+          <li>
+            <a href="https://alerts.weather.gov/" target="_blank" rel="noopener noreferrer">
+              <span>
+                <span class="label">NWS Active Alerts</span>
+                <span class="desc">Official warnings and watches nationwide</span>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">
+              <span>
+                <span class="label">weather.gov</span>
+                <span class="desc">National Weather Service forecasts</span>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">
+              <span>
+                <span class="label">RainViewer</span>
+                <span class="desc">Live precipitation radar maps</span>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <div class="retry">
+        <a href="https://stormtracking.io/">Try stormtracking.io again</a>
+      </div>
+    </main>
+
+    <footer>
+      <p>If you're seeing this page, our main app is down.</p>
+      <p>Last updated: June 2026</p>
+    </footer>
+  </div>
+</body>
+</html>
