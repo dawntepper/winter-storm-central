@@ -1798,7 +1798,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null, mapOverlay = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
   const basemapPreferenceControlled = basemapStyleProp == null;
@@ -2209,7 +2209,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-3 sm:justify-between">
+        <div className={
+          headerCenterControls
+            ? 'grid grid-cols-1 sm:grid-cols-[minmax(0,auto)_1fr_minmax(0,auto)] items-center gap-x-3 gap-y-2'
+            : 'flex flex-wrap items-center gap-x-3 gap-y-3 sm:justify-between'
+        }>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div>
             <h2 className={`font-bold truncate ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
@@ -2223,7 +2227,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               />
             )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:ml-auto">
+          {headerCenterControls && (
+            <div className="flex flex-wrap items-center justify-center gap-2 min-w-0 w-full sm:w-auto order-last sm:order-none">
+              {headerCenterControls}
+            </div>
+          )}
+          <div className={`flex items-center gap-2 flex-wrap w-full sm:w-auto ${headerCenterControls ? 'sm:justify-end' : 'sm:ml-auto'}`}>
             {showResetView && (
               <button
                 onClick={handleResetView}

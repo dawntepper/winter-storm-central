@@ -190,6 +190,11 @@ export default function RadarPage() {
     setGpsCenter(c);
     focusCounty(c.lat, c.lon);
     scrollMapIntoView();
+    reverseGeocode(c.lat, c.lon).then((place) => {
+      if (!place?.city) return;
+      setHeroLocation({ city: place.city, region: place.region || null });
+      if (place.region) setGpsStateCode(place.region);
+    });
   }, [focusCounty, scrollMapIntoView]);
 
   const heroLocationFromLabel = useCallback((label, regionOverride) => {
@@ -215,11 +220,6 @@ export default function RadarPage() {
     if (resolvedHero) setHeroLocation(resolvedHero);
     scrollMapIntoView();
   }, [focusCounty, scrollMapIntoView, heroLocationFromLabel]);
-
-  const handleChangeLocation = () => {
-    window.dispatchEvent(new CustomEvent('checkLocationExpand'));
-    document.querySelector('#radar-location-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
 
   // Click the highlighted county → its state alerts/radar page.
   const handleAreaClick = (feature) => {
@@ -365,10 +365,6 @@ export default function RadarPage() {
             variant="radar"
             locationActive={mapHasLocalFocus}
             resolvedLocation={headerResolvedLocation}
-            onResolved={setHeroLocation}
-            onLocate={handleGpsLocate}
-            onChangeLocation={handleChangeLocation}
-            onResolveState={handleGpsResolveState}
             locationContext={heroLocationContext}
           />
         </div>
@@ -400,50 +396,39 @@ export default function RadarPage() {
               resetViewLabel={mapResetViewLabel}
               resetViewTitle={mapResetViewTitle}
               analyticsPageContext="radar"
-              mapOverlay={(
-                <div
-                  className="absolute top-2 left-11 sm:left-12 z-[1000] flex flex-col gap-2 w-[min(calc(100%-3.5rem),18rem)] max-w-[calc(100%-3rem)] pointer-events-none"
-                  aria-label="Radar map controls"
-                >
-                  <div className="pointer-events-auto flex flex-col gap-2 rounded-xl bg-slate-900/88 backdrop-blur-sm border border-slate-600/70 shadow-lg p-2">
-                    <div id="radar-location-search" className="jump-scroll-target min-w-0 [&_.rounded-2xl]:rounded-lg [&_.shadow-2xl]:shadow-none">
-                      <ZipCodeSearch
-                        variant="radar"
-                        collapseOnDesktop
-                        defaultExpanded={false}
-                        stormPhase="active"
-                        totalLocationCount={0}
-                        onLocationsChange={() => {}}
-                        onLocationClick={handleSearchLocationClick}
-                        onLocate={handleGpsLocate}
-                        onResolveState={handleGpsResolveState}
-                        onLocationResolved={(loc) => {
-                          if (loc) setHeroLocation(loc);
-                        }}
-                      />
-                    </div>
-                    <select
-                      id="radar-layer-select"
-                      aria-label="Radar layer"
-                      value={radarType}
-                      onChange={(e) => {
-                        const nextType = e.target.value;
-                        if (!nextType || nextType === radarType) return;
-                        setRadarType(nextType);
-                        trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
-                      }}
-                      className={RADAR_CONTROL_PILL_CLASS}
-                    >
-                      <option value="" disabled>
-                        Radar Layer
+              headerCenterControls={(
+                <div className="flex flex-wrap items-center justify-center gap-2 min-w-0">
+                  <ZipCodeSearch
+                    layout="header"
+                    variant="radar"
+                    stormPhase="active"
+                    totalLocationCount={0}
+                    onLocationsChange={() => {}}
+                    onLocationClick={handleSearchLocationClick}
+                    onLocate={handleGpsLocate}
+                    onResolveState={handleGpsResolveState}
+                  />
+                  <select
+                    id="radar-layer-select"
+                    aria-label="Radar layer"
+                    value={radarType}
+                    onChange={(e) => {
+                      const nextType = e.target.value;
+                      if (!nextType || nextType === radarType) return;
+                      setRadarType(nextType);
+                      trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
+                    }}
+                    className={RADAR_CONTROL_PILL_CLASS}
+                  >
+                    <option value="" disabled>
+                      Radar Layer
+                    </option>
+                    {LAYER_TYPES.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.label} — {type.description}
                       </option>
-                      {LAYER_TYPES.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.label} — {type.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    ))}
+                  </select>
                 </div>
               )}
             />
@@ -457,7 +442,7 @@ export default function RadarPage() {
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
               <h3 className="text-sm font-semibold text-white mb-2">Choose a Map Layer</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Use the Radar Layer dropdown on the map to switch between live precipitation,
+                Use the Radar Layer dropdown in the map header to switch between live precipitation,
                 infrared satellite, HRRR forecast radar, and surface wind.
               </p>
             </div>
