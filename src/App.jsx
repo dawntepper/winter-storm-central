@@ -1022,6 +1022,8 @@ export default function App() {
     setPreviewCity(null);
   };
 
+  const hasMapLocalFocus = !!(mapCenterOn?.lat || userArea?.geometry || previewCity?.lat);
+
   return (
     <div className="min-h-screen">
       <Header
@@ -1049,8 +1051,8 @@ export default function App() {
         {/* Localized hero headline + primary location action + jump-to links. */}
         <NearMeHeader
           as="h2"
-          enableSilentGeo
-          resolvedLocation={heroLocation}
+          locationActive={hasMapLocalFocus}
+          resolvedLocation={hasMapLocalFocus ? heroLocation : null}
           onResolved={setHeroLocation}
           onLocate={handleHeroLocate}
           onChangeLocation={handleChangeLocation}

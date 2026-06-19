@@ -363,6 +363,7 @@ export default function RadarPage() {
           <NearMeHeader
             as="h1"
             variant="radar"
+            locationActive={mapHasLocalFocus}
             resolvedLocation={headerResolvedLocation}
             onResolved={setHeroLocation}
             onLocate={handleGpsLocate}
@@ -388,6 +389,7 @@ export default function RadarPage() {
               userLocations={[]}
               alerts={mapAlerts}
               isHero
+              fitConusView
               radarLayerType={radarType}
               radarColorScheme={4}
               centerOn={displayCenterOn}
@@ -415,7 +417,9 @@ export default function RadarPage() {
                         onLocationClick={handleSearchLocationClick}
                         onLocate={handleGpsLocate}
                         onResolveState={handleGpsResolveState}
-                        onLocationResolved={setHeroLocation}
+                        onLocationResolved={(loc) => {
+                          if (loc) setHeroLocation(loc);
+                        }}
                       />
                     </div>
                     <select
