@@ -2,7 +2,7 @@
 
 Source of truth for every Plausible event StormTracking fires, the props each event carries, and the typed constants that back them. **Keep this file in sync** with `src/utils/analytics.js` — every new event, source value, or trigger added there should land here too.
 
-Last reviewed: 2026-06-17.
+Last reviewed: 2026-06-19.
 
 ---
 
@@ -15,6 +15,8 @@ These are the events to register as goals in the Plausible dashboard. Properties
 | Event | What it captures |
 |---|---|
 | `Radar Page View` | `/radar` mount — includes `source` and `state_context` |
+| `Radar Type Change` | Layer dropdown on `/radar` — precipitation vs infrared |
+| `Map Basemap Change` | Dark / Light / System cycle on `/radar` map header |
 | `Map Region Click` | Homepage StateHeatmap + MostImpactedStates clicks (unified — see below) |
 | `State Alerts Page View` | Any state alert page mount |
 | `State Quick Action Clicked` | Hero action cards on state pages — `action`: `radar`, `city`, or `county` |
@@ -121,6 +123,19 @@ Radar Page View
   source         a value from NAV_SOURCES
   source_page    homepage | storm_page | state | city | county | other
   state_context  "national" (or a state slug if state-scoped radar is added later)
+
+Radar Type Change
+  radar_type     "precipitation" | "infrared"
+  state_code     2-letter abbr when a state is resolved (optional)
+
+Radar Color Scheme Change
+  color_scheme   RainViewer scheme label (e.g. "NEXRAD Level III")
+  state_code     2-letter abbr when a state is resolved (optional)
+
+Map Basemap Change
+  basemap_preference   "dark" | "light" | "system"
+  state_code           2-letter abbr when a state is resolved (optional)
+  page                 "radar" when fired from the /radar StormMap header
 
 Storm Banner Click
   stormSlug

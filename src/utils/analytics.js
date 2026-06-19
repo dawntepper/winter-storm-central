@@ -939,15 +939,30 @@ export function trackStormRadarClick({ stormSlug, stormType, source }) {
  * Track radar type change on /radar page
  */
 export function trackRadarTypeChange(radarType, { stateCode } = {}) {
-  track('Radar Type Change', { radar_type: radarType });
+  const props = { radar_type: radarType };
+  if (stateCode) props.state_code = stateCode;
+  track('Radar Type Change', props);
   recordRadarEvent(RADAR_EVENTS.TYPE_CHANGED, { radarType, stateCode });
 }
 
 /**
  * Track color scheme change on /radar page
  */
-export function trackRadarColorSchemeChange(colorScheme) {
-  track('Radar Color Scheme Change', { color_scheme: colorScheme });
+export function trackRadarColorSchemeChange(colorScheme, { stateCode } = {}) {
+  const props = { color_scheme: colorScheme };
+  if (stateCode) props.state_code = stateCode;
+  track('Radar Color Scheme Change', props);
+}
+
+/**
+ * Track basemap preference cycle (Dark / Light / System) on map controls.
+ * Pass `page: 'radar'` when fired from the /radar StormMap header.
+ */
+export function trackMapBasemapChange(basemapPreference, { stateCode, page } = {}) {
+  const props = { basemap_preference: basemapPreference };
+  if (stateCode) props.state_code = stateCode;
+  if (page) props.page = page;
+  track('Map Basemap Change', props);
 }
 
 /**
@@ -1913,8 +1928,9 @@ export function testAllTracking() {
 
   // Radar page interaction events
   console.log('\n6b. Radar Page Interaction Events:');
-  trackRadarTypeChange('satellite');
-  trackRadarColorSchemeChange('NEXRAD Level III');
+  trackRadarTypeChange('satellite', { stateCode: 'FL' });
+  trackRadarColorSchemeChange('NEXRAD Level III', { stateCode: 'FL' });
+  trackMapBasemapChange('light', { stateCode: 'FL', page: 'radar' });
   trackRadarStormEventClick({ stormSlug: 'winter-storm-test', stormName: 'Winter Storm Test' });
 
   // State alerts events
@@ -2015,6 +2031,7 @@ export default {
   trackStormRadarClick,
   trackRadarTypeChange,
   trackRadarColorSchemeChange,
+  trackMapBasemapChange,
   trackRadarStormEventClick,
   // State alerts events
   trackStateAlertsPageView,

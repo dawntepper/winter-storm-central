@@ -3,13 +3,16 @@ import { useCallback, useSyncExternalStore } from 'react';
 export const MAP_BASEMAP_STORAGE_KEY = 'stormtracking-map-basemap';
 
 const VALID_PREFERENCES = new Set(['dark', 'light', 'system']);
-const PREFERENCE_CYCLE = ['dark', 'light', 'system'];
 
 export const BASEMAP_PREFERENCE_LABELS = {
   dark: 'Dark',
   light: 'Light',
   system: 'System',
 };
+
+export const BASEMAP_PREFERENCE_CYCLE = ['dark', 'light', 'system'];
+
+const PREFERENCE_CYCLE = BASEMAP_PREFERENCE_CYCLE;
 
 const preferenceListeners = new Set();
 

@@ -132,10 +132,13 @@ function ActiveStormsHighlight() {
   );
 }
 
-// Radar overlay types. Satellite hidden — GIBS GeoColor was unreliable (404s).
+// Radar overlay types for /radar page layer dropdown.
+// Lightning deferred — no free real-time strike tiles without a backend proxy.
 const LAYER_TYPES = [
-  { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow' },
-  { id: 'infrared', label: 'Infrared', description: 'Cloud tops' },
+  { id: 'precipitation', label: 'Precipitation', description: 'Live rain & snow (RainViewer)' },
+  { id: 'infrared', label: 'Infrared', description: 'Cloud tops (GOES)' },
+  { id: 'forecast', label: 'Forecast Radar', description: 'HRRR ~1 hr ahead (CONUS)' },
+  { id: 'wind', label: 'Wind', description: 'Surface wind arrows (GFS)' },
 ];
 
 export default function RadarPage() {
@@ -328,47 +331,50 @@ export default function RadarPage() {
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-2 sm:space-y-3">
 
-        {/* Check Location (collapsed on desktop) → radar map */}
+        {/* Check Location + radar layer — compact row on desktop */}
         <section className="space-y-2">
-          <div id="radar-location-search" className="jump-scroll-target">
-            <ZipCodeSearch
-              variant="radar"
-              collapseOnDesktop
-              defaultExpanded
-              stormPhase="active"
-              totalLocationCount={0}
-              onLocationsChange={() => {}}
-              onLocationClick={handleSearchLocationClick}
-              onLocate={handleGpsLocate}
-              onResolveState={handleGpsResolveState}
-              onLocationResolved={setHeroLocation}
-            />
+          <div className="flex flex-wrap items-stretch gap-2">
+            <div id="radar-location-search" className="jump-scroll-target flex-1 min-w-[12rem] lg:flex-none lg:max-w-sm">
+              <ZipCodeSearch
+                variant="radar"
+                collapseOnDesktop
+                defaultExpanded
+                stormPhase="active"
+                totalLocationCount={0}
+                onLocationsChange={() => {}}
+                onLocationClick={handleSearchLocationClick}
+                onLocate={handleGpsLocate}
+                onResolveState={handleGpsResolveState}
+                onLocationResolved={setHeroLocation}
+              />
+            </div>
+
+            <div className="w-full sm:w-auto sm:flex-shrink-0 sm:self-center flex items-center gap-2">
+              <select
+                id="radar-layer-select"
+                aria-label="Radar layer"
+                value={radarType}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  if (!nextType || nextType === radarType) return;
+                  setRadarType(nextType);
+                  trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
+                }}
+                className="w-full sm:w-auto sm:min-w-[11rem] px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40"
+              >
+                <option value="" disabled>
+                  Radar Layer
+                </option>
+                {LAYER_TYPES.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.label} — {type.description}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <ActiveStormsHighlight />
-
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Radar Type</label>
-            <div className="flex gap-1.5">
-              {LAYER_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => {
-                    setRadarType(type.id);
-                    trackRadarTypeChange(type.id, { stateCode: effectiveStateCode });
-                  }}
-                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
-                    radarType === type.id
-                      ? 'bg-sky-600/20 text-sky-400 border-sky-500/40'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div
             id="radar-map"
@@ -389,6 +395,7 @@ export default function RadarPage() {
               onResetView={handleMapResetView}
               resetViewLabel={mapResetViewLabel}
               resetViewTitle={mapResetViewTitle}
+              analyticsPageContext="radar"
             />
           </div>
         </section>
@@ -398,10 +405,10 @@ export default function RadarPage() {
           <h2 className="text-xl font-semibold text-white mb-4">How to Use the Weather Radar</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
-              <h3 className="text-sm font-semibold text-white mb-2">Toggle Radar Overlay</h3>
+              <h3 className="text-sm font-semibold text-white mb-2">Choose a Map Layer</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Click the "Radar On/Off" button to show or hide precipitation on the map.
-                The radar displays rain, snow, and mixed precipitation in real-time.
+                Use the Radar Layer dropdown above the map to switch between live precipitation,
+                infrared satellite, HRRR forecast radar, and surface wind.
               </p>
             </div>
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">

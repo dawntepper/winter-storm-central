@@ -8,6 +8,11 @@ import { savedLocationAlertsPath } from '../services/locationCatalogService';
 import { ABBR_TO_SLUG, STATE_NAMES, US_STATES } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
+import {
+  WindOverlayLayer,
+  HRRR_FORECAST_WMS_URL,
+  HRRR_FORECAST_LAYER,
+} from './map/MapOverlayLayers';
 import { getForecastIcon } from '../utils/getForecastIcon';
 import {
   trackRadarToggle,
@@ -18,6 +23,7 @@ import {
   trackMapReset,
   trackMapAlertClicked,
   trackAlertDetailView,
+  trackMapBasemapChange,
   trackGeolocationUsed,
   trackMapRegionClick,
   MAP_REGION_SOURCES,
@@ -25,7 +31,7 @@ import {
   NAV_SOURCES,
   SAVE_TRIGGERS
 } from '../utils/analytics';
-import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS } from '../hooks/useMapBasemapPreference';
+import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS, BASEMAP_PREFERENCE_CYCLE } from '../hooks/useMapBasemapPreference';
 
 /**
  * Full Alert Modal - shows complete alert details
@@ -141,8 +147,14 @@ const ZoomContext = createContext(5.5);
 // geographic midpoint so less Canada is in view on /radar without scrolling.
 const CENTER_DESKTOP = [37.8, -96];
 const CENTER_MOBILE = [38.5, -98];
-const ZOOM_DESKTOP = 4.35;
-const ZOOM_MOBILE = 3.0;
+const ZOOM_DESKTOP = 4.85;
+const ZOOM_MOBILE = 3.5;
+
+// Lower-48 bounding box for fitBounds (Alaska/Hawaii remain pannable).
+const CONUS_BOUNDS = L.latLngBounds(
+  [24.52, -124.77],
+  [49.38, -66.95],
+);
 
 // Atmospheric color palette - more vibrant
 const hazardColors = {
@@ -320,12 +332,58 @@ function FitBoundsToLocations({ userLocations, triggerFit }) {
   return null;
 }
 
+// Fit the lower-48 to the map container — used on the homepage where the map
+// sits in a narrower column than /radar, so a fixed zoom clips the coasts.
+function ConusViewport({ enabled, resetTrigger, centerOn, highlightArea }) {
+  const map = useMap();
+  const hasLocalFocus = !!(centerOn?.lat || highlightArea?.geometry);
+  const shouldFit = enabled && !hasLocalFocus;
+
+  const fitConus = useCallback((animate = false) => {
+    const isMobile = window.innerWidth < 768;
+    map.fitBounds(CONUS_BOUNDS, {
+      padding: isMobile ? [24, 24] : [32, 32],
+      maxZoom: isMobile ? ZOOM_MOBILE : ZOOM_DESKTOP,
+      animate,
+      duration: animate ? 0.5 : 0,
+    });
+  }, [map]);
+
+  useEffect(() => {
+    if (!shouldFit) return;
+    const id = requestAnimationFrame(() => fitConus(false));
+    return () => cancelAnimationFrame(id);
+  }, [shouldFit, fitConus]);
+
+  useEffect(() => {
+    if (!enabled || resetTrigger === 0) return;
+    fitConus(true);
+  }, [enabled, resetTrigger, fitConus]);
+
+  useEffect(() => {
+    if (!shouldFit) return;
+    let timeout;
+    const handleResize = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fitConus(false), 150);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [shouldFit, fitConus]);
+
+  return null;
+}
+
 // Reset map to default view (responsive)
-function ResetMapView({ trigger, centerOn, useUsDefault = false }) {
+function ResetMapView({ trigger, centerOn, useUsDefault = false, fitConusView = false }) {
   const map = useMap();
 
   useEffect(() => {
     if (trigger) {
+      if (fitConusView) return;
       const isMobile = window.innerWidth < 768;
       if (!useUsDefault && centerOn?.lat && centerOn?.lon) {
         const latOffset = isMobile ? 0.1 : -0.2;
@@ -418,8 +476,28 @@ function ZoomTracker({ onZoomChange }) {
 export const RADAR_LAYER_TYPES = {
   precipitation: 'precipitation',
   satellite: 'satellite',
-  forecast: 'forecast'
+  infrared: 'infrared',
+  forecast: 'forecast',
+  wind: 'wind',
 };
+
+const TILE_RADAR_LAYER_TYPES = new Set([
+  RADAR_LAYER_TYPES.precipitation,
+  RADAR_LAYER_TYPES.satellite,
+  RADAR_LAYER_TYPES.infrared,
+  RADAR_LAYER_TYPES.forecast,
+]);
+
+const RADAR_LOADING_LABELS = {
+  [RADAR_LAYER_TYPES.precipitation]: 'Loading radar…',
+  [RADAR_LAYER_TYPES.satellite]: 'Loading satellite…',
+  [RADAR_LAYER_TYPES.infrared]: 'Loading infrared…',
+  [RADAR_LAYER_TYPES.forecast]: 'Loading forecast…',
+  [RADAR_LAYER_TYPES.wind]: 'Loading wind…',
+};
+
+/** Debounce before showing the radar spinner — avoids flash on fast tile loads. */
+const RADAR_SPINNER_DELAY_MS = 200;
 
 // Color scheme options for precipitation radar (RainViewer tile API).
 // Keys MUST match RainViewer's documented scheme numbering — they're
@@ -554,9 +632,22 @@ const STATE_ABBR_CENTERS = Object.fromEntries(
 );
 const STATE_LABEL_PANE = 'state-labels';
 
+const RADAR_MANIFEST_REFRESH_MS = 5 * 60 * 1000;
+
+function buildRainViewerTileUrl(host, path, colorScheme) {
+  return `${host}${path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
+}
+
+async function fetchRainViewerManifest() {
+  const response = await fetch(`https://api.rainviewer.com/public/weather-maps.json?_=${Date.now()}`);
+  if (!response.ok) throw new Error(`RainViewer manifest ${response.status}`);
+  return response.json();
+}
+
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
   const map = useMap();
   const layerRef = useRef(null);
+  const rainViewerHostRef = useRef('https://tilecache.rainviewer.com');
 
   useEffect(() => {
     // Dedicated pane so we can fade the WHOLE radar layer in at once via the
@@ -589,7 +680,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
     onLoadingChange?.(true);
     hideRadar(); // start hidden; reveal (faded) once tiles finish on this pull-in
 
-    const addLayer = (url, options = {}) => {
+    const addLayer = (url, options = {}, { notifyLoading = true } = {}) => {
       if (layerRef.current) map.removeLayer(layerRef.current);
       const layer = L.tileLayer(url, {
         opacity: 0.7,
@@ -597,16 +688,59 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
         pane: RADAR_PANE,
         ...options,
       });
-      // On load: clear the spinner and fade the radar in. We only listen for
-      // 'load' (not 'loading'): the spinner/fade are armed once per pull-in at
-      // the top of the effect, so pan/zoom tile reloads don't re-flash them —
-      // only the initial load, a radar toggle, or a layer/color change does.
-      layer.on('load', () => { onLoadingChange?.(false); revealRadar(); });
+      layer.on('load', () => {
+        if (notifyLoading) onLoadingChange?.(false);
+        revealRadar();
+      });
+      layer.addTo(map);
+      layerRef.current = layer;
+    };
+
+    const addWmsLayer = (url, options = {}, { notifyLoading = true } = {}) => {
+      if (layerRef.current) map.removeLayer(layerRef.current);
+      const layer = L.tileLayer.wms(url, {
+        opacity: 0.7,
+        format: 'image/png',
+        transparent: true,
+        tileSize: 256,
+        pane: RADAR_PANE,
+        ...options,
+      });
+      layer.on('load', () => {
+        if (notifyLoading) onLoadingChange?.(false);
+        revealRadar();
+      });
       layer.addTo(map);
       layerRef.current = layer;
     };
 
     let cancelled = false;
+
+    const showLatestPrecipFrame = async () => {
+      try {
+        const data = await fetchRainViewerManifest();
+        if (cancelled) return;
+        const host = data.host || 'https://tilecache.rainviewer.com';
+        rainViewerHostRef.current = host;
+        const past = data.radar?.past || [];
+        const latest = past[past.length - 1];
+        if (latest && show) {
+          addLayer(
+            buildRainViewerTileUrl(host, latest.path, colorScheme),
+            {
+              attribution: '<a href="https://rainviewer.com">RainViewer</a>',
+              maxNativeZoom: 7,
+              maxZoom: 18,
+            }
+          );
+        } else {
+          onLoadingChange?.(false);
+        }
+      } catch (err) {
+        console.error('Radar fetch error:', err);
+        onLoadingChange?.(false);
+      }
+    };
 
     if (layerType === 'satellite') {
       // NASA GIBS GOES-East GeoColor — true color (day) / blended IR (night)
@@ -630,38 +764,23 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
           attribution: 'NASA GIBS / NOAA GOES',
         }
       );
+    } else if (layerType === 'forecast') {
+      // RainViewer nowcast discontinued Jan 2026 — use IEM HRRR simulated
+      // reflectivity (~60 min ahead, CONUS). See mesonet.agron.iastate.edu/GIS/model.phtml
+      addWmsLayer(HRRR_FORECAST_WMS_URL, {
+        layers: HRRR_FORECAST_LAYER,
+        attribution: '<a href="https://mesonet.agron.iastate.edu/">IEM</a> / NOAA HRRR',
+        maxNativeZoom: 7,
+        maxZoom: 18,
+      });
     } else {
-      // Precipitation: RainViewer (latest past radar frame)
-      const fetchRadar = async () => {
-        try {
-          const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-          const data = await response.json();
-          if (cancelled) return;
-          const host = data.host || 'https://tilecache.rainviewer.com';
-          const latest = data.radar?.past?.slice(-1)[0];
-          if (latest && show) {
-            addLayer(
-              `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
-              {
-                attribution: '<a href="https://rainviewer.com">RainViewer</a>',
-                maxNativeZoom: 7,
-                maxZoom: 18,
-              }
-            );
-          } else {
-            onLoadingChange?.(false); // no frame to show — don't leave the spinner hanging
-          }
-        } catch (err) {
-          console.error('Radar fetch error:', err);
-          onLoadingChange?.(false);
-        }
-      };
-      fetchRadar();
+      // Precipitation: RainViewer latest past frame
+      showLatestPrecipFrame();
     }
 
-    // Refresh every 5 minutes
     const interval = setInterval(() => {
       if (cancelled) return;
+      const refreshOpts = { notifyLoading: false };
       if (layerType === 'satellite' || layerType === 'infrared') {
         const url = layerType === 'satellite'
           ? `https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_GeoColor/default/${GIBS_TIME}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.jpg`
@@ -671,18 +790,28 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
           maxNativeZoom: layerType === 'satellite' ? 7 : 6,
           maxZoom: 18,
           attribution: 'NASA GIBS / NOAA GOES',
-        });
+        }, refreshOpts);
+      } else if (layerType === 'forecast') {
+        addWmsLayer(HRRR_FORECAST_WMS_URL, {
+          layers: HRRR_FORECAST_LAYER,
+          attribution: '<a href="https://mesonet.agron.iastate.edu/">IEM</a> / NOAA HRRR',
+          maxNativeZoom: 7,
+          maxZoom: 18,
+        }, refreshOpts);
       } else {
         (async () => {
           try {
-            const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-            const data = await response.json();
+            const data = await fetchRainViewerManifest();
             if (cancelled) return;
-            const host = data.host || 'https://tilecache.rainviewer.com';
-            const latest = data.radar?.past?.slice(-1)[0];
-            if (latest) {
+            const host = data.host || rainViewerHostRef.current;
+            rainViewerHostRef.current = host;
+            const past = data.radar?.past || [];
+            const latest = past[past.length - 1];
+            if (latest && layerRef.current) {
+              layerRef.current.setUrl(buildRainViewerTileUrl(host, latest.path, colorScheme));
+            } else if (latest) {
               addLayer(
-                `${host}${latest.path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`,
+                buildRainViewerTileUrl(host, latest.path, colorScheme),
                 {
                   attribution: '<a href="https://rainviewer.com">RainViewer</a>',
                   maxNativeZoom: 7,
@@ -695,7 +824,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
           }
         })();
       }
-    }, 5 * 60 * 1000);
+    }, RADAR_MANIFEST_REFRESH_MS);
 
     return () => {
       cancelled = true;
@@ -1217,6 +1346,14 @@ function StateAbbrevLabels({ zoomLevel, basemapStyle = 'dark' }) {
 }
 
 // Pane above radar tiles so state polygons receive pointer events.
+function redrawStateBorderLayers(map) {
+  map.eachLayer((layer) => {
+    if (typeof layer.redraw === 'function' && layer.options?.pane === STATE_INTERACTIVE_PANE) {
+      layer.redraw();
+    }
+  });
+}
+
 function StateInteractivePane() {
   const map = useMap();
 
@@ -1225,6 +1362,16 @@ function StateInteractivePane() {
       const pane = map.createPane(STATE_INTERACTIVE_PANE);
       pane.style.zIndex = 450;
     }
+
+    const handleZoom = () => redrawStateBorderLayers(map);
+
+    map.on('zoom', handleZoom);
+    map.on('zoomend', handleZoom);
+
+    return () => {
+      map.off('zoom', handleZoom);
+      map.off('zoomend', handleZoom);
+    };
   }, [map]);
 
   return null;
@@ -1398,6 +1545,7 @@ function StateOutlineShadow({ basemapStyle }) {
     <GeoJSON
       key={`state-shadow-${code}`}
       data={data}
+      pane={STATE_INTERACTIVE_PANE}
       interactive={false}
       style={{
         color: '#0f172a',
@@ -1650,10 +1798,22 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
   const basemapPreferenceControlled = basemapStyleProp == null;
+
+  const handleBasemapCycle = useCallback(() => {
+    const idx = BASEMAP_PREFERENCE_CYCLE.indexOf(basemapPreference);
+    const nextPreference = BASEMAP_PREFERENCE_CYCLE[(idx + 1) % BASEMAP_PREFERENCE_CYCLE.length];
+    if (analyticsPageContext) {
+      trackMapBasemapChange(nextPreference, {
+        stateCode: selectedStateCode,
+        page: analyticsPageContext,
+      });
+    }
+    cyclePreference();
+  }, [analyticsPageContext, basemapPreference, cyclePreference, selectedStateCode]);
   const navigate = useNavigate();
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
@@ -1661,16 +1821,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [mapReady, setMapReady] = useState(false);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
-  // Only surfaces if the radar genuinely takes a beat; otherwise the tiles just
-  // ease in via Leaflet's fade. Kills the jarring split-second spinner.
+  // Surfaces once loading exceeds ~200ms; tiles still ease in via pane fade.
   const [radarSpinnerVisible, setRadarSpinnerVisible] = useState(false);
   useEffect(() => {
     if (showRadar && radarLoading) {
-      const t = setTimeout(() => setRadarSpinnerVisible(true), 400);
+      const t = setTimeout(() => setRadarSpinnerVisible(true), RADAR_SPINNER_DELAY_MS);
       return () => clearTimeout(t);
     }
     setRadarSpinnerVisible(false);
   }, [showRadar, radarLoading]);
+
+  const radarLoadingLabel = RADAR_LOADING_LABELS[radarLayerType] || RADAR_LOADING_LABELS[RADAR_LAYER_TYPES.precipitation];
 
   // Defer briefly when state is unknown so async parent resolution (GPS, IP geo)
   // can populate selectedStateCode before the one-shot radar_opened fires.
@@ -2075,7 +2236,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             {basemapPreferenceControlled && (
               <button
                 type="button"
-                onClick={cyclePreference}
+                onClick={handleBasemapCycle}
                 className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300"
                 title={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]} (click to cycle)`}
                 aria-label={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]}`}
@@ -2215,7 +2376,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <MapController showRadar={showRadar} />
           <ZoomTracker onZoomChange={setZoomLevel} />
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
-          <ResetMapView trigger={resetTrigger} centerOn={centerOn} useUsDefault={resetUsesUsDefault} />
+          <ResetMapView trigger={resetTrigger} centerOn={centerOn} useUsDefault={resetUsesUsDefault} fitConusView={fitConusView} />
+          <ConusViewport enabled={fitConusView} resetTrigger={resetTrigger} centerOn={centerOn} highlightArea={highlightArea} />
           <CenterOnLocation location={centerOn} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
@@ -2240,7 +2402,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <StateInteractivePane />
           <StateLabelsPane />
           <StateOutlineShadow basemapStyle={basemapStyle} />
-          <RadarLayer show={showRadar} layerType={radarLayerType} colorScheme={radarColorScheme} onLoadingChange={setRadarLoading} />
+          <RadarLayer
+            show={showRadar && TILE_RADAR_LAYER_TYPES.has(radarLayerType)}
+            layerType={radarLayerType}
+            colorScheme={radarColorScheme}
+            onLoadingChange={setRadarLoading}
+          />
+          <WindOverlayLayer
+            show={showRadar && radarLayerType === RADAR_LAYER_TYPES.wind}
+            onLoadingChange={setRadarLoading}
+          />
           <UsStatesOutline
             basemapStyle={basemapStyle}
             selectedStateCode={selectedStateCode}
@@ -2306,14 +2477,19 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </ZoomContext.Provider>
         </MapContainer>
 
-        {/* Radar loading indicator — gentle pill while tiles fetch/paint, so
-            the imagery eases in behind a spinner instead of popping into view.
+        {/* Radar loading overlay — centered card while tiles fetch/paint.
             pointer-events-none keeps the map fully interactive underneath. */}
         {radarSpinnerVisible && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] pointer-events-none">
-            <div className="radar-loading-fade flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-sm border border-slate-700 shadow-lg">
-              <span className="radar-spinner" aria-hidden="true"></span>
-              <span className="text-xs font-medium text-slate-200">Loading radar…</span>
+          <div
+            className="absolute inset-0 z-[450] flex items-center justify-center pointer-events-none"
+            role="status"
+            aria-live="polite"
+            aria-label={radarLoadingLabel}
+          >
+            <div className="absolute inset-0 bg-slate-950/30" aria-hidden="true" />
+            <div className="radar-loading-fade relative flex flex-col items-center gap-3 px-6 py-5 rounded-xl bg-slate-900/95 backdrop-blur-sm border border-slate-600/80 shadow-2xl">
+              <span className="radar-spinner radar-spinner-lg" aria-hidden="true" />
+              <span className="text-sm font-medium text-slate-200">{radarLoadingLabel}</span>
             </div>
           </div>
         )}
@@ -2710,6 +2886,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           border-radius: 50%;
           display: inline-block;
           animation: radar-spin 0.7s linear infinite;
+        }
+        .radar-spinner-lg {
+          width: 32px;
+          height: 32px;
+          border-width: 3px;
+          border-color: rgba(148, 163, 184, 0.25);
+          border-top-color: #38bdf8;
         }
         @keyframes radar-spin {
           to { transform: rotate(360deg); }

@@ -999,6 +999,7 @@ export default function App() {
   };
 
   const handleMapResetView = () => {
+    setMapCenterOn(null);
     setSelectedStateCode(null);
     setSelectedAlertId(null);
     setUserArea(null);
@@ -1055,6 +1056,7 @@ export default function App() {
               userLocations={userLocations}
               alerts={mapAlerts}
               isHero
+              fitConusView
               centerOn={mapCenterOn}
               previewLocation={previewCity}
               highlightedAlertId={highlightedAlertId}
@@ -1063,6 +1065,8 @@ export default function App() {
               highlightArea={userArea}
               onAreaClick={handleAreaClick}
               onResetView={handleMapResetView}
+              resetViewLabel="Full View"
+              resetViewTitle="Reset to default US view"
               onAddAlertToMap={handleAddAlertToMap}
               onRemoveAlertFromMap={handleRemoveAlertFromMap}
             />
@@ -1281,6 +1285,7 @@ export default function App() {
                   userLocations={userLocations}
                   alerts={mapAlerts}
                   isHero
+                  fitConusView
                   centerOn={mapCenterOn}
                   previewLocation={previewCity}
                   highlightedAlertId={highlightedAlertId}
@@ -1289,6 +1294,8 @@ export default function App() {
                   highlightArea={userArea}
                   onAreaClick={handleAreaClick}
                   onResetView={handleMapResetView}
+                  resetViewLabel="Full View"
+                  resetViewTitle="Reset to default US view"
                   onAddAlertToMap={handleAddAlertToMap}
                   onRemoveAlertFromMap={handleRemoveAlertFromMap}
                 />
