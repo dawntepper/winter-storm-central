@@ -25,6 +25,7 @@ import {
   NAV_SOURCES,
   SAVE_TRIGGERS
 } from '../utils/analytics';
+import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS } from '../hooks/useMapBasemapPreference';
 
 /**
  * Full Alert Modal - shows complete alert details
@@ -446,7 +447,8 @@ export const BASEMAP_STYLES = {
   },
   light: {
     label: 'Light',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+    // nolabels — we draw state/geographic labels; voyager base is warmer than light_all.
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
   },
   voyager: {
     label: 'Voyager',
@@ -473,6 +475,15 @@ export const BASEMAP_ATMOSPHERE = {
   hueRotate: -10,     // cooler slate/navy cast
 };
 
+// Light basemap — subtle darkening/muting so tiles stay calm and radar-readable (not washed out).
+export const BASEMAP_ATMOSPHERE_LIGHT = {
+  brightness: 0.9,
+  contrast: 1.14,
+  saturation: 0.84,
+  sepia: 0.07,
+  hueRotate: -4,
+};
+
 // Map chrome — container bg + overlay opacities (not applied to radar/alerts).
 export const MAP_ATMOSPHERE_CHROME = {
   containerBg: '#0f172a',       // deep navy behind tiles while loading
@@ -481,11 +492,22 @@ export const MAP_ATMOSPHERE_CHROME = {
 };
 
 // Decorative geographic labels — tiered by feature type, below radar/state labels.
-const GEOGRAPHIC_LABEL_TIERS = {
+const GEOGRAPHIC_LABEL_TIERS_DARK = {
   ocean: { maxZoom: 7, color: 'rgba(148, 163, 184, 0.58)', baseFontSize: 12 },
   water: { maxZoom: 6, color: 'rgba(148, 163, 184, 0.55)', baseFontSize: 11 },
   mountain: { maxZoom: 5, color: 'rgba(148, 163, 184, 0.52)', baseFontSize: 10 },
 };
+const GEOGRAPHIC_LABEL_TIERS_LIGHT = {
+  ocean: { maxZoom: 7, color: 'rgba(71, 85, 105, 0.58)', baseFontSize: 12 },
+  water: { maxZoom: 6, color: 'rgba(71, 85, 105, 0.55)', baseFontSize: 11 },
+  mountain: { maxZoom: 5, color: 'rgba(100, 116, 139, 0.52)', baseFontSize: 10 },
+};
+const GEOGRAPHIC_LABEL_SHADOW_DARK = '0 1px 6px rgba(15, 23, 42, 0.95), 0 0 10px rgba(15, 23, 42, 0.45)';
+const GEOGRAPHIC_LABEL_SHADOW_LIGHT = '0 1px 3px rgba(255, 255, 255, 0.95), 0 0 8px rgba(255, 255, 255, 0.65)';
+
+function isLightBasemapStyle(basemapStyle) {
+  return basemapStyle === 'light' || basemapStyle === 'voyager';
+}
 const GEOGRAPHIC_FEATURE_LABELS = [
   { name: 'Atlantic Ocean', position: [33.0, -62.0], tier: 'ocean' },
   { name: 'Pacific Ocean', position: [34.0, -132.0], tier: 'ocean' },
@@ -1152,10 +1174,15 @@ function StateLabelsPane() {
   return null;
 }
 
-function StateAbbrevLabels({ zoomLevel }) {
+function StateAbbrevLabels({ zoomLevel, basemapStyle = 'dark' }) {
   if (zoomLevel > 6) return null;
 
   const fontSize = zoomLevel >= 5 ? 10 : zoomLevel >= 4 ? 11 : 12;
+  const isLight = isLightBasemapStyle(basemapStyle);
+  const labelColor = isLight ? 'rgba(30, 41, 59, 0.78)' : 'rgba(255, 255, 255, 0.82)';
+  const textShadow = isLight
+    ? '0 1px 3px rgba(255, 255, 255, 0.95), 0 0 6px rgba(255, 255, 255, 0.55)'
+    : '0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.55)';
 
   return Object.keys(STATE_GEOJSON).map((code) => {
     const center = STATE_ABBR_CENTERS[code];
@@ -1164,11 +1191,11 @@ function StateAbbrevLabels({ zoomLevel }) {
     const icon = L.divIcon({
       className: 'state-abbr-label-wrapper',
       html: `<div class="state-abbr-label" style="
-        color: rgba(255, 255, 255, 0.82);
+        color: ${labelColor};
         font-size: ${fontSize}px;
         font-weight: 700;
         letter-spacing: 0.06em;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.55);
+        text-shadow: ${textShadow};
         transform: translate(-50%, -50%);
         pointer-events: none;
         user-select: none;
@@ -1214,25 +1241,32 @@ function BasemapTileEnhancement({
 }) {
   const map = useMap();
   const isDarkBasemap = basemapStyle === 'dark';
+  const isLightBasemap = basemapStyle === 'light';
 
   useEffect(() => {
     const applyFilter = () => {
       const pane = map.getPane('tilePane');
       if (!pane) return;
 
-      if (!isDarkBasemap) {
-        pane.style.filter = '';
-        return;
+      const filters = [];
+
+      if (isDarkBasemap) {
+        const level = Number(brightness);
+        const contrastLevel = Number(contrast);
+        if (level && level !== 1) filters.push(`brightness(${level})`);
+        if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
+        if (saturation != null && saturation !== 1) filters.push(`saturate(${saturation})`);
+        if (sepia) filters.push(`sepia(${sepia})`);
+        if (hueRotate) filters.push(`hue-rotate(${hueRotate}deg)`);
+      } else if (isLightBasemap) {
+        const light = BASEMAP_ATMOSPHERE_LIGHT;
+        if (light.brightness && light.brightness !== 1) filters.push(`brightness(${light.brightness})`);
+        if (light.contrast && light.contrast !== 1) filters.push(`contrast(${light.contrast})`);
+        if (light.saturation != null && light.saturation !== 1) filters.push(`saturate(${light.saturation})`);
+        if (light.sepia) filters.push(`sepia(${light.sepia})`);
+        if (light.hueRotate) filters.push(`hue-rotate(${light.hueRotate}deg)`);
       }
 
-      const filters = [];
-      const level = Number(brightness);
-      const contrastLevel = Number(contrast);
-      if (level && level !== 1) filters.push(`brightness(${level})`);
-      if (contrastLevel && contrastLevel !== 1) filters.push(`contrast(${contrastLevel})`);
-      if (saturation != null && saturation !== 1) filters.push(`saturate(${saturation})`);
-      if (sepia) filters.push(`sepia(${sepia})`);
-      if (hueRotate) filters.push(`hue-rotate(${hueRotate}deg)`);
       pane.style.filter = filters.length ? filters.join(' ') : '';
     };
 
@@ -1247,7 +1281,7 @@ function BasemapTileEnhancement({
       const pane = map.getPane('tilePane');
       if (pane) pane.style.filter = '';
     };
-  }, [map, isDarkBasemap, brightness, contrast, saturation, sepia, hueRotate]);
+  }, [map, isDarkBasemap, isLightBasemap, brightness, contrast, saturation, sepia, hueRotate]);
 
   return null;
 }
@@ -1299,24 +1333,32 @@ function GeographicLabelsPane() {
   return null;
 }
 
-function getGeographicLabelFontSize(tier, zoomLevel) {
-  const { baseFontSize } = GEOGRAPHIC_LABEL_TIERS[tier] || GEOGRAPHIC_LABEL_TIERS.water;
+function getGeographicLabelFontSize(tierConfig, zoomLevel) {
+  const { baseFontSize } = tierConfig || GEOGRAPHIC_LABEL_TIERS_DARK.water;
   if (zoomLevel >= 7) return baseFontSize - 2;
   if (zoomLevel >= 5) return baseFontSize - 1;
   return baseFontSize;
 }
 
-function GeographicFeatureLabels({ zoomLevel }) {
+function GeographicFeatureLabels({ zoomLevel, basemapStyle = 'dark' }) {
+  const labelTiers = isLightBasemapStyle(basemapStyle)
+    ? GEOGRAPHIC_LABEL_TIERS_LIGHT
+    : GEOGRAPHIC_LABEL_TIERS_DARK;
+  const textShadow = isLightBasemapStyle(basemapStyle)
+    ? GEOGRAPHIC_LABEL_SHADOW_LIGHT
+    : GEOGRAPHIC_LABEL_SHADOW_DARK;
+
   const visibleLabels = GEOGRAPHIC_FEATURE_LABELS.filter(({ tier = 'water' }) => {
-    const config = GEOGRAPHIC_LABEL_TIERS[tier];
+    const config = labelTiers[tier];
     return config && zoomLevel <= config.maxZoom;
   });
 
   if (visibleLabels.length === 0) return null;
 
   return visibleLabels.map(({ name, position, tier = 'water' }) => {
-    const { color } = GEOGRAPHIC_LABEL_TIERS[tier];
-    const fontSize = getGeographicLabelFontSize(tier, zoomLevel);
+    const tierConfig = labelTiers[tier];
+    const { color } = tierConfig;
+    const fontSize = getGeographicLabelFontSize(tierConfig, zoomLevel);
 
     const icon = L.divIcon({
       className: 'geographic-label-wrapper',
@@ -1330,7 +1372,7 @@ function GeographicFeatureLabels({ zoomLevel }) {
         transform: translate(-50%, -50%);
         pointer-events: none;
         user-select: none;
-        text-shadow: 0 1px 6px rgba(15, 23, 42, 0.95), 0 0 10px rgba(15, 23, 42, 0.45);
+        text-shadow: ${textShadow};
       ">${name}</div>`,
       iconSize: [0, 0],
       iconAnchor: [0, 0],
@@ -1373,7 +1415,7 @@ function UsStatesOutline({
   basemapStyle,
   selectedStateCode,
   hoveredStateCode,
-  pinnedStateCode,
+  stateCardLocked,
   onStateHover,
   onStateLeave,
   onStateClick,
@@ -1384,13 +1426,15 @@ function UsStatesOutline({
   return Object.entries(STATE_GEOJSON).map(([code, data]) => {
     const isSelected = code === selectedStateCode;
     const isHovered = code === hoveredStateCode;
+    // Only lock other polygons while the cursor is on the hover card (not during map-to-map moves).
+    const interactive = !stateCardLocked || code === hoveredStateCode;
 
     return (
       <GeoJSON
         key={`state-outline-${code}`}
         data={data}
         pane={STATE_INTERACTIVE_PANE}
-        interactive={!pinnedStateCode || code === pinnedStateCode}
+        interactive={interactive}
         style={{
           color: borderColor,
           weight: isSelected ? 2.5 : (isHovered ? 2 : (isLightBasemap ? 1.75 : 1.75)),
@@ -1606,7 +1650,10 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle = 'dark', basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null }) {
+  const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
+  const basemapStyle = basemapStyleProp ?? effectiveBasemap;
+  const basemapPreferenceControlled = basemapStyleProp == null;
   const navigate = useNavigate();
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
@@ -1672,6 +1719,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [hoveredAlert, setHoveredAlert] = useState(null);
   const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
   const [hoveredStateCode, setHoveredStateCode] = useState(null);
+  const [stateCardLocked, setStateCardLocked] = useState(false);
   const [hoverCardPosition, setHoverCardPosition] = useState(null);
   const [modalAlert, setModalAlert] = useState(null); // For the full alert modal
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -1760,6 +1808,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
     stateHoverLockedRef.current = false;
+    setStateCardLocked(false);
     setHoveredAlert(alert);
 
     // Get position relative to map container
@@ -1796,6 +1845,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
     stateHoverLockedRef.current = false;
+    setStateCardLocked(false);
     setHoveredAlert(alert);
     if (mapContainerRef.current && event) {
       setHoverCardPosition({
@@ -1821,6 +1871,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     setHoveredAlert(null);
     setHoveredStateCode(null);
+    setStateCardLocked(false);
     setHoveredUserLocation(location);
 
     // Get position relative to map container
@@ -1840,27 +1891,21 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }, 200);
   };
 
-  // Handle state polygon hover — popup anchored near cursor; other states disabled while open.
+  // Handle state polygon hover — popup anchored near cursor; free state-to-state moves on the map.
   const handleStateHover = (stateCode, event) => {
-    if (pinnedAlertRef.current) return;
-
-    if (hoveredStateCode && stateCode !== hoveredStateCode) {
-      return;
-    }
+    if (pinnedAlertRef.current || stateHoverLockedRef.current) return;
 
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
       hideAlertTimeoutRef.current = null;
     }
 
-    if (hoveredStateCode === stateCode) {
-      return;
-    }
-
     const point = event?.containerPoint;
     if (point && mapContainerRef.current) {
       setHoverCardPosition({ x: point.x, y: point.y });
     }
+
+    if (hoveredStateCode === stateCode) return;
 
     setHoveredAlert(null);
     setHoveredUserLocation(null);
@@ -1896,10 +1941,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       hideAlertTimeoutRef.current = null;
     }
     stateHoverLockedRef.current = true;
+    setStateCardLocked(true);
   };
 
   const handleStateCardLeave = () => {
     stateHoverLockedRef.current = false;
+    setStateCardLocked(false);
     setHoveredStateCode(null);
     setHoverCardPosition(null);
   };
@@ -1911,6 +1958,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     if (hoveredStateCode) {
       stateHoverLockedRef.current = true;
+      setStateCardLocked(true);
     }
   };
 
@@ -1918,6 +1966,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const handleCardLeave = () => {
     pinnedAlertRef.current = false;
     stateHoverLockedRef.current = false;
+    setStateCardLocked(false);
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
@@ -2021,6 +2070,18 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                 title={resetViewTitle ?? (resetViewLabel === 'Full View' ? resetViewTitleUsDefault : (resetViewLabel === 'Reset View' ? resetViewTitleUsDefault : `Return to ${resetViewLabel.toLowerCase()}`))}
               >
                 {resetViewLabel}
+              </button>
+            )}
+            {basemapPreferenceControlled && (
+              <button
+                type="button"
+                onClick={cyclePreference}
+                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300"
+                title={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]} (click to cycle)`}
+                aria-label={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]}`}
+              >
+                {basemapPreference === 'dark' ? '🌙' : basemapPreference === 'light' ? '☀️' : '🖥️'}{' '}
+                {BASEMAP_PREFERENCE_LABELS[basemapPreference]}
               </button>
             )}
             {/* Radar toggle */}
@@ -2184,7 +2245,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             basemapStyle={basemapStyle}
             selectedStateCode={selectedStateCode}
             hoveredStateCode={hoveredStateCode}
-            pinnedStateCode={hoveredStateCode}
+            stateCardLocked={stateCardLocked}
             onStateHover={handleStateHover}
             onStateLeave={handleStateLeave}
             onStateClick={handleStateClick}
@@ -2194,8 +2255,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <StateBorderHighlight stateCode={selectedStateCode} basemapStyle={basemapStyle} />
 
           <ZoomContext.Provider value={zoomLevel}>
-            <GeographicFeatureLabels zoomLevel={zoomLevel} />
-            <StateAbbrevLabels zoomLevel={zoomLevel} />
+            <GeographicFeatureLabels zoomLevel={zoomLevel} basemapStyle={basemapStyle} />
+            <StateAbbrevLabels zoomLevel={zoomLevel} basemapStyle={basemapStyle} />
           </ZoomContext.Provider>
 
           {/* "Your area" county highlight (drawn over the state outline) */}
@@ -2620,7 +2681,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.06));
         }
         .storm-map-dark.leaflet-container {
-          background: ${basemapChrome.containerBg};
+          background: ${MAP_ATMOSPHERE_CHROME.containerBg};
         }
         .storm-map-atmosphere-texture {
           background:
