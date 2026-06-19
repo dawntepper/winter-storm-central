@@ -12,7 +12,7 @@ import EssentialsCard from './EssentialsCard';
 import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
 import { setHomepageMetaTags } from '../data/homepageMeta';
-import { fetchCountyGeoJSON } from '../services/geoLocationService';
+import { fetchCountyGeoJSON, reverseGeocode } from '../services/geoLocationService';
 import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
@@ -164,8 +164,6 @@ export default function RadarPage() {
   // "Your area" county polygon (GeoJSON Feature) once GPS coords resolve.
   const [userArea, setUserArea] = useState(null);
   const areaReqRef = useRef(0);
-
-  const effectiveStateCode = gpsStateCode || heroLocation?.region || null;
   const radarResolveSourceRef = useRef(null);
 
   const focusCounty = useCallback((lat, lon) => {
@@ -227,6 +225,11 @@ export default function RadarPage() {
     return { id: `radar-${lat}-${lon}`, lat, lon, zoom };
   }, [searchParams]);
 
+  const mapHasLocalFocus = !!(gpsCenter ?? centerOn);
+  const effectiveStateCode = mapHasLocalFocus
+    ? (gpsStateCode || heroLocation?.region || null)
+    : null;
+
   useEffect(() => {
     if (centerOn && !gpsCenter) {
       radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.DEEP_LINK;
@@ -249,24 +252,50 @@ export default function RadarPage() {
   }, [effectiveStateCode]);
 
   const displayCenterOn = gpsCenter ?? centerOn;
-  const displayHighlightArea = userArea;
-  const hasLocalFocus = !!(gpsCenter || userArea);
+  const displayHighlightArea = mapHasLocalFocus ? userArea : null;
+  const headerResolvedLocation = mapHasLocalFocus ? heroLocation : null;
+
+  // Drop stale city labels when the map is on national view (e.g. silent IP geo
+  // or a saved location name without an active centerOn).
+  useEffect(() => {
+    if (mapHasLocalFocus) return;
+    setHeroLocation(null);
+    setLocationSummary(null);
+    setGpsStateCode(null);
+    setUserArea(null);
+  }, [mapHasLocalFocus]);
 
   const handleMapResetView = useCallback(() => {
     areaReqRef.current += 1;
-    if (hasLocalFocus) {
-      setGpsCenter(null);
-      setUserArea(null);
-      setGpsStateCode(null);
-    } else if (centerOn) {
+    setHeroLocation(null);
+    setLocationSummary(null);
+    setGpsCenter(null);
+    setUserArea(null);
+    setGpsStateCode(null);
+    if (centerOn) {
       navigate('/radar', { replace: true });
     }
-  }, [hasLocalFocus, centerOn, navigate]);
+  }, [centerOn, navigate]);
+
+  // Deep-link ?lat=&lon= — label the header for the linked coordinates.
+  useEffect(() => {
+    if (!centerOn || gpsCenter) return;
+    let cancelled = false;
+    reverseGeocode(centerOn.lat, centerOn.lon).then((place) => {
+      if (cancelled || !place?.city) return;
+      setHeroLocation({ city: place.city, region: place.region || null });
+      if (place.region) setGpsStateCode(place.region);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [centerOn, gpsCenter]);
 
   const mapResetViewLabel = 'Full View';
   const mapResetViewTitle = 'Reset to default US view';
 
   const heroLocationContext = useMemo(() => {
+    if (!mapHasLocalFocus) return null;
     if (locationSummary) {
       return {
         alertInfo: locationSummary.alertInfo || null,
@@ -282,7 +311,7 @@ export default function RadarPage() {
       alertCount: stateAlerts.length,
       conditions: null,
     };
-  }, [locationSummary, effectiveStateCode, heroLocation, mapAlerts]);
+  }, [mapHasLocalFocus, locationSummary, effectiveStateCode, heroLocation, mapAlerts]);
 
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
@@ -319,7 +348,7 @@ export default function RadarPage() {
           <NearMeHeader
             as="h1"
             variant="radar"
-            resolvedLocation={heroLocation}
+            resolvedLocation={headerResolvedLocation}
             onResolved={setHeroLocation}
             onLocate={handleGpsLocate}
             onChangeLocation={handleChangeLocation}
@@ -331,49 +360,7 @@ export default function RadarPage() {
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-2 sm:space-y-3">
 
-        {/* Check Location + radar layer — compact row on desktop */}
         <section className="space-y-2">
-          <div className="flex flex-wrap items-stretch gap-2">
-            <div id="radar-location-search" className="jump-scroll-target flex-1 min-w-[12rem] lg:flex-none lg:max-w-sm">
-              <ZipCodeSearch
-                variant="radar"
-                collapseOnDesktop
-                defaultExpanded
-                stormPhase="active"
-                totalLocationCount={0}
-                onLocationsChange={() => {}}
-                onLocationClick={handleSearchLocationClick}
-                onLocate={handleGpsLocate}
-                onResolveState={handleGpsResolveState}
-                onLocationResolved={setHeroLocation}
-              />
-            </div>
-
-            <div className="w-full sm:w-auto sm:flex-shrink-0 sm:self-center flex items-center gap-2">
-              <select
-                id="radar-layer-select"
-                aria-label="Radar layer"
-                value={radarType}
-                onChange={(e) => {
-                  const nextType = e.target.value;
-                  if (!nextType || nextType === radarType) return;
-                  setRadarType(nextType);
-                  trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
-                }}
-                className="w-full sm:w-auto sm:min-w-[11rem] px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40"
-              >
-                <option value="" disabled>
-                  Radar Layer
-                </option>
-                {LAYER_TYPES.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label} — {type.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <ActiveStormsHighlight />
 
           <div
@@ -396,6 +383,50 @@ export default function RadarPage() {
               resetViewLabel={mapResetViewLabel}
               resetViewTitle={mapResetViewTitle}
               analyticsPageContext="radar"
+              mapOverlay={(
+                <div
+                  className="absolute top-2 left-11 sm:left-12 z-[1000] flex flex-col gap-2 w-[min(calc(100%-3.5rem),18rem)] max-w-[calc(100%-3rem)] pointer-events-none"
+                  aria-label="Radar map controls"
+                >
+                  <div className="pointer-events-auto flex flex-col gap-2 rounded-xl bg-slate-900/88 backdrop-blur-sm border border-slate-600/70 shadow-lg p-2">
+                    <div id="radar-location-search" className="jump-scroll-target min-w-0 [&_.rounded-2xl]:rounded-lg [&_.shadow-2xl]:shadow-none">
+                      <ZipCodeSearch
+                        variant="radar"
+                        collapseOnDesktop
+                        defaultExpanded={false}
+                        stormPhase="active"
+                        totalLocationCount={0}
+                        onLocationsChange={() => {}}
+                        onLocationClick={handleSearchLocationClick}
+                        onLocate={handleGpsLocate}
+                        onResolveState={handleGpsResolveState}
+                        onLocationResolved={setHeroLocation}
+                      />
+                    </div>
+                    <select
+                      id="radar-layer-select"
+                      aria-label="Radar layer"
+                      value={radarType}
+                      onChange={(e) => {
+                        const nextType = e.target.value;
+                        if (!nextType || nextType === radarType) return;
+                        setRadarType(nextType);
+                        trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40"
+                    >
+                      <option value="" disabled>
+                        Radar Layer
+                      </option>
+                      {LAYER_TYPES.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.label} — {type.description}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             />
           </div>
         </section>
@@ -407,7 +438,7 @@ export default function RadarPage() {
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
               <h3 className="text-sm font-semibold text-white mb-2">Choose a Map Layer</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Use the Radar Layer dropdown above the map to switch between live precipitation,
+                Use the Radar Layer dropdown on the map to switch between live precipitation,
                 infrared satellite, HRRR forecast radar, and surface wind.
               </p>
             </div>

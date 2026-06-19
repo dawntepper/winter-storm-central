@@ -23,12 +23,14 @@ export default function NearMeHeader({
   resolvedLocation = null,
   onResolved,
   locationContext = null,
+  /** When false (default), heading stays national until GPS/search/deep-link sets a place. */
+  enableSilentGeo = false,
   className = '',
   headingClassName = '',
 }) {
   const HeadingTag = as;
   const isRadar = variant === 'radar';
-  const FALLBACK_HEADING = variant === 'radar' ? 'Live Weather Radar' : 'Live Weather & Alerts';
+  const FALLBACK_HEADING = variant === 'radar' ? 'Live Radar — United States' : 'Live Weather & Alerts';
 
   const [internalResolved, setInternalResolved] = useState(null);
   const [geoDenied, setGeoDenied] = useState(false);
@@ -41,8 +43,10 @@ export default function NearMeHeader({
     else setInternalResolved(loc);
   };
 
-  // Layer 1 — silent IP geo. Header text + jump links only.
+  // Layer 1 — silent IP geo (opt-in). Personalizes jump links on homepage only;
+  // never updates the heading unless enableSilentGeo is true (legacy).
   useEffect(() => {
+    if (!enableSilentGeo) return undefined;
     let cancelled = false;
     fetchApproxLocation().then((loc) => {
       if (cancelled || !loc?.city) return;
@@ -54,7 +58,7 @@ export default function NearMeHeader({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enableSilentGeo]);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.permissions?.query) return;

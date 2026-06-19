@@ -868,6 +868,17 @@ export default function App() {
     </div>
   );
 
+  // Parse "City, ST" labels into NearMeHeader shape.
+  const heroLocationFromLabel = (label, regionOverride) => {
+    const trimmed = String(label || '').trim();
+    if (!trimmed) return null;
+    const stateMatch = trimmed.match(/,\s*([A-Za-z]{2})\s*$/);
+    const region = regionOverride || stateMatch?.[1]?.toUpperCase() || null;
+    const city = stateMatch ? trimmed.replace(/,\s*[A-Za-z]{2}\s*$/, '').trim() : trimmed;
+    if (!city) return null;
+    return { city, region };
+  };
+
   // Handle clicking a viewed location to re-center map and show marker
   const handleViewedLocationClick = (location) => {
     if (location.lat && location.lon) {
@@ -889,6 +900,8 @@ export default function App() {
       const stateMatch = locationLabel.match(/,\s*([A-Za-z]{2})\s*$/);
       const resolvedState = location.region || stateMatch?.[1]?.toUpperCase() || null;
       if (resolvedState) setSelectedStateCode(resolvedState);
+      const resolvedHero = heroLocationFromLabel(locationLabel, resolvedState);
+      if (resolvedHero) setHeroLocation(resolvedHero);
       trackLocationSearch({
         query: locationLabel,
         matchType: 'saved_location',
@@ -970,6 +983,8 @@ export default function App() {
 
       const stateMatch = locationData.name?.match(/,\s*([A-Z]{2})\s*$/);
       if (stateMatch) setSelectedStateCode(stateMatch[1]);
+      const resolved = heroLocationFromLabel(locationData.name);
+      if (resolved) setHeroLocation(resolved);
 
       // On mobile, scroll to the map
       const isMobile = window.innerWidth < 1024;
@@ -1003,6 +1018,8 @@ export default function App() {
     setSelectedStateCode(null);
     setSelectedAlertId(null);
     setUserArea(null);
+    setHeroLocation(null);
+    setPreviewCity(null);
   };
 
   return (
