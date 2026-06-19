@@ -4,6 +4,11 @@
   functions = "netlify/functions"
   edge_functions = "netlify/edge-functions"
 
+# Static pages use path/index.html; disable auto trailing-slash redirects that
+# fight our canonical no-slash URLs (caused infinite 301 loops in production).
+[build.processing.html]
+  pretty_urls = false
+
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["sharp"]
@@ -40,15 +45,6 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-
-# Strip trailing slashes sitewide (301). Matches /path/ but not root /.
-# force = true so directory index.html files (e.g. dist/alerts/index.html)
-# don't serve /alerts/ before this rule runs. Query strings are preserved.
-[[redirects]]
-  from = "/*/"
-  to = "/:splat"
-  status = 301
-  force = true
 
 # SPA fallback (must be last)
 [[redirects]]
