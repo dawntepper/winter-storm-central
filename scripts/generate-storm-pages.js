@@ -1,95 +1,19 @@
 #!/usr/bin/env node
 
 // Generate unique static HTML files for each /storm/[slug] route.
-// Reads dist/index.html and src/content/storms/*.json, then writes
-// dist/storm/[slug]/index.html with unique <title>, <meta description>,
-// canonical, OG tags, and JSON-LD per storm.
+// Reads dist/index.html and src/content/storms/*.json (+ live Supabase storms),
+// then writes dist/storm/[slug]/index.html with unique <title>, <meta description>,
+// canonical, OG tags, JSON-LD, and a hidden SEO body snippet per storm.
 
 const fs = require('fs');
 const path = require('path');
 
+const { loadStorms } = require('./lib/load-storms');
+const { buildStormBodySnippet, escapeHtml } = require('./lib/seo-body-snippet');
+
 const ROOT = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT, 'dist');
-const STORMS_DIR = path.join(ROOT, 'src', 'content', 'storms');
 const BASE_URL = 'https://stormtracking.io';
-
-function loadJsonStorms() {
-  if (!fs.existsSync(STORMS_DIR)) return [];
-  return fs.readdirSync(STORMS_DIR)
-    .filter(f => f.endsWith('.json'))
-    .map(f => JSON.parse(fs.readFileSync(path.join(STORMS_DIR, f), 'utf-8')));
-}
-
-/** Convert a live Supabase storms row to the JSON shape generateStormHTML expects. */
-function dbRowToJsonStorm(row) {
-  const content = row.content || {};
-  const mapCenter = content.map_center || {};
-  const publicStatus = content.public_status || 'active';
-  return {
-    slug: row.slug,
-    title: row.title,
-    type: row.storm_type,
-    type_label: content.type_label || row.storm_type,
-    status: row.status === 'archived' ? 'completed' : publicStatus,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    description: row.summary || '',
-    impacts: content.impacts || [],
-    affected_states: content.affected_states || [],
-    alert_categories: content.alert_categories || [],
-    map_center: {
-      latitude: mapCenter.latitude ?? 39,
-      longitude: mapCenter.longitude ?? -98,
-      zoom: mapCenter.zoom ?? 5
-    },
-    seo: {
-      title: row.seo_title || '',
-      description: row.seo_description || '',
-      og_image_url: content.og_image_url || '',
-      keywords: content.keywords || []
-    },
-    peak_alert_count: content.peak_alert_count ?? null,
-    total_alerts_issued: content.total_alerts_issued ?? null,
-    show_emergency_info_panel: content.show_emergency_info_panel ?? false
-  };
-}
-
-async function loadLiveStormsFromSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return [];
-
-  try {
-    const res = await fetch(
-      `${url}/rest/v1/storms?status=eq.live&select=*`,
-      {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`
-        }
-      }
-    );
-    if (!res.ok) {
-      console.warn('Supabase storms fetch failed:', res.status, await res.text());
-      return [];
-    }
-    const rows = await res.json();
-    return (rows || []).map(dbRowToJsonStorm);
-  } catch (err) {
-    console.warn('Supabase storms fetch error:', err.message);
-    return [];
-  }
-}
-
-async function loadStorms() {
-  const jsonStorms = loadJsonStorms();
-  const dbStorms = await loadLiveStormsFromSupabase();
-  const bySlug = new Map(jsonStorms.filter(s => s.slug).map(s => [s.slug, s]));
-  for (const storm of dbStorms) {
-    if (storm.slug) bySlug.set(storm.slug, storm);
-  }
-  return [...bySlug.values()];
-}
 
 function escapeAttr(str) {
   return String(str || '')
@@ -99,21 +23,22 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
 function buildKeywords(storm, defaults) {
   const k = storm?.seo?.keywords;
   const arr = Array.isArray(k)
     ? k
     : typeof k === 'string'
-      ? k.split(',').map(s => s.trim()).filter(Boolean)
+      ? k.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
   return [...arr, ...defaults].join(', ');
+}
+
+function injectBodySnippet(html, storm) {
+  const snippet = buildStormBodySnippet(storm);
+  if (/<body[^>]*>/.test(html)) {
+    return html.replace(/<body([^>]*)>/, `<body$1>\n    ${snippet}`);
+  }
+  return html;
 }
 
 function generateStormHTML(baseHTML, storm) {
@@ -137,7 +62,7 @@ function generateStormHTML(baseHTML, storm) {
     `${titleLower} update`,
     'live radar',
     'real-time alerts',
-    'storm tracking'
+    'storm tracking',
   ];
   const keywords = buildKeywords(storm, defaultKeywords);
 
@@ -204,15 +129,15 @@ function generateStormHTML(baseHTML, storm) {
       name: 'United States',
       address: {
         '@type': 'PostalAddress',
-        addressRegion: states
-      }
+        addressRegion: states,
+      },
     },
     organizer: {
       '@type': 'Organization',
-      name: 'National Weather Service'
+      name: 'National Weather Service',
     },
     url: pageUrl,
-    image: ogImage
+    image: ogImage,
   }, null, 2);
 
   if (/<script\s+type="application\/ld\+json">/.test(html)) {
@@ -223,6 +148,8 @@ function generateStormHTML(baseHTML, storm) {
   } else {
     html = html.replace('</head>', `  <script type="application/ld+json">\n    ${jsonLd}\n    </script>\n  </head>`);
   }
+
+  html = injectBodySnippet(html, storm);
 
   return html;
 }
@@ -240,7 +167,7 @@ async function main() {
   // Always emit storm-data.json so the og-image function and og-rewrite edge
   // function have a public, same-origin lookup table — even if storms is empty.
   const byslug = Object.fromEntries(
-    storms.filter(s => s && s.slug).map(s => [s.slug, s])
+    storms.filter((s) => s && s.slug).map((s) => [s.slug, s])
   );
   fs.writeFileSync(
     path.join(DIST_DIR, 'storm-data.json'),
