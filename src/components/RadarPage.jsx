@@ -389,6 +389,7 @@ export default function RadarPage() {
               radarLayerType={radarType}
               radarColorScheme={4}
               centerOn={displayCenterOn}
+              resolvedLocation={headerResolvedLocation}
               selectedStateCode={effectiveStateCode}
               highlightArea={displayHighlightArea}
               onAreaClick={handleAreaClick}

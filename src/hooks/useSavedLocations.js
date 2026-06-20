@@ -40,6 +40,78 @@ const MIGRATED_FLAG = 'st_locations_migrated';
  * Read both legacy localStorage keys and normalize to import candidates.
  * @returns {{ name: string, state: string|null, lat: number, lon: number, zip: string|null }[]}
  */
+/** All saved location data from device localStorage (full objects, any on-map state). */
+export function readStoredSavedLocations() {
+  if (typeof window === 'undefined') return [];
+  const out = [];
+
+  try {
+    const raw = localStorage.getItem(SEARCH_LOCATIONS_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw) || {};
+      for (const entry of Object.values(obj)) {
+        if (entry?.data?.lat != null && entry?.data?.lon != null) {
+          out.push(entry.data);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('readStoredSavedLocations (search) error:', e);
+  }
+
+  try {
+    const raw = localStorage.getItem(ALERT_LOCATIONS_KEY);
+    if (raw) {
+      for (const d of JSON.parse(raw) || []) {
+        if (d?.lat != null && d?.lon != null) out.push(d);
+      }
+    }
+  } catch (e) {
+    console.error('readStoredSavedLocations (alert) error:', e);
+  }
+
+  const seen = new Set();
+  return out.filter((loc) => {
+    const key = `${Number(loc.lat).toFixed(2)},${Number(loc.lon).toFixed(2)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** On-map pins from device localStorage (search + alert keys). */
+export function readOnMapSavedLocations() {
+  if (typeof window === 'undefined') return [];
+  const out = [];
+
+  try {
+    const raw = localStorage.getItem(SEARCH_LOCATIONS_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw) || {};
+      for (const entry of Object.values(obj)) {
+        if (entry?.onMap && entry?.data?.lat != null && entry?.data?.lon != null) {
+          out.push(entry.data);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('readOnMapSavedLocations (search) error:', e);
+  }
+
+  try {
+    const raw = localStorage.getItem(ALERT_LOCATIONS_KEY);
+    if (raw) {
+      for (const d of JSON.parse(raw) || []) {
+        if (d?.lat != null && d?.lon != null) out.push(d);
+      }
+    }
+  } catch (e) {
+    console.error('readOnMapSavedLocations (alert) error:', e);
+  }
+
+  return out;
+}
+
 export function readLocalLocations() {
   if (typeof window === 'undefined') return [];
   const out = [];

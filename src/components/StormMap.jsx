@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { STATE_GEOJSON } from '../data/stateGeoJSON';
 import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService';
-import { savedLocationAlertsPath } from '../services/locationCatalogService';
+import { savedLocationAlertsPath, resolveMyLocationAlertsLink } from '../services/locationCatalogService';
+import { readStoredSavedLocations } from '../hooks/useSavedLocations';
 import { ABBR_TO_SLUG, STATE_NAMES, US_STATES } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
 import { MapSkeleton } from './Skeletons';
@@ -1209,7 +1210,8 @@ function formatStateLabel(stateCode) {
 const HOVER_CARD_W = 288;
 const STATE_HOVER_CARD_W = 220;
 const HOVER_CARD_H_EST = 220;
-const STATE_HOVER_CARD_H_EST = 140;
+const STATE_HOVER_CARD_H_EST = 155;
+const STATE_POPUP_LINK_CLASS = 'text-sky-600 hover:text-sky-700 hover:underline';
 const HOVER_CARD_PAD = 8;
 const HOVER_CARD_GAP = 14;
 
@@ -1798,7 +1800,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, resolvedLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
   const basemapPreferenceControlled = basemapStyleProp == null;
@@ -1915,6 +1917,23 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     return counts;
   }, [alerts]);
+
+  const [storedLocationsVersion, setStoredLocationsVersion] = useState(0);
+  useEffect(() => {
+    const onStoredLocationsChanged = () => setStoredLocationsVersion((v) => v + 1);
+    window.addEventListener('savedLocationsChanged', onStoredLocationsChanged);
+    return () => window.removeEventListener('savedLocationsChanged', onStoredLocationsChanged);
+  }, []);
+
+  const myLocationLink = useMemo(
+    () => resolveMyLocationAlertsLink({
+      previewLocation,
+      resolvedLocation,
+      userLocations,
+      storedLocations: readStoredSavedLocations(),
+    }),
+    [previewLocation, resolvedLocation, userLocations, storedLocationsVersion],
+  );
 
   // Top-N active Tornado Warnings get the pulsing marker treatment. Capped so
   // paint cost stays bounded during major outbreaks (real-world peak is ~30
@@ -2791,23 +2810,37 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             onMouseEnter={handleStateCardEnter}
             onMouseLeave={handleStateCardLeave}
           >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🗺️</span>
-                <div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                {getStateSlug(hoveredStateCode) ? (
+                  <Link
+                    to={`/alerts/${getStateSlug(hoveredStateCode)}`}
+                    className={`inline-flex items-start gap-1 font-semibold text-sm ${STATE_POPUP_LINK_CLASS}`}
+                    onClick={() => {
+                      trackMapRegionClick(hoveredStateCode, MAP_REGION_SOURCES.STORM_MAP);
+                      setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
+                    }}
+                  >
+                    <span className="text-sm shrink-0" aria-hidden="true">🗺️</span>
+                    <span>{formatStateLabel(hoveredStateCode)}</span>
+                  </Link>
+                ) : (
                   <h4 className="font-semibold text-slate-800 text-sm">
+                    <span className="mr-1" aria-hidden="true">🗺️</span>
                     {formatStateLabel(hoveredStateCode)}
                   </h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {(stateAlertCounts[hoveredStateCode] || 0) === 1
+                )}
+                <p className="text-xs text-slate-500 font-medium mt-0.5 pl-5">
+                  {(stateAlertCounts[hoveredStateCode] || 0) === 0
+                    ? 'No active alerts'
+                    : (stateAlertCounts[hoveredStateCode] || 0) === 1
                       ? '1 active alert'
                       : `${stateAlertCounts[hoveredStateCode] || 0} active alerts`}
-                  </p>
-                </div>
+                </p>
               </div>
               <button
                 onClick={handleStateCardLeave}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2815,20 +2848,29 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               </button>
             </div>
 
-            {getStateSlug(hoveredStateCode) ? (
-              <Link
-                to={`/alerts/${getStateSlug(hoveredStateCode)}`}
-                className="block w-full text-center py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
-                onClick={() => {
-                  trackMapRegionClick(hoveredStateCode, MAP_REGION_SOURCES.STORM_MAP);
-                  setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP);
-                }}
-              >
-                View Alerts
-              </Link>
-            ) : (
-              <p className="text-xs text-slate-500 text-center">No state alerts page available</p>
-            )}
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              {myLocationLink ? (
+                <Link
+                  to={myLocationLink.path}
+                  className={`text-xs font-medium ${STATE_POPUP_LINK_CLASS}`}
+                  onClick={() => setNavSource(NAV_SOURCES.HOMEPAGE_ALERT_POPUP)}
+                >
+                  <span aria-hidden="true">📍 </span>
+                  {myLocationLink.label}
+                </Link>
+              ) : (
+                <Link
+                  to="/#location-search"
+                  className={`text-xs font-medium ${STATE_POPUP_LINK_CLASS}`}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('checkLocationExpand'));
+                  }}
+                >
+                  <span aria-hidden="true">📍 </span>
+                  Check your location
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </div>

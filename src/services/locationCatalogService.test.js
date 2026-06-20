@@ -4,6 +4,7 @@ import {
   parseCityStateLabel,
   CITY_PROMOTION_THRESHOLD,
   savedLocationAlertsPath,
+  resolveMyLocationAlertsLink,
   haversineMiles,
 } from './locationCatalogService.js';
 import { getCitySlugForLocation } from '../utils/cityLookup.js';
@@ -85,5 +86,44 @@ describe('savedLocationAlertsPath', () => {
 
   it('returns null for non-city labels', () => {
     expect(savedLocationAlertsPath({ name: 'Near me (40.01, -105.27)' })).toBeNull();
+  });
+
+  it('derives user-generated city path from City, ST label without stored slug', () => {
+    expect(savedLocationAlertsPath({ name: 'Cypress Lake, FL' })).toBe('/alerts/city/cypress-lake-fl');
+  });
+});
+
+describe('resolveMyLocationAlertsLink', () => {
+  it('prefers resolved GPS/hero location over saved pins', () => {
+    const link = resolveMyLocationAlertsLink({
+      resolvedLocation: { city: 'Cypress Lake', region: 'FL' },
+      userLocations: [{ name: 'Miami, FL' }],
+    });
+    expect(link?.path).toBe('/alerts/city/cypress-lake-fl');
+    expect(link?.label).toBe('Cypress Lake, FL');
+  });
+
+  it('falls back to userLocations when no hero location', () => {
+    const link = resolveMyLocationAlertsLink({
+      userLocations: [{ name: 'Cypress Lake, FL' }],
+    });
+    expect(link?.path).toBe('/alerts/city/cypress-lake-fl');
+    expect(link?.label).toBe('Cypress Lake, FL');
+  });
+
+  it('falls back to storedLocations (device localStorage shape)', () => {
+    const link = resolveMyLocationAlertsLink({
+      userLocations: [],
+      storedLocations: [{ name: 'Cypress Lake, FL', lat: 26.53, lon: -81.75 }],
+    });
+    expect(link?.path).toBe('/alerts/city/cypress-lake-fl');
+    expect(link?.label).toBe('Cypress Lake, FL');
+  });
+
+  it('returns null when no resolvable city label exists', () => {
+    expect(resolveMyLocationAlertsLink({
+      resolvedLocation: { city: 'Near me', region: null },
+      storedLocations: [{ name: 'Near me (40.01, -105.27)' }],
+    })).toBeNull();
   });
 });

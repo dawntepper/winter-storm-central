@@ -1079,6 +1079,7 @@ export default function App() {
               fitConusView
               centerOn={mapCenterOn}
               previewLocation={previewCity}
+              resolvedLocation={hasMapLocalFocus ? heroLocation : null}
               highlightedAlertId={highlightedAlertId}
               selectedAlertId={selectedAlertId}
               selectedStateCode={selectedStateCode}
@@ -1308,6 +1309,7 @@ export default function App() {
                   fitConusView
                   centerOn={mapCenterOn}
                   previewLocation={previewCity}
+                  resolvedLocation={hasMapLocalFocus ? heroLocation : null}
                   highlightedAlertId={highlightedAlertId}
                   selectedAlertId={selectedAlertId}
                   selectedStateCode={selectedStateCode}

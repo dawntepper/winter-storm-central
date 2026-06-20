@@ -242,7 +242,53 @@ export function savedLocationAlertsPath(loc) {
   const richSlug = getCitySlugForLocation(loc?.name);
   if (richSlug) return cityAlertsPath(richSlug, true);
   if (loc?.citySlug) return cityAlertsPath(loc.citySlug, false);
+  const parsed = parseCityStateLabel(loc?.name);
+  if (parsed) {
+    const slug = citySlug(parsed.name, parsed.stateCode);
+    if (slug) return cityAlertsPath(slug, false);
+  }
   return null;
+}
+
+function myLocationLinkLabel(loc) {
+  if (loc?.name && parseCityStateLabel(loc.name)) return loc.name;
+  if (loc?.city && loc?.region) return `${loc.city}, ${loc.region}`;
+  if (loc?.name) return loc.name;
+  return 'My Location';
+}
+
+function firstSavedLocationAlertsLink(locs) {
+  for (const loc of locs) {
+    const path = savedLocationAlertsPath(loc);
+    if (path) return { path, label: myLocationLinkLabel(loc) };
+  }
+  return null;
+}
+
+/**
+ * Resolve the user's city alerts page from known location sources.
+ * Priority: preview pin → GPS/hero label → saved pins (props) → device storage.
+ * Independent of map hover — same path resolution as saved-location name links.
+ *
+ * @returns {{ path: string, label: string } | null}
+ */
+export function resolveMyLocationAlertsLink({
+  previewLocation = null,
+  resolvedLocation = null,
+  userLocations = [],
+  storedLocations = [],
+} = {}) {
+  const candidates = [];
+  if (previewLocation) candidates.push(previewLocation);
+  if (resolvedLocation?.city && resolvedLocation?.region) {
+    candidates.push({ name: `${resolvedLocation.city}, ${resolvedLocation.region}` });
+  } else if (resolvedLocation?.city) {
+    candidates.push({ name: resolvedLocation.city });
+  }
+  if (userLocations?.length) candidates.push(...userLocations);
+
+  return firstSavedLocationAlertsLink(candidates)
+    || firstSavedLocationAlertsLink(storedLocations);
 }
 
 /** Record alert signup demand from a ZIP code (resolves city via Zippopotam). */
