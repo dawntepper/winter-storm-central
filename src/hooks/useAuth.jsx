@@ -86,7 +86,7 @@ function useAuthState() {
 
         if (event === 'SIGNED_IN' && session?.user) {
           markAccountKnown();
-          trackSignIn({ method: session.app_metadata?.provider || 'email' });
+          trackSignIn({ method: session.app_metadata?.provider || 'magic_link' });
           console.log('User signed in:', session?.user?.email);
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
@@ -155,6 +155,32 @@ function useAuthState() {
     }
 
     return { data };
+  }, []);
+
+  /**
+   * Sign in with magic link (passwordless)
+   */
+  const signInWithMagicLink = useCallback(async (email) => {
+    if (!isSupabaseConfigured) {
+      setError('Authentication not configured');
+      return { error: { message: 'Authentication not configured' } };
+    }
+
+    setError(null);
+
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+
+    if (error) {
+      setError(error.message);
+      return { error };
+    }
+
+    return { data, message: 'Check your email for the login link!' };
   }, []);
 
   /**
@@ -230,6 +256,7 @@ function useAuthState() {
     isConfigured: isSupabaseConfigured,
     signUp,
     signIn,
+    signInWithMagicLink,
     signInWithProvider,
     signOut,
     resetPassword

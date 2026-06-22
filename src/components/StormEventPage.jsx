@@ -1290,12 +1290,12 @@ export default function StormEventPage() {
             <AccountMenu
               placement="headerTop"
               showSignedInFallback
-              onSignInClick={() => {
+              onSignInOpen={() => {
                 if (event) {
                   trackStormSignInStarted({
                     stormSlug: event.slug,
                     stormType: event.type,
-                    source: NAV_SOURCES.SIGN_IN_PAGE,
+                    source: NAV_SOURCES.SIGN_IN_MODAL,
                   });
                 }
               }}
