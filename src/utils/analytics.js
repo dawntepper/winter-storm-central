@@ -1269,12 +1269,25 @@ export function trackCityResultClick({ citySlug, stateCode, source }) {
 }
 
 /**
- * Track city name search that did not resolve in the location catalog.
+ * Track ZIP or city search that did not resolve in the location catalog
+ * (valid ZIP / city input, but no coverage yet).
  */
-export function trackLocationSearchNotFound({ query, stateCode }) {
+export function trackLocationSearchNotFound({ query, stateCode, failureReason = 'no_coverage' }) {
   track('Location Search Not Found', {
     query: query || '',
     state: stateCode || 'unknown',
+    failure_reason: failureReason,
+  });
+}
+
+/**
+ * Track garbage ZIP input (bad format or unknown to Zippopotam) — not a failed catalog search.
+ */
+export function trackLocationSearchInvalidZip({ query, stateCode, reason = 'invalid' }) {
+  track('Location Search Invalid ZIP', {
+    query: query || '',
+    state: stateCode || 'unknown',
+    reason,
   });
 }
 

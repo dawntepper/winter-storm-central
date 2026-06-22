@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { lookupZipCoords } from '../services/forecastService';
+import { isValidZipFormat, INVALID_ZIP_MESSAGE } from '../services/zipLookupService';
 import { getCitiesForStateSlug } from '../data/cityCatalog';
 
 /**
@@ -45,8 +46,8 @@ export default function ForecastLocationPicker({
     e.preventDefault();
     setZipError('');
     const zip = zipInput.trim();
-    if (!/^\d{5}$/.test(zip)) {
-      setZipError('Enter a 5-digit ZIP');
+    if (!isValidZipFormat(zip)) {
+      setZipError(INVALID_ZIP_MESSAGE);
       return;
     }
     setZipBusy(true);
@@ -60,7 +61,7 @@ export default function ForecastLocationPicker({
         zip,
       });
     } catch (err) {
-      setZipError(err.message || 'ZIP lookup failed');
+      setZipError(INVALID_ZIP_MESSAGE);
     } finally {
       setZipBusy(false);
     }

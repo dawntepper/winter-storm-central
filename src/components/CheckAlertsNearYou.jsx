@@ -9,10 +9,12 @@ import {
   resolveCityByName,
   trackLocationSearch,
   trackLocationSearchNotFound,
+  trackLocationSearchInvalidZip,
   trackCountyAlertView,
   getStateSlugForCode,
   cityAlertsPath,
 } from '../services/locationCatalogService';
+import { isValidZipFormat, lookupZip, INVALID_ZIP_MESSAGE } from '../services/zipLookupService';
 import {
   trackCountyResultClick,
   trackCityResultClick,
@@ -63,6 +65,7 @@ export function LocationSearchPanel({
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  const [zipNoCoverage, setZipNoCoverage] = useState(null);
   const [result, setResult] = useState(null);
   const [lastMatchType, setLastMatchType] = useState(null);
   const [countyAlerts, setCountyAlerts] = useState([]);
@@ -167,6 +170,7 @@ export function LocationSearchPanel({
   const handleZipSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setZipNoCoverage(null);
     setResult(null);
     setCountyAlerts([]);
     setNearbyCities([]);
@@ -176,20 +180,57 @@ export function LocationSearchPanel({
     closeCityDropdown();
 
     const trimmed = zip.trim();
-    if (!/^\d{5}$/.test(trimmed)) {
-      setError('Enter a valid 5-digit ZIP code');
+    if (!isValidZipFormat(trimmed)) {
+      setError(INVALID_ZIP_MESSAGE);
+      await trackLocationSearchInvalidZip({
+        query: trimmed,
+        stateCode,
+        pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP,
+        reason: 'format',
+      });
       return;
     }
 
     setSearching(true);
     try {
+      const zipPlace = await lookupZip(trimmed);
+      if (!zipPlace) {
+        setError(INVALID_ZIP_MESSAGE);
+        await trackLocationSearchInvalidZip({
+          query: trimmed,
+          stateCode,
+          pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP,
+          reason: 'unknown',
+        });
+        return;
+      }
+
       const resolved = await resolveLocationSearch(trimmed, stateCode);
+      if (resolved.failureType === 'invalid_zip') {
+        setError(INVALID_ZIP_MESSAGE);
+        await trackLocationSearchInvalidZip({
+          query: trimmed,
+          stateCode,
+          pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP,
+          reason: 'unknown',
+        });
+        return;
+      }
+
       if (resolved.error || !resolved.county) {
-        setError(resolved.error || 'Could not resolve ZIP to a county');
+        const place = resolved.zipPlace || zipPlace;
+        const displayName = `${place.city}, ${place.stateAbbr}`;
+        const stateSlugForLink = getStateSlugForCode(place.stateAbbr);
+        setZipNoCoverage({
+          displayName,
+          statePath: stateSlugForLink ? `/alerts/${stateSlugForLink}` : null,
+        });
+        setError(resolved.error || `No coverage yet for ${displayName}`);
         await trackLocationSearchNotFound({
           query: trimmed,
           stateCode,
           pageContext: FORECAST_SOURCE_PAGES.STATE_SEARCH_ZIP,
+          zipPlace: place,
         });
         return;
       }
@@ -269,6 +310,7 @@ export function LocationSearchPanel({
     setZip('');
     setSelectedCountyId('');
     setError('');
+    setZipNoCoverage(null);
     setResult(null);
     setCountyAlerts([]);
     setNearbyCities([]);
@@ -508,6 +550,13 @@ export function LocationSearchPanel({
         )}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
+        {zipNoCoverage?.statePath && (
+          <p className="text-sm text-amber-300/90">
+            <Link to={zipNoCoverage.statePath} className="text-sky-400 hover:text-sky-300 underline">
+              View {stateName} alerts instead
+            </Link>
+          </p>
+        )}
       </div>
 
       {result?.county && (

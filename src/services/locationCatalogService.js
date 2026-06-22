@@ -93,7 +93,13 @@ import {
   trackLocationSearchSuccess,
   trackCountyAlertView as trackCountyAlertViewEvent,
   trackLocationSearchNotFound as trackLocationSearchNotFoundEvent,
+  trackLocationSearchInvalidZip as trackLocationSearchInvalidZipEvent,
 } from '../utils/analytics';
+import {
+  isValidZipFormat,
+  lookupZip,
+  INVALID_ZIP_MESSAGE,
+} from './zipLookupService';
 
 /** Optional signed-in user id for analytics rows (null for anonymous). */
 async function getOptionalUserId() {
@@ -293,18 +299,13 @@ export function resolveMyLocationAlertsLink({
 
 /** Record alert signup demand from a ZIP code (resolves city via Zippopotam). */
 export async function recordAlertRequestDemandFromZip(zip) {
-  if (!/^\d{5}$/.test(String(zip || ''))) return;
+  if (!isValidZipFormat(zip)) return;
   try {
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    const place = data?.places?.[0];
-    const cityName = place?.['place name'];
-    const stateCode = place?.['state abbreviation'];
-    if (!cityName || !stateCode) return;
+    const place = await lookupZip(zip);
+    if (!place?.city || !place?.stateAbbr) return;
     await recordCityDemandIfUncataloged({
-      cityName,
-      stateCode,
+      cityName: place.city,
+      stateCode: place.stateAbbr,
       source: 'alert_request',
     });
   } catch (err) {
@@ -575,7 +576,7 @@ async function fetchPrimaryCountyForCity(cityId) {
   return mapCounty(primary?.counties);
 }
 
-async function lookupZip(zip, stateContext) {
+async function lookupZipInCatalog(zip, stateContext) {
   if (!supabase) return null;
   let q = supabase
     .from('zip_locations')
@@ -616,23 +617,17 @@ async function lookupZip(zip, stateContext) {
 }
 
 /** Zippopotam.us fallback when ZIP is not in zip_locations (~82 seeded ZIPs). */
-async function lookupZipExternal(zip, stateContext) {
+async function lookupZipExternal(zip, stateContext, zipPlace = null) {
   try {
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const place = data?.places?.[0];
+    const place = zipPlace || await lookupZip(zip);
     if (!place) return null;
 
-    const lat = parseFloat(place.latitude);
-    const lon = parseFloat(place.longitude);
-    const stateAbbr = String(place['state abbreviation'] || '').toUpperCase();
+    const { lat, lon, city: cityName, stateAbbr } = place;
     const st = normalizeStateCode(stateContext);
     if (st && stateAbbr && stateAbbr !== st) {
-      return { mismatch: true, actualState: stateAbbr };
+      return { mismatch: true, actualState: stateAbbr, zipPlace: place };
     }
 
-    const cityName = place['place name'];
     let city = cityName && stateAbbr ? await lookupCity(cityName, stateAbbr) : null;
     if (!city && cityName && stateAbbr && Number.isFinite(lat) && Number.isFinite(lon)) {
       city = await ensureUserGeneratedCity({
@@ -647,11 +642,99 @@ async function lookupZipExternal(zip, stateContext) {
     }
     const county = await ensureCounty({ city, county: null, lat, lon });
 
-    return { zip, city, county, lat, lon, matchType: 'zip' };
+    return { zip, city, county, lat, lon, matchType: 'zip', zipPlace: place };
   } catch (err) {
     console.warn('lookupZipExternal:', err.message);
     return null;
   }
+}
+
+/**
+ * Resolve alert-page coverage for a validated ZIP (city/county/state paths).
+ * @returns {Promise<{
+ *   valid: boolean,
+ *   failureType?: 'invalid_zip' | 'no_coverage',
+ *   zip?: string,
+ *   city?: string,
+ *   stateAbbr?: string,
+ *   displayName?: string,
+ *   cityPath?: string | null,
+ *   countyPath?: string | null,
+ *   statePath?: string | null,
+ *   hasCoverage?: boolean,
+ *   lat?: number,
+ *   lon?: number,
+ * }>}
+ */
+export async function resolveZipAlertCoverage(zip, stateContext = null) {
+  const trimmed = String(zip || '').trim();
+  if (!isValidZipFormat(trimmed)) {
+    return { valid: false, failureType: 'invalid_zip' };
+  }
+
+  const zipPlace = await lookupZip(trimmed);
+  if (!zipPlace) {
+    return { valid: false, failureType: 'invalid_zip' };
+  }
+
+  const stateSlug = getStateSlugForCode(zipPlace.stateAbbr);
+  const statePath = stateSlug ? `/alerts/${stateSlug}` : null;
+  const displayName = `${zipPlace.city}, ${zipPlace.stateAbbr}`;
+
+  const richSlug = getCitySlugForLocation(displayName);
+  let cityPath = richSlug ? cityPagePath(richSlug, true) : null;
+  let countyPath = null;
+
+  let zipResult = await lookupZipInCatalog(trimmed, stateContext);
+  if (!zipResult) {
+    zipResult = await lookupZipExternal(trimmed, stateContext, zipPlace);
+  }
+
+  if (zipResult?.mismatch) {
+    return {
+      valid: true,
+      failureType: 'no_coverage',
+      zip: trimmed,
+      city: zipPlace.city,
+      stateAbbr: zipPlace.stateAbbr,
+      displayName,
+      cityPath,
+      countyPath,
+      statePath,
+      hasCoverage: false,
+      lat: zipPlace.lat,
+      lon: zipPlace.lon,
+    };
+  }
+
+  const city = zipResult?.city;
+  const county = zipResult?.county;
+
+  if (!cityPath && city) {
+    cityPath = cityPagePath(city.slug, city.hasStaticPage);
+  }
+  if (county?.slug) {
+    countyPath = `/alerts/county/${county.slug}`;
+  }
+
+  const hasCoverage = Boolean(cityPath || countyPath);
+
+  return {
+    valid: true,
+    failureType: hasCoverage ? null : 'no_coverage',
+    zip: trimmed,
+    city: city?.name || zipPlace.city,
+    stateAbbr: zipPlace.stateAbbr,
+    displayName,
+    cityPath,
+    countyPath,
+    statePath,
+    hasCoverage,
+    lat: zipPlace.lat,
+    lon: zipPlace.lon,
+    catalogCity: city || null,
+    catalogCounty: county || null,
+  };
 }
 
 async function lookupCity(name, stateCode) {
@@ -743,24 +826,43 @@ export async function resolveLocationSearch(query, stateContext) {
 
   const stateCode = normalizeStateCode(stateContext);
 
-  // 5-digit ZIP
+  // 5-digit ZIP — validate format + Zippopotam before catalog resolution
   if (/^\d{5}$/.test(trimmed)) {
-    let zipResult = await lookupZip(trimmed, stateCode);
-    if (!zipResult) zipResult = await lookupZipExternal(trimmed, stateCode);
+    if (!isValidZipFormat(trimmed)) {
+      return { ...empty, error: INVALID_ZIP_MESSAGE, failureType: 'invalid_zip' };
+    }
+
+    const zipPlace = await lookupZip(trimmed);
+    if (!zipPlace) {
+      return { ...empty, error: INVALID_ZIP_MESSAGE, failureType: 'invalid_zip' };
+    }
+
+    let zipResult = await lookupZipInCatalog(trimmed, stateCode);
+    if (!zipResult) zipResult = await lookupZipExternal(trimmed, stateCode, zipPlace);
     if (zipResult?.mismatch) {
       return {
         ...empty,
         error: `ZIP ${trimmed} is in ${zipResult.actualState}, not ${stateCode}`,
+        failureType: 'no_coverage',
+        zipPlace,
       };
     }
     if (!zipResult) {
-      const hint = stateCode
-        ? `ZIP ${trimmed} not found in ${stateCode}`
-        : `ZIP ${trimmed} not found`;
-      return { ...empty, error: hint };
+      return {
+        ...empty,
+        error: `No coverage yet for ${zipPlace.city}, ${zipPlace.stateAbbr}`,
+        failureType: 'no_coverage',
+        zipPlace,
+      };
     }
     if (!zipResult.county) {
-      return { ...empty, error: `ZIP ${trimmed} found but county could not be resolved` };
+      return {
+        ...empty,
+        error: `No coverage yet for ${zipPlace.city}, ${zipPlace.stateAbbr}`,
+        failureType: 'no_coverage',
+        zipPlace,
+        city: zipResult.city,
+      };
     }
     return {
       query: trimmed,
@@ -769,6 +871,7 @@ export async function resolveLocationSearch(query, stateContext) {
       county: zipResult.county,
       zip: zipResult.zip,
       error: null,
+      zipPlace,
     };
   }
 
@@ -1235,15 +1338,38 @@ export async function trackLocationSearch(event) {
 }
 
 /**
- * Persist failed location search (city, ZIP, or county) + Plausible event.
+ * Persist invalid ZIP search (bad format or unknown ZIP) + Plausible event.
+ * Does not count as a failed catalog search.
  */
-export async function trackLocationSearchNotFound({ query, stateCode, pageContext }) {
+export async function trackLocationSearchInvalidZip({ query, stateCode, pageContext, reason = 'invalid' }) {
+  trackLocationSearchInvalidZipEvent({ query, stateCode, reason });
+
+  await trackLocationSearch({
+    query,
+    matchType: 'invalid_zip',
+    stateCode,
+    pageContext,
+    resultCount: 0,
+    success: false,
+    resolvedType: 'invalid_zip',
+  });
+}
+
+/**
+ * Persist failed location search (valid ZIP/city but no catalog coverage) + Plausible event.
+ */
+export async function trackLocationSearchNotFound({ query, stateCode, pageContext, zipPlace = null }) {
   trackLocationSearchNotFoundEvent({
     query,
-    stateCode,
+    stateCode: stateCode || zipPlace?.stateAbbr || null,
+    failureReason: 'no_coverage',
   });
 
-  const parsed = parseCityStateLabel(query) || (stateCode ? { name: query, stateCode } : null);
+  const parsed = parseCityStateLabel(query)
+    || (zipPlace?.city && zipPlace?.stateAbbr
+      ? { name: zipPlace.city, stateCode: zipPlace.stateAbbr }
+      : null)
+    || (stateCode ? { name: query, stateCode } : null);
   if (parsed?.name && parsed?.stateCode) {
     await recordCityDemandIfUncataloged({
       cityName: parsed.name,
@@ -1255,11 +1381,11 @@ export async function trackLocationSearchNotFound({ query, stateCode, pageContex
   await trackLocationSearch({
     query,
     matchType: 'not_found',
-    stateCode,
+    stateCode: stateCode || zipPlace?.stateAbbr || null,
     pageContext,
     resultCount: 0,
     success: false,
-    resolvedType: 'not_found',
+    resolvedType: 'no_coverage',
   });
 }
 

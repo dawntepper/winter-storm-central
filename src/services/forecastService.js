@@ -91,28 +91,25 @@ export async function getForecastForCoords(lat, lon) {
   return data;
 }
 
+import { lookupZip, isValidZipFormat } from './zipLookupService';
+
 /**
- * Free Zippopotam.us lookup — same endpoint used by ZipCodeSearch.
+ * Free Zippopotam.us lookup — delegates to zipLookupService (shared session cache).
  * Returns { lat, lon, place, state, stateAbbr } or throws on lookup failure.
  */
 export async function lookupZipCoords(zip) {
-  if (!/^\d{5}$/.test(zip)) {
+  if (!isValidZipFormat(zip)) {
     throw new Error('ZIP must be exactly 5 digits');
   }
-  const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
-  if (!response.ok) {
-    throw new Error(`ZIP not found (${response.status})`);
-  }
-  const data = await response.json();
-  const place = data.places?.[0];
-  if (!place) {
-    throw new Error('ZIP returned no places');
+  const result = await lookupZip(zip);
+  if (!result) {
+    throw new Error('ZIP not found');
   }
   return {
-    lat: parseFloat(place.latitude),
-    lon: parseFloat(place.longitude),
-    place: place['place name'],
-    state: place.state,
-    stateAbbr: place['state abbreviation'],
+    lat: result.lat,
+    lon: result.lon,
+    place: result.city,
+    state: result.state,
+    stateAbbr: result.stateAbbr,
   };
 }

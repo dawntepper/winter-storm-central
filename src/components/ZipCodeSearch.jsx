@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { trackLocationAdded, trackLocationRemoved, trackGeolocationUsed, SAVE_TRIGGERS } from '../utils/analytics';
 import { STATE_NAMES } from '../data/stateConfig';
 import {
@@ -6,8 +7,11 @@ import {
   resolveCityByName,
   trackLocationSearch,
   trackLocationSearchNotFound,
+  trackLocationSearchInvalidZip,
   ensureCityFromSavedLocation,
+  resolveZipAlertCoverage,
 } from '../services/locationCatalogService';
+import { isValidZipFormat, lookupZip, INVALID_ZIP_MESSAGE } from '../services/zipLookupService';
 import { reverseGeocode } from '../services/geoLocationService';
 import { getForecastIcon } from '../utils/getForecastIcon';
 import { filterCatalogByPrefix } from '../utils/catalogFilter';
@@ -23,34 +27,6 @@ function locationSearchPageContext(variant) {
     return 'radar';
   }
   return 'homepage';
-}
-
-
-// Fetch coordinates from zip code using Zippopotam.us (free, CORS-friendly)
-async function getCoordinatesFromZip(zip) {
-  const url = `https://api.zippopotam.us/us/${zip}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Zip code not found');
-    }
-    throw new Error('Geocoding service unavailable');
-  }
-
-  const data = await response.json();
-  const place = data.places?.[0];
-
-  if (!place) {
-    throw new Error('Zip code not found');
-  }
-
-  return {
-    lat: parseFloat(place.latitude),
-    lon: parseFloat(place.longitude),
-    name: `${place['place name']}, ${place['state abbreviation']}`,
-    zip
-  };
 }
 
 // Fetch weather data for coordinates (same logic as useWeatherData)
@@ -288,6 +264,7 @@ export default function ZipCodeSearch({
   const [searchMode, setSearchMode] = useState('zip'); // 'city' or 'zip' — zip is the default so users can find their location fastest; URL initial location handlers below override based on the incoming type ('zip' / 'search')
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [zipCoverage, setZipCoverage] = useState(null);
   const [currentLocationData, setCurrentLocationData] = useState(null);
   const [isCardDismissed, setIsCardDismissed] = useState(false);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -461,41 +438,80 @@ export default function ZipCodeSearch({
   const fetchLocationWeather = async (zipCode) => {
     setLoading(true);
     setError(null);
+    setZipCoverage(null);
     setIsCardDismissed(false);
 
+    const pageContext = locationSearchPageContext(variant);
+
+    if (!isValidZipFormat(zipCode)) {
+      setError(INVALID_ZIP_MESSAGE);
+      await trackLocationSearchInvalidZip({
+        query: zipCode,
+        stateCode: selectedState || null,
+        pageContext,
+        reason: 'format',
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log('Looking up zip code:', zipCode);
-      const coords = await getCoordinatesFromZip(zipCode);
-      console.log('Got coordinates:', coords);
-      const weather = await fetchWeatherForLocation(coords.lat, coords.lon, coords.name, zipCode);
+      const zipPlace = await lookupZip(zipCode);
+      if (!zipPlace) {
+        setError(INVALID_ZIP_MESSAGE);
+        await trackLocationSearchInvalidZip({
+          query: zipCode,
+          stateCode: selectedState || null,
+          pageContext,
+          reason: 'unknown',
+        });
+        return;
+      }
+
+      const coverage = await resolveZipAlertCoverage(zipCode);
+      setZipCoverage(coverage.valid ? coverage : null);
+
+      const locationName = `${zipPlace.city}, ${zipPlace.stateAbbr}`;
+      console.log('Looking up zip code:', zipCode, locationName);
+
+      const weather = await fetchWeatherForLocation(
+        zipPlace.lat,
+        zipPlace.lon,
+        locationName,
+        zipCode,
+      );
       console.log('Got weather data:', weather);
 
       setCurrentLocationData(weather);
 
       if (onLocationClick) onLocationClick(weather);
-      const zipParts = weather.name?.split(', ');
-      if (zipParts?.length >= 2) {
-        onLocationResolved?.({ city: zipParts[0], region: zipParts[1] });
-        onResolveState?.(zipParts[1]);
+      onLocationResolved?.({ city: zipPlace.city, region: zipPlace.stateAbbr });
+      onResolveState?.(zipPlace.stateAbbr);
+
+      if (coverage.valid && !coverage.hasCoverage) {
+        await trackLocationSearchNotFound({
+          query: zipCode,
+          stateCode: zipPlace.stateAbbr,
+          pageContext,
+          zipPlace,
+        });
       }
 
       await trackLocationSearch({
         query: zipCode,
         matchType: 'zip',
-        stateCode: zipParts?.[1] || null,
+        stateCode: zipPlace.stateAbbr,
         zipCode,
-        pageContext: locationSearchPageContext(variant),
+        pageContext,
         success: true,
         resolvedType: 'zip',
       });
 
-      // Check if this zip already exists in saved locations
       const existingLocation = savedLocations[zipCode];
       if (existingLocation) {
-        // Update the data but keep the onMap setting
         const newLocations = {
           ...savedLocations,
-          [zipCode]: { ...existingLocation, data: weather }
+          [zipCode]: { ...existingLocation, data: weather },
         };
         updateSavedLocations(newLocations);
       }
@@ -503,11 +519,6 @@ export default function ZipCodeSearch({
       console.error('Zip code search error:', err);
       setError(err.message || 'Failed to fetch weather data');
       setCurrentLocationData(null);
-      await trackLocationSearchNotFound({
-        query: zipCode,
-        stateCode: selectedState || null,
-        pageContext: locationSearchPageContext(variant),
-      });
     } finally {
       setLoading(false);
     }
@@ -570,8 +581,9 @@ export default function ZipCodeSearch({
     e.preventDefault();
     const cleanZip = zip.trim();
 
-    if (!/^\d{5}$/.test(cleanZip)) {
-      setError('Please enter a valid 5-digit zip code');
+    if (!isValidZipFormat(cleanZip)) {
+      setError(INVALID_ZIP_MESSAGE);
+      setZipCoverage(null);
       return;
     }
 
@@ -860,6 +872,28 @@ export default function ZipCodeSearch({
     ? `${fieldClass} placeholder-slate-500`
     : `flex-1 ${fieldClass} placeholder-slate-500`;
 
+  const zipCoverageMessage = zipCoverage?.valid && !zipCoverage.hasCoverage ? (
+    <p className="text-xs text-amber-300/90 mt-2">
+      No coverage yet for {zipCoverage.displayName}.{' '}
+      {zipCoverage.statePath ? (
+        <Link to={zipCoverage.statePath} className="text-sky-400 hover:text-sky-300 underline">
+          View {STATE_NAMES[zipCoverage.stateAbbr] || zipCoverage.stateAbbr} alerts
+        </Link>
+      ) : null}
+    </p>
+  ) : null;
+
+  const zipCoverageLink = zipCoverage?.valid && zipCoverage.hasCoverage ? (
+    <p className="text-xs mt-2">
+      <Link
+        to={zipCoverage.cityPath || zipCoverage.countyPath}
+        className="text-sky-400 hover:text-sky-300 underline"
+      >
+        View alerts for {zipCoverage.displayName} →
+      </Link>
+    </p>
+  ) : null;
+
   const locationResult = currentLocationData && !isCardDismissed ? (
     <div className={isCompact ? 'mt-2 pt-2 border-t border-slate-700/50' : 'mt-3 pt-3 border-t border-slate-700/50'}>
       <div className="flex items-center gap-3 overflow-x-auto">
@@ -1050,7 +1084,11 @@ export default function ZipCodeSearch({
             <input
               type="text"
               value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              onChange={(e) => {
+                setZip(e.target.value.replace(/\D/g, '').slice(0, 5));
+                setError(null);
+                setZipCoverage(null);
+              }}
               placeholder="Enter zip code"
               className={`${isCompact ? 'w-28 sm:w-32' : 'flex-1'} ${inputClass}`}
               maxLength={5}
@@ -1090,6 +1128,8 @@ export default function ZipCodeSearch({
       {error && (
         <p className="text-red-400 text-xs mt-2">{error}</p>
       )}
+      {zipCoverageMessage}
+      {zipCoverageLink}
       {locationResult}
     </>
   );
