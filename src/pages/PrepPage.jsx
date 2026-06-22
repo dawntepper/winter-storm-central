@@ -8,6 +8,7 @@ import {
 } from '../data/affiliateProducts';
 import ProductCard from '../components/ProductCard';
 import ContactLink from '../components/ContactLink';
+import { FooterLinks } from '../components/SiteFooter';
 import { trackAlertSignup, trackAlertSignupError } from '../utils/analytics';
 import { recordAlertRequestDemandFromZip } from '../services/locationCatalogService';
 
@@ -385,6 +386,9 @@ export default function PrepPage() {
             Showing {AFFILIATE_PRODUCTS.length} products across {AFFILIATE_CATEGORIES.length} categories.
             Last updated {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
           </p>
+          <div className="mt-6">
+            <FooterLinks />
+          </div>
         </div>
       </footer>
     </div>

@@ -13,13 +13,12 @@ import AlertTimeline from './components/AlertTimeline';
 import StateHeatmap from './components/StateHeatmap';
 import MostImpactedStates from './components/MostImpactedStates';
 import LiveAlertsWidget from './components/LiveAlertsWidget';
-import ContactLink from './components/ContactLink';
+import { FooterLinks } from './components/SiteFooter';
 import AlertSignupBar from './components/AlertSignupBar';
 import EssentialsCard from './components/EssentialsCard';
 import PushNotificationCard from './components/PushNotificationCard';
 import NearMeHeader from './components/NearMeHeader';
 import { useSavedLocations } from './hooks/useSavedLocations';
-import SignInModal from './components/auth/SignInModal';
 import { Skeleton } from './components/Skeletons';
 import { fetchCurrentConditions } from './utils/fetchCurrentConditions';
 import { fetchCountyGeoJSON } from './services/geoLocationService';
@@ -301,6 +300,9 @@ function StormEventBanner() {
 export default function App() {
 
   const navigate = useNavigate();
+  const goToSignIn = useCallback(() => {
+    navigate('/sign-in');
+  }, [navigate]);
   const [searchLocations, setSearchLocations] = useState([]); // From ZipCodeSearch
   const [alertLocations, setAlertLocations] = useState(() => {
     // Hydrate alert-pin locations from localStorage so they survive a refresh.
@@ -332,7 +334,6 @@ export default function App() {
   const saved = useSavedLocations();
   const [saveToast, setSaveToast] = useState(null);       // "Added to map" confirmation
   const [showSyncCta, setShowSyncCta] = useState(false);  // gentle, dismissible "sign in to sync" CTA
-  const [showSignIn, setShowSignIn] = useState(false);
   const prevLocCountRef = useRef(null);
   const syncCtaShownRef = useRef(false);
   const toastReadyRef = useRef(false); // suppress toasts during initial hydration
@@ -1237,10 +1238,10 @@ export default function App() {
                       <div className="mt-1 text-center">
                         <p className="text-[11px] text-slate-500">Save your locations across devices.</p>
                         <button
-                          onClick={() => setShowSignIn(true)}
+                          onClick={goToSignIn}
                           className="text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
                         >
-                          Sign in with email
+                          Sign in
                         </button>
                       </div>
                     ) : (
@@ -1482,10 +1483,10 @@ export default function App() {
                       <div className="mt-1 text-center">
                         <p className="text-[11px] text-slate-500">Save your locations across devices.</p>
                         <button
-                          onClick={() => setShowSignIn(true)}
+                          onClick={goToSignIn}
                           className="text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer"
                         >
-                          Sign in with email
+                          Sign in
                         </button>
                       </div>
                     ) : (
@@ -1563,14 +1564,7 @@ export default function App() {
 
         {/* Footer */}
         <footer className="text-center py-6 border-t border-slate-800 space-y-6">
-          {/* Footer Links */}
-          <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
-            <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
-            <span className="text-slate-600">|</span>
-            <ContactLink className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</ContactLink>
-            <span className="text-slate-600">|</span>
-            <a href="https://status.stormtracking.io" className="text-slate-400 hover:text-sky-400 transition-colors">Status</a>
-          </div>
+          <FooterLinks />
 
           {/* SEO Content */}
           <section className="max-w-3xl mx-auto px-4">
@@ -1622,10 +1616,10 @@ export default function App() {
             <p className="text-sm text-slate-300 mb-3">Save your locations across devices.</p>
             <div className="flex gap-2">
               <button
-                onClick={() => { setShowSyncCta(false); setShowSignIn(true); }}
+                onClick={() => { setShowSyncCta(false); goToSignIn(); }}
                 className="flex-1 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold cursor-pointer transition-colors"
               >
-                Sign in with email
+                Sign in
               </button>
               <button
                 onClick={() => setShowSyncCta(false)}
@@ -1637,8 +1631,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
     </div>
   );

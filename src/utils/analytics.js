@@ -1135,13 +1135,12 @@ export function trackAlertSignupError(error) {
 // ============================================
 
 /**
- * Track first-time signup intent: magic link requested from the "Create account"
- * path (no prior completed sign-in on this device). Does not fire for returning
- * users requesting another magic link. Distinct from Alert Signup.
+ * Track first-time signup intent from the "Create account" path
+ * (no prior completed sign-in on this device). Distinct from Alert Signup.
  *
  * @param {{ authMethod?: string }} params
  */
-export function trackSignUpFormSubmitted({ authMethod = 'magic_link' } = {}) {
+export function trackSignUpFormSubmitted({ authMethod = 'password' } = {}) {
   track('Sign Up Form Submitted', { auth_method: authMethod });
 }
 
@@ -1351,6 +1350,7 @@ export const NAV_SOURCES = {
 
   // Auth / onboarding
   SIGN_IN_MODAL: 'sign_in_modal',
+  SIGN_IN_PAGE: 'sign_in_page',
 
   // Generic
   HEADER_NAVIGATION: 'header_navigation',
@@ -1523,7 +1523,7 @@ export function trackLocationChange({ source, stateCode, metadata } = {}) {
 }
 
 /**
- * Completed sign-in (magic link, OAuth, or password).
+ * Completed sign-in (OAuth or password).
  */
 export function trackSignIn({ method } = {}) {
   const recorded = recordProductEvent(PRODUCT_EVENTS.SIGN_IN, {

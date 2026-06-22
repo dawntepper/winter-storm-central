@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { finalizeAuthFromUrl } from '../../lib/finalizeAuthFromUrl';
+import { getReturnPathFromSearch } from '../../lib/authRedirect';
 
 /**
- * Magic-link return target (/auth/callback).
+ * OAuth and email-confirmation return target (/auth/callback).
  *
  * Session finalization also runs globally in useAuth (any route) so misrouted
  * redirects to / still work. This page provides loading UX and error guidance.
@@ -23,12 +24,14 @@ export default function AuthCallback() {
         return;
       }
 
+      const returnPath = getReturnPathFromSearch(new URLSearchParams(window.location.search));
+
       const { handled, session, error } = await finalizeAuthFromUrl();
 
       if (!handled) {
         const { data: { session: existing } } = await supabase.auth.getSession();
         if (existing) {
-          if (!cancelled) navigate('/', { replace: true });
+          if (!cancelled) navigate(returnPath, { replace: true });
           return;
         }
         if (!cancelled) {
@@ -46,7 +49,7 @@ export default function AuthCallback() {
         return;
       }
 
-      if (!cancelled) navigate('/', { replace: true });
+      if (!cancelled) navigate(returnPath, { replace: true });
     }
 
     finish();
@@ -66,8 +69,14 @@ export default function AuthCallback() {
             Tip: open the link on the same device and browser where you requested it.
           </p>
           <button
-            onClick={() => navigate('/', { replace: true })}
+            onClick={() => navigate('/sign-in', { replace: true })}
             className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold cursor-pointer transition-colors"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            className="mt-2 px-4 py-2 text-sm text-slate-400 hover:text-slate-200 cursor-pointer transition-colors"
           >
             Back to weather
           </button>

@@ -14,6 +14,7 @@ import StormMap from '../components/StormMap';
 import PageHeaderNav from '../components/PageHeaderNav';
 import PageBackNav from '../components/PageBackNav';
 import ContactLink from '../components/ContactLink';
+import { FooterLinks } from '../components/SiteFooter';
 import { trackForecastPageView, trackForecastLocationChanged, trackRadarLinkClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 const PENDING_GEO_KEY = 'forecast_pending_geo';
@@ -348,11 +349,14 @@ export default function ForecastPage() {
           </>
         )}
 
-        <footer className="pt-4 text-xs text-slate-500 text-center">
-          Forecast data from the National Weather Service (api.weather.gov). Updates ~hourly. For severe weather, always defer to{' '}
-          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>{' '}
-          and local emergency management. Questions? Reach{' '}
-          <ContactLink className="text-sky-400 hover:text-sky-300">StormTracking Support</ContactLink>.
+        <footer className="pt-4 text-xs text-slate-500 text-center space-y-4">
+          <p>
+            Forecast data from the National Weather Service (api.weather.gov). Updates ~hourly. For severe weather, always defer to{' '}
+            <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>{' '}
+            and local emergency management. Questions? Reach{' '}
+            <ContactLink className="text-sky-400 hover:text-sky-300">StormTracking Support</ContactLink>.
+          </p>
+          <FooterLinks />
         </footer>
       </main>
     </div>

@@ -23,7 +23,7 @@ const STATE_SLUGS = [
   'district-of-columbia', 'puerto-rico', 'us-virgin-islands', 'guam', 'american-samoa',
 ];
 
-const CORE_ROUTES = ['/', '/radar', '/alerts', '/prep', '/add-to-home'];
+const CORE_ROUTES = ['/', '/radar', '/alerts', '/prep', '/add-to-home', '/privacy', '/terms'];
 
 function loadCities() {
   if (!fs.existsSync(CITIES_DIR)) return [];
@@ -128,6 +128,8 @@ ${urlEntry(`${BASE_URL}/radar`, { lastmod: now, changefreq: 'daily', priority: '
 ${urlEntry(`${BASE_URL}/alerts`, { lastmod: now, changefreq: 'hourly', priority: '0.8' })}
 ${urlEntry(`${BASE_URL}/prep`, { lastmod: now, changefreq: 'weekly', priority: '0.9' })}
 ${urlEntry(`${BASE_URL}/add-to-home`, { lastmod: now, changefreq: 'monthly', priority: '0.5' })}
+${urlEntry(`${BASE_URL}/privacy`, { lastmod: now, changefreq: 'yearly', priority: '0.3' })}
+${urlEntry(`${BASE_URL}/terms`, { lastmod: now, changefreq: 'yearly', priority: '0.3' })}
 ${stateUrls}
 ${forecastUrls}
 ${cityUrls}

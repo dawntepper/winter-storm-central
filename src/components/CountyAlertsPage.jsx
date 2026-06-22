@@ -18,6 +18,7 @@ import { fetchCountyHighlight } from '../services/geoLocationService';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { US_STATES } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
+import SiteFooter from './SiteFooter';
 import PageHeaderNav from './PageHeaderNav';
 import StormMap from './StormMap';
 import AlertDetailModal from './AlertDetailModal';
@@ -258,12 +259,7 @@ export default function CountyAlertsPage() {
         </div>
       </main>
 
-      <footer className="text-center py-6 border-t border-slate-800 px-4">
-        <p className="text-slate-500 text-xs max-w-2xl mx-auto">
-          <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Always verify with official sources at{' '}
-          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>.
-        </p>
-      </footer>
+      <SiteFooter />
 
       <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
     </div>

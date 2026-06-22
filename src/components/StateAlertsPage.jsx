@@ -23,6 +23,7 @@ import StateFindLocalWeather from './state/StateFindLocalWeather';
 import PopularLocations from './state/PopularLocations';
 import StateCountyBrowse from './state/StateCountyBrowse';
 import RelatedWeatherLinks from './state/RelatedWeatherLinks';
+import SiteFooter from './SiteFooter';
 
 // Hurricane/Gulf Coast states surface the Florida-style variant; Tornado Alley
 // states get the tornado variant. TX gets its own variant. All other states
@@ -462,14 +463,7 @@ export default function StateAlertsPage() {
         />
       </main>
 
-      {/* Footer */}
-      <footer className="text-center py-6 border-t border-slate-800 px-4">
-        <p className="text-slate-500 text-xs max-w-2xl mx-auto">
-          <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
-          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-          {' '}and follow local emergency management guidance.
-        </p>
-      </footer>
+      <SiteFooter />
 
       {/* Alert Detail Modal */}
       <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />

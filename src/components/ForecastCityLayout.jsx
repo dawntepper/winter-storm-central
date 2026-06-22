@@ -11,6 +11,7 @@ import StormMap from './StormMap';
 import PageHeaderNav from './PageHeaderNav';
 import PageBackNav from './PageBackNav';
 import ContactLink from './ContactLink';
+import { FooterLinks } from './SiteFooter';
 import CityActiveAlertBanner from './city/CityActiveAlertBanner';
 import CityPageAlertStatus from './city/CityPageAlertStatus';
 import CityAlertsSection from './city/CityAlertsSection';
@@ -371,15 +372,16 @@ export default function ForecastCityLayout({
 
         {extras}
 
-        <footer className="pt-4 text-xs text-slate-500 text-center">
+        <footer className="pt-4 text-xs text-slate-500 text-center space-y-4">
           {footerNote || (
-            <>
+            <p>
               Forecast data from the National Weather Service (api.weather.gov). Updates ~hourly. For severe weather, always defer to{' '}
               <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>{' '}
               and local emergency management. Questions? Reach{' '}
               <ContactLink className="text-sky-400 hover:text-sky-300">StormTracking Support</ContactLink>.
-            </>
+            </p>
           )}
+          <FooterLinks />
         </footer>
       </main>
     </div>

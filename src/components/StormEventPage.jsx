@@ -18,6 +18,7 @@ import { ALERT_CATEGORIES, CATEGORY_ORDER } from '../services/noaaAlertsService'
 import { STATE_CENTROIDS } from '../data/stateCentroids';
 import { STATE_NAMES, US_STATES } from '../data/stateConfig';
 import { setHomepageMetaTags } from '../data/homepageMeta';
+import SiteFooter from './SiteFooter';
 import {
   trackStormPageView,
   trackStormAlertExpanded,
@@ -1289,12 +1290,12 @@ export default function StormEventPage() {
             <AccountMenu
               placement="headerTop"
               showSignedInFallback
-              onSignInOpen={() => {
+              onSignInClick={() => {
                 if (event) {
                   trackStormSignInStarted({
                     stormSlug: event.slug,
                     stormType: event.type,
-                    source: NAV_SOURCES.SIGN_IN_MODAL,
+                    source: NAV_SOURCES.SIGN_IN_PAGE,
                   });
                 }
               }}
@@ -1658,14 +1659,7 @@ export default function StormEventPage() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="text-center py-6 border-t border-slate-800 px-4">
-        <p className="text-slate-500 text-xs max-w-2xl mx-auto">
-          <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
-          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-          {' '}and follow local emergency management guidance.
-        </p>
-      </footer>
+      <SiteFooter />
 
       {/* JSON-LD Structured Data */}
       <script

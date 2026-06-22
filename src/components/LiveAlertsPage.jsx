@@ -8,7 +8,7 @@ import { setHomepageMetaTags } from '../data/homepageMeta';
 import { rankAlerts } from '../utils/alertRanking';
 import LiveAlertCard from './LiveAlertCard';
 import StormMap from './StormMap';
-import ContactLink from './ContactLink';
+import { FooterLinks } from './SiteFooter';
 import { trackRadarLinkClick, trackBrowseByStateClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
 
 // =============================================
@@ -242,13 +242,7 @@ export default function LiveAlertsPage() {
             <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>.
             StormTracking is not affiliated with NOAA or NWS.
           </p>
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <Link to="/" className="text-slate-400 hover:text-sky-400 transition-colors">Home</Link>
-            <span className="text-slate-600">|</span>
-            <Link to="/radar" className="text-slate-400 hover:text-sky-400 transition-colors">Weather Radar</Link>
-            <span className="text-slate-600">|</span>
-            <ContactLink className="text-slate-400 hover:text-sky-400 transition-colors cursor-pointer">Contact</ContactLink>
-          </div>
+          <FooterLinks showHome />
         </div>
       </footer>
     </div>

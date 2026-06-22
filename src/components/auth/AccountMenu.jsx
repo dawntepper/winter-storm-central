@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import SignInModal from './SignInModal';
 
 const UTILITY_TRIGGER_CLASS =
   'inline-flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer';
@@ -18,11 +18,16 @@ function AccountIcon() {
   );
 }
 
+function signInHref(pathname) {
+  if (!pathname || pathname === '/' || pathname === '/sign-in') return '/sign-in';
+  return `/sign-in?redirect=${encodeURIComponent(pathname)}`;
+}
+
 /**
  * Header account control. Hidden entirely when Supabase isn't configured, so
  * the app degrades to its current anonymous-only behavior with zero UI noise.
  *
- *  - Signed out → "Sign in" on headerTop row (isolated from nav chips).
+ *  - Signed out → "Sign in" links to /sign-in (with return URL).
  *  - Signed in  → utility-row control next to "Updated" (homepage) or headerTop fallback.
  *
  * Never gates content — it's a convenience entry point only.
@@ -32,11 +37,10 @@ function AccountIcon() {
  *   utility   — account control in homepage utility row (signed in only)
  * @param {boolean} [showSignedInFallback]
  *   When true with headerTop, render signed-in account on row 1 (pages without utility row).
- * @param {() => void} [onSignInOpen] Optional callback when sign-in modal opens.
  */
-export default function AccountMenu({ placement = 'utility', showSignedInFallback = false, onSignInOpen }) {
+export default function AccountMenu({ placement = 'utility', showSignedInFallback = false, onSignInClick }) {
   const { isConfigured, isAuthenticated, user, signOut, initializing } = useAuth();
-  const [showModal, setShowModal] = useState(false);
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
@@ -56,19 +60,14 @@ export default function AccountMenu({ placement = 'utility', showSignedInFallbac
   if (!isAuthenticated) {
     if (placement !== 'headerTop') return null;
     return (
-      <>
-        <button
-          onClick={() => {
-            onSignInOpen?.();
-            setShowModal(true);
-          }}
-          className="text-xs sm:text-sm text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer whitespace-nowrap"
-          title="Sign in with email"
-        >
-          Sign in
-        </button>
-        {showModal && <SignInModal onClose={() => setShowModal(false)} />}
-      </>
+      <Link
+        to={signInHref(location.pathname + location.search)}
+        onClick={() => onSignInClick?.()}
+        className="text-xs sm:text-sm text-sky-400 hover:text-sky-300 font-medium transition-colors whitespace-nowrap"
+        title="Sign in or create an account"
+      >
+        Sign in
+      </Link>
     );
   }
 
@@ -89,12 +88,13 @@ export default function AccountMenu({ placement = 'utility', showSignedInFallbac
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
         className={UTILITY_TRIGGER_CLASS}
-        title="Account"
+        title={email}
         aria-expanded={open}
         aria-haspopup="menu"
       >
         <AccountIcon />
-        Account
+        <span className="max-w-[9rem] truncate hidden sm:inline">{email}</span>
+        <span className="sm:hidden">Account</span>
       </button>
 
       {open && (

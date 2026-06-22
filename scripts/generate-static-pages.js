@@ -52,6 +52,24 @@ const PAGES = [
     schemaName: 'Add to Home Screen Guide',
     schemaDescription: 'How to add StormTracking to your mobile home screen on iOS and Android',
   },
+  {
+    route: 'privacy',
+    title: 'Privacy Policy | StormTracking',
+    description: 'How StormTracking.io collects, uses, and protects your data — including location, saved cities, account sign-in, and privacy-friendly analytics.',
+    ogTitle: 'Privacy Policy | StormTracking',
+    ogDescription: 'How StormTracking.io handles your data, accounts, and analytics.',
+    schemaName: 'Privacy Policy',
+    schemaDescription: 'StormTracking.io privacy policy',
+  },
+  {
+    route: 'terms',
+    title: 'Terms of Service | StormTracking',
+    description: 'Terms of Service for StormTracking.io — live weather alerts, radar, and account features. Informational use only; not an official NWS source.',
+    ogTitle: 'Terms of Service | StormTracking',
+    ogDescription: 'Terms governing use of StormTracking.io weather alerts and radar.',
+    schemaName: 'Terms of Service',
+    schemaDescription: 'StormTracking.io terms of service',
+  },
 ];
 
 function generateStaticHTML(baseHTML, page) {

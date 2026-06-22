@@ -22,6 +22,9 @@ import StripTrailingSlash from './components/StripTrailingSlash.jsx'
 import VisitorSessionTracker from './components/VisitorSessionTracker.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import AuthCallback from './components/auth/AuthCallback.jsx'
+import SignInPage from './pages/SignInPage.jsx'
+import PrivacyPage from './pages/PrivacyPage.jsx'
+import TermsPage from './pages/TermsPage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -50,6 +53,10 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin/seo" element={<AdminSeo />} />
         <Route path="/admin/analysis" element={<AdminAnalysis />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/account" element={<SignInPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

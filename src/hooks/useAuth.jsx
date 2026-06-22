@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { markAccountKnown } from '../lib/accountHint';
+import { authCallbackUrl } from '../lib/authRedirect';
 import { finalizeAuthFromUrl } from '../lib/finalizeAuthFromUrl';
 import { trackSignIn } from '../utils/analytics';
 
@@ -58,7 +59,7 @@ function useAuthState() {
 
     let cancelled = false;
 
-    // Finalize magic-link / OAuth tokens on any route, then hydrate session.
+    // Finalize OAuth / email-confirmation tokens on any route, then hydrate session.
     (async () => {
       const { session: urlSession, error: urlError } = await finalizeAuthFromUrl();
       if (urlError) {
@@ -78,17 +79,14 @@ function useAuthState() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // --- temporary debug for the mobile magic-link investigation ---
-        console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!session);
         setSession(session);
         setUser(session?.user ?? null);
         setInitializing(false);
         setLoading(false);
 
-        // Completed sign-in only (dedupe in productAnalyticsService covers token refresh).
         if (event === 'SIGNED_IN' && session?.user) {
           markAccountKnown();
-          trackSignIn({ method: session.app_metadata?.provider || 'magic_link' });
+          trackSignIn({ method: session.app_metadata?.provider || 'email' });
           console.log('User signed in:', session?.user?.email);
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
@@ -105,7 +103,7 @@ function useAuthState() {
   /**
    * Sign up with email and password
    */
-  const signUp = useCallback(async (email, password) => {
+  const signUp = useCallback(async (email, password, returnPath = '/') => {
     if (!isSupabaseConfigured) {
       setError('Authentication not configured');
       return { error: { message: 'Authentication not configured' } };
@@ -118,7 +116,7 @@ function useAuthState() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: authCallbackUrl(returnPath)
       }
     });
 
@@ -160,35 +158,9 @@ function useAuthState() {
   }, []);
 
   /**
-   * Sign in with magic link (passwordless)
-   */
-  const signInWithMagicLink = useCallback(async (email) => {
-    if (!isSupabaseConfigured) {
-      setError('Authentication not configured');
-      return { error: { message: 'Authentication not configured' } };
-    }
-
-    setError(null);
-
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-      }
-    });
-
-    if (error) {
-      setError(error.message);
-      return { error };
-    }
-
-    return { data, message: 'Check your email for the login link!' };
-  }, []);
-
-  /**
    * Sign in with OAuth provider (Google, etc.)
    */
-  const signInWithProvider = useCallback(async (provider) => {
+  const signInWithProvider = useCallback(async (provider, returnPath = '/') => {
     if (!isSupabaseConfigured) {
       setError('Authentication not configured');
       return { error: { message: 'Authentication not configured' } };
@@ -199,7 +171,7 @@ function useAuthState() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: authCallbackUrl(returnPath)
       }
     });
 
@@ -228,7 +200,7 @@ function useAuthState() {
   /**
    * Reset password
    */
-  const resetPassword = useCallback(async (email) => {
+  const resetPassword = useCallback(async (email, returnPath = '/') => {
     if (!isSupabaseConfigured) {
       setError('Authentication not configured');
       return { error: { message: 'Authentication not configured' } };
@@ -237,7 +209,7 @@ function useAuthState() {
     setError(null);
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
+      redirectTo: authCallbackUrl(returnPath)
     });
 
     if (error) {
@@ -258,7 +230,6 @@ function useAuthState() {
     isConfigured: isSupabaseConfigured,
     signUp,
     signIn,
-    signInWithMagicLink,
     signInWithProvider,
     signOut,
     resetPassword

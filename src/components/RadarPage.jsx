@@ -17,6 +17,7 @@ import { ABBR_TO_SLUG } from '../data/stateConfig';
 import PageBackNav from './PageBackNav';
 import PageHeaderNav from './PageHeaderNav';
 import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, trackRadarTypeChange, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import SiteFooter from './SiteFooter';
 
 // Event type icons
 const typeIcons = {
@@ -535,14 +536,7 @@ export default function RadarPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="text-center py-6 border-t border-slate-800 px-4">
-        <p className="text-slate-500 text-xs max-w-2xl mx-auto">
-          <span className="font-medium text-slate-400">Disclaimer:</span> StormTracking uses NOAA/National Weather Service data for informational purposes only. Weather forecasts can change rapidly. Always verify with official sources at{' '}
-          <a href="https://weather.gov" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">weather.gov</a>
-          {' '}and follow local emergency management guidance.
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
