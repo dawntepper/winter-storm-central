@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
 /**
- * Client-side mirror of the server trailing-slash 301 (edge + Netlify redirect).
+ * Client-side mirror of the strip-trailing-slash edge 301.
  * Covers local Vite dev and in-app navigations to a trailing-slash path.
  * Root `/` is exempt. Canonical public URLs never end with `/`.
  */

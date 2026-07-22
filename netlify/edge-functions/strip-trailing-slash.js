@@ -5,18 +5,27 @@
 // splitting signals. Canonical tags + sitemap already omit the slash; crawlers
 // still need a server-side 301.
 //
-// History: a netlify.toml `/*/` → `/:splat` 301 looped when pretty_urls was on
-// (e05d7ea). pretty_urls is now false; this edge redirect is the safe
-// server-side enforcement (client StripTrailingSlash remains for SPA nav).
+// History: a netlify.toml `/*/` → `/:splat` 301 self-redirected canonical
+// no-slash URLs (and looped when pretty_urls was on). Site-level Pretty URLs
+// must stay OFF (processing_settings.html.pretty_urls=false). This edge
+// function is the safe server-side enforcement; client StripTrailingSlash
+// remains for SPA nav.
 
 export default async (request, context) => {
   const url = new URL(request.url);
-  const { pathname } = url;
+  const pathname = url.pathname;
 
-  if (pathname.length > 1 && pathname.endsWith('/')) {
-    url.pathname = pathname.replace(/\/+$/, '');
-    return Response.redirect(url.toString(), 301);
+  // Only strip when there is a real trailing slash on a non-root path.
+  if (pathname === '/' || !pathname.endsWith('/')) {
+    return context.next();
   }
 
-  return context.next();
+  const stripped = pathname.replace(/\/+$/, '');
+  // Guard against empty / no-op redirects (would 301 a URL onto itself).
+  if (!stripped || stripped === pathname) {
+    return context.next();
+  }
+
+  url.pathname = stripped;
+  return Response.redirect(url.toString(), 301);
 };

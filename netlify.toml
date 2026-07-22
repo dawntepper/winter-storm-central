@@ -7,7 +7,9 @@
 # Static pages use path/index.html. Keep pretty_urls false so Netlify does NOT
 # auto-redirect /alerts/illinois → /alerts/illinois/ (that fought our strip
 # rules and caused infinite 301 loops — e05d7ea). Canonical form is NO trailing
-# slash; strip-trailing-slash edge + /*/ redirects enforce it server-side.
+# slash; strip-trailing-slash edge function enforces it server-side.
+# Do NOT add a /*/ → /:splat redirect — with directory index.html files that
+# rule 301s canonical no-slash URLs onto themselves (site outage 2026-07-22).
 [build.processing.html]
   pretty_urls = false
 
@@ -48,16 +50,6 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Strip trailing slashes (301). force=true so directory index.html files
-# (e.g. dist/alerts/illinois/index.html) do not serve /alerts/illinois/ as 200.
-# Safe only while pretty_urls = false above — otherwise Netlify re-adds the
-# slash and loops. Query strings are preserved by Netlify.
-[[redirects]]
-  from = "/*/"
-  to = "/:splat"
-  status = 301
-  force = true
-
 # Emergency / maintenance mode — uncomment to serve 503.html site-wide.
 # See docs/outage-fallback.md. Re-comment after recovery.
 # [[redirects]]
@@ -75,8 +67,8 @@
   to = "/index.html"
   status = 200
 
-# 301 trailing-slash → canonical no-slash (must be first so crawlers never
-# get 200 HTML on /alerts/illinois/). Complements the /*/ redirect above.
+# 301 trailing-slash → canonical no-slash (declared first among edge fns).
+# Sole server-side enforcer — no /*/ redirect (that self-redirected no-slash URLs).
 [[edge_functions]]
   path = "/*"
   function = "strip-trailing-slash"
