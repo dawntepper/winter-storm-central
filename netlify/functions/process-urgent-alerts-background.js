@@ -24,12 +24,13 @@
  * Most invocations (the common case) are no-ops: no urgent alerts active in
  * CONUS → fetch returns zero in-scope → exit cleanly without writes.
  *
- * Schedule: */5 * * * * (every 5 min) — configured in netlify.toml
+ * Schedule: every 5 min (cron in netlify.toml)
  * Cost: 288 invocations/day, well under Netlify's free-tier function limit.
  */
 
 const { URGENT_EVENT_TYPES } = require('../../shared/nws-alert-parser.js');
 const { processAlerts } = require('./lib/alert-pipeline.js');
+const { initBlobsFromLambda } = require('./lib/dedup-store.js');
 
 // Scope filter: include only urgent event types. Single source of truth for
 // the urgent set is URGENT_EVENT_TYPES in shared/nws-alert-parser.js so the
@@ -39,6 +40,9 @@ function filterUrgentAlerts(alerts) {
 }
 
 exports.handler = async (event) => {
+  // Lambda-compat mode: Blobs needs credentials from the event.
+  initBlobsFromLambda(event);
+
   const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' };
 
   // Required env check (same as standard pipeline).

@@ -247,7 +247,9 @@ async function sendStateAlerts(state, alerts, stateTagId, tagsByName, logPrefix)
   }
 
   // State-level legacy fallback: location-XX subscribers without has-county-info
-  // get the full state alert set, preserving behavior for early subscribers.
+  // get the full state alert set. Zip signups MUST NOT land here — they opted
+  // into county precision, and a missing county tag would otherwise blast them
+  // every alert in the state (e.g. Lee County ZIP getting Panhandle digests).
   const stateSubs = await getTagSubscribers(stateTagId);
   let countyInfoEmails = new Set();
   const countyInfoTagId = tagsByName.get(HAS_COUNTY_INFO_TAG);
@@ -255,9 +257,25 @@ async function sendStateAlerts(state, alerts, stateTagId, tagsByName, logPrefix)
     const ciSubs = await getTagSubscribers(countyInfoTagId);
     countyInfoEmails = new Set(ciSubs.map(s => s.email_address).filter(Boolean));
   }
-  const legacyEmails = stateSubs
-    .map(s => s.email_address)
-    .filter(e => e && !countyInfoEmails.has(e) && !sentTo.has(e));
+  let skippedZipWithoutCounty = 0;
+  const legacyEmails = [];
+  for (const sub of stateSubs) {
+    const e = sub.email_address;
+    if (!e || countyInfoEmails.has(e) || sentTo.has(e)) continue;
+    const zip = sub.fields?.zip_code;
+    if (zip && String(zip).trim()) {
+      skippedZipWithoutCounty++;
+      continue;
+    }
+    legacyEmails.push(e);
+  }
+  if (skippedZipWithoutCounty > 0) {
+    console.warn(
+      `[${logPrefix}] [Resend] Skipping ${skippedZipWithoutCounty} ${stateName} ` +
+      `state-fallback recipient(s) who have zip_code but lack has-county-info ` +
+      `(need county re-tag; refusing statewide blast)`
+    );
+  }
 
   if (legacyEmails.length > 0) {
     const subject = buildAlertSubject({ stateName, alerts });

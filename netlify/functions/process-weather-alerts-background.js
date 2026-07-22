@@ -12,7 +12,7 @@
  * Shared logic lives in lib/alert-pipeline.js — see that file for the full
  * fetch → dedup → tag → send → record flow.
  *
- * Schedule: */30 * * * * (every 30 min) — configured in netlify.toml
+ * Schedule: every 30 min (cron in netlify.toml)
  *
  * Environment variables required:
  *   RESEND_API_KEY         - Resend API key for email delivery
@@ -24,6 +24,7 @@
 
 const { URGENT_EVENT_TYPES } = require('../../shared/nws-alert-parser.js');
 const { processAlerts } = require('./lib/alert-pipeline.js');
+const { initBlobsFromLambda } = require('./lib/dedup-store.js');
 
 // Scope filter: exclude urgent event types. Those go through the dedicated
 // urgent pipeline on a 5-min cron. Shared SENT_ALERTS_STORE dedup is the
@@ -33,6 +34,9 @@ function filterStandardAlerts(alerts) {
 }
 
 exports.handler = async (event) => {
+  // Lambda-compat mode: Blobs needs credentials from the event.
+  initBlobsFromLambda(event);
+
   const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' };
 
   // Required env check.

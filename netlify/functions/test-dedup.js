@@ -14,16 +14,23 @@
 
 const { getStore } = require('@netlify/blobs');
 const {
+  initBlobsFromLambda,
   getAlreadySentAlertIds,
   recordSentAlert,
   logBroadcastSend,
 } = require('./lib/dedup-store.js');
 
 function makeStore(name) {
-  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN;
-  if (siteID && token) {
-    return getStore({ name, siteID, token });
+  // Cleanup helper only — same credential rules as lib/dedup-store.js.
+  const runningOnNetlify = Boolean(
+    process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+  if (!runningOnNetlify) {
+    const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+    const token = process.env.NETLIFY_BLOBS_TOKEN;
+    if (siteID && token) {
+      return getStore({ name, siteID, token });
+    }
   }
   return getStore(name);
 }
@@ -107,6 +114,7 @@ exports.handler = async (event) => {
     }
   }
 
+  initBlobsFromLambda(event);
   const result = await runTests();
   return {
     statusCode: result.success ? 200 : 500,

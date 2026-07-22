@@ -5,17 +5,21 @@
  *   1. zip → lat/lng via Zippopotam.us (already used in the app)
  *   2. lat/lng → state + county + FIPS via the FCC's free Census Block API
  *
- * Both are public, no API key, no auth. Either failing returns null so the
- * caller can gracefully degrade to state-only tagging without breaking signup.
+ * Both are public, no API key, no auth. Returns null on failure — callers
+ * must NOT silently degrade zip signups to state-only tagging (that sends
+ * statewide digests to county-intent subscribers).
  */
 
 const NWS_USER_AGENT = 'StormTracking.io (contact@stormtracking.io)';
 
 // Simple in-memory cache so repeat signups for the same zip don't re-fetch.
 // Lives only for the function instance's warm life, which is fine for our
-// signup volume.
+// signup volume. Only successful lookups are cached — caching null would
+// poison a zip for the warm instance after a single transient API blip.
 const zipCache = new Map();
 const CACHE_MAX = 200;
+const LOOKUP_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 250;
 
 function rememberZip(zip, value) {
   if (zipCache.size >= CACHE_MAX) {
@@ -23,6 +27,10 @@ function rememberZip(zip, value) {
     zipCache.delete(firstKey);
   }
   zipCache.set(zip, value);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function fetchLatLngFromZip(zip) {
@@ -69,22 +77,32 @@ async function fetchCountyFromLatLng(lat, lon) {
   }
 }
 
+async function lookupOnce(zip) {
+  const coords = await fetchLatLngFromZip(zip);
+  if (!coords) return null;
+  return fetchCountyFromLatLng(coords.lat, coords.lon);
+}
+
 /**
  * Look up { state, county, fips } for a US zip code.
- * Returns null on any failure — callers should fall back to state-only tagging.
+ * Retries transient upstream failures. Returns null only after all attempts
+ * fail — callers should reject the signup rather than tag state-only.
  */
 async function getLocationFromZip(zip) {
   if (!zip || !/^\d{5}$/.test(String(zip))) return null;
   if (zipCache.has(zip)) return zipCache.get(zip);
 
-  const coords = await fetchLatLngFromZip(zip);
-  if (!coords) {
-    rememberZip(zip, null);
-    return null;
+  let location = null;
+  for (let attempt = 1; attempt <= LOOKUP_ATTEMPTS; attempt++) {
+    location = await lookupOnce(zip);
+    if (location) break;
+    if (attempt < LOOKUP_ATTEMPTS) {
+      console.warn(`[zip-to-location] Lookup miss for ${zip} (attempt ${attempt}/${LOOKUP_ATTEMPTS}), retrying`);
+      await sleep(RETRY_DELAY_MS * attempt);
+    }
   }
 
-  const location = await fetchCountyFromLatLng(coords.lat, coords.lon);
-  rememberZip(zip, location); // cache the null case too — don't retry on repeat
+  if (location) rememberZip(zip, location);
   return location;
 }
 

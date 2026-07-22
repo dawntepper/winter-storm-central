@@ -34,7 +34,7 @@ const {
   MARINE_ZONE_PREFIXES,
 } = require('../../shared/nws-alert-parser.js');
 
-const { getStore } = require('@netlify/blobs');
+const { connectLambda, getStore } = require('@netlify/blobs');
 const {
   HAIKU_MODEL,
   getAnthropicApiKey,
@@ -254,14 +254,17 @@ async function fetchActiveAlerts() {
 // ============================================================================
 
 function summariesStore() {
-  // Use explicit credentials only when NETLIFY_BLOBS_TOKEN is set. Netlify
-  // auto-injects SITE_ID in production; pairing it with NETLIFY_API_TOKEN (a
-  // deploy/build token without Blobs scope) causes 401 on every blob read.
-  // When no Blobs PAT is configured, let the SDK auto-detect deploy context.
-  const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
-  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-  if (blobsToken && siteID) {
-    return getStore({ name: BLOB_STORE_NAME, siteID, token: blobsToken });
+  // Prefer Lambda/deploy context (after connectLambda in the handler). Explicit
+  // PAT only outside Netlify runtime — stale tokens in prod 401 every blob op.
+  const runningOnNetlify = Boolean(
+    process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+  if (!runningOnNetlify) {
+    const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
+    const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+    if (blobsToken && siteID) {
+      return getStore({ name: BLOB_STORE_NAME, siteID, token: blobsToken });
+    }
   }
   return getStore(BLOB_STORE_NAME);
 }
@@ -348,6 +351,13 @@ async function upsertIndexEntry(summary) {
 // ============================================================================
 
 exports.handler = async (event) => {
+  // Lambda-compat mode: Blobs needs credentials from the event.
+  try {
+    connectLambda(event);
+  } catch (err) {
+    console.warn('[weather-summary] connectLambda skipped:', err.message);
+  }
+
   // ── Auth (applies to every method) ──────────────────────────────────────
   const expectedToken = process.env.ADMIN_FUNCTION_TOKEN;
   if (!expectedToken) {

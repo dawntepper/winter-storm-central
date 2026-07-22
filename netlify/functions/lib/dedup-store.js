@@ -12,13 +12,16 @@
  *     are JSON log entries. Used for analytics/debugging, never read during
  *     normal alert processing.
  *
- * Inside a Netlify Function, getStore() picks up the deploy context
- * automatically. For local scripts run outside `netlify dev`, set
- * NETLIFY_SITE_ID + NETLIFY_BLOBS_TOKEN and the store helper below will use
- * them explicitly.
+ * These handlers use Lambda-compat (`exports.handler`). Blobs context is NOT
+ * auto-injected in that mode — call initBlobsFromLambda(event) once at the
+ * top of the handler before any store reads/writes.
+ *
+ * For local scripts outside `netlify dev`, set NETLIFY_SITE_ID +
+ * NETLIFY_BLOBS_TOKEN (PAT with Blobs scope). Do not leave a stale PAT in
+ * Netlify env vars: it overrides working context and 401s every blob op.
  */
 
-const { getStore } = require('@netlify/blobs');
+const { connectLambda, getStore } = require('@netlify/blobs');
 
 const SENT_ALERTS_STORE = 'sent-alerts';
 const BROADCAST_LOG_STORE = 'broadcast-log';
@@ -26,15 +29,37 @@ const LOCK_STORE = 'alert-processing-lock';
 const LOCK_KEY = 'lock';
 const DEFAULT_LOCK_TTL_MS = 10 * 60 * 1000; // 10 min, generous margin over typical 3-4 min runs
 
+let lambdaBlobsReady = false;
+
+/**
+ * Wire Blobs credentials from the Lambda event (required for exports.handler).
+ * Safe to call multiple times; no-ops when event lacks Blobs context (local).
+ */
+function initBlobsFromLambda(event) {
+  if (lambdaBlobsReady || !event || typeof event !== 'object') return;
+  try {
+    connectLambda(event);
+    lambdaBlobsReady = true;
+  } catch (err) {
+    // Scheduled/local invocations without Blobs blobs on the event fall through
+    // to explicit token / MissingBlobsEnvironmentError at getStore time.
+    console.warn('[dedup-store] connectLambda skipped:', err.message);
+  }
+}
+
 function makeStore(name) {
-  // Use explicit credentials only when NETLIFY_BLOBS_TOKEN is set. Netlify
-  // auto-injects SITE_ID in production; pairing it with NETLIFY_API_TOKEN (a
-  // deploy/build token without Blobs scope) causes 401 on every blob read.
-  // When no Blobs PAT is configured, let the SDK auto-detect deploy context.
-  const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
-  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-  if (blobsToken && siteID) {
-    return getStore({ name, siteID, token: blobsToken });
+  // Prefer deploy/Lambda context (after initBlobsFromLambda). Only use an
+  // explicit PAT outside Netlify runtime — a stale NETLIFY_BLOBS_TOKEN in
+  // production previously 401'd the entire alert pipeline.
+  const runningOnNetlify = Boolean(
+    process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+  if (!runningOnNetlify) {
+    const blobsToken = process.env.NETLIFY_BLOBS_TOKEN;
+    const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+    if (blobsToken && siteID) {
+      return getStore({ name, siteID, token: blobsToken });
+    }
   }
   return getStore(name);
 }
@@ -241,6 +266,7 @@ async function releaseProcessingLock({ lockKey = LOCK_KEY } = {}) {
 }
 
 module.exports = {
+  initBlobsFromLambda,
   isAlertSent,
   getAlreadySentAlertIds,
   recordSentAlert,
