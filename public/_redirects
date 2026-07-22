@@ -11,5 +11,10 @@
 /app-assets/js/script.js  https://plausible.io/js/pa-FKdcykjvEN6q_wMdvAIZa.js  200
 /app-assets/api/event     https://plausible.io/api/event  200
 
+# Strip trailing slashes sitewide (301). Matches /path/ but not root /.
+# 301! forces redirect even when a directory index.html exists.
+# Requires pretty_urls = false in netlify.toml (otherwise Netlify loops).
+/*/  /:splat  301!
+
 # SPA routing - serve index.html for all other routes
 /*    /index.html   200

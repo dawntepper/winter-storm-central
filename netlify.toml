@@ -4,8 +4,10 @@
   functions = "netlify/functions"
   edge_functions = "netlify/edge-functions"
 
-# Static pages use path/index.html; disable auto trailing-slash redirects that
-# fight our canonical no-slash URLs (caused infinite 301 loops in production).
+# Static pages use path/index.html. Keep pretty_urls false so Netlify does NOT
+# auto-redirect /alerts/illinois → /alerts/illinois/ (that fought our strip
+# rules and caused infinite 301 loops — e05d7ea). Canonical form is NO trailing
+# slash; strip-trailing-slash edge + /*/ redirects enforce it server-side.
 [build.processing.html]
   pretty_urls = false
 
@@ -46,6 +48,16 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Strip trailing slashes (301). force=true so directory index.html files
+# (e.g. dist/alerts/illinois/index.html) do not serve /alerts/illinois/ as 200.
+# Safe only while pretty_urls = false above — otherwise Netlify re-adds the
+# slash and loops. Query strings are preserved by Netlify.
+[[redirects]]
+  from = "/*/"
+  to = "/:splat"
+  status = 301
+  force = true
+
 # Emergency / maintenance mode — uncomment to serve 503.html site-wide.
 # See docs/outage-fallback.md. Re-comment after recovery.
 # [[redirects]]
@@ -62,6 +74,12 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# 301 trailing-slash → canonical no-slash (must be first so crawlers never
+# get 200 HTML on /alerts/illinois/). Complements the /*/ redirect above.
+[[edge_functions]]
+  path = "/*"
+  function = "strip-trailing-slash"
 
 # Approximate visitor location for the "Weather Near Me" headline (Layer 1).
 # Returns coarse city/region from Netlify's geo context — no third-party API.

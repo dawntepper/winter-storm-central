@@ -1,8 +1,9 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
 /**
- * Client-side mirror of the Netlify trailing-slash 301 redirect. Covers local
- * dev (vite) and any in-app navigation to a trailing-slash path. Root is exempt.
+ * Client-side mirror of the server trailing-slash 301 (edge + Netlify redirect).
+ * Covers local Vite dev and in-app navigations to a trailing-slash path.
+ * Root `/` is exempt. Canonical public URLs never end with `/`.
  */
 export default function StripTrailingSlash() {
   const location = useLocation();

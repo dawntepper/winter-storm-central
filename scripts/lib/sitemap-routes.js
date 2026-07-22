@@ -54,8 +54,11 @@ function collectPrerenderRoutes(storms, cities = loadCities()) {
 }
 
 function urlEntry(loc, { lastmod, changefreq, priority }) {
+  // Canonical URLs never end with `/` (except site root).
+  const canonical =
+    loc.length > BASE_URL.length + 1 && loc.endsWith('/') ? loc.replace(/\/+$/, '') : loc;
   return `  <url>
-    <loc>${loc}</loc>
+    <loc>${canonical}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
