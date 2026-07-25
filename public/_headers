@@ -7,6 +7,39 @@
   Cache-Control: public, max-age=300, must-revalidate
   X-Robots-Tag: all
 
+# Prerendered SEO HTML (same TTL as homepage; previously defaulted to max-age=0)
+/alerts/*
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/radar
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/radar/
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/storm/*
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/forecast/*
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/severe-weather/*
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/prep
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
+/prep/
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Robots-Tag: all
+
 # OG images - moderate cache (refreshes every 15 min)
 /api/og-image/*
   Cache-Control: public, max-age=900, s-maxage=900

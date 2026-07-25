@@ -1866,6 +1866,81 @@ export function trackForecastStateClick({ stateCode, stateSlug, sourcePage }) {
   });
 }
 
+// ============================================
+// SEVERE WEATHER / HAZARD ENGINE
+// ============================================
+
+export function trackSevereWeatherPageView(props = {}) {
+  const recorded = recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_PAGE_VIEW, {
+    metadata: {
+      hazard_slug: props.hazard_slug,
+      active_count_bucket: props.active_count_bucket,
+      has_active_alerts: props.has_active_alerts,
+    },
+  });
+  if (!recorded) return;
+  track('severe_weather_page_view', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    active_count_bucket: props.active_count_bucket || '0',
+    has_active_alerts: props.has_active_alerts ? 'yes' : 'no',
+  });
+}
+
+export function trackSevereWeatherRadarClick(props = {}) {
+  recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_RADAR_CLICK, {
+    metadata: {
+      hazard_slug: props.hazard_slug,
+      active_count_bucket: props.active_count_bucket,
+      has_active_alerts: props.has_active_alerts,
+    },
+  });
+  track('live_radar_clicked', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    has_active_alerts: props.has_active_alerts ? 'yes' : 'no',
+  });
+}
+
+export function trackSevereWeatherAlertOpened(props = {}) {
+  recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_ALERT_OPENED, {
+    metadata: { hazard_slug: props.hazard_slug },
+  });
+  track('alert_opened', { hazard_slug: props.hazard_slug || 'unknown' });
+}
+
+export function trackSevereWeatherStateClick(props = {}) {
+  recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_STATE_CLICK, {
+    stateCode: props.destination_state_code,
+    metadata: {
+      hazard_slug: props.hazard_slug,
+      destination_state_code: props.destination_state_code,
+    },
+  });
+  track('affected_state_clicked', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    destination_state_code: props.destination_state_code || 'unknown',
+  });
+}
+
+export function trackSevereWeatherRelatedClick(props = {}) {
+  recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_RELATED_CLICK, {
+    metadata: {
+      hazard_slug: props.hazard_slug,
+      related_hazard_slug: props.related_hazard_slug,
+    },
+  });
+  track('related_hazard_clicked', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    related_hazard_slug: props.related_hazard_slug || 'unknown',
+  });
+}
+
+export function trackSevereWeatherStateListExpanded(props = {}) {
+  recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_STATE_LIST_EXPANDED, {
+    metadata: { hazard_slug: props.hazard_slug },
+  });
+  track('state_list_expanded', { hazard_slug: props.hazard_slug || 'unknown' });
+}
+
 
 // ============================================
 // TEST FUNCTION
@@ -2086,4 +2161,10 @@ export default {
   trackCityRadarViewed,
   trackForecastSectionViewed,
   FORECAST_SOURCE_PAGES,
+  trackSevereWeatherPageView,
+  trackSevereWeatherRadarClick,
+  trackSevereWeatherAlertOpened,
+  trackSevereWeatherStateClick,
+  trackSevereWeatherRelatedClick,
+  trackSevereWeatherStateListExpanded,
 };

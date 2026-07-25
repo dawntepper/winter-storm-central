@@ -1800,7 +1800,7 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, resolvedLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, resolvedLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, eventFilter = null, lockCategoryFilters = false, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
   const basemapPreferenceControlled = basemapStyleProp == null;
@@ -1897,7 +1897,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const hideAlertTimeoutRef = useRef(null);
   const pinnedAlertRef = useRef(false);
   const stateHoverLockedRef = useRef(false);
-  const cities = Object.values(weatherData);
+  const cities = Object.values(weatherData || {});
 
   // Count alerts per category
   const categoryCounts = useMemo(() => {
@@ -2316,6 +2316,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
               </div>
             )}
             <div className="flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
+            {!lockCategoryFilters && (
             <button
               onClick={() => {
                 const allOn = activeCategories.size === CATEGORY_ORDER.length;
@@ -2332,7 +2333,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             >
               {activeCategories.size > 0 ? '✓ Alerts' : 'Alerts'}
             </button>
-            {CATEGORY_ORDER.map(id => {
+            )}
+            {!lockCategoryFilters && CATEGORY_ORDER.map(id => {
               const cat = ALERT_CATEGORIES[id];
               const count = categoryCounts[id] || 0;
               if (count === 0) return null;
@@ -2465,8 +2467,16 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {/* Alert dot markers */}
-            {alerts.filter(alert => activeCategories.has(alert.category)).map((alert) => (
+            {/* Alert dot markers — optional eventFilter locks to exact NWS event names */}
+            {alerts
+              .filter((alert) => activeCategories.has(alert.category))
+              .filter((alert) => {
+                if (!eventFilter) return true;
+                if (Array.isArray(eventFilter)) return eventFilter.includes(alert.event);
+                if (eventFilter instanceof Set) return eventFilter.has(alert.event);
+                return alert.event === eventFilter;
+              })
+              .map((alert) => (
               <AlertDotMarker
                 key={alert.id}
                 alert={alert}

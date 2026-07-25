@@ -12,7 +12,7 @@ const SECTIONS = [
     href: '/admin/weather-summary',
     title: 'Weather Summary',
     icon: '📰',
-    description: 'Generate social-media-ready summaries of active NWS alerts via Claude Haiku.'
+    description: 'Generate social summaries and manage Hazard Engine Weather Briefs (Claude + manual override).'
   },
   {
     href: '/admin/seo',

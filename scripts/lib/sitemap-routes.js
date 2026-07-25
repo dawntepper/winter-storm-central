@@ -25,6 +25,17 @@ const STATE_SLUGS = [
 
 const CORE_ROUTES = ['/', '/radar', '/alerts', '/prep', '/add-to-home', '/privacy', '/terms'];
 
+const SEVERE_WEATHER_SLUGS = [
+  'tornado-warning',
+  'tornado-watch',
+  'severe-thunderstorm-warning',
+  'severe-thunderstorm-watch',
+  'flash-flood-warning',
+  'flood-watch',
+  'hurricane-warning',
+  'tropical-storm-warning',
+];
+
 function loadCities() {
   if (!fs.existsSync(CITIES_DIR)) return [];
   return fs
@@ -48,6 +59,10 @@ function collectPrerenderRoutes(storms, cities = loadCities()) {
 
   for (const storm of storms) {
     if (storm?.slug) routes.push(`/storm/${storm.slug}`);
+  }
+
+  for (const slug of SEVERE_WEATHER_SLUGS) {
+    routes.push(`/severe-weather/${slug}`);
   }
 
   return [...new Set(routes)].sort((a, b) => a.localeCompare(b));
@@ -124,6 +139,14 @@ function buildSitemap(storms, cities, { lastmodBySlug } = {}) {
     })
     .join('\n');
 
+  const severeWeatherUrls = SEVERE_WEATHER_SLUGS.map((slug) =>
+    urlEntry(`${BASE_URL}/severe-weather/${slug}`, {
+      lastmod: now,
+      changefreq: 'hourly',
+      priority: '0.85',
+    })
+  ).join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urlEntry(BASE_URL, { lastmod: now, changefreq: 'daily', priority: '1.0' })}
@@ -137,6 +160,7 @@ ${stateUrls}
 ${forecastUrls}
 ${cityUrls}
 ${stormUrls}
+${severeWeatherUrls}
 </urlset>
 `;
 }
@@ -154,6 +178,7 @@ module.exports = {
   BASE_URL,
   STATE_SLUGS,
   CORE_ROUTES,
+  SEVERE_WEATHER_SLUGS,
   loadCities,
   collectPrerenderRoutes,
   buildSitemap,

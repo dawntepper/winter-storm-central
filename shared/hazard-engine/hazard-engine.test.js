@@ -1,0 +1,275 @@
+import { describe, expect, it } from 'vitest';
+import {
+  hazardEngine,
+  get,
+} from './index.js';
+import { getHazardConfig, labelForCount } from './hazards.js';
+import {
+  matchesHazardEvent,
+  dedupeAlertsById,
+  filterAlertsForHazard,
+  buildAffectedStates,
+  extractAffectedStateCodes,
+  isAlertExpired,
+} from './normalize.js';
+import { buildFallbackBrief } from './fallbackBrief.js';
+import { buildDataSignature } from './dataSignature.js';
+import { shouldRegenerateBrief } from './regeneration.js';
+import { validateBriefResponse } from './validateBrief.js';
+import { buildLiveStatus } from './liveStatus.js';
+
+const tornadoConfig = getHazardConfig('tornado-warning');
+
+function alert(overrides = {}) {
+  return {
+    id: 'nws-1',
+    event: 'Tornado Warning',
+    state: 'KY',
+    areaDesc: 'Floyd, KY; Pike, KY',
+    severity: 'Extreme',
+    urgency: 'Immediate',
+    certainty: 'Observed',
+    onset: '2026-07-24T12:00:00Z',
+    expires: '2099-07-24T18:00:00Z',
+    headline: 'Tornado Warning for Floyd',
+    ...overrides,
+  };
+}
+
+describe('hazard config', () => {
+  it('looks up known hazards', () => {
+    expect(tornadoConfig.nwsEvents).toEqual(['Tornado Warning']);
+    expect(tornadoConfig.pageTitle).toBe('Tornado Warnings Today');
+  });
+
+  it('returns null for unknown slugs', () => {
+    expect(getHazardConfig('not-a-hazard')).toBeNull();
+    expect(get('not-a-hazard', []).ok).toBe(false);
+  });
+
+  it('singular/plural labels', () => {
+    expect(labelForCount(tornadoConfig, 1)).toBe('Tornado Warning');
+    expect(labelForCount(tornadoConfig, 12)).toBe('Tornado Warnings');
+  });
+});
+
+describe('exact NWS event matching', () => {
+  it('matches exact event only', () => {
+    expect(matchesHazardEvent(alert(), tornadoConfig)).toBe(true);
+    expect(matchesHazardEvent(alert({ event: 'Tornado Watch' }), tornadoConfig)).toBe(false);
+    expect(matchesHazardEvent(alert({ event: 'Severe Thunderstorm Warning' }), tornadoConfig)).toBe(false);
+  });
+});
+
+describe('dedupe + active filter', () => {
+  it('dedupes by id keeping newest', () => {
+    const a = alert({ id: 'same', onset: '2026-07-24T10:00:00Z' });
+    const b = alert({ id: 'same', onset: '2026-07-24T12:00:00Z', headline: 'Updated' });
+    const out = dedupeAlertsById([a, b]);
+    expect(out).toHaveLength(1);
+    expect(out[0].headline).toBe('Updated');
+  });
+
+  it('drops expired alerts', () => {
+    expect(isAlertExpired(alert({ expires: '2020-01-01T00:00:00Z' }))).toBe(true);
+    const filtered = filterAlertsForHazard(
+      [alert({ expires: '2020-01-01T00:00:00Z' }), alert({ id: 'nws-2' })],
+      tornadoConfig
+    );
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe('nws-2');
+  });
+});
+
+describe('state extraction + sorting', () => {
+  it('extracts multiple states from areaDesc', () => {
+    const codes = extractAffectedStateCodes(alert({
+      state: 'KY',
+      areaDesc: 'Floyd, KY; Mingo, WV; Fayette, PA',
+    }));
+    expect(codes.sort()).toEqual(['KY', 'PA', 'WV']);
+  });
+
+  it('sorts states by count then name', () => {
+    const alerts = [
+      alert({ id: '1', state: 'WV', areaDesc: 'Mingo, WV' }),
+      alert({ id: '2', state: 'KY', areaDesc: 'Floyd, KY' }),
+      alert({ id: '3', state: 'KY', areaDesc: 'Pike, KY' }),
+      alert({ id: '4', state: 'PA', areaDesc: 'Fayette, PA' }),
+      alert({ id: '5', state: 'KY', areaDesc: 'Knott, KY' }),
+    ];
+    const states = buildAffectedStates(alerts);
+    expect(states.map((s) => s.code)).toEqual(['KY', 'PA', 'WV']);
+    expect(states[0].alertCount).toBe(3);
+    expect(states[0].href).toBe('/alerts/kentucky');
+  });
+});
+
+describe('live status + fallback brief', () => {
+  it('builds active status sentence', () => {
+    const states = buildAffectedStates([
+      alert({ id: '1', areaDesc: 'Floyd, KY' }),
+      alert({ id: '2', areaDesc: 'Mingo, WV' }),
+      alert({ id: '3', areaDesc: 'Fayette, PA' }),
+    ]);
+    const status = buildLiveStatus(tornadoConfig, { activeCount: 12, affectedStates: states });
+    expect(status.hasActiveAlerts).toBe(true);
+    expect(status.statusHeadline).toBe('12 Tornado Warnings Active');
+    expect(status.statusSentence).toContain('Kentucky');
+  });
+
+  it('builds zero-active status', () => {
+    const status = buildLiveStatus(tornadoConfig, { activeCount: 0, affectedStates: [] });
+    expect(status.statusHeadline).toBe('No Active Tornado Warnings');
+  });
+
+  it('fallback briefs are grammatical', () => {
+    const multi = buildFallbackBrief(tornadoConfig, {
+      activeCount: 12,
+      affectedStates: [
+        { name: 'Kentucky', alertCount: 7 },
+        { name: 'West Virginia', alertCount: 3 },
+        { name: 'Pennsylvania', alertCount: 2 },
+      ],
+    });
+    expect(multi.summary).toContain('3 states');
+    expect(multi.summary).toContain('Kentucky');
+
+    const one = buildFallbackBrief(tornadoConfig, {
+      activeCount: 1,
+      affectedStates: [{ name: 'Illinois', alertCount: 1 }],
+    });
+    expect(one.summary).toContain('Illinois');
+
+    const zero = buildFallbackBrief(tornadoConfig, { activeCount: 0, affectedStates: [] });
+    expect(zero.summary).toContain('No tornado warnings');
+  });
+});
+
+describe('data signature + regeneration', () => {
+  it('changes signature when states change', () => {
+    const a = buildDataSignature({
+      hazardSlug: 'tornado-warning',
+      activeCount: 2,
+      affectedStateCodes: ['KY', 'WV'],
+      sourceAlertIds: ['1', '2'],
+      highestSeverity: 'Extreme',
+      highestUrgency: 'Immediate',
+      hasExtremeAlert: true,
+    });
+    const b = buildDataSignature({
+      hazardSlug: 'tornado-warning',
+      activeCount: 2,
+      affectedStateCodes: ['KY', 'PA'],
+      sourceAlertIds: ['1', '2'],
+      highestSeverity: 'Extreme',
+      highestUrgency: 'Immediate',
+      hasExtremeAlert: true,
+    });
+    expect(a).not.toBe(b);
+  });
+
+  it('regenerates on zero-to-active and respects manual override', () => {
+    const active = shouldRegenerateBrief({
+      cachedBrief: {
+        summary: 'old',
+        active_count: 0,
+        affected_state_codes: [],
+        data_signature: 'x',
+        generated_at: new Date().toISOString(),
+        status: 'valid',
+      },
+      currentSignature: 'y',
+      currentActiveCount: 5,
+      currentStateCodes: ['KY'],
+    });
+    expect(active.shouldRegenerate).toBe(true);
+    expect(active.reasons).toContain('zero_to_active');
+
+    const locked = shouldRegenerateBrief({
+      cachedBrief: {
+        summary: 'ai',
+        manual_override: true,
+        manual_summary: 'editor',
+        active_count: 5,
+        affected_state_codes: ['KY'],
+        generated_at: new Date().toISOString(),
+        status: 'valid',
+      },
+      currentSignature: 'changed',
+      currentActiveCount: 8,
+      currentStateCodes: ['KY', 'WV'],
+    });
+    expect(locked.shouldRegenerate).toBe(false);
+  });
+});
+
+describe('Claude validation', () => {
+  it('accepts clean JSON', () => {
+    const result = validateBriefResponse(
+      {
+        summary: 'Tornado warnings remain active across eastern Kentucky and portions of West Virginia.',
+        notableChange: null,
+        confidenceNotes: [],
+      },
+      { affectedStateNames: ['Kentucky', 'West Virginia'], activeCount: 5 }
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects unsupported states and URLs', () => {
+    const badState = validateBriefResponse(
+      { summary: 'Warnings are active in Texas and Alaska.', notableChange: null, confidenceNotes: [] },
+      { affectedStateNames: ['Kentucky'], activeCount: 2 }
+    );
+    expect(badState.ok).toBe(false);
+
+    const badUrl = validateBriefResponse(
+      { summary: 'See https://example.com for details.', notableChange: null, confidenceNotes: [] },
+      { affectedStateNames: ['Kentucky'], activeCount: 1 }
+    );
+    expect(badUrl.ok).toBe(false);
+  });
+});
+
+describe('hazardEngine.get snapshot', () => {
+  it('returns a normalized intelligence object', () => {
+    const alerts = [
+      alert({ id: '1', areaDesc: 'Floyd, KY' }),
+      alert({ id: '2', areaDesc: 'Mingo, WV' }),
+      alert({ id: '3', areaDesc: 'Fayette, PA' }),
+      alert({ id: 'dup', event: 'Tornado Watch' }),
+    ];
+    const snap = hazardEngine.get('tornado-warning', alerts, {
+      latestSourceUpdateAt: '2026-07-24T12:05:00Z',
+    });
+    expect(snap.ok).toBe(true);
+    expect(snap.activeCount).toBe(3);
+    expect(snap.radarFilter).toBe('tornado-warning');
+    expect(snap.liveStatus.statusHeadline).toContain('3 Tornado Warnings');
+    expect(snap.weatherBrief.source).toBe('fallback');
+    expect(snap.affectedStates).toHaveLength(3);
+    expect(snap.relatedHazards.some((r) => r.slug === 'tornado-watch')).toBe(true);
+  });
+
+  it('uses manual override brief', () => {
+    const snap = hazardEngine.get('tornado-warning', [alert()], {
+      cachedBrief: {
+        summary: 'AI text',
+        manual_override: true,
+        manual_summary: 'Editor-approved tornado brief.',
+        status: 'valid',
+        generated_at: '2026-07-24T12:00:00Z',
+      },
+    });
+    expect(snap.weatherBrief.source).toBe('manual');
+    expect(snap.weatherBrief.summary).toBe('Editor-approved tornado brief.');
+  });
+
+  it('handles unavailable feed without claiming zero alerts', () => {
+    const snap = hazardEngine.get('tornado-warning', [alert()], { dataAvailable: false });
+    expect(snap.activeCount).toBe(0);
+    expect(snap.liveStatus.statusHeadline).toMatch(/unavailable/i);
+    expect(snap.freshness.dataAvailable).toBe(false);
+  });
+});

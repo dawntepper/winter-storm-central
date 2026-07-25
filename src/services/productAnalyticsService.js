@@ -67,6 +67,12 @@ export const PRODUCT_EVENTS = {
   STORM_LOCATION_SAVED: 'storm_location_saved',
   STORM_SIGNIN_STARTED: 'storm_signin_started',
   RADAR_STATE_RESOLVED: 'radar_state_resolved',
+  SEVERE_WEATHER_PAGE_VIEW: 'severe_weather_page_view',
+  SEVERE_WEATHER_RADAR_CLICK: 'live_radar_clicked',
+  SEVERE_WEATHER_ALERT_OPENED: 'alert_opened',
+  SEVERE_WEATHER_STATE_CLICK: 'affected_state_clicked',
+  SEVERE_WEATHER_RELATED_CLICK: 'related_hazard_clicked',
+  SEVERE_WEATHER_STATE_LIST_EXPANDED: 'state_list_expanded',
 };
 
 export const RADAR_EVENTS = {
@@ -160,6 +166,15 @@ const PRODUCT_DEDUPE_RULES = {
     type: 'session_once',
     key: () => 'radar_state_resolved',
   },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_PAGE_VIEW]: {
+    type: 'visit_cooldown',
+    key: ({ metadata }) => `severe_weather:${metadata?.hazard_slug || 'unknown'}`,
+  },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_RADAR_CLICK]: { type: 'none' },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_ALERT_OPENED]: { type: 'none' },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_STATE_CLICK]: { type: 'none' },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_RELATED_CLICK]: { type: 'none' },
+  [PRODUCT_EVENTS.SEVERE_WEATHER_STATE_LIST_EXPANDED]: { type: 'none' },
 };
 
 const RADAR_DEDUPE_RULES = {
