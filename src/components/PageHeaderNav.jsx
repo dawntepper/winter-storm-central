@@ -6,45 +6,72 @@ import {
   NAV_SOURCES,
 } from '../utils/analytics';
 
+const ALERTS_NAV =
+  'text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2 sm:px-2.5 py-1.5 sm:py-1 rounded border border-red-500/30 transition-colors whitespace-nowrap';
+
+/** Cyan/sky — primary interactive nav (not green). */
+const RADAR_NAV =
+  'text-xs sm:text-sm text-sky-400 hover:bg-sky-500/25 font-medium bg-sky-500/15 px-2 sm:px-2.5 py-1.5 sm:py-1 rounded border border-sky-500/30 transition-colors whitespace-nowrap';
+
 /**
- * Shared nav-button cluster — Live Alerts / Live Weather Radar / State
- * Weather-Radar dropdown. Same component used by Header (homepage) and
- * by inline page-headers on state alerts pages, forecast pages, etc.
- *
- * @param {Object} props
- * @param {string} props.source  NAV_SOURCES value attributed to clicks
- *   from this header instance (e.g. 'state_page_state_dropdown',
- *   'forecast_page_state_dropdown').
- * @param {boolean} [props.showStateDropdown=true]  Set false only when no
- *   state selector should appear in this header row.
- * @param {string|null} [props.currentStateSlug]  Active state slug on state
- *   alert pages — passed through to StateAlertsDropdown for pin styling.
+ * Shared nav-button cluster — Alerts / Radar / State Alerts.
+ * Mobile: short labels. Radar uses cyan/blue (never green).
  */
 export default function PageHeaderNav({
   source = NAV_SOURCES.HEADER_NAVIGATION,
+  stateSource = null,
   showStateDropdown = true,
   currentStateSlug = null,
+  className = '',
+  /** When true, keep Alerts/Radar/State in one left cluster (More sits outside). */
+  compactCluster = false,
 }) {
+  const dropdownSource = stateSource || source;
+
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-      <Link
-        to="/alerts"
-        className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors"
-      >
-        Live Alerts
-      </Link>
-      <Link
-        to="/radar"
-        onClick={() => { trackRadarLinkClick(source); setNavSource(source); }}
-        className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors"
-      >
-        Live Weather Radar
-      </Link>
-      {showStateDropdown && (
-        <span className="relative inline-flex items-center">
-          <StateAlertsDropdown source={source} currentStateSlug={currentStateSlug} />
+    <nav
+      aria-label="Primary"
+      className={`flex items-center gap-1.5 sm:gap-2 min-w-0 ${
+        compactCluster ? '' : 'w-full lg:w-auto justify-between lg:justify-start'
+      } ${className}`.trim()}
+    >
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <Link
+          to="/alerts"
+          aria-label="Live weather alerts"
+          className={ALERTS_NAV}
+        >
+          <span className="md:hidden">Alerts</span>
+          <span className="hidden md:inline">Live Alerts</span>
+        </Link>
+        <Link
+          to="/radar"
+          aria-label="Live weather radar"
+          onClick={() => { trackRadarLinkClick(source); setNavSource(source); }}
+          className={RADAR_NAV}
+        >
+          <span className="md:hidden">Radar</span>
+          <span className="hidden md:inline">Live Weather Radar</span>
+        </Link>
+        {showStateDropdown && compactCluster && (
+          <span className="relative inline-flex items-center min-w-0 max-w-[9.5rem] sm:max-w-none shrink-0">
+            <StateAlertsDropdown
+              source={dropdownSource}
+              currentStateSlug={currentStateSlug}
+              compactMobileLabel
+            />
+          </span>
+        )}
+      </div>
+      {showStateDropdown && !compactCluster && (
+        <span className="relative inline-flex items-center min-w-0 max-w-[48%] md:max-w-none shrink-0 ml-auto lg:ml-0">
+          <StateAlertsDropdown
+            source={dropdownSource}
+            currentStateSlug={currentStateSlug}
+            compactMobileLabel
+          />
         </span>
       )}
-    </div>
+    </nav>
   );
 }

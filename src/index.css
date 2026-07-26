@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 body {
   margin: 0;
@@ -92,6 +93,17 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
+}
+
+/* Hide scrollbars while keeping overflow scroll/swipe (e.g. mobile hazard pills). */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Tornado Warning pulse — 1.5s halo on active Tornado Warnings (not Watches).

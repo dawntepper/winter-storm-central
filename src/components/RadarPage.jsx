@@ -9,14 +9,24 @@ import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { getActiveStormEvents } from '../services/stormEventsService';
 import StormMap from './StormMap';
 import EssentialsCard from './EssentialsCard';
-import NearMeHeader from './NearMeHeader';
 import ZipCodeSearch from './ZipCodeSearch';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { fetchCountyGeoJSON, reverseGeocode } from '../services/geoLocationService';
-import { ABBR_TO_SLUG } from '../data/stateConfig';
-import PageBackNav from './PageBackNav';
-import PageHeaderNav from './PageHeaderNav';
-import { trackRadarStormEventClick, trackBrowseByStateClick, trackRadarPageView, trackRadarStateResolved, trackRadarTypeChange, RADAR_RESOLUTION_SOURCES, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { ABBR_TO_SLUG, US_STATES } from '../data/stateConfig';
+import PageSiteHeader from './PageSiteHeader';
+import NonConusJumpButtons from './NonConusJumpButtons';
+import {
+  trackRadarStormEventClick,
+  trackBrowseByStateClick,
+  trackRadarPageView,
+  trackRadarStateResolved,
+  trackRadarTypeChange,
+  trackMapRegionClick,
+  RADAR_RESOLUTION_SOURCES,
+  MAP_REGION_SOURCES,
+  setNavSource,
+  NAV_SOURCES,
+} from '../utils/analytics';
 import SiteFooter from './SiteFooter';
 
 // Event type icons
@@ -143,7 +153,97 @@ const LAYER_TYPES = [
 ];
 
 const RADAR_CONTROL_PILL_CLASS =
-  'px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 min-w-[11rem] max-w-full shrink-0';
+  'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer bg-slate-800/95 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 whitespace-nowrap shrink-0';
+
+/**
+ * Compact layer picker — closed control always reads "Radar Layer" so the
+ * mobile map header stays narrow; open list shows labels + descriptions.
+ */
+function RadarLayerPicker({ value, onChange, stateCode }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const active = LAYER_TYPES.find((t) => t.id === value) || LAYER_TYPES[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative shrink-0" ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={RADAR_CONTROL_PILL_CLASS}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls="radar-layer-menu"
+        aria-label={`Radar Layer, currently ${active.label}`}
+        title={active.description}
+      >
+        Radar Layer
+        <svg
+          className={`w-3.5 h-3.5 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <ul
+          id="radar-layer-menu"
+          role="listbox"
+          aria-label="Radar Layer"
+          className="absolute left-0 top-full mt-1.5 z-50 w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border border-slate-600/70 bg-slate-900/98 backdrop-blur-sm shadow-xl p-1.5"
+        >
+          {LAYER_TYPES.map((type) => {
+            const selected = type.id === value;
+            return (
+              <li key={type.id} role="option" aria-selected={selected}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (type.id !== value) {
+                      onChange(type.id);
+                      trackRadarTypeChange(type.id, { stateCode });
+                    }
+                    setOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors cursor-pointer ${
+                    selected
+                      ? 'bg-sky-500/20 text-sky-200'
+                      : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="block text-xs font-semibold">{type.label}</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5 leading-snug">
+                    {type.description}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function RadarPage() {
   const navigate = useNavigate();
@@ -221,6 +321,28 @@ export default function RadarPage() {
     if (resolvedHero) setHeroLocation(resolvedHero);
     scrollMapIntoView();
   }, [focusCounty, scrollMapIntoView, heroLocationFromLabel]);
+
+  /** Pan the existing map to AK/HI — no inset maps, just centerOn. */
+  const handleJumpToNonConusState = useCallback((abbr) => {
+    const slug = ABBR_TO_SLUG[abbr];
+    const state = slug ? US_STATES[slug] : null;
+    if (!state?.center) return;
+
+    areaReqRef.current += 1;
+    setUserArea(null);
+    setLocationSummary(null);
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.SEARCH;
+    setGpsCenter({
+      lat: state.center[0],
+      lon: state.center[1],
+      zoom: state.zoom ?? (abbr === 'AK' ? 4 : 7),
+      id: `radar-jump-${abbr}-${Date.now()}`,
+    });
+    setGpsStateCode(abbr);
+    setHeroLocation({ city: state.name, region: abbr });
+    trackMapRegionClick(abbr, MAP_REGION_SOURCES.RADAR_AK_HI_JUMP);
+    scrollMapIntoView();
+  }, [scrollMapIntoView]);
 
   // Click the highlighted county → its state alerts/radar page.
   const handleAreaClick = (feature) => {
@@ -310,25 +432,6 @@ export default function RadarPage() {
   const mapResetViewLabel = 'Full View';
   const mapResetViewTitle = 'Reset to default US view';
 
-  const heroLocationContext = useMemo(() => {
-    if (!mapHasLocalFocus) return null;
-    if (locationSummary) {
-      return {
-        alertInfo: locationSummary.alertInfo || null,
-        alertCount: locationSummary.alertInfo ? 1 : 0,
-        conditions: locationSummary.conditions || null,
-      };
-    }
-    const stateCode = effectiveStateCode || heroLocation?.region;
-    if (!stateCode) return null;
-    const stateAlerts = mapAlerts.filter((a) => a.state === stateCode);
-    return {
-      alertInfo: null,
-      alertCount: stateAlerts.length,
-      conditions: null,
-    };
-  }, [mapHasLocalFocus, locationSummary, effectiveStateCode, heroLocation, mapAlerts]);
-
   // Set meta tags on mount, reset on unmount
   useEffect(() => {
     setRadarMetaTags();
@@ -344,32 +447,12 @@ export default function RadarPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      {/* Header — shared nav cluster; state dropdown lives here, not on the map */}
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <PageBackNav />
-            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <span className="text-xl">📡</span>
-              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
-            </Link>
-          </div>
-          <PageHeaderNav source={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN} />
-        </div>
-      </header>
+      <PageSiteHeader
+        source={NAV_SOURCES.RADAR_PAGE_STATE_DROPDOWN}
+        className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-2.5 sm:py-3"
+      />
 
-      {/* Compact hero — radar-first title with location context */}
-      <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-2">
-        <div className="max-w-7xl mx-auto">
-          <NearMeHeader
-            as="h1"
-            variant="radar"
-            locationActive={mapHasLocalFocus}
-            resolvedLocation={headerResolvedLocation}
-            locationContext={heroLocationContext}
-          />
-        </div>
-      </div>
+      <h1 className="sr-only">Live Weather Radar</h1>
 
       <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-2 sm:space-y-3">
 
@@ -399,7 +482,7 @@ export default function RadarPage() {
               resetViewTitle={mapResetViewTitle}
               analyticsPageContext="radar"
               headerCenterControls={(
-                <div className="flex flex-wrap items-center justify-center gap-2 min-w-0">
+                <div className="flex flex-wrap items-center justify-start gap-2 min-w-0 w-full">
                   <ZipCodeSearch
                     layout="header"
                     variant="radar"
@@ -410,28 +493,15 @@ export default function RadarPage() {
                     onLocate={handleGpsLocate}
                     onResolveState={handleGpsResolveState}
                   />
-                  <select
-                    id="radar-layer-select"
-                    aria-label="Radar layer"
+                  <RadarLayerPicker
                     value={radarType}
-                    onChange={(e) => {
-                      const nextType = e.target.value;
-                      if (!nextType || nextType === radarType) return;
-                      setRadarType(nextType);
-                      trackRadarTypeChange(nextType, { stateCode: effectiveStateCode });
-                    }}
-                    className={RADAR_CONTROL_PILL_CLASS}
-                  >
-                    <option value="" disabled>
-                      Radar Layer
-                    </option>
-                    {LAYER_TYPES.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.label} — {type.description}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setRadarType}
+                    stateCode={effectiveStateCode}
+                  />
                 </div>
+              )}
+              headerRegionJumps={(
+                <NonConusJumpButtons onJump={handleJumpToNonConusState} />
               )}
             />
           </div>

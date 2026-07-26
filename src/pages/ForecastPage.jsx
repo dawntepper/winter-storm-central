@@ -11,8 +11,7 @@ import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/Fo
 import { getTimeOfDayClass } from '../components/ForecastVisuals';
 import TornadoWarningBanner from '../components/TornadoWarningBanner';
 import StormMap from '../components/StormMap';
-import PageHeaderNav from '../components/PageHeaderNav';
-import PageBackNav from '../components/PageBackNav';
+import PageSiteHeader from '../components/PageSiteHeader';
 import ContactLink from '../components/ContactLink';
 import { FooterLinks } from '../components/SiteFooter';
 import { trackForecastPageView, trackForecastLocationChanged, trackRadarLinkClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
@@ -245,18 +244,10 @@ export default function ForecastPage() {
 
   return (
     <div className={`min-h-screen ${todClass}`}>
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <PageBackNav />
-            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <span className="text-xl">📡</span>
-              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
-            </Link>
-          </div>
-          <PageHeaderNav source={NAV_SOURCES.HEADER_NAVIGATION} />
-        </div>
-      </header>
+      <PageSiteHeader
+        source={NAV_SOURCES.HEADER_NAVIGATION}
+        maxWidthClass="max-w-5xl"
+      />
 
       <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
         <div className="max-w-5xl mx-auto">

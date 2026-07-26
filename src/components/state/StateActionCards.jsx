@@ -1,136 +1,58 @@
 import { trackStateQuickActionClicked } from '../../utils/analytics';
 
-function ChevronIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-
-function RadarIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.75}
-        d="M12 3a9 9 0 109 9M12 7a5 5 0 105 5M12 11a1 1 0 100-2 1 1 0 000 2z"
-      />
-    </svg>
-  );
-}
-
-function CityIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.75}
-        d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 9h.01M15 9h.01M9 13h.01M15 13h.01"
-      />
-    </svg>
-  );
-}
-
-function MapIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.75}
-        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-      />
-    </svg>
-  );
-}
-
-const THEMES = {
-  green: {
-    card: 'bg-emerald-500/10 border-emerald-500/25 hover:border-emerald-500/45 hover:bg-emerald-500/15',
-    iconWrap: 'bg-emerald-500/20 text-emerald-400',
-    title: 'text-emerald-400',
-    chevron: 'text-emerald-400',
-  },
-  blue: {
-    card: 'bg-sky-500/10 border-sky-500/25 hover:border-sky-500/45 hover:bg-sky-500/15',
-    iconWrap: 'bg-sky-500/20 text-sky-400',
-    title: 'text-sky-400',
-    chevron: 'text-sky-400',
-  },
-  purple: {
-    card: 'bg-violet-500/10 border-violet-500/25 hover:border-violet-500/45 hover:bg-violet-500/15',
-    iconWrap: 'bg-violet-500/20 text-violet-400',
-    title: 'text-violet-400',
-    chevron: 'text-violet-400',
-  },
-};
-
-function ActionCard({ theme, icon: Icon, title, subtitle, onClick }) {
-  const colors = THEMES[theme];
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group flex w-full items-center gap-3 sm:gap-4 rounded-xl border px-4 py-4 sm:py-5 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 ${colors.card}`}
-    >
-      <span
-        className={`flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full ${colors.iconWrap}`}
-      >
-        <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={`block text-base sm:text-lg font-bold ${colors.title}`}>{title}</span>
-        <span className="mt-0.5 block text-xs sm:text-sm text-slate-400 leading-snug">{subtitle}</span>
-      </span>
-      <ChevronIcon className={`h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5 ${colors.chevron}`} />
-    </button>
-  );
-}
-
 /**
- * Prominent above-the-fold action cards for state alert pages.
+ * Compact mobile-only jump nav for state alert pages.
+ * Desktop already exposes radar / city / county inline — do not show cards there.
  */
 export default function StateActionCards({ stateCode, stateName, onRadar, onSelectCity, onCounties }) {
   const track = (actionType) => {
     trackStateQuickActionClicked({ state: stateCode, actionType });
   };
 
+  const itemClass =
+    'inline-flex h-11 min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-slate-600/80 bg-slate-800/70 px-2 text-xs font-semibold text-slate-200 transition-colors cursor-pointer hover:bg-slate-800 hover:border-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50';
+
   return (
-    <nav aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-      <ActionCard
-        theme="green"
-        icon={RadarIcon}
-        title="Live Radar"
-        subtitle="View precipitation and storm activity"
+    <nav
+      aria-label={`${stateName} page shortcuts`}
+      className="mt-3 grid grid-cols-3 gap-2 lg:hidden"
+    >
+      <button
+        type="button"
         onClick={() => {
           track('radar');
           onRadar?.();
         }}
-      />
-      <ActionCard
-        theme="blue"
-        icon={CityIcon}
-        title="Select City"
-        subtitle="Get alerts and forecasts for your location"
+        className={itemClass}
+        aria-label={`Jump to ${stateName} radar map`}
+      >
+        <span aria-hidden="true">🌀</span>
+        Radar
+      </button>
+      <button
+        type="button"
         onClick={() => {
           track('city');
           onSelectCity?.();
         }}
-      />
-      <ActionCard
-        theme="purple"
-        icon={MapIcon}
-        title="Counties"
-        subtitle={`Browse alerts by ${stateName} county`}
+        className={itemClass}
+        aria-label={`Jump to find local weather by city in ${stateName}`}
+      >
+        <span aria-hidden="true">🏙</span>
+        City
+      </button>
+      <button
+        type="button"
         onClick={() => {
           track('county');
           onCounties?.();
         }}
-      />
+        className={itemClass}
+        aria-label={`Jump to ${stateName} counties`}
+      >
+        <span aria-hidden="true">🗺</span>
+        Counties
+      </button>
     </nav>
   );
 }

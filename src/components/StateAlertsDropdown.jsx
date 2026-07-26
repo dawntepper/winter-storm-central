@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { US_STATES } from '../data/stateConfig';
 import {
@@ -22,10 +23,26 @@ export default function StateAlertsDropdown({
   source,
   className = DEFAULT_CLASS,
   currentStateSlug = null,
+  /** When true, placeholder uses short mobile-friendly "State Alerts ▾". */
+  compactMobileLabel = false,
 }) {
   const navigate = useNavigate();
   const currentName = currentStateSlug ? US_STATES[currentStateSlug]?.name : null;
   const isStatePage = Boolean(currentStateSlug);
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
+
+  useEffect(() => {
+    if (!compactMobileLabel) return undefined;
+    const onResize = () => setIsNarrow(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [compactMobileLabel]);
+
+  const placeholder = compactMobileLabel && isNarrow
+    ? 'State Alerts ▾'
+    : 'State Alerts/Radar ▾';
 
   const select = (
     <select
@@ -51,11 +68,15 @@ export default function StateAlertsDropdown({
         }
       }}
       className={`${className}${isStatePage ? ` ${STATE_TRIGGER_CLASS}` : ''}`}
-      aria-label={currentName ? `Current state: ${currentName}. Choose another state.` : 'Choose a state for alerts and radar'}
+      aria-label={
+        currentName
+          ? `${currentName} weather alerts and radar. Choose another state.`
+          : 'State weather alerts and radar. Choose a state.'
+      }
     >
       {!currentStateSlug && (
         <option value="" disabled>
-          State Alerts/Radar ▾
+          {placeholder}
         </option>
       )}
       {Object.entries(US_STATES).map(([slug, s]) => (

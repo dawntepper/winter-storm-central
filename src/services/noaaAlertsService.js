@@ -177,6 +177,7 @@ function parseAlert(alert) {
     category,
     state, // State code (e.g., "PA", "NY")
     sameCodes,
+    ugc: props.geocode?.UGC || [],
     location: extractLocationName(alert),
     lat: coords.lat,
     lon: coords.lon,
@@ -185,9 +186,15 @@ function parseAlert(alert) {
     fullDescription: props.description || '',
     severity: props.severity,
     urgency: props.urgency,
+    certainty: props.certainty || null,
     onset: props.onset,
+    effective: props.effective || null,
+    sent: props.sent || null,
     expires: props.expires,
     areaDesc: props.areaDesc,
+    instruction: props.instruction || null,
+    senderName: props.senderName || null,
+    parameters: props.parameters || null,
     url: alertUrl
   };
 }

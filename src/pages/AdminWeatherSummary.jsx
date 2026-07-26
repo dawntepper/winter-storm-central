@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminGate from '../components/AdminGate';
+import HazardBriefAdmin from '../components/admin/HazardBriefAdmin';
 
 const API = '/.netlify/functions/generate-weather-summary';
 const TOKEN_KEY = 'admin_function_token';
@@ -662,6 +663,8 @@ function AdminWeatherSummaryInner() {
             onSelect={fetchSummary}
           />
         )}
+
+        <HazardBriefAdmin token={token} />
       </main>
     </div>
   );

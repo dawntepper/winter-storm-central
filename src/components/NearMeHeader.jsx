@@ -32,6 +32,7 @@ export default function NearMeHeader({
 }) {
   const HeadingTag = as;
   const isRadar = variant === 'radar';
+  const isToolbar = variant === 'toolbar';
   const FALLBACK_HEADING = variant === 'radar' ? 'Live Radar — Continental US' : 'Live Weather & Alerts';
 
   const [internalResolved, setInternalResolved] = useState(null);
@@ -137,10 +138,10 @@ export default function NearMeHeader({
   };
 
   const primaryLabel = useChangeLocation
-    ? 'Change Location'
+    ? (isToolbar ? 'Change' : 'Change Location')
     : gpsStatus === 'locating'
       ? 'Locating…'
-      : 'Find Weather Near Me';
+      : (isToolbar ? 'Near Me' : 'Find Weather Near Me');
 
   const stateSlug = region ? ABBR_TO_SLUG[region] : null;
   const stateName = stateSlug ? US_STATES[stateSlug]?.name : null;
@@ -155,10 +156,14 @@ export default function NearMeHeader({
 
   const defaultHeadingClass = isRadar
     ? 'text-base sm:text-lg font-bold text-white'
-    : 'text-xl sm:text-2xl font-bold text-white';
+    : 'text-lg sm:text-2xl font-bold text-white leading-tight';
 
   const radarActionClass =
     'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/50 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap shrink-0';
+
+  /** Homepage: compact chip beside the heading — not a full-width hero CTA. */
+  const homepageActionClass =
+    'inline-flex items-center gap-1 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-sky-300 hover:text-sky-200 border border-sky-500/35 hover:border-sky-500/55 rounded-md bg-sky-500/10 hover:bg-sky-500/15 disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap shrink-0';
 
   const contextLine = isRadar && locationContext ? (
     <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
@@ -203,15 +208,11 @@ export default function NearMeHeader({
       aria-label={
         useChangeLocation
           ? 'Change your location'
-          : 'Find weather near me using your device location'
+          : 'Find weather near me'
       }
-      className={
-        isRadar
-          ? radarActionClass
-          : 'inline-flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 border border-sky-500/60 text-white font-semibold rounded-lg shadow-sm shadow-sky-900/30 transition-colors cursor-pointer whitespace-nowrap px-4 py-2.5 text-sm'
-      }
+      className={isRadar || isToolbar ? radarActionClass : homepageActionClass}
     >
-      {!isRadar && <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>}
+      <span aria-hidden="true">{useChangeLocation ? '📍' : '🎯'}</span>
       {primaryLabel}
     </button>
   ) : null;
@@ -227,8 +228,17 @@ export default function NearMeHeader({
     </>
   );
 
+  if (isToolbar) {
+    return (
+      <span className={`inline-flex flex-col items-start gap-0.5 ${className}`.trim()}>
+        {locationActionButton}
+        {gpsStatusHints}
+      </span>
+    );
+  }
+
   return (
-    <div className={`${isRadar ? 'space-y-1' : 'space-y-2'} ${className}`}>
+    <div className={`${isRadar ? 'space-y-1' : 'space-y-1'} ${className}`}>
       {isRadar ? (
         <div className="space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
@@ -241,23 +251,19 @@ export default function NearMeHeader({
           {gpsStatusHints}
         </div>
       ) : (
-        <div className={showLocationAction ? 'flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined}>
-          <div className="min-w-0">
-            <HeadingTag className={headingClassName || defaultHeadingClass}>
+        <div className="space-y-0.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+            <HeadingTag className={`${headingClassName || defaultHeadingClass} min-w-0`}>
               {heading}
             </HeadingTag>
+            {locationActionButton}
           </div>
-          {showLocationAction && (
-            <div className="flex flex-col items-stretch sm:items-end gap-0.5 flex-shrink-0">
-              {locationActionButton}
-              {gpsStatusHints}
-            </div>
-          )}
+          {gpsStatusHints}
         </div>
       )}
 
       {hasJumpLinks && !isRadar && (
-        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <nav aria-label="Jump to local alerts and forecasts" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-0.5">
           <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Jump to:</span>
           {citySlug && (
             <Link to={`/alerts/${citySlug}`} className={cityLinkClass}>

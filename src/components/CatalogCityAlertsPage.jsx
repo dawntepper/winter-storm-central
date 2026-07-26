@@ -177,7 +177,13 @@ export default function CatalogCityAlertsPage() {
       alertsLoading={alertsLoading}
       mapAlerts={mapAlerts}
       analyticsSource="catalog_city_page"
-      headerNav={<PageHeaderNav source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN} />}
+      headerNav={(
+        <PageHeaderNav
+          source={NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN}
+          currentStateSlug={stateSlug}
+          className="w-full justify-between md:w-auto md:justify-end"
+        />
+      )}
       extras={(
         <div className="space-y-6">
           {county && (

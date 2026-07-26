@@ -252,10 +252,13 @@ export default function ZipCodeSearch({
   layout = 'default',
   defaultExpanded = false,
   collapseOnDesktop = false,
+  /** 'default' | 'forest' — forest = single soft green edge (homepage mobile). */
+  accent = 'default',
 }) {
   const isCompact = variant === 'compact';
   const isRadar = variant === 'radar';
   const isHeaderLayout = layout === 'header';
+  const isForestAccent = accent === 'forest';
   const [zip, setZip] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -1173,7 +1176,7 @@ export default function ZipCodeSearch({
         {isExpanded && (
           <div
             id="radar-location-panel"
-            className="absolute right-0 max-sm:left-0 top-full mt-1.5 z-50 w-[min(calc(100vw-2rem),22rem)] max-sm:w-full rounded-xl border border-slate-600/70 bg-slate-900/98 backdrop-blur-sm shadow-xl p-3"
+            className="absolute left-0 top-full mt-1.5 z-50 w-[min(24rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] rounded-xl border border-slate-600/70 bg-slate-900/98 backdrop-blur-sm shadow-xl p-3"
           >
             {searchControls}
           </div>
@@ -1185,23 +1188,32 @@ export default function ZipCodeSearch({
   const radarCardClass = `rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl ${
     isExpanded ? 'overflow-visible relative z-10' : 'overflow-hidden'
   }`;
+  const forestCardClass = isExpanded
+    ? 'rounded-xl ring-1 ring-emerald-400/55 bg-[#234d38] shadow-lg overflow-visible relative z-10'
+    : 'rounded-xl ring-1 ring-emerald-400/55 bg-[#234d38] shadow-lg overflow-hidden';
   const defaultCardClass = isExpanded
-    ? 'rounded-lg border border-slate-600 shadow-lg overflow-visible relative z-10'
-    : 'rounded-lg border border-slate-600 shadow-lg overflow-hidden';
+    ? 'rounded-xl border border-slate-600/80 bg-slate-900 shadow-lg overflow-visible relative z-10'
+    : 'rounded-xl border border-slate-600/80 bg-slate-900 shadow-lg overflow-hidden';
   const accordionHeaderClass = isRadar
     ? 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-800 to-slate-800/80 hover:from-slate-700 hover:to-slate-700/80 transition-all'
-    : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-700 hover:bg-slate-600 transition-all';
+    : isForestAccent
+      ? 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-[#234d38] hover:bg-[#2a5a42] transition-colors'
+      : 'w-full px-4 py-2.5 flex items-center justify-between cursor-pointer bg-slate-800/90 hover:bg-slate-800 transition-colors';
   const accordionPanelClass = isRadar
     ? 'px-4 py-3 bg-slate-900 border-t border-slate-700 overflow-visible'
-    : 'px-6 py-6 bg-slate-800 border-t border-slate-600 rounded-b-lg overflow-visible';
+    : isForestAccent
+      ? 'px-4 py-4 bg-[#1c3f2e] border-t border-emerald-400/30 rounded-b-xl overflow-visible'
+      : 'px-6 py-6 bg-slate-800 border-t border-slate-600/80 rounded-b-xl overflow-visible';
+
+  const cardClass = isRadar ? radarCardClass : (isForestAccent ? forestCardClass : defaultCardClass);
 
   return (
     <div className={isRadar ? 'space-y-2' : 'space-y-4'} ref={panelRef}>
-      <div className={isRadar ? radarCardClass : defaultCardClass}>
+      <div className={cardClass}>
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`${accordionHeaderClass} ${isExpanded ? (isRadar ? '' : 'rounded-t-lg') : (isRadar ? '' : 'rounded-lg')}`}
+          className={`${accordionHeaderClass} ${isExpanded ? (isRadar ? '' : 'rounded-t-xl') : (isRadar ? '' : 'rounded-xl')}`}
           aria-expanded={isExpanded}
         >
           <div className="flex items-center gap-2">

@@ -8,6 +8,7 @@ import { US_STATES, STATE_NAMES, ABBR_TO_SLUG } from './data/stateConfig';
 import Header from './components/Header';
 import ZipCodeSearch from './components/ZipCodeSearch';
 import StormMap from './components/StormMap';
+import NonConusJumpButtons from './components/NonConusJumpButtons';
 import ExtremeWeatherSection from './components/ExtremeWeatherSection';
 import AlertTimeline from './components/AlertTimeline';
 import StateHeatmap from './components/StateHeatmap';
@@ -43,7 +44,9 @@ import {
   trackBrowseByStateClick,
   trackHomepageView,
   trackRadarStateResolved,
+  trackMapRegionClick,
   RADAR_RESOLUTION_SOURCES,
+  MAP_REGION_SOURCES,
   setNavSource,
   NAV_SOURCES,
   SAVE_TRIGGERS
@@ -326,6 +329,10 @@ export default function App() {
   const [initialLocation, setInitialLocation] = useState(null); // From ?location= URL param
   const [alertFilter, setAlertFilter] = useState(null); // null = national, "PA" = state filter
   const [heroLocation, setHeroLocation] = useState(null); // IP/GPS label for NearMeHeader
+  // Only the visible homepage map owns the page H1 (mobile vs desktop layouts).
+  const [isLgUp, setIsLgUp] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
+  );
 
   // Saved-locations abstraction (anon localStorage vs authed Supabase).
   // Weather access never depends on this — accounts are pure convenience.
@@ -342,6 +349,14 @@ export default function App() {
   useEffect(() => {
     const t = setTimeout(() => { toastReadyRef.current = true; }, 1500);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsLgUp(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   // Handle ?location= URL parameter
@@ -1022,6 +1037,33 @@ export default function App() {
     setPreviewCity(null);
   };
 
+  /** Pan the homepage map to AK/HI — same pattern as /radar (no inset maps). */
+  const handleJumpToNonConusState = useCallback((abbr) => {
+    const slug = ABBR_TO_SLUG[abbr];
+    const state = slug ? US_STATES[slug] : null;
+    if (!state?.center) return;
+
+    radarResolveSourceRef.current = RADAR_RESOLUTION_SOURCES.MANUAL_STATE_SELECT;
+    setUserArea(null);
+    setPreviewCity(null);
+    setSelectedAlertId(null);
+    setMapCenterOn({
+      lat: state.center[0],
+      lon: state.center[1],
+      zoom: state.zoom ?? (abbr === 'AK' ? 4 : 7),
+      id: `home-jump-${abbr}-${Date.now()}`,
+    });
+    setSelectedStateCode(abbr);
+    setHeroLocation({ city: state.name, region: abbr });
+    trackMapRegionClick(abbr, MAP_REGION_SOURCES.HOMEPAGE_AK_HI_JUMP);
+
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        document.querySelector('#storm-map-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
+
   const hasMapLocalFocus = !!(mapCenterOn?.lat || userArea?.geometry || previewCity?.lat);
 
   return (
@@ -1047,27 +1089,16 @@ export default function App() {
       {/* Active Storm Event Banner — reads from src/content/storms/ JSON files */}
       <StormEventBanner />
 
-      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Localized hero headline + primary location action + jump-to links. */}
-        <NearMeHeader
-          as="h2"
-          locationActive={hasMapLocalFocus}
-          resolvedLocation={hasMapLocalFocus ? heroLocation : null}
-          onResolved={setHeroLocation}
-          onLocate={handleHeroLocate}
-          onChangeLocation={handleChangeLocation}
-          onResolveState={handleResolveState}
-        />
-
+      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-5 space-y-2.5 sm:space-y-6">
         {/* Stale Data Warning */}
         <StaleDataBanner isStale={alertsIsStale} lastSuccessfulUpdate={alertsLastUpdated} error={alertsError && alertsData ? alertsError : null} />
 
         {/* ========== MOBILE LAYOUT ========== */}
-        <div className="lg:hidden space-y-4">
-          {/* 1. Storm Coverage Map — primary focus after hero */}
+        <div className="lg:hidden space-y-2.5">
+          {/* 1. Live Weather Map — homepage hero (no separate page heading) */}
           <div
             id="storm-map-mobile"
-            className="sticky z-10 -mx-3 sm:-mx-4 [&_.leaflet-container]:!h-[40vh] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900"
+            className="sticky z-20 relative isolate -mx-3 sm:-mx-4 px-3 sm:px-4 pb-1 bg-slate-900 [&_.leaflet-container]:!h-[40vh] before:content-[''] before:absolute before:left-0 before:right-0 before:h-4 before:-top-4 before:bg-slate-900"
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}
           >
             <StormMap
@@ -1076,6 +1107,7 @@ export default function App() {
               userLocations={userLocations}
               alerts={mapAlerts}
               isHero
+              isPageHero={!isLgUp}
               fitConusView
               centerOn={mapCenterOn}
               previewLocation={previewCity}
@@ -1090,11 +1122,26 @@ export default function App() {
               resetViewTitle="Reset to default US view"
               onAddAlertToMap={handleAddAlertToMap}
               onRemoveAlertFromMap={handleRemoveAlertFromMap}
+              analyticsPageContext="homepage"
+              headerNearMe={(
+                <NearMeHeader
+                  variant="toolbar"
+                  locationActive={hasMapLocalFocus}
+                  resolvedLocation={hasMapLocalFocus ? heroLocation : null}
+                  onResolved={setHeroLocation}
+                  onLocate={handleHeroLocate}
+                  onChangeLocation={handleChangeLocation}
+                  onResolveState={handleResolveState}
+                />
+              )}
+              headerRegionJumps={(
+                <NonConusJumpButtons onJump={handleJumpToNonConusState} />
+              )}
             />
           </div>
 
           {/* 2. Check Location */}
-          <div id="location-search-mobile" className="jump-scroll-target rounded-xl overflow-visible" style={{ backgroundColor: '#1a3d2e', border: '1px solid antiquewhite' }}>
+          <div id="location-search-mobile" className="jump-scroll-target">
             <ZipCodeSearch
               stormPhase="active"
               totalLocationCount={userLocations.length}
@@ -1306,6 +1353,7 @@ export default function App() {
                   userLocations={userLocations}
                   alerts={mapAlerts}
                   isHero
+                  isPageHero={isLgUp}
                   fitConusView
                   centerOn={mapCenterOn}
                   previewLocation={previewCity}
@@ -1320,6 +1368,10 @@ export default function App() {
                   resetViewTitle="Reset to default US view"
                   onAddAlertToMap={handleAddAlertToMap}
                   onRemoveAlertFromMap={handleRemoveAlertFromMap}
+                  analyticsPageContext="homepage"
+                  headerRegionJumps={(
+                    <NonConusJumpButtons onJump={handleJumpToNonConusState} />
+                  )}
                 />
               </div>
 
