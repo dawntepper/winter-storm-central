@@ -16,33 +16,41 @@ function formatRelativeTime(iso) {
   return `${hours} hours ago`;
 }
 
+function normalizeText(s) {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 /**
- * Whether cached/manual brief analysis adds context beyond the deterministic summary.
- * Fallback briefs are skipped — Layer 1 already covers that case.
+ * Optional cached/manual analysis that adds context beyond the deterministic brief.
+ * Fallback briefs and near-duplicates of Layer 1 are skipped.
+ * "What's changed" is never taken from AI — only deterministic changeSummary.
  */
-function getUsefulAnalysis(weatherBrief, situationSummary) {
+function getUsefulAnalysis(weatherBrief, brief) {
   if (!weatherBrief?.summary) return null;
   if (weatherBrief.source === 'fallback') return null;
 
   const analysis = weatherBrief.summary.trim();
   if (!analysis) return null;
 
-  const norm = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-  if (norm(analysis) === norm(situationSummary || '')) return null;
+  if (normalizeText(analysis) === normalizeText(brief || '')) return null;
 
-  // Reject if it only restates count + state list without extra substance
+  // Reject thin restatements
   const words = analysis.split(/\s+/).length;
   if (words < 12) return null;
 
-  return {
-    summary: analysis,
-    notableChange: weatherBrief.notableChange?.trim() || null,
-  };
+  // Reject if it mostly restates "N warnings across M states" without new facts
+  const briefNorm = normalizeText(brief);
+  const overlap = briefNorm
+    .split(/\W+/)
+    .filter((w) => w.length > 4 && normalizeText(analysis).includes(w));
+  if (overlap.length >= 12 && words < 40) return null;
+
+  return { summary: analysis };
 }
 
 /**
- * CurrentSituation — facts + optional cached analysis above the radar.
- * Merges former Live Status, Weather Brief presentation, and Affected States.
+ * CurrentSituation — concise live briefing:
+ * headline · brief · what's changed (deterministic) · affected states
  */
 export default function CurrentSituation({
   hazard,
@@ -63,14 +71,17 @@ export default function CurrentSituation({
     shortLabel,
   } = hazard;
 
-  const situationSummary = liveStatus.situationSummary || liveStatus.statusSentence;
-  const analysis = getUsefulAnalysis(weatherBrief, situationSummary);
+  const brief = liveStatus.brief || liveStatus.situationSummary || liveStatus.statusSentence;
+  const analysis = getUsefulAnalysis(weatherBrief, brief);
+  // Only deterministic change copy, and only when a prior snapshot existed
+  const changeSummary = liveStatus.changeSummary || null;
 
   const compactStates = liveStatus.affectedStatesCompact || {};
   const showExpand = (compactStates.remainingCount || 0) > 0;
+  const compactCount = compactStates.compactNames?.length || 4;
   const statesToShow = expanded
     ? affectedStates
-    : affectedStates.slice(0, Math.max(compactStates.compactNames?.length || 3, 3));
+    : affectedStates.slice(0, Math.max(compactCount, 1));
 
   const updatedIso = freshness?.latestSourceUpdateAt || hazard.updatedAt;
   const relative = formatRelativeTime(updatedIso);
@@ -112,7 +123,7 @@ export default function CurrentSituation({
           </p>
 
           <p className="mt-2 text-sm sm:text-[15px] text-slate-300 leading-relaxed max-w-3xl">
-            {situationSummary}
+            {brief}
           </p>
 
           {liveStatus.monitoringNote && !liveStatus.hasActiveAlerts && (
@@ -127,10 +138,10 @@ export default function CurrentSituation({
             </p>
           )}
 
-          {analysis?.notableChange && (
+          {changeSummary && (
             <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-3xl">
               <span className="text-slate-400 font-medium">What&apos;s changed: </span>
-              {analysis.notableChange}
+              {changeSummary}
             </p>
           )}
 
@@ -182,7 +193,7 @@ export default function CurrentSituation({
                       }}
                       aria-expanded="false"
                     >
-                      and {compactStates.remainingCount} more
+                      {compactStates.remainingCount} more
                     </button>
                   </>
                 )}

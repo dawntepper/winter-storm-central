@@ -25,7 +25,12 @@ import {
   buildAffectedCounties,
   buildHazardAlertStats,
 } from './normalize.js';
-import { buildLiveStatus } from './liveStatus.js';
+import {
+  buildLiveStatus,
+  buildChangeSummary,
+  buildSituationBrief,
+  buildSituationHeadline,
+} from './liveStatus.js';
 import { buildFallbackBrief } from './fallbackBrief.js';
 import { buildDataSignature } from './dataSignature.js';
 import { shouldRegenerateBrief } from './regeneration.js';
@@ -47,36 +52,63 @@ import {
  */
 export function resolveWeatherBrief(config, statsContext, cachedBrief = null) {
   const fallback = buildFallbackBrief(config, statsContext);
+  const affectedStateNames = (statsContext.affectedStates || []).map((s) => s.name);
+  const affectedCountyNames = (statsContext.affectedCounties || []).map((c) => c.name);
+
+  const validateOrNull = (summary, notableChange) => {
+    const result = validateBriefResponse(
+      { summary, notableChange, confidenceNotes: [] },
+      {
+        affectedStateNames,
+        affectedCountyNames,
+        activeCount: statsContext.activeCount || 0,
+      }
+    );
+    return result.ok ? result.brief : null;
+  };
 
   if (cachedBrief?.manual_override && cachedBrief.manual_summary) {
-    return {
-      summary: cachedBrief.manual_summary,
-      notableChange: cachedBrief.notable_change || null,
-      source: 'manual',
-      status: cachedBrief.status || 'valid',
-      generatedAt: cachedBrief.generated_at || null,
-      model: cachedBrief.model || null,
-      promptVersion: cachedBrief.prompt_version || null,
-      confidence: 'editorial',
-    };
+    const validated = validateOrNull(
+      cachedBrief.manual_summary,
+      cachedBrief.notable_change || null
+    );
+    if (validated) {
+      return {
+        summary: validated.summary,
+        // Trend copy is owned by deterministic changeSummary in liveStatus
+        notableChange: null,
+        source: 'manual',
+        status: cachedBrief.status || 'valid',
+        generatedAt: cachedBrief.generated_at || null,
+        model: cachedBrief.model || null,
+        promptVersion: cachedBrief.prompt_version || null,
+        confidence: 'editorial',
+      };
+    }
   }
 
   if (cachedBrief?.summary && cachedBrief.status !== 'failed') {
-    return {
-      summary: cachedBrief.summary,
-      notableChange: cachedBrief.notable_change || null,
-      source: 'cached',
-      status: cachedBrief.status || 'valid',
-      generatedAt: cachedBrief.generated_at || null,
-      model: cachedBrief.model || null,
-      promptVersion: cachedBrief.prompt_version || null,
-      confidence: 'model',
-    };
+    const validated = validateOrNull(
+      cachedBrief.summary,
+      cachedBrief.notable_change || null
+    );
+    if (validated) {
+      return {
+        summary: validated.summary,
+        notableChange: null,
+        source: 'cached',
+        status: cachedBrief.status || 'valid',
+        generatedAt: cachedBrief.generated_at || null,
+        model: cachedBrief.model || null,
+        promptVersion: cachedBrief.prompt_version || null,
+        confidence: 'model',
+      };
+    }
   }
 
   return {
     summary: fallback.summary,
-    notableChange: fallback.notableChange,
+    notableChange: null,
     source: 'fallback',
     status: 'valid',
     generatedAt: null,
@@ -158,24 +190,40 @@ export function get(slug, alerts = [], options = {}) {
     hasExtremeAlert: stats.hasExtremeAlert,
   });
 
+  // Prior brief row carries the last known structured counts — use as
+  // previous snapshot for deterministic "What's changed" (never invent trends).
+  const previousSnapshot = (cachedBrief && typeof cachedBrief.active_count === 'number')
+    ? {
+      activeCount: cachedBrief.active_count,
+      stateCodes: cachedBrief.affected_state_codes || [],
+    }
+    : null;
+
   const liveStatus = dataAvailable
     ? buildLiveStatus(config, {
       activeCount: filtered.length,
       affectedStates,
+      affectedCounties,
       alerts: filtered,
+      previousSnapshot,
     })
     : {
-      heading: 'Live Status',
+      heading: 'Current Situation',
       statusHeadline: 'Live alert data temporarily unavailable',
       statusSentence: 'Live alert data is temporarily unavailable. Radar, related links, and safety information remain available below.',
+      situationSummary: 'Live alert data is temporarily unavailable. Radar, related links, and safety information remain available below.',
+      brief: 'Live alert data is temporarily unavailable. Radar, related links, and safety information remain available below.',
+      changeSummary: null,
       countLabel: null,
       hasActiveAlerts: false,
+      hasPreviousSnapshot: false,
       affectedStatesCompact: { compactNames: [], displayText: '', remainingCount: 0 },
     };
 
   const statsContext = {
     activeCount: filtered.length,
     affectedStates,
+    affectedCounties,
   };
 
   const weatherBrief = resolveWeatherBrief(config, statsContext, cachedBrief);
@@ -282,6 +330,9 @@ export const hazardEngine = {
   shouldRegenerateBrief,
   buildFallbackBrief,
   buildLiveStatus,
+  buildChangeSummary,
+  buildSituationBrief,
+  buildSituationHeadline,
   buildDataSignature,
   validateBriefResponse,
   buildBriefLlmPayload,

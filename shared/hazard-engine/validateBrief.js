@@ -95,6 +95,37 @@ export function validateBriefResponse(raw, {
     }
   }
 
+  // Reject unsafe “remaining / the rest” math language — deterministic brief owns distribution.
+  if (/\b(the remaining|account for the remaining|all other|the rest of the)\b/i.test(summary)) {
+    reasons.push('unsafe_remaining_language');
+  }
+  if (notable && /\b(the remaining|account for the remaining|all other)\b/i.test(notable)) {
+    reasons.push('notable_unsafe_remaining_language');
+  }
+
+  // Reject invented absolute active-count claims that disagree with structured data.
+  if (activeCount > 0) {
+    const countClaims = [...summary.matchAll(/\b(\d+)\s+(active\s+)?(warnings?|watches?|advisories|alerts?)\b/gi)];
+    for (const match of countClaims) {
+      const claimed = Number(match[1]);
+      if (Number.isFinite(claimed) && claimed !== activeCount && claimed > 0) {
+        // Allow small subset counts (e.g. "10 warnings in Arizona") — only flag
+        // when claim is larger than activeCount (impossible) or equals a round
+        // "national total" pattern with "across" / "nationwide" / "United States".
+        const window = summary.slice(Math.max(0, match.index - 40), match.index + match[0].length + 40);
+        if (claimed > activeCount) {
+          reasons.push(`count_exceeds_active:${claimed}`);
+        } else if (
+          claimed !== activeCount
+          && /\b(across|nationwide|united states|nationally|in the u\.s\.)\b/i.test(window)
+          && !/\bin\s+[A-Z][a-z]+/.test(window)
+        ) {
+          reasons.push(`national_count_mismatch:${claimed}`);
+        }
+      }
+    }
+  }
+
   if (reasons.length > 0) {
     return { ok: false, reasons: [...new Set(reasons)] };
   }
@@ -114,13 +145,16 @@ export const BRIEF_SYSTEM_PROMPT = `You write concise, factual weather briefs fo
 Summarize only the structured alert information supplied.
 
 Rules:
-- Write no more than 2–3 sentences.
+- Write no more than 2 sentences of analysis that add context beyond count and state lists.
 - Do not invent conditions, movement, damage, timing, or locations.
 - Do not claim a storm is occurring in an entire state when alerts affect only part of it.
 - Do not describe a location as eastern, western, northern, southern, or central unless that geographic characterization is supported by the supplied data.
+- Do not say alerts "account for the remaining" or "the rest" unless the listed subsets sum exactly to the total.
+- Do not claim a tornado or other hazard has been observed unless certainty/tags in the data support it.
 - Do not add safety advice.
 - Do not add URLs.
-- Do not repeat the full active count unless necessary for clarity.
+- Do not repeat the full active count or full state list.
+- Set notableChange only when previousSummary is provided and a real change is evident; otherwise null.
 - Avoid hype, dramatic language, and vague claims.
 - Avoid phrases such as 'devastating,' 'historic,' or 'catastrophic' unless those exact classifications are present in an official source.
 - Prefer plain language.
