@@ -478,7 +478,7 @@ const CONTENT = {
       {
         heading: 'What is an Excessive Heat Warning?',
         paragraphs: [
-          'An Excessive Heat Warning means a dangerous heat event is occurring or expected. High temperatures and humidity can create a significant risk of heat-related illness.',
+          'An Excessive Heat Warning (also issued by many National Weather Service offices as an Extreme Heat Warning) means a dangerous heat event is occurring or expected. High temperatures and humidity can create a significant risk of heat-related illness.',
         ],
       },
       {
@@ -491,7 +491,7 @@ const CONTENT = {
     faq: [
       {
         q: 'Where do Excessive Heat Warnings come from?',
-        a: 'Official Excessive Heat Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+        a: 'Official Excessive Heat Warnings and Extreme Heat Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
       },
     ],
     source: SHARED_SOURCE,

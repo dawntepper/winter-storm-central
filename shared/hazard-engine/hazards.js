@@ -338,7 +338,8 @@ export const HAZARD_CONFIGS = {
   },
   'excessive-heat-warning': {
     slug: 'excessive-heat-warning',
-    nwsEvents: ['Excessive Heat Warning'],
+    // Exact NWS event strings — include both legacy Excessive and current Extreme names.
+    nwsEvents: ['Excessive Heat Warning', 'Extreme Heat Warning'],
     singularLabel: 'Excessive Heat Warning',
     pluralLabel: 'Excessive Heat Warnings',
     pageTitle: 'Excessive Heat Warnings Today',

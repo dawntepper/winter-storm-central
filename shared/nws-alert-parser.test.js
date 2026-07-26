@@ -3,7 +3,9 @@ import {
   extractGeometryCoordinates,
   extractLocationName,
   extractStateCode,
+  filterAlertFeatures,
   filterSameCodesForState,
+  getCategoryForEvent,
   normalizeSameFips,
 } from './nws-alert-parser.js';
 
@@ -74,6 +76,32 @@ describe('extractLocationName', () => {
 describe('extractStateCode', () => {
   it('reads postal state from the first UGC code', () => {
     expect(extractStateCode(DE_HEAT_ADVISORY)).toBe('DE');
+  });
+});
+
+describe('heat event inclusion + categorization', () => {
+  it('categorizes Extreme and Excessive Heat products as heat', () => {
+    expect(getCategoryForEvent('Extreme Heat Warning')).toBe('heat');
+    expect(getCategoryForEvent('Extreme Heat Watch')).toBe('heat');
+    expect(getCategoryForEvent('Excessive Heat Warning')).toBe('heat');
+    expect(getCategoryForEvent('Heat Advisory')).toBe('heat');
+  });
+
+  it('includes Extreme Heat Warning/Watch in the active-alert filter', () => {
+    const features = [
+      { properties: { event: 'Extreme Heat Warning' } },
+      { properties: { event: 'Extreme Heat Watch' } },
+      { properties: { event: 'Excessive Heat Warning' } },
+      { properties: { event: 'Heat Advisory' } },
+      { properties: { event: 'Special Weather Statement' } },
+    ];
+    const filtered = filterAlertFeatures(features).map((f) => f.properties.event);
+    expect(filtered).toEqual([
+      'Extreme Heat Warning',
+      'Extreme Heat Watch',
+      'Excessive Heat Warning',
+      'Heat Advisory',
+    ]);
   });
 });
 
