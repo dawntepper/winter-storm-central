@@ -67,7 +67,7 @@ function HazardFilterPill({
       }
     >
       <span aria-hidden="true" className={selected ? undefined : 'opacity-70'}>{hazard.icon}</span>
-      <span>{hazard.label}</span>
+      <span className="hidden lg:inline">{hazard.label}</span>
       <span className={selected ? 'text-white/80' : 'text-slate-500'}>
         {hazard.activeCount}
       </span>
@@ -83,8 +83,8 @@ function HazardFilterPill({
  * for the state (not the post-filter remainder).
  *
  * Desktop (lg+): compact status card — one-hazard states hide redundant All/filter
- * chrome; multi-hazard keeps filters; CTA sits on the hazard row.
- * Mobile: preserves filter pills + All control; alerts CTA stays hidden.
+ * chrome; multi-hazard keeps filters (emoji + name + count); CTA on the hazard row.
+ * Mobile: All + filter pills as emoji + count only (full name in aria-label); CTA hidden.
  */
 export default function StateCurrentSituation({
   stateIntel,
@@ -263,7 +263,7 @@ export default function StateCurrentSituation({
             </span>
           </p>
 
-          {/* Mobile — keep All + filter pills (unchanged behavior) */}
+          {/* Mobile — All + compact emoji/count filter pills */}
           <div className="flex flex-wrap gap-1.5 lg:hidden">
             {allControl}
             {multiHazardPills}
