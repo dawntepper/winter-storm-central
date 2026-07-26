@@ -60,6 +60,35 @@ describe('exact NWS event matching', () => {
     expect(matchesHazardEvent(alert({ event: 'Tornado Watch' }), tornadoConfig)).toBe(false);
     expect(matchesHazardEvent(alert({ event: 'Severe Thunderstorm Warning' }), tornadoConfig)).toBe(false);
   });
+
+  it('matches both Excessive and Extreme Heat Warning on the heat hazard page', () => {
+    const heatConfig = getHazardConfig('excessive-heat-warning');
+    expect(heatConfig.nwsEvents).toEqual([
+      'Excessive Heat Warning',
+      'Extreme Heat Warning',
+    ]);
+    expect(matchesHazardEvent(alert({ event: 'Excessive Heat Warning' }), heatConfig)).toBe(true);
+    expect(matchesHazardEvent(alert({ event: 'Extreme Heat Warning' }), heatConfig)).toBe(true);
+    // Advisories and watches are separate products — do not group onto this page
+    expect(matchesHazardEvent(alert({ event: 'Heat Advisory' }), heatConfig)).toBe(false);
+    expect(matchesHazardEvent(alert({ event: 'Extreme Heat Watch' }), heatConfig)).toBe(false);
+    expect(matchesHazardEvent(alert({ event: 'Excessive Heat Watch' }), heatConfig)).toBe(false);
+  });
+
+  it('counts Extreme Heat Warnings in the heat hazard snapshot', () => {
+    const snap = hazardEngine.get(
+      'excessive-heat-warning',
+      [
+        alert({ id: 'eh-1', event: 'Extreme Heat Warning', state: 'MT', areaDesc: 'Cascade, MT' }),
+        alert({ id: 'eh-2', event: 'Extreme Heat Warning', state: 'AZ', areaDesc: 'Maricopa, AZ' }),
+        alert({ id: 'adv-1', event: 'Heat Advisory', state: 'TX', areaDesc: 'Travis, TX' }),
+      ],
+      { dataAvailable: true }
+    );
+    expect(snap.ok).toBe(true);
+    expect(snap.activeCount).toBe(2);
+    expect(snap.alerts.every((a) => a.event === 'Extreme Heat Warning')).toBe(true);
+  });
 });
 
 describe('dedupe + active filter', () => {

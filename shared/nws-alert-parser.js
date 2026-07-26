@@ -47,8 +47,10 @@ export const INCLUDED_EVENTS = [
   'Freeze Warning', 'Freeze Watch',
   'Frost Advisory',
   'Cold Weather Advisory',
-  // Heat
+  // Heat — NWS issues both legacy "Excessive Heat *" and current "Extreme Heat *"
+  // product names depending on WFO / directive era.
   'Excessive Heat Warning', 'Excessive Heat Watch',
+  'Extreme Heat Warning', 'Extreme Heat Watch',
   'Heat Advisory',
   // Tropical
   'Hurricane Warning', 'Hurricane Watch',
@@ -113,7 +115,7 @@ export const ALERT_CATEGORIES = {
     name: 'Extreme Heat',
     icon: '🌡️',
     color: '#f97316',
-    events: ['Excessive Heat', 'Heat Advisory'],
+    events: ['Excessive Heat', 'Extreme Heat', 'Heat Advisory'],
   },
   fire: {
     id: 'fire',
