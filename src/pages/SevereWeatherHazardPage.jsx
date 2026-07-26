@@ -98,9 +98,7 @@ function NotFoundHazard({ slug }) {
     <div className="min-h-screen bg-slate-950 text-white">
       <PageSiteHeader
         source={NAV_SOURCES.HEADER_NAVIGATION}
-        showBrand={false}
         maxWidthClass="max-w-5xl"
-        className="border-b border-slate-800 px-4 py-3"
       />
       <main className="max-w-5xl mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-3">Hazard page not found</h1>
@@ -153,11 +151,7 @@ export default function SevereWeatherHazardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <PageSiteHeader
-        source={NAV_SOURCES.HEADER_NAVIGATION}
-        showBrand={false}
-        className="border-b border-slate-800 px-4 py-3"
-      />
+      <PageSiteHeader source={NAV_SOURCES.HEADER_NAVIGATION} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <nav aria-label="Breadcrumb" className="text-xs text-slate-500 mb-3">
