@@ -5,7 +5,8 @@ const StormMap = lazy(() => import('../StormMap'));
 
 /**
  * Full-width hazard-filtered radar — visual centerpiece after Current Situation.
- * Mobile uses StormMap presentation="embedded" (compact height + alert-extent fit).
+ * Uses StormMap presentation="embedded" for alert-extent fit; height overrides
+ * keep the map larger than the default compact embedded sizing.
  */
 export default function HazardRadarSection({ hazard, alerts = [] }) {
   const [activeCategories] = useState(() => new Set([hazard.radarCategory]));
@@ -28,11 +29,11 @@ export default function HazardRadarSection({ hazard, alerts = [] }) {
 
       <div
         id="hazard-radar-map"
-        className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 lg:[&_.leaflet-container]:!h-[520px]"
+        className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 [&_.leaflet-container]:!h-[clamp(360px,50vh,440px)] md:[&_.leaflet-container]:!h-[500px] lg:[&_.leaflet-container]:!h-[560px]"
       >
         <Suspense
           fallback={
-            <div className="h-[clamp(280px,42vh,320px)] lg:h-[520px] flex items-center justify-center text-slate-400 text-sm">
+            <div className="h-[clamp(360px,50vh,440px)] md:h-[500px] lg:h-[560px] flex items-center justify-center text-slate-400 text-sm">
               Loading radar…
             </div>
           }
@@ -41,7 +42,6 @@ export default function HazardRadarSection({ hazard, alerts = [] }) {
             weatherData={{}}
             alerts={mapAlerts}
             isHero
-            heroCompact
             presentation="embedded"
             embedFit="alerts"
             embedContextKey={hazard.slug}

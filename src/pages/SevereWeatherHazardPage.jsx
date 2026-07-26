@@ -153,7 +153,7 @@ export default function SevereWeatherHazardPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <PageSiteHeader source={NAV_SOURCES.HEADER_NAVIGATION} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-6 sm:pt-10 sm:pb-8">
         <nav aria-label="Breadcrumb" className="text-xs text-slate-500 mb-3">
           <ol className="flex flex-wrap items-center gap-1.5">
             <li><Link to="/" className="hover:text-slate-300">Home</Link></li>
