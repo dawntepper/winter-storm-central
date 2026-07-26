@@ -3,7 +3,7 @@
  * Used as Layer 1 facts above the radar on hazard landing pages.
  */
 
-import { MAX_STATES_COMPACT, labelForCount } from './hazards.js';
+import { MAX_STATES_COMPACT, labelForCount, resolveDisplayLabels } from './hazards.js';
 
 function joinNames(names) {
   if (names.length === 0) return '';
@@ -106,16 +106,24 @@ export function buildSituationSummary(config, { activeCount, affectedStates }) {
   return summary;
 }
 
-export function buildLiveStatus(config, { activeCount, affectedStates }) {
-  const label = labelForCount(config, activeCount);
-  const pluralLower = (config.pluralLabel || 'alerts').toLowerCase();
+export function buildLiveStatus(config, { activeCount, affectedStates, alerts = [] }) {
+  // Prefer the live NWS product name when a multi-event hazard has only one product active
+  // (e.g. Extreme Heat Warning on the excessive-heat-warning page).
+  const labels = resolveDisplayLabels(config, alerts);
+  const displayConfig = {
+    ...config,
+    singularLabel: labels.singularLabel || config.singularLabel,
+    pluralLabel: labels.pluralLabel || config.pluralLabel,
+  };
+  const label = labelForCount(displayConfig, activeCount);
+  const pluralLower = (displayConfig.pluralLabel || 'alerts').toLowerCase();
 
   if (activeCount <= 0) {
     return {
       heading: 'Current Situation',
-      statusHeadline: `No Active ${config.pluralLabel}`,
-      statusSentence: buildSituationSummary(config, { activeCount: 0, affectedStates: [] }),
-      situationSummary: buildSituationSummary(config, { activeCount: 0, affectedStates: [] }),
+      statusHeadline: `No Active ${displayConfig.pluralLabel}`,
+      statusSentence: buildSituationSummary(displayConfig, { activeCount: 0, affectedStates: [] }),
+      situationSummary: buildSituationSummary(displayConfig, { activeCount: 0, affectedStates: [] }),
       monitoringNote:
         `StormTracking continues to monitor National Weather Service alerts and will update this page when new ${pluralLower} are issued.`,
       countLabel: null,
@@ -125,9 +133,9 @@ export function buildLiveStatus(config, { activeCount, affectedStates }) {
   }
 
   const compact = formatAffectedStatesCompact(affectedStates);
-  const situationSummary = buildSituationSummary(config, { activeCount, affectedStates });
+  const situationSummary = buildSituationSummary(displayConfig, { activeCount, affectedStates });
   // Prefer plural label in the headline for scannability ("Active Flood Warnings: 7")
-  const headlineLabel = config.pluralLabel || label;
+  const headlineLabel = displayConfig.pluralLabel || label;
 
   return {
     heading: 'Current Situation',

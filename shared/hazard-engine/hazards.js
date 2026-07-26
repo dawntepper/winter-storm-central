@@ -338,22 +338,24 @@ export const HAZARD_CONFIGS = {
   },
   'excessive-heat-warning': {
     slug: 'excessive-heat-warning',
-    // Exact NWS event strings — include both legacy Excessive and current Extreme names.
-    nwsEvents: ['Excessive Heat Warning', 'Extreme Heat Warning'],
-    singularLabel: 'Excessive Heat Warning',
-    pluralLabel: 'Excessive Heat Warnings',
-    pageTitle: 'Excessive Heat Warnings Today',
-    shortLabel: 'Excessive Heat',
+    // Exact NWS event strings — include both current Extreme and legacy Excessive names.
+    // Display copy prefers Extreme Heat (current NWS product + ALERT_CATEGORIES.heat).
+    nwsEvents: ['Extreme Heat Warning', 'Excessive Heat Warning'],
+    singularLabel: 'Extreme Heat Warning',
+    pluralLabel: 'Extreme Heat Warnings',
+    pageTitle: 'Extreme Heat Warnings Today',
+    shortLabel: 'Extreme Heat',
     intro:
-      'Track active excessive heat warnings across the United States with affected areas, warning details, and links to current state alerts.',
+      'Track active Extreme Heat Warnings and Excessive Heat Warnings across the United States with affected areas, warning details, and links to current state alerts.',
     icon: ALERT_CATEGORIES.heat.icon,
     severityColor: ALERT_CATEGORIES.heat.color,
     radarCategory: 'heat',
     radarFilter: 'excessive-heat-warning',
-    seoTitle: 'Excessive Heat Warnings Today | StormTracking',
+    seoTitle: 'Extreme Heat Warnings Today | StormTracking',
     seoDescription:
-      'Track active excessive heat warnings across the United States with affected states, warning details, and current National Weather Service alerts.',
-    zeroActiveDescription: 'There are currently no active excessive heat warnings in the United States.',
+      'Track active Extreme Heat Warnings and Excessive Heat Warnings across the United States with affected states, warning details, and current National Weather Service alerts.',
+    zeroActiveDescription:
+      'There are currently no active Extreme Heat Warnings or Excessive Heat Warnings in the United States.',
     relatedHazards: ['red-flag-warning', 'high-wind-warning'],
     educationalContentKey: 'excessive-heat-warning',
     launch: true,
@@ -453,4 +455,46 @@ export function hazardHref(slug) {
 export function labelForCount(config, count) {
   if (!config) return 'alerts';
   return count === 1 ? config.singularLabel : config.pluralLabel;
+}
+
+/** Pluralize a single NWS event name for headlines ("Extreme Heat Warning" → "... Warnings"). */
+export function pluralizeNwsEvent(event) {
+  if (!event) return 'alerts';
+  if (/Warnings$|Watches$|Advisories$/i.test(event)) return event;
+  if (event.endsWith('Warning')) return event.replace(/Warning$/, 'Warnings');
+  if (event.endsWith('Watch')) return event.replace(/Watch$/, 'Watches');
+  if (event.endsWith('Advisory')) return event.replace(/Advisory$/, 'Advisories');
+  return `${event}s`;
+}
+
+/**
+ * For multi-event hazards (e.g. Extreme + Excessive Heat Warning), prefer the
+ * active product name in Current Situation copy when only one product is live.
+ * When none or both are active, fall back to the hazard's configured labels.
+ */
+export function resolveDisplayLabels(config, alerts = []) {
+  const nwsEvents = config?.nwsEvents || [];
+  if (!config || nwsEvents.length <= 1) {
+    return {
+      singularLabel: config?.singularLabel,
+      pluralLabel: config?.pluralLabel,
+    };
+  }
+
+  const activeUnique = nwsEvents.filter((event) =>
+    (alerts || []).some((a) => a?.event === event)
+  );
+
+  if (activeUnique.length === 1) {
+    const singular = activeUnique[0];
+    return {
+      singularLabel: singular,
+      pluralLabel: pluralizeNwsEvent(singular),
+    };
+  }
+
+  return {
+    singularLabel: config.singularLabel,
+    pluralLabel: config.pluralLabel,
+  };
 }
