@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getLaunchHazardSlugs, getHazardConfig } from '../../shared/hazard-engine/hazards.js';
+import { getLaunchHazardSlugs, getHazardConfig } from '../../../shared/hazard-engine/hazards.js';
 
 const API = '/.netlify/functions/hazard-weather-brief';
 
