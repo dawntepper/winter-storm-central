@@ -275,21 +275,25 @@ export const HAZARD_CONFIGS = {
   },
   'winter-storm-warning': {
     slug: 'winter-storm-warning',
-    nwsEvents: ['Winter Storm Warning'],
-    singularLabel: 'Winter Storm Warning',
-    pluralLabel: 'Winter Storm Warnings',
-    pageTitle: 'Winter Storm Warnings Today',
+    // Warning + Advisory — Alaska often has Winter Weather Advisories when
+    // no Winter Storm Warning is in effect. Include both; display labels
+    // prefer the live product name (resolveDisplayLabels).
+    nwsEvents: ['Winter Storm Warning', 'Winter Weather Advisory'],
+    singularLabel: 'Winter Weather Alert',
+    pluralLabel: 'Winter Weather Alerts',
+    pageTitle: 'Winter Storm Warnings & Advisories Today',
     shortLabel: 'Winter Storm',
     intro:
-      'Track active winter storm warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
+      'Track active Winter Storm Warnings and Winter Weather Advisories across the United States — including Alaska and Hawaii — with live radar, affected areas, alert details, and links to current state alerts.',
     icon: ALERT_CATEGORIES.winter.icon,
     severityColor: ALERT_CATEGORIES.winter.color,
     radarCategory: 'winter',
     radarFilter: 'winter-storm-warning',
-    seoTitle: 'Winter Storm Warnings Today & Live Radar | StormTracking',
+    seoTitle: 'Winter Storm Warnings & Advisories Today | StormTracking',
     seoDescription:
-      'Track active winter storm warnings across the United States with live radar, affected states, warning details, and current National Weather Service alerts.',
-    zeroActiveDescription: 'There are currently no active winter storm warnings in the United States.',
+      'Track active Winter Storm Warnings and Winter Weather Advisories across the United States, including Alaska and Hawaii, with live radar, affected states, and current National Weather Service alerts.',
+    zeroActiveDescription:
+      'There are currently no active Winter Storm Warnings or Winter Weather Advisories in the United States.',
     relatedHazards: ['blizzard-warning', 'ice-storm-warning'],
     educationalContentKey: 'winter-storm-warning',
     launch: true,
@@ -430,7 +434,8 @@ export const PROMPT_VERSION = 'hazard-brief-v1';
 export const BRIEF_MAX_AGE_ACTIVE_MS = 20 * 60 * 1000;
 export const BRIEF_MAX_AGE_INACTIVE_MS = 2 * 60 * 60 * 1000;
 export const COUNT_CHANGE_THRESHOLD = 3;
-export const MAX_STATES_COMPACT = 3;
+/** Top states shown before “N more” in Affected States. */
+export const MAX_STATES_COMPACT = 4;
 export const MAX_ALERTS_TO_LLM = 12;
 
 export function getHazardConfig(slug) {

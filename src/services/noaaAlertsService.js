@@ -159,11 +159,18 @@ function parseAlert(alert) {
 
   if (!category) return null;
 
-  const coords = extractCoordinates(alert);
-  if (!coords) return null; // Skip alerts without coordinates
-
-  // Extract state code for filtering
+  // Prefer geometry / FIPS / UGC centroid. Always keep Alaska & Hawaii land
+  // alerts even when county FIPS/geometry is missing — state centroid is enough
+  // for hazard pages and map framing.
+  let coords = extractCoordinates(alert);
   const state = extractStateCode(alert);
+  if (!coords && state && (state === 'AK' || state === 'HI')) {
+    const centroid = getStateCentroid(state);
+    if (centroid) {
+      coords = addJitter({ ...centroid, source: 'state' }, 0.5);
+    }
+  }
+  if (!coords) return null; // Skip alerts without coordinates
 
   // Link to weather.gov alerts page - individual alert URLs no longer work
   // The main alerts page shows all active alerts and is the best user experience

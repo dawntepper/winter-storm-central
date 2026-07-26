@@ -413,16 +413,22 @@ const CONTENT = {
         ],
       },
       {
-        heading: 'Safety during a Winter Storm Warning',
+        heading: 'Winter Weather Advisories',
         paragraphs: [
-          'Limit travel, prepare for power outages, and keep pets and vulnerable household members indoors when conditions are dangerous. Continue monitoring official National Weather Service alerts.',
+          'A Winter Weather Advisory means winter conditions are expected to cause inconvenience and could become hazardous, especially for travel. Advisories are common in Alaska and other snow-prone areas when impacts are notable but below Winter Storm Warning criteria.',
+        ],
+      },
+      {
+        heading: 'Safety during winter alerts',
+        paragraphs: [
+          'Limit travel, prepare for power outages, and keep pets and vulnerable household members indoors when conditions are dangerous. Continue monitoring official National Weather Service alerts for your area, including Alaska and Hawaii.',
         ],
       },
     ],
     faq: [
       {
-        q: 'Where do Winter Storm Warnings come from?',
-        a: 'Official Winter Storm Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+        q: 'Where do Winter Storm Warnings and Advisories come from?',
+        a: 'Official Winter Storm Warnings and Winter Weather Advisories are issued by the National Weather Service. StormTracking organizes and displays them nationwide, including Alaska and Hawaii.',
       },
     ],
     source: SHARED_SOURCE,
