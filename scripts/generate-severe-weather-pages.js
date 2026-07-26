@@ -107,10 +107,10 @@ const HAZARDS = [
   },
   {
     slug: 'winter-storm-warning',
-    title: 'Winter Storm Warnings Today & Live Radar | StormTracking',
-    description: 'Track active winter storm warnings across the United States with live radar, affected states, warning details, and current National Weather Service alerts.',
-    h1: 'Winter Storm Warnings Today',
-    intro: 'Track active winter storm warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
+    title: 'Winter Storm Warnings & Advisories Today | StormTracking',
+    description: 'Track active Winter Storm Warnings and Winter Weather Advisories across the United States, including Alaska and Hawaii, with live radar, affected states, and current National Weather Service alerts.',
+    h1: 'Winter Storm Warnings & Advisories Today',
+    intro: 'Track active Winter Storm Warnings and Winter Weather Advisories across the United States — including Alaska and Hawaii — with live radar, affected areas, alert details, and links to current state alerts.',
   },
   {
     slug: 'ice-storm-warning',
@@ -200,10 +200,8 @@ function generateHTML(baseHTML, page) {
   <div id="seo-severe-weather-snippet" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">
     <h1>${page.h1}</h1>
     <p>${page.intro}</p>
-    <h2>Live Status</h2>
-    <p>Live National Weather Service alert status for ${page.h1.replace(' Today', '').toLowerCase()} updates on this page.</p>
-    <h2>Weather Brief</h2>
-    <p>A concise weather brief summarizes current conditions when alerts are active. When no alerts are active, this page remains available with radar and safety information.</p>
+    <h2>Current Situation</h2>
+    <p>Live National Weather Service status for ${page.h1.replace(' Today', '').toLowerCase()} — including an active-count headline, concise weather briefing, and affected states — updates on this page from structured alert data.</p>
     <h2>Related Severe Weather</h2>
     <ul>
       <li><a href="${BASE_URL}/severe-weather/tornado-warning">Tornado Warnings Today</a></li>
