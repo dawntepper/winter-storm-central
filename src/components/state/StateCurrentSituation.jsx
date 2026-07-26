@@ -145,8 +145,7 @@ export default function StateCurrentSituation({
     </a>
   ) : null;
 
-  // National page links only for launched hazard landings (heat/fire
-  // configs exist but launch:false until those pages ship).
+  // National page links only for launched hazard landings.
   // Default: first (or only) pill's page when All is selected.
   // Filtered: selected pill's page when it has one.
   let linkHazard = null;
