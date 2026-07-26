@@ -25,16 +25,26 @@ const STATE_SLUGS = [
 
 const CORE_ROUTES = ['/', '/radar', '/alerts', '/prep', '/add-to-home', '/privacy', '/terms'];
 
+// Keep in sync with shared/hazard-engine/hazards.js launch:true entries
 const SEVERE_WEATHER_SLUGS = [
   'tornado-warning',
   'tornado-watch',
   'severe-thunderstorm-warning',
   'severe-thunderstorm-watch',
   'flash-flood-warning',
+  'flash-flood-watch',
   'flood-warning',
   'flood-watch',
   'hurricane-warning',
   'tropical-storm-warning',
+  'storm-surge-warning',
+  'extreme-wind-warning',
+  'blizzard-warning',
+  'winter-storm-warning',
+  'ice-storm-warning',
+  'high-wind-warning',
+  'excessive-heat-warning',
+  'red-flag-warning',
 ];
 
 function loadCities() {

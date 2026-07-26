@@ -54,6 +54,7 @@ export const INCLUDED_EVENTS = [
   'Hurricane Warning', 'Hurricane Watch',
   'Tropical Storm Warning', 'Tropical Storm Watch',
   'Storm Surge Warning', 'Storm Surge Watch',
+  'Extreme Wind Warning',
   // Fire
   'Red Flag Warning', 'Fire Weather Watch',
   'Fire Warning',
@@ -80,7 +81,7 @@ export const ALERT_CATEGORIES = {
     name: 'Tropical',
     icon: '🌀',
     color: '#0ea5e9',
-    events: ['Hurricane', 'Tropical Storm', 'Storm Surge'],
+    events: ['Hurricane', 'Tropical Storm', 'Storm Surge', 'Extreme Wind'],
   },
   severe: {
     id: 'severe',

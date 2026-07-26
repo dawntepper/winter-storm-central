@@ -342,6 +342,229 @@ const CONTENT = {
     ],
     source: SHARED_SOURCE,
   },
+  'flash-flood-watch': {
+    sections: [
+      {
+        heading: 'What is a Flash Flood Watch?',
+        paragraphs: [
+          'A Flash Flood Watch means conditions are favorable for flash flooding in and near the watch area. Stay informed and be ready to move to higher ground if a warning is issued.',
+        ],
+      },
+      {
+        heading: 'Flash Flood Watch vs. Flash Flood Warning',
+        paragraphs: [
+          'A watch means flash flooding is possible. A Flash Flood Warning means life-threatening flash flooding is occurring or imminent — move to higher ground immediately.',
+        ],
+      },
+      {
+        heading: 'Safety during a Flash Flood Watch',
+        paragraphs: [
+          'Avoid unnecessary travel through low-lying areas and never drive into flooded roadways. Monitor National Weather Service alerts for upgrades to warnings.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Does a Flash Flood Watch mean flooding is happening now?',
+        a: 'No. A watch means flash flooding is possible. Take action immediately if a Flash Flood Warning is issued for your area.',
+      },
+      {
+        q: 'Where do Flash Flood Watches come from?',
+        a: 'Official Flash Flood Watches are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'blizzard-warning': {
+    sections: [
+      {
+        heading: 'What is a Blizzard Warning?',
+        paragraphs: [
+          'A Blizzard Warning means blizzard conditions are occurring or expected. Expect falling or blowing snow with strong winds that reduce visibility to a quarter mile or less for an extended period.',
+        ],
+      },
+      {
+        heading: 'Safety during a Blizzard Warning',
+        paragraphs: [
+          'Avoid travel if possible. If you must go out, dress in layers, carry emergency supplies, and tell someone your route. Stay indoors when conditions deteriorate.',
+        ],
+      },
+      {
+        heading: 'How StormTracking displays Blizzard Warnings',
+        paragraphs: [
+          'This page filters live National Weather Service alerts to Blizzard Warnings and links related winter hazard pages for broader situational awareness.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'What is the difference between a Blizzard Warning and a Winter Storm Warning?',
+        a: 'A Blizzard Warning focuses on dangerous winds and severely reduced visibility in snow. A Winter Storm Warning covers significant snow, ice, or mixed precipitation that can disrupt travel and services.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'winter-storm-warning': {
+    sections: [
+      {
+        heading: 'What is a Winter Storm Warning?',
+        paragraphs: [
+          'A Winter Storm Warning means a significant winter storm is occurring or expected. Hazardous snow, ice, or mixed precipitation may disrupt travel and daily activities.',
+        ],
+      },
+      {
+        heading: 'Safety during a Winter Storm Warning',
+        paragraphs: [
+          'Limit travel, prepare for power outages, and keep pets and vulnerable household members indoors when conditions are dangerous. Continue monitoring official National Weather Service alerts.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Where do Winter Storm Warnings come from?',
+        a: 'Official Winter Storm Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'ice-storm-warning': {
+    sections: [
+      {
+        heading: 'What is an Ice Storm Warning?',
+        paragraphs: [
+          'An Ice Storm Warning means significant ice accumulation is occurring or expected. Ice can make roads and walkways extremely hazardous and weigh down trees and power lines.',
+        ],
+      },
+      {
+        heading: 'Safety during an Ice Storm Warning',
+        paragraphs: [
+          'Avoid travel when possible. Watch for downed power lines and falling tree limbs. Prepare for potential power outages and slippery surfaces around your home.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Why are ice storms so dangerous?',
+        a: 'Even a thin glaze of ice can cause widespread traffic accidents, while heavier accumulations can snap trees and bring down power lines across large areas.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'high-wind-warning': {
+    sections: [
+      {
+        heading: 'What is a High Wind Warning?',
+        paragraphs: [
+          'A High Wind Warning means sustained winds or frequent gusts meeting local high-wind criteria are occurring or expected. Damaging winds can down trees and power lines and make driving hazardous, especially for high-profile vehicles.',
+        ],
+      },
+      {
+        heading: 'Safety during a High Wind Warning',
+        paragraphs: [
+          'Secure outdoor objects, avoid unnecessary travel if possible, and stay away from downed power lines. High-profile vehicles are especially vulnerable to strong crosswinds.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Is a High Wind Warning the same as a Severe Thunderstorm Warning?',
+        a: 'No. Severe Thunderstorm Warnings are typically tied to thunderstorms and may include large hail or damaging winds. High Wind Warnings cover non-thunderstorm wind hazards that meet warning criteria.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'excessive-heat-warning': {
+    sections: [
+      {
+        heading: 'What is an Excessive Heat Warning?',
+        paragraphs: [
+          'An Excessive Heat Warning means a dangerous heat event is occurring or expected. High temperatures and humidity can create a significant risk of heat-related illness.',
+        ],
+      },
+      {
+        heading: 'Safety during an Excessive Heat Warning',
+        paragraphs: [
+          'Limit outdoor activity during the hottest hours, stay hydrated, and check on vulnerable neighbors. Never leave children or pets in a vehicle.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Where do Excessive Heat Warnings come from?',
+        a: 'Official Excessive Heat Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'red-flag-warning': {
+    sections: [
+      {
+        heading: 'What is a Red Flag Warning?',
+        paragraphs: [
+          'A Red Flag Warning means critical fire weather conditions are occurring or expected. Warm temperatures, low humidity, and strong winds can cause wildfires to start easily and spread rapidly.',
+        ],
+      },
+      {
+        heading: 'Safety during a Red Flag Warning',
+        paragraphs: [
+          'Avoid outdoor burning and activities that could spark a fire. Follow local fire restrictions and be ready to evacuate if you live in a wildfire-prone area.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Does a Red Flag Warning mean a wildfire is happening?',
+        a: 'Not necessarily. It means weather conditions are favorable for rapid fire growth. Always follow local fire and emergency guidance.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'storm-surge-warning': {
+    sections: [
+      {
+        heading: 'What is a Storm Surge Warning?',
+        paragraphs: [
+          'A Storm Surge Warning means there is a danger of life-threatening inundation from rising water moving inland from the shoreline, generally within 36 hours. Follow evacuation orders from local officials.',
+        ],
+      },
+      {
+        heading: 'Safety during a Storm Surge Warning',
+        paragraphs: [
+          'Move away from the coast and low-lying areas if directed. Storm surge is often the greatest threat to life from a landfalling tropical cyclone.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'Is storm surge the same as flooding from heavy rain?',
+        a: 'No. Storm surge is ocean water pushed ashore by a storm. Rainfall flooding is a separate hazard that can also occur during tropical systems.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'extreme-wind-warning': {
+    sections: [
+      {
+        heading: 'What is an Extreme Wind Warning?',
+        paragraphs: [
+          'An Extreme Wind Warning means extreme tropical-cyclone winds are occurring or expected soon, typically associated with the eyewall of a major hurricane. Take shelter immediately in a sturdy structure.',
+        ],
+      },
+      {
+        heading: 'Safety during an Extreme Wind Warning',
+        paragraphs: [
+          'Get to a safe interior location away from windows. Extreme winds can cause catastrophic damage; do not attempt to travel once this warning is in effect for your area.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'How is an Extreme Wind Warning different from a Hurricane Warning?',
+        a: 'A Hurricane Warning covers a broader area and longer lead time. An Extreme Wind Warning is a short-fuse alert for the most dangerous winds near the storm center.',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
 };
 
 const DEFAULT_CONTENT = {

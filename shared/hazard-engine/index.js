@@ -93,7 +93,7 @@ export function buildRelatedHazards(config, relatedCounts = {}) {
   return (config.relatedHazards || [])
     .map((slug) => {
       const related = getHazardConfig(slug);
-      if (!related) return null;
+      if (!related?.launch) return null;
       return {
         slug: related.slug,
         href: hazardHref(related.slug),
