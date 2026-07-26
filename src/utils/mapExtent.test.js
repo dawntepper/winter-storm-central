@@ -8,6 +8,9 @@ import {
   BROAD_SPAN_LON_DEG,
   BROAD_STATE_COUNT,
   CONUS_BOUNDS,
+  EMBED_CONUS_PADDING,
+  EMBED_CONUS_MAX_ZOOM,
+  EMBED_MOBILE_PADDING,
 } from './mapExtent.js';
 
 function pt(lat, lon, state, id = 'a') {
@@ -65,10 +68,15 @@ describe('isBroadlyDistributed', () => {
 });
 
 describe('resolveHazardEmbedTarget', () => {
-  it('uses CONUS when empty', () => {
+  it('uses tight CONUS padding/maxZoom when empty', () => {
     const t = resolveHazardEmbedTarget([]);
     expect(t.mode).toBe('conus');
     expect(boundsEquals(t.bounds, CONUS_BOUNDS)).toBe(true);
+    expect(t.padding).toEqual(EMBED_CONUS_PADDING);
+    expect(t.maxZoom).toBe(EMBED_CONUS_MAX_ZOOM);
+    // Tighter than the general embed pad so lower-48 fills the hazard map
+    expect(EMBED_CONUS_PADDING[0]).toBeLessThan(EMBED_MOBILE_PADDING[0]);
+    expect(EMBED_CONUS_PADDING[1]).toBeLessThan(EMBED_MOBILE_PADDING[1]);
   });
 
   it('uses single-alert regional box', () => {
@@ -84,6 +92,33 @@ describe('resolveHazardEmbedTarget', () => {
       pt(33, -83.5, 'GA'),
     ]);
     expect(t.mode).toBe('alerts');
+  });
+
+  it('ignores AK/HI points when framing mixed CONUS alert sets', () => {
+    const t = resolveHazardEmbedTarget([
+      pt(31.5, -99, 'TX'),
+      pt(38.5, -98, 'KS'),
+      pt(33, -83.5, 'GA'),
+      pt(64.8, -147.7, 'AK', 'ak-1'),
+    ]);
+    // Without filtering AK, lon span would look "broad" and fall back to CONUS
+    expect(t.mode).toBe('alerts');
+    expect(t.bounds.north).toBeLessThan(50);
+    expect(t.bounds.west).toBeGreaterThan(-130);
+  });
+
+  it('uses tight CONUS when lower-48 alerts are broadly distributed', () => {
+    const t = resolveHazardEmbedTarget([
+      pt(34, -118, 'CA'),
+      pt(25, -80, 'FL'),
+      pt(45, -69, 'ME'),
+      pt(47, -122, 'WA'),
+      pt(40, -74, 'NY'),
+      pt(41, -87, 'IL'),
+    ]);
+    expect(t.mode).toBe('conus');
+    expect(t.padding).toEqual(EMBED_CONUS_PADDING);
+    expect(t.maxZoom).toBe(EMBED_CONUS_MAX_ZOOM);
   });
 
   it('frames Alaska instead of CONUS for Alaska-only alerts', () => {

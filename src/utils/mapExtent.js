@@ -24,16 +24,32 @@ export const BROAD_SPAN_LAT_DEG = 18;
 /** Distinct state codes above which we fall back to CONUS. */
 export const BROAD_STATE_COUNT = 6;
 
-/** Embedded mobile fitBounds padding. */
+/** Embedded mobile fitBounds padding (alert clusters / state pages). */
 export const EMBED_MOBILE_PADDING = [36, 28];
 export const EMBED_STATE_PADDING = [32, 24];
+/**
+ * Tight lower-48 fit for hazard embeds (empty / broad / CONUS fallback).
+ * Looser [36, 28] left too much Canada / ocean and crowded state labels.
+ */
+export const EMBED_CONUS_PADDING = [16, 12];
 
 /** Cap zoom so single alerts stay regional, not street-level. */
 export const EMBED_MAX_ZOOM = 8;
+/** Allow CONUS fitBounds to fill the embed; still below street-level. */
+export const EMBED_CONUS_MAX_ZOOM = 6;
 export const EMBED_SINGLE_ALERT_ZOOM = 7;
 /** Alaska is large — keep a wider regional view than CONUS counties. */
 export const EMBED_ALASKA_MAX_ZOOM = 5;
 export const EMBED_HAWAII_MAX_ZOOM = 7;
+
+function conusEmbedTarget() {
+  return {
+    bounds: CONUS_BOUNDS,
+    mode: 'conus',
+    maxZoom: EMBED_CONUS_MAX_ZOOM,
+    padding: EMBED_CONUS_PADDING,
+  };
+}
 
 /** States outside the default lower-48 radar frame. */
 export const NON_CONUS_STATE_CODES = new Set(['AK', 'HI']);
@@ -217,7 +233,7 @@ function singleAlertBounds(alert, padDeg) {
 export function resolveHazardEmbedTarget(alerts) {
   const list = alerts || [];
   if (list.length === 0) {
-    return { bounds: CONUS_BOUNDS, mode: 'conus', maxZoom: EMBED_MAX_ZOOM };
+    return conusEmbedTarget();
   }
 
   const outside = list.filter(isOutsideConusAlert);
@@ -257,21 +273,24 @@ export function resolveHazardEmbedTarget(alerts) {
     }
   }
 
-  const bounds = boundsFromAlertPoints(list);
+  // Mixed AK/HI + CONUS: frame from lower-48 points only so Alaska/Hawaii
+  // markers cannot force a world-wide / overly broad embed viewport.
+  const conusList = list.filter((a) => !isOutsideConusAlert(a));
+  const bounds = boundsFromAlertPoints(conusList);
   if (!isValidBounds(bounds)) {
-    return { bounds: CONUS_BOUNDS, mode: 'conus', maxZoom: EMBED_MAX_ZOOM };
+    return conusEmbedTarget();
   }
 
-  if (list.length === 1) {
+  if (conusList.length === 1) {
     return {
-      bounds: singleAlertBounds(list[0], 1.2),
+      bounds: singleAlertBounds(conusList[0], 1.2),
       mode: 'single',
       maxZoom: EMBED_SINGLE_ALERT_ZOOM,
     };
   }
 
-  if (isBroadlyDistributed(bounds, list)) {
-    return { bounds: CONUS_BOUNDS, mode: 'conus', maxZoom: EMBED_MAX_ZOOM };
+  if (isBroadlyDistributed(bounds, conusList)) {
+    return conusEmbedTarget();
   }
 
   return { bounds, mode: 'alerts', maxZoom: EMBED_MAX_ZOOM };
