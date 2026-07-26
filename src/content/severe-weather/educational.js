@@ -15,7 +15,7 @@ const CONTENT = {
   'tornado-warning': {
     sections: [
       {
-        heading: 'What is a Tornado Warning?',
+        heading: 'About Tornado Warnings',
         paragraphs: [
           'A Tornado Warning means a tornado has been sighted or indicated by weather radar. Take protective action immediately in the warned area.',
           'Tornado Warnings are issued by National Weather Service forecast offices and typically cover portions of one or more counties for a short period of time.',
@@ -171,7 +171,7 @@ const CONTENT = {
   'flash-flood-warning': {
     sections: [
       {
-        heading: 'What is a Flash Flood Warning?',
+        heading: 'About Flash Flood Warnings',
         paragraphs: [
           'A Flash Flood Warning means flash flooding is occurring or imminent. Move to higher ground immediately — do not drive through flooded roadways.',
         ],
@@ -183,16 +183,72 @@ const CONTENT = {
         ],
       },
       {
-        heading: 'What to do during a Flash Flood Warning',
+        heading: 'Safety during a Flash Flood Warning',
         paragraphs: [
-          'Avoid flood waters and underpasses. Just six inches of moving water can knock a person down; a foot of water can float many vehicles.',
+          'Avoid flood waters and underpasses. Just six inches of moving water can knock a person down; a foot of water can float many vehicles. Turn around — never drive through flooded roadways.',
         ],
       },
     ],
     faq: [
       {
+        q: 'What does a Flash Flood Warning mean?',
+        a: 'It means flash flooding is occurring or imminent. Move to higher ground and avoid flooded roads immediately.',
+      },
+      {
         q: 'Is it safe to drive through a flooded road if I know the area?',
         a: 'No. Turn around — never drive through flooded roadways.',
+      },
+      {
+        q: 'Where do Flash Flood Warnings come from?',
+        a: 'Official Flash Flood Warnings are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+      },
+      {
+        q: 'How often is this page updated?',
+        a: 'StormTracking refreshes National Weather Service alert data on a regular cadence (faster when urgent warnings are active).',
+      },
+    ],
+    source: SHARED_SOURCE,
+  },
+  'flood-warning': {
+    sections: [
+      {
+        heading: 'About Flood Warnings',
+        paragraphs: [
+          'A Flood Warning is issued when flooding is occurring, imminent, or expected within the warned area. Take protective action and follow instructions from local officials.',
+          'Flood Warnings come from the National Weather Service. StormTracking displays active warnings with live status, radar, and links to affected state alert pages.',
+        ],
+      },
+      {
+        heading: 'Flood Watch vs. Flood Warning',
+        paragraphs: [
+          'A Flood Watch means conditions are favorable for flooding. Stay informed and be ready to act.',
+          'A Flood Warning means flooding is occurring, imminent, or expected and action may be necessary in the warned area.',
+        ],
+      },
+      {
+        heading: 'Safety during a Flood Warning',
+        paragraphs: [
+          'Avoid flooded roads. Never drive through water covering a roadway — turn around instead.',
+          'Move to higher ground if flooding threatens your location. Follow evacuation or emergency instructions from local officials and continue monitoring official National Weather Service alerts.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: 'What does a Flood Warning mean?',
+        a: 'A Flood Warning means flooding is occurring, imminent, or expected in the warned area. Follow local guidance and avoid flood waters.',
+      },
+      {
+        q: 'What is the difference between a Flood Watch and Flood Warning?',
+        a: 'A Flood Watch means flooding is possible. A Flood Warning means flooding is occurring, imminent, or expected and protective action may be needed.',
+      },
+      {
+        q: 'Where do these Flood Warnings come from?',
+        a: 'Official Flood Warnings are issued by the National Weather Service. StormTracking organizes and displays them for easier monitoring.',
+      },
+      {
+        q: 'How often is this page updated?',
+        a: 'StormTracking refreshes National Weather Service alert data on a regular cadence (faster when urgent warnings are active). Counts and affected states update as the live feed changes.',
       },
     ],
     source: SHARED_SOURCE,
@@ -200,22 +256,36 @@ const CONTENT = {
   'flood-watch': {
     sections: [
       {
-        heading: 'What is a Flood Watch?',
+        heading: 'About Flood Watches',
         paragraphs: [
           'A Flood Watch means conditions are favorable for flooding. Stay informed and be ready to move to higher ground if flooding develops.',
         ],
       },
       {
-        heading: 'How StormTracking displays Flood Watches',
+        heading: 'Flood Watch vs. Flood Warning',
         paragraphs: [
-          'This page lists active Flood Watches from the National Weather Service with radar and links to related flood and severe-weather pages.',
+          'A Flood Watch means flooding is possible. A Flood Warning means flooding is occurring, imminent, or expected and action may be necessary.',
+        ],
+      },
+      {
+        heading: 'Safety during a Flood Watch',
+        paragraphs: [
+          'Review your plan for moving to higher ground. Avoid unnecessary travel through low-lying areas, and monitor National Weather Service alerts for upgrades to warnings.',
         ],
       },
     ],
     faq: [
       {
         q: 'Does a Flood Watch mean flooding is happening now?',
-        a: 'No. A watch means flooding is possible. Follow Flash Flood or Flood Warnings if they are issued for your area.',
+        a: 'No. A watch means flooding is possible. Follow Flood or Flash Flood Warnings if they are issued for your area.',
+      },
+      {
+        q: 'Where do Flood Watches come from?',
+        a: 'Official Flood Watches are issued by the National Weather Service. StormTracking organizes and displays them for monitoring.',
+      },
+      {
+        q: 'How often is this page updated?',
+        a: 'StormTracking refreshes National Weather Service alert data on a regular cadence. This page updates when the live feed changes.',
       },
     ],
     source: SHARED_SOURCE,

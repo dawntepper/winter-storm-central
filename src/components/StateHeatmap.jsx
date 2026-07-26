@@ -166,8 +166,11 @@ export default function StateHeatmap({ alerts, loading, onStateZoom }) {
               style={{
                 gridRow: row + 1,
                 gridColumn: col + 1,
-                backgroundColor: isHovered ? undefined : color,
-                background: isHovered ? `linear-gradient(135deg, ${color}, ${hoverColor}40)` : undefined,
+                // Use only `background` (not backgroundColor) so hover toggles
+                // don't mix shorthand/longhand and trip React's style warning.
+                background: isHovered
+                  ? `linear-gradient(135deg, ${color}, ${hoverColor}40)`
+                  : color,
                 ...(isHovered
                   ? { outline: `2px solid ${hoverColor}`, outlineOffset: '-1px' }
                   : borderStyle),

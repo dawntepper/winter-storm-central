@@ -8,7 +8,7 @@ import { savedLocationAlertsPath, resolveMyLocationAlertsLink } from '../service
 import { readStoredSavedLocations } from '../hooks/useSavedLocations';
 import { ABBR_TO_SLUG, STATE_NAMES, US_STATES } from '../data/stateConfig';
 import StateAlertsDropdown from './StateAlertsDropdown';
-import { MapSkeleton } from './Skeletons';
+import MapOptionsSheet from './MapOptionsSheet';
 import {
   WindOverlayLayer,
   HRRR_FORECAST_WMS_URL,
@@ -33,7 +33,14 @@ import {
   SAVE_TRIGGERS
 } from '../utils/analytics';
 import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS, BASEMAP_PREFERENCE_CYCLE } from '../hooks/useMapBasemapPreference';
-
+import {
+  EMBED_MOBILE_PADDING,
+  EMBED_STATE_PADDING,
+  resolveHazardEmbedTarget,
+  resolveStateEmbedTarget,
+  alertGeographySignature,
+  toLeafletBounds,
+} from '../utils/mapExtent';
 /**
  * Full Alert Modal - shows complete alert details
  */
@@ -378,6 +385,151 @@ function ConusViewport({ enabled, resetTrigger, centerOn, highlightArea }) {
   return null;
 }
 
+/**
+ * Embedded map viewport — state pages fit state bounds; hazard pages fit
+ * active alert extent (or CONUS when broad / empty). AK/HI alerts frame
+ * those states instead of the lower-48.
+ * Does not re-fit on minor live-count refreshes after the user pans/zooms;
+ * does re-fit when alert geography class changes (e.g. empty → Alaska).
+ */
+function EmbeddedViewport({
+  enabled,
+  fitMode = 'alerts',
+  stateCode = null,
+  alerts = [],
+  contextKey = '',
+  resetTrigger = 0,
+}) {
+  const map = useMap();
+  const userMovedRef = useRef(false);
+  const programmaticFitRef = useRef(false);
+  const lastContextRef = useRef(contextKey);
+  const lastGeoSigRef = useRef(alertGeographySignature(alerts));
+  // Snapshot alerts used for the last auto-fit so refresh doesn't re-center
+  const fitAlertsRef = useRef(alerts);
+  const geoSig = alertGeographySignature(alerts);
+
+  useEffect(() => {
+    if (lastContextRef.current !== contextKey) {
+      lastContextRef.current = contextKey;
+      userMovedRef.current = false;
+      fitAlertsRef.current = alerts;
+      lastGeoSigRef.current = alertGeographySignature(alerts);
+    }
+  }, [contextKey, alerts]);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const markMoved = () => {
+      if (programmaticFitRef.current) return;
+      userMovedRef.current = true;
+    };
+    map.on('dragend', markMoved);
+    map.on('zoomend', markMoved);
+    return () => {
+      map.off('dragend', markMoved);
+      map.off('zoomend', markMoved);
+    };
+  }, [map, enabled]);
+
+  const applyFit = useCallback((animate = false, alertSnapshot = fitAlertsRef.current) => {
+    const target = fitMode === 'state'
+      ? resolveStateEmbedTarget(stateCode)
+      : resolveHazardEmbedTarget(alertSnapshot);
+
+    const padding = fitMode === 'state' ? EMBED_STATE_PADDING : EMBED_MOBILE_PADDING;
+    programmaticFitRef.current = true;
+    map.invalidateSize({ animate: false });
+    map.fitBounds(toLeafletBounds(L, target.bounds), {
+      padding,
+      maxZoom: target.maxZoom,
+      animate,
+      duration: animate ? 0.45 : 0,
+    });
+    map.once('moveend', () => {
+      programmaticFitRef.current = false;
+    });
+  }, [map, fitMode, stateCode]);
+
+  // Initial / page-context / geography-class fit (not every alert poll)
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const geoChanged = lastGeoSigRef.current !== geoSig;
+    if (userMovedRef.current && !geoChanged) return undefined;
+    if (geoChanged) {
+      // Meaningful geography change (e.g. CONUS empty → Alaska) — allow re-frame
+      userMovedRef.current = false;
+      lastGeoSigRef.current = geoSig;
+    }
+    fitAlertsRef.current = alerts;
+    const id = requestAnimationFrame(() => applyFit(false, alerts));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, contextKey, geoSig, applyFit]);
+
+  // Explicit Reset View
+  useEffect(() => {
+    if (!enabled || resetTrigger === 0) return;
+    userMovedRef.current = false;
+    fitAlertsRef.current = alerts;
+    lastGeoSigRef.current = alertGeographySignature(alerts);
+    applyFit(true, alerts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetTrigger]);
+
+  // Orientation / breakpoint — re-invalidate; re-fit only if user hasn't moved
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let timeout;
+    const handleResize = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        map.invalidateSize({ animate: false });
+        if (!userMovedRef.current) {
+          applyFit(false, fitAlertsRef.current);
+        }
+      }, 150);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [enabled, map, applyFit]);
+
+  return null;
+}
+
+function MapSizeSync({ syncKey }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      map.invalidateSize({ animate: false });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [map, syncKey]);
+
+  useEffect(() => {
+    let timeout;
+    const handleResize = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => map.invalidateSize({ animate: false }), 100);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 // Reset map to default view (responsive)
 function ResetMapView({ trigger, centerOn, useUsDefault = false, fitConusView = false }) {
   const map = useMap();
@@ -435,24 +587,23 @@ function CenterOnGeolocation({ trigger, onLocated, onError }) {
 }
 
 // Center map on a specific location with responsive offset
-function CenterOnLocation({ location }) {
+function CenterOnLocation({ location, enabled = true }) {
   const map = useMap();
 
   useEffect(() => {
-    if (location && location.lat && location.lon) {
-      const isMobile = window.innerWidth < 768;
+    if (!enabled || !location?.lat || !location?.lon) return;
+    const isMobile = window.innerWidth < 768;
 
-      // Small offset to place city slightly above center (negative = city appears higher)
-      // Keep it minimal so city stays well within view
-      const latOffset = isMobile ? 0.1 : -0.2;
-      const adjustedLat = location.lat + latOffset;
+    // Small offset to place city slightly above center (negative = city appears higher)
+    // Keep it minimal so city stays well within view
+    const latOffset = isMobile ? 0.1 : -0.2;
+    const adjustedLat = location.lat + latOffset;
 
-      // Use provided zoom level or default to 7
-      const zoomLevel = location.zoom || 7;
+    // Use provided zoom level or default to 7
+    const zoomLevel = location.zoom || 7;
 
-      map.setView([adjustedLat, location.lon], zoomLevel, { animate: true, duration: 0.5 });
-    }
-  }, [location?.id, location?.lat, location?.lon, location?.zoom, map]);
+    map.setView([adjustedLat, location.lon], zoomLevel, { animate: true, duration: 0.5 });
+  }, [enabled, location?.id, location?.lat, location?.lon, location?.zoom, map]);
 
   return null;
 }
@@ -1800,7 +1951,40 @@ function isAlertLocationSaved(alert, userLocations) {
   );
 }
 
-export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, resolvedLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, eventFilter = null, lockCategoryFilters = false, analyticsPageContext = null, headerCenterControls = null, mapOverlay = null }) {
+export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLocations = [], alerts = [], cityMarkers = [], isHero = false, heroCompact = false, isSidebar = false, centerOn = null, previewLocation = null, resolvedLocation = null, highlightedAlertId = null, selectedAlertId = null, selectedAlertUsesCategoryColor = false, selectedStateCode = null, highlightArea = null, onAreaClick = null, onResetView = null, showResetView = true, resetViewLabel = 'Reset View', resetViewTitle = null, resetViewTitleUsDefault = 'Reset to default US view', resetToDefaultOnClick = true, resetUsesUsDefault = false, fitConusView = false, onAddAlertToMap = null, onRemoveAlertFromMap = null, radarLayerType = 'precipitation', radarColorScheme = 4, basemapStyle: basemapStyleProp, basemapBrightness = DEFAULT_BASEMAP_BRIGHTNESS, stateNavSource = null, currentStateSlug = null, activeCategories: controlledActiveCategories, onActiveCategoriesChange = null, eventFilter = null, lockCategoryFilters = false,
+  /**
+   * When false, hide Alerts / category chips in the map header.
+   * Parent pages (e.g. state alerts) can own hazard filtering externally while
+   * still passing `activeCategories` to filter markers. Default true so
+   * homepage / radar / city pages keep map-native controls.
+   */
+  showHazardControls = true,
+  analyticsPageContext = null, headerCenterControls = null,
+  /**
+   * Optional Alaska/Hawaii (etc.) jump controls. When set, Full View / Reset
+   * renders immediately to their left in the header cluster (not in the
+   * right-side System / Radar group).
+   */
+  headerRegionJumps = null,
+  /** Compact Near Me / location control for map toolbar (homepage mobile). */
+  headerNearMe = null,
+  /**
+   * When true, map title is the page H1: visible "Live Weather Map" with
+   * accessible name "Live Weather Map & Alerts".
+   */
+  isPageHero = false,
+  mapTitle = 'Live Weather Map',
+  mapOverlay = null,
+  /**
+   * 'full' — /radar and homepage exploration (unchanged).
+   * 'embedded' — state / severe-weather page preview; enables mobile compact mode.
+   */
+  presentation = 'full',
+  /** Mobile embedded fit: 'state' (state GeoJSON) or 'alerts' (hazard extent). */
+  embedFit = 'alerts',
+  /** Re-fit key when page context changes (state abbr / hazard slug). */
+  embedContextKey = '',
+}) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
   const basemapPreferenceControlled = basemapStyleProp == null;
@@ -1820,7 +2004,6 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [showRadar, setShowRadar] = useState(true);
   const radarOpenedTracked = useRef(false);
   const prevCenterOnRef = useRef(undefined);
-  const [mapReady, setMapReady] = useState(false);
   const [radarLoading, setRadarLoading] = useState(false);
   // Delay the radar spinner so fast loads (the common case) never flash it.
   // Surfaces once loading exceeds ~200ms; tiles still ease in via pane fade.
@@ -1893,7 +2076,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState(null);
   const [userGeoLocation, setUserGeoLocation] = useState(null);
+  const [mapOptionsOpen, setMapOptionsOpen] = useState(false);
   const mapContainerRef = useRef(null);
+  const isEmbedded = presentation === 'embedded';
+  const isMobileEmbedded = isEmbedded && isMobile;
+  /** Mobile progressive disclosure for secondary map controls (all presentations). */
+  const useMobileMapChrome = isMobile;
+  const mapOptionsId = 'storm-map-options-sheet';
   const hideAlertTimeoutRef = useRef(null);
   const pinnedAlertRef = useRef(false);
   const stateHoverLockedRef = useRef(false);
@@ -2224,192 +2413,375 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     );
   }, [hoverCardPosition]);
 
+  const radarToggleButton = (
+    <button
+      type="button"
+      onClick={() => {
+        const newState = !showRadar;
+        setShowRadar(newState);
+        trackRadarToggle(newState, {
+          stateCode: selectedStateCode,
+          radarType: radarLayerType,
+        });
+      }}
+      className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+        showRadar
+          ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+          : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+      }`}
+      aria-pressed={showRadar}
+      aria-label={showRadar ? 'Radar on' : 'Show radar'}
+    >
+      {showRadar ? '✓ Radar On' : 'Show Radar'}
+    </button>
+  );
+
+  const resetViewButton = showResetView ? (
+    <button
+      type="button"
+      onClick={handleResetView}
+      className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
+      title={resetViewTitle ?? (resetViewLabel === 'Full View' ? resetViewTitleUsDefault : (resetViewLabel === 'Reset View' ? resetViewTitleUsDefault : `Return to ${resetViewLabel.toLowerCase()}`))}
+    >
+      {resetViewLabel}
+    </button>
+  ) : null;
+
+  const basemapButton = basemapPreferenceControlled ? (
+    <button
+      type="button"
+      onClick={handleBasemapCycle}
+      className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300"
+      title={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]} (click to cycle)`}
+      aria-label={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]}`}
+    >
+      {basemapPreference === 'dark' ? '🌙' : basemapPreference === 'light' ? '☀️' : '🖥️'}{' '}
+      {BASEMAP_PREFERENCE_LABELS[basemapPreference]}
+    </button>
+  ) : null;
+
+  const showCategoryFilters = showHazardControls && !lockCategoryFilters;
+  const hasActiveHazardCategories = CATEGORY_ORDER.some((id) => (categoryCounts[id] || 0) > 0);
+
+  const handleAlertsMasterToggle = useCallback(() => {
+    const allOn = activeCategories.size === CATEGORY_ORDER.length;
+    const newCategories = allOn ? new Set() : new Set(CATEGORY_ORDER);
+    setActiveCategories(newCategories);
+    setShowAlerts(newCategories.size > 0);
+    trackAlertsToggle(!allOn, alerts.length);
+  }, [activeCategories.size, alerts.length, setActiveCategories]);
+
+  const renderHazardPill = (id) => {
+    const cat = ALERT_CATEGORIES[id];
+    const count = categoryCounts[id] || 0;
+    if (!cat || count === 0) return null;
+    const active = activeCategories.has(id);
+    const color = alertCategoryColors[id] || alertCategoryColors.default;
+    const allShown = activeCategories.size === CATEGORY_ORDER.length;
+    const onlyThis = activeCategories.size === 1 && active;
+    const title = allShown
+      ? `Show only ${cat.name}`
+      : onlyThis
+        ? 'Show all alerts'
+        : active
+          ? `Hide ${cat.name}`
+          : `Add ${cat.name}`;
+    return (
+      <button
+        key={id}
+        type="button"
+        onClick={() => toggleCategory(id)}
+        onMouseEnter={(e) => {
+          if (useMobileMapChrome) return;
+          const row = catRowRef.current;
+          if (!row) { setHoveredCatTip({ label: title, x: 0 }); return; }
+          const pill = e.currentTarget.getBoundingClientRect();
+          const wrap = row.getBoundingClientRect();
+          setHoveredCatTip({ label: title, x: pill.left - wrap.left + pill.width / 2 });
+        }}
+        onMouseLeave={() => setHoveredCatTip(null)}
+        aria-label={`${title} (${count})`}
+        className={`shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+          active
+            ? ''
+            : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
+        }`}
+        style={active ? {
+          backgroundColor: `${color}20`,
+          color,
+          borderColor: `${color}66`,
+        } : undefined}
+      >
+        <span aria-hidden="true">{cat.icon}</span> {count}
+      </button>
+    );
+  };
+
+  const allCategoriesOn = activeCategories.size === CATEGORY_ORDER.length;
+  // Desktop: Full View + AK/HI share the alerts/pills row, flush right.
+  const desktopRegionActions = !useMobileMapChrome && headerRegionJumps ? (
+    <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
+      {resetViewButton}
+      {headerRegionJumps}
+    </div>
+  ) : null;
+  const categoryFilterRow = showCategoryFilters ? (
+    <div
+      ref={catRowRef}
+      className={`relative ${
+        useMobileMapChrome
+          ? (headerNearMe ? '' : 'mt-2')
+          : 'mt-[15px]'
+      }${desktopRegionActions ? ' flex items-center gap-3 min-w-0' : ''}`}
+    >
+      {hoveredCatTip && !useMobileMapChrome && (
+        <div
+          className="absolute -top-7 -translate-x-1/2 z-[20] px-2 py-1 rounded bg-slate-900 text-slate-100 text-[10px] whitespace-nowrap shadow-lg border border-slate-700 pointer-events-none"
+          style={{ left: `${hoveredCatTip.x}px` }}
+        >
+          {hoveredCatTip.label}
+        </div>
+      )}
+      <div className={desktopRegionActions ? 'min-w-0 flex-1 overflow-hidden' : undefined}>
+        {!hasActiveHazardCategories ? (
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800/60 text-slate-400">
+              No Active Alerts
+            </span>
+          </div>
+        ) : (
+          <div className="flex gap-1.5 overflow-x-auto flex-nowrap pb-0.5 scrollbar-hide">
+            <button
+              type="button"
+              onClick={handleAlertsMasterToggle}
+              className={`shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                allCategoriesOn
+                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/40'
+                  : 'bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-slate-200'
+              }`}
+              aria-pressed={allCategoriesOn}
+              aria-label={allCategoriesOn ? 'Hide all alert categories' : 'Show all alert categories'}
+            >
+              {useMobileMapChrome
+                ? (allCategoriesOn ? '✓ All' : 'Show All')
+                : (allCategoriesOn ? '✓ Alerts' : 'Show All')}
+            </button>
+            {CATEGORY_ORDER.map((id) => renderHazardPill(id))}
+          </div>
+        )}
+      </div>
+      {desktopRegionActions}
+    </div>
+  ) : null;
+
+  const mapHeightStyle = isSidebar
+    ? '100%'
+    : (isMobileEmbedded
+      ? 'clamp(280px, 42vh, 320px)'
+      : (isHero ? (heroCompact ? '320px' : '500px') : '350px'));
+
+  const mapHeightClass = isSidebar
+    ? ''
+    : presentation === 'embedded'
+      ? (heroCompact
+        ? 'md:!h-[360px] lg:!h-[400px]'
+        : 'md:!h-[500px] lg:!h-[500px]')
+      : (!isSidebar && isHero && heroCompact
+        ? 'sm:!h-[360px] lg:!h-[400px]'
+        : !isSidebar && isHero
+          ? 'sm:!h-[600px] lg:!h-[700px]'
+          : !isSidebar && !isHero
+            ? 'sm:!h-[450px]'
+            : '');
+
+  const MapHeadingTag = isPageHero ? 'h1' : 'h2';
+  const mapHeadingNode = (
+    <MapHeadingTag
+      className={`font-bold truncate ${
+        useMobileMapChrome
+          ? 'text-sm'
+          : (isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg')
+      }`}
+      style={{ color: 'antiquewhite' }}
+    >
+      {mapTitle}
+      {isPageHero && <span className="sr-only"> & Alerts</span>}
+    </MapHeadingTag>
+  );
+
   return (
     <div className={`bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl ${isHero ? 'ring-2 ring-slate-600/50 shadow-slate-900/50' : ''} ${isSidebar ? 'h-full flex flex-col' : ''}`}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-700">
-        <div className={
-          headerCenterControls
-            ? 'grid grid-cols-1 sm:grid-cols-[minmax(0,auto)_1fr_minmax(0,auto)] items-center gap-x-3 gap-y-2'
-            : 'flex flex-wrap items-center gap-x-3 gap-y-3 sm:justify-between'
-        }>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div>
-            <h2 className={`font-bold truncate ${isHero ? 'text-lg sm:text-xl' : 'text-base sm:text-lg'}`} style={{ color: 'antiquewhite' }}>
-              Live Weather Map
-            </h2>
-            {stateNavSource && (
-              <StateAlertsDropdown
-                source={stateNavSource}
-                currentStateSlug={currentStateSlug}
-                className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
-              />
-            )}
-          </div>
-          {headerCenterControls && (
-            <div className="flex flex-wrap items-center justify-center gap-2 min-w-0 w-full sm:w-auto order-last sm:order-none">
-              {headerCenterControls}
-            </div>
-          )}
-          <div className={`flex items-center gap-2 flex-wrap w-full sm:w-auto ${headerCenterControls ? 'sm:justify-end' : 'sm:ml-auto'}`}>
-            {showResetView && (
-              <button
-                onClick={handleResetView}
-                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300 cursor-pointer"
-                title={resetViewTitle ?? (resetViewLabel === 'Full View' ? resetViewTitleUsDefault : (resetViewLabel === 'Reset View' ? resetViewTitleUsDefault : `Return to ${resetViewLabel.toLowerCase()}`))}
-              >
-                {resetViewLabel}
-              </button>
-            )}
-            {basemapPreferenceControlled && (
-              <button
-                type="button"
-                onClick={handleBasemapCycle}
-                className="px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300"
-                title={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]} (click to cycle)`}
-                aria-label={`Map style: ${BASEMAP_PREFERENCE_LABELS[basemapPreference]}`}
-              >
-                {basemapPreference === 'dark' ? '🌙' : basemapPreference === 'light' ? '☀️' : '🖥️'}{' '}
-                {BASEMAP_PREFERENCE_LABELS[basemapPreference]}
-              </button>
-            )}
-            {/* Radar toggle */}
-            <button
-              onClick={() => {
-                const newState = !showRadar;
-                setShowRadar(newState);
-                trackRadarToggle(newState, {
-                  stateCode: selectedStateCode,
-                  radarType: radarLayerType,
-                });
-              }}
-              className={`px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                showRadar
-                  ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-              }`}
-            >
-              {showRadar ? '✓ Radar On' : 'Show Radar'}
-            </button>
-          </div>
-        </div>
-
-        {/* Helper text */}
-        {geoError && (
-          <div className="mt-3">
-            <span className="text-red-400 text-[10px]">{geoError}</span>
-          </div>
-        )}
-
-        {/* Alerts toggle + category filter chips */}
-        {alerts.length > 0 && (
-          <div ref={catRowRef} className="relative mt-2">
-            {/* Instant tooltip, anchored above the specific hovered pill (rendered
-                outside the scroll row so overflow-x doesn't clip it; native title
-                has a ~1s OS delay). */}
-            {hoveredCatTip && (
-              <div
-                className="absolute -top-7 -translate-x-1/2 z-[20] px-2 py-1 rounded bg-slate-900 text-slate-100 text-[10px] whitespace-nowrap shadow-lg border border-slate-700 pointer-events-none"
-                style={{ left: `${hoveredCatTip.x}px` }}
-              >
-                {hoveredCatTip.label}
+      <div className={`bg-gradient-to-r from-slate-800 to-slate-800/80 border-b border-slate-700 ${useMobileMapChrome ? 'px-3 py-2' : 'px-4 sm:px-5 py-3 sm:py-4'}`}>
+        {useMobileMapChrome ? (
+          <>
+            {headerNearMe ? (
+              <>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" aria-hidden="true" />
+                  {mapHeadingNode}
+                </div>
+                <div className="flex items-center justify-between gap-2 min-w-0 mt-1.5 mb-[15px]">
+                  {headerNearMe}
+                  <button
+                    type="button"
+                    onClick={() => setMapOptionsOpen(true)}
+                    className="inline-flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                    aria-label="Map options"
+                    aria-expanded={mapOptionsOpen}
+                    aria-haspopup="dialog"
+                    aria-controls={mapOptionsId}
+                  >
+                    Options
+                    {showRadar && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-cyan-400"
+                        title="Radar on"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span aria-hidden="true">⚙</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" aria-hidden="true" />
+                  {mapHeadingNode}
+                  {stateNavSource && (
+                    <StateAlertsDropdown
+                      source={stateNavSource}
+                      currentStateSlug={currentStateSlug}
+                      className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer py-0.5 rounded focus:outline-none text-[10px] font-medium border border-sky-500/30 transition-colors"
+                    />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMapOptionsOpen(true)}
+                  className="inline-flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                  aria-label="Map options"
+                  aria-expanded={mapOptionsOpen}
+                  aria-haspopup="dialog"
+                  aria-controls={mapOptionsId}
+                >
+                  Options
+                  {showRadar && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-cyan-400"
+                      title="Radar on"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span aria-hidden="true">⚙</span>
+                </button>
               </div>
             )}
-            <div className="flex gap-1.5 overflow-x-auto flex-nowrap pb-1 scrollbar-hide">
-            {!lockCategoryFilters && (
-            <button
-              onClick={() => {
-                const allOn = activeCategories.size === CATEGORY_ORDER.length;
-                const newCategories = allOn ? new Set() : new Set(CATEGORY_ORDER);
-                setActiveCategories(newCategories);
-                setShowAlerts(newCategories.size > 0);
-                trackAlertsToggle(!allOn, alerts.length);
-              }}
-              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                activeCategories.size > 0
-                  ? 'bg-red-500/20 text-red-400 border-red-500/40'
-                  : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-              }`}
-            >
-              {activeCategories.size > 0 ? '✓ Alerts' : 'Alerts'}
-            </button>
+
+            {headerCenterControls && (
+              <div className="mt-2 flex flex-wrap items-center justify-start gap-2 min-w-0">
+                {headerCenterControls}
+              </div>
             )}
-            {!lockCategoryFilters && CATEGORY_ORDER.map(id => {
-              const cat = ALERT_CATEGORIES[id];
-              const count = categoryCounts[id] || 0;
-              if (count === 0) return null;
-              const active = activeCategories.has(id);
-              const color = alertCategoryColors[id] || alertCategoryColors.default;
-              const allShown = activeCategories.size === CATEGORY_ORDER.length;
-              const onlyThis = activeCategories.size === 1 && active;
-              const title = allShown
-                ? `Show only ${cat.name}`
-                : onlyThis
-                  ? 'Show all alerts'
-                  : active
-                    ? `Hide ${cat.name}`
-                    : `Add ${cat.name}`;
-              return (
-                <button
-                  key={id}
-                  onClick={() => toggleCategory(id)}
-                  onMouseEnter={(e) => {
-                    const row = catRowRef.current;
-                    if (!row) { setHoveredCatTip({ label: title, x: 0 }); return; }
-                    const pill = e.currentTarget.getBoundingClientRect();
-                    const wrap = row.getBoundingClientRect();
-                    setHoveredCatTip({ label: title, x: pill.left - wrap.left + pill.width / 2 });
-                  }}
-                  onMouseLeave={() => setHoveredCatTip(null)}
-                  aria-label={title}
-                  className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                    active
-                      ? ''
-                      : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700 hover:text-slate-300'
-                  }`}
-                  style={active ? {
-                    backgroundColor: `${color}20`,
-                    color: color,
-                    borderColor: `${color}66`,
-                  } : undefined}
-                >
-                  {cat.icon} {count}
-                </button>
-              );
-            })}
+
+            {categoryFilterRow}
+
+            {geoError && (
+              <div className="mt-2">
+                <span className="text-red-400 text-[10px]">{geoError}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className={
+              headerCenterControls
+                ? 'grid grid-cols-1 sm:grid-cols-[minmax(0,auto)_1fr_minmax(0,auto)] items-start gap-x-3 gap-y-2'
+                : 'flex flex-wrap items-start gap-x-3 gap-y-3 sm:justify-between'
+            }>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" aria-hidden="true" />
+                {mapHeadingNode}
+                {stateNavSource && (
+                  <StateAlertsDropdown
+                    source={stateNavSource}
+                    currentStateSlug={currentStateSlug}
+                    className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+                  />
+                )}
+              </div>
+              {headerCenterControls && (
+                <div className="flex flex-wrap items-center justify-start sm:justify-center gap-2 min-w-0 w-full sm:w-auto order-last sm:order-none">
+                  {headerCenterControls}
+                </div>
+              )}
+              {/* Desktop: System / Radar On. Full View + AK/HI sit on the alerts/pills row when filters show. */}
+              <div className={`flex flex-col items-stretch sm:items-end gap-1.5 w-full sm:w-auto ${headerCenterControls ? '' : 'sm:ml-auto'}`}>
+                <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
+                  {!headerRegionJumps && resetViewButton}
+                  {basemapButton}
+                  {radarToggleButton}
+                </div>
+                {headerRegionJumps && !showCategoryFilters && (
+                  <div className="flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
+                    {resetViewButton}
+                    {headerRegionJumps}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+
+            {geoError && (
+              <div className="mt-3">
+                <span className="text-red-400 text-[10px]">{geoError}</span>
+              </div>
+            )}
+
+            {categoryFilterRow}
+          </>
         )}
       </div>
 
       {/* Map Container - fills available height in sidebar mode */}
       <div ref={mapContainerRef} className={`relative overflow-visible z-10 storm-map-shell ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
         {mapOverlay}
-        {!mapReady && <MapSkeleton />}
         <MapContainer
           center={initialCenter}
           zoom={initialZoom}
           style={{
-            height: isSidebar
-              ? '100%'
-              : (isHero ? (heroCompact ? '320px' : '500px') : '350px'),
+            height: mapHeightStyle,
             width: '100%',
-            background: basemapStyle === 'dark' ? MAP_ATMOSPHERE_CHROME.containerBg : undefined,
+            backgroundColor: basemapStyle === 'dark' ? MAP_ATMOSPHERE_CHROME.containerBg : undefined,
           }}
-          className={`z-0 storm-map-canvas${basemapStyle === 'dark' ? ' storm-map-dark' : ''} ${
-            !isSidebar && isHero && heroCompact ? 'sm:!h-[360px] lg:!h-[400px]'
-            : !isSidebar && isHero ? 'sm:!h-[600px] lg:!h-[700px]'
-            : !isSidebar && !isHero ? 'sm:!h-[450px]' : ''
-          }`}
-          zoomControl={true}
-          whenReady={() => setMapReady(true)}
+          className={`z-0 storm-map-canvas${basemapStyle === 'dark' ? ' storm-map-dark' : ''} ${mapHeightClass}`}
+          zoomControl={!isMobileEmbedded}
         >
           <MapController showRadar={showRadar} />
+          <MapSizeSync syncKey={`${presentation}-${isMobileEmbedded ? 'm' : 'd'}-${embedContextKey}`} />
           <ZoomTracker onZoomChange={setZoomLevel} />
           <FitBoundsToLocations userLocations={userLocations} triggerFit={fitTrigger} />
-          <ResetMapView trigger={resetTrigger} centerOn={centerOn} useUsDefault={resetUsesUsDefault} fitConusView={fitConusView} />
-          <ConusViewport enabled={fitConusView} resetTrigger={resetTrigger} centerOn={centerOn} highlightArea={highlightArea} />
-          <CenterOnLocation location={centerOn} />
+          <ResetMapView
+            trigger={isEmbedded ? 0 : resetTrigger}
+            centerOn={centerOn}
+            useUsDefault={resetUsesUsDefault}
+            fitConusView={fitConusView}
+          />
+          <ConusViewport
+            enabled={fitConusView && !isEmbedded}
+            resetTrigger={resetTrigger}
+            centerOn={centerOn}
+            highlightArea={highlightArea}
+          />
+          <EmbeddedViewport
+            enabled={isEmbedded}
+            fitMode={embedFit}
+            stateCode={selectedStateCode}
+            alerts={alerts}
+            contextKey={embedContextKey || selectedStateCode || analyticsPageContext || 'embed'}
+            resetTrigger={resetTrigger}
+          />
+          <CenterOnLocation location={centerOn} enabled={!isEmbedded} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
           {/* CARTO basemap — key forces Leaflet to swap tiles when style changes */}
@@ -2884,6 +3256,24 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </div>
         )}
       </div>
+
+      {useMobileMapChrome && (
+        <div id={mapOptionsId}>
+          <MapOptionsSheet
+            open={mapOptionsOpen}
+            onClose={() => setMapOptionsOpen(false)}
+            showRadar={showRadar}
+            radarControl={radarToggleButton}
+            appearanceControl={basemapButton}
+            viewControl={resetViewButton ? (
+              <div onClick={() => setMapOptionsOpen(false)}>{resetViewButton}</div>
+            ) : null}
+            regionsControl={headerRegionJumps ? (
+              <div onClick={() => setMapOptionsOpen(false)}>{headerRegionJumps}</div>
+            ) : null}
+          />
+        </div>
+      )}
 
       {/* Alert Detail Modal */}
       {modalAlert && (

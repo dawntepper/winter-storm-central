@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { trackManualRefresh, trackRadarLinkClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
-import StateAlertsDropdown from './StateAlertsDropdown';
+import { trackManualRefresh, NAV_SOURCES } from '../utils/analytics';
 import AccountMenu from './auth/AccountMenu';
 import HomeUtilityBar from './HomeUtilityBar';
+import PageHeaderNav from './PageHeaderNav';
 
 const SITE_SETTINGS_KEY = 'stormtracking_site_settings';
 
@@ -15,30 +14,6 @@ function getSiteSettings() {
   } catch {
     return { showBetaBadge: true };
   }
-}
-
-function NavLinks() {
-  return (
-    <nav className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-      <Link
-        to="/alerts"
-        className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2.5 py-1 rounded border border-red-500/30 transition-colors"
-      >
-        Live Alerts
-      </Link>
-      <Link
-        to="/radar"
-        onClick={() => {
-          trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION);
-          setNavSource(NAV_SOURCES.HEADER_NAVIGATION);
-        }}
-        className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 transition-colors"
-      >
-        Live Weather Radar
-      </Link>
-      <StateAlertsDropdown source={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN} />
-    </nav>
-  );
 }
 
 export default function Header({ lastRefresh, onRefresh, loading, isStale, showUtilities = false }) {
@@ -65,10 +40,10 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
     return (
       <header className="bg-slate-900 border-b border-slate-700 px-4 py-2.5" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            <span className="text-lg">📡</span>
+          <p className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">📡</span>
             StormTracking
-          </h1>
+          </p>
           <div className="flex items-center gap-3">
             {lastRefresh && (
               <span className="text-[10px] text-slate-500">
@@ -90,10 +65,10 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
 
   const brandBlock = (
     <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-      <h1 className="text-lg sm:text-2xl lg:text-xl font-bold text-white tracking-tight truncate flex items-center gap-2">
-        <span className="text-xl sm:text-2xl lg:text-xl">📡</span>
+      <p className="text-base sm:text-2xl lg:text-xl font-bold text-white tracking-tight truncate flex items-center gap-1.5 sm:gap-2">
+        <span className="text-lg sm:text-2xl lg:text-xl" aria-hidden="true">📡</span>
         StormTracking
-      </h1>
+      </p>
       {showBetaBadge && (
         <div
           className="relative flex-shrink-0"
@@ -152,26 +127,52 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
 
   return (
     <header
-      className="bg-slate-900 border-b border-slate-700 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-2.5"
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
+      className="bg-slate-900 border-b border-slate-700 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-2.5"
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
     >
-      <div className="max-w-[1400px] mx-auto flex flex-col gap-2 lg:gap-1">
-        {/* Mobile / tablet: stacked brand row, then nav + utilities */}
-        <div className="flex lg:hidden items-center justify-between gap-3 sm:gap-4">
-          {brandBlock}
-          <div className="flex-shrink-0">{accountTop}</div>
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-1 lg:gap-1">
+        {/* Mobile / tablet: Brand → Nav+More → status */}
+        <div className="flex lg:hidden flex-col gap-1">
+          <div className="flex items-center justify-between gap-3 min-w-0">
+            {brandBlock}
+            <div className="flex-shrink-0">{accountTop}</div>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <PageHeaderNav
+              source={NAV_SOURCES.HEADER_NAVIGATION}
+              stateSource={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN}
+              compactCluster
+              className="flex-1 min-w-0"
+            />
+            {showUtilities && (
+              <HomeUtilityBar
+                mode="more"
+                lastRefresh={lastRefresh}
+                onRefresh={onRefresh}
+                loading={loading}
+                isStale={isStale}
+              />
+            )}
+          </div>
+          {showUtilities && (
+            <HomeUtilityBar
+              mode="status"
+              lastRefresh={lastRefresh}
+              onRefresh={onRefresh}
+              loading={loading}
+              isStale={isStale}
+            />
+          )}
         </div>
 
-        <div className="flex lg:hidden flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <NavLinks />
-          {utilityBar && <div className="flex justify-end flex-shrink-0">{utilityBar}</div>}
-        </div>
-
-        {/* Desktop lg+: single row brand + nav; utilities + sign-in on the right */}
+        {/* Desktop lg+: brand + nav; utilities + sign-in on the right */}
         <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-6">
           <div className="flex items-center gap-5 xl:gap-6 min-w-0">
             {brandBlock}
-            <NavLinks />
+            <PageHeaderNav
+              source={NAV_SOURCES.HEADER_NAVIGATION}
+              stateSource={NAV_SOURCES.HOMEPAGE_STATE_DROPDOWN}
+            />
           </div>
 
           <div className="flex items-center gap-3 xl:gap-4 flex-shrink-0">
@@ -180,7 +181,6 @@ export default function Header({ lastRefresh, onRefresh, loading, isStale, showU
           </div>
         </div>
 
-        {/* Desktop lg only: thin utility sub-row (xl inlines utilities above) */}
         {utilityBar && (
           <div className="hidden lg:flex xl:hidden justify-end">
             {utilityBar}

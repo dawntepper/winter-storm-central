@@ -35,6 +35,12 @@ import {
   BRIEF_SYSTEM_PROMPT,
   validateBriefResponse,
 } from './validateBrief.js';
+import {
+  getState,
+  alertAffectsState,
+  buildStateHazards,
+  buildStateSituationSummary,
+} from './getState.js';
 
 /**
  * Resolve displayed weather brief text from cache + override rules.
@@ -257,8 +263,16 @@ export function getRelatedCounts(alerts, slugs = getLaunchHazardSlugs()) {
   return counts;
 }
 
+export {
+  getState,
+  alertAffectsState,
+  buildStateHazards,
+  buildStateSituationSummary,
+};
+
 export const hazardEngine = {
   get,
+  getState,
   getConfig: getHazardConfig,
   getAllSlugs: getAllHazardSlugs,
   getLaunchSlugs: getLaunchHazardSlugs,

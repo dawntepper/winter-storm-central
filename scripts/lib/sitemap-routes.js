@@ -31,6 +31,7 @@ const SEVERE_WEATHER_SLUGS = [
   'severe-thunderstorm-warning',
   'severe-thunderstorm-watch',
   'flash-flood-warning',
+  'flood-warning',
   'flood-watch',
   'hurricane-warning',
   'tropical-storm-warning',

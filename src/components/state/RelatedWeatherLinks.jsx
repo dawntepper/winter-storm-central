@@ -12,17 +12,10 @@ export default function RelatedWeatherLinks({
 }) {
   return (
     <section>
-      <h2 className="text-lg font-semibold text-white mb-3">Related Weather Information</h2>
+      <h2 className="text-lg font-semibold text-white mb-3">
+        Related {stateName} Weather
+      </h2>
       <ul className="space-y-2 text-sm">
-        <li>
-          <button
-            type="button"
-            onClick={onStateCounties}
-            className="text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
-          >
-            {stateName} Counties
-          </button>
-        </li>
         <li>
           <Link
             to={`/forecast/${stateSlug}`}
@@ -39,11 +32,28 @@ export default function RelatedWeatherLinks({
           </Link>
         </li>
         <li>
+          <button
+            type="button"
+            onClick={onStateCounties}
+            className="text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
+          >
+            {stateName} Counties
+          </button>
+        </li>
+        <li>
           <Link
             to="/alerts"
             className="text-sky-400 hover:text-sky-300 hover:underline transition-colors"
           >
-            National Alerts
+            National Weather Alerts
+          </Link>
+        </li>
+        <li>
+          <Link
+            to="/radar"
+            className="text-sky-400 hover:text-sky-300 hover:underline transition-colors"
+          >
+            Live Weather Radar
           </Link>
         </li>
       </ul>

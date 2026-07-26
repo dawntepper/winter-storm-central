@@ -1229,39 +1229,45 @@ export default function StormEventPage() {
           )}
         </div>
       )}
-      {/* Header */}
+      {/* Header — mobile: primary nav above brand; desktop: brand left / nav right */}
       <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Logo & Back Link */}
-          <div className="flex items-center gap-4">
-            <PageBackNav />
-            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <span className="text-xl">📡</span>
-              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
-            </Link>
-          </div>
-
-          {/* Nav Links & Share */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              to="/alerts"
-              onClick={() => {
-                if (event) {
-                  trackStormAlertsClicked({
-                    stormSlug: event.slug,
-                    stormType: event.type,
-                    destination: '/alerts',
-                    source: NAV_SOURCES.STORM_PAGE_LINK,
-                  });
-                }
-              }}
-              className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors"
-            >
-              Live Alerts
-            </Link>
-            <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
+        <div className="max-w-7xl mx-auto flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4">
+          <nav
+            aria-label="Primary"
+            className="order-1 md:order-2 flex items-center gap-1.5 sm:gap-2 w-full md:w-auto justify-between md:justify-end min-w-0"
+          >
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <Link
+                to="/alerts"
+                aria-label="Live weather alerts"
+                onClick={() => {
+                  if (event) {
+                    trackStormAlertsClicked({
+                      stormSlug: event.slug,
+                      stormType: event.type,
+                      destination: '/alerts',
+                      source: NAV_SOURCES.STORM_PAGE_LINK,
+                    });
+                  }
+                }}
+                className="text-xs sm:text-sm text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 px-2 sm:px-2.5 py-1.5 sm:py-1 rounded border border-red-500/30 transition-colors whitespace-nowrap"
+              >
+                <span className="md:hidden">Alerts</span>
+                <span className="hidden md:inline">Live Alerts</span>
+              </Link>
+              <Link
+                to="/radar"
+                aria-label="Live weather radar"
+                onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }}
+                className="text-xs sm:text-sm text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 px-2 sm:px-2.5 py-1.5 sm:py-1 rounded border border-emerald-500/30 transition-colors whitespace-nowrap"
+              >
+                <span className="md:hidden">Radar</span>
+                <span className="hidden md:inline">Live Weather Radar</span>
+              </Link>
+            </div>
             <select
               defaultValue=""
+              aria-label="State weather alerts and radar. Choose a state."
               onChange={(e) => {
                 if (e.target.value) {
                   const abbr = US_STATES[e.target.value]?.abbr;
@@ -1279,27 +1285,40 @@ export default function StormEventPage() {
                   e.target.value = '';
                 }
               }}
-              className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
+              className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer px-2 sm:px-2.5 py-1.5 sm:py-1 rounded focus:outline-none text-xs sm:text-sm font-medium border border-sky-500/30 transition-colors min-w-0 max-w-[48%] md:max-w-none truncate shrink-0"
             >
-              <option value="" disabled>State Alerts/Radar ▾</option>
+              <option value="" disabled>
+                State Alerts ▾
+              </option>
               {Object.entries(US_STATES).map(([slug, s]) => (
                 <option key={slug} value={slug}>{s.name}</option>
               ))}
             </select>
-            <ShareButton event={event} />
-            <AccountMenu
-              placement="headerTop"
-              showSignedInFallback
-              onSignInOpen={() => {
-                if (event) {
-                  trackStormSignInStarted({
-                    stormSlug: event.slug,
-                    stormType: event.type,
-                    source: NAV_SOURCES.SIGN_IN_MODAL,
-                  });
-                }
-              }}
-            />
+          </nav>
+          <div className="order-2 md:order-1 flex items-center justify-between gap-3 min-w-0">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <PageBackNav />
+              <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors min-w-0">
+                <span className="text-xl" aria-hidden="true">📡</span>
+                <span className="text-lg sm:text-xl font-bold truncate">StormTracking</span>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <ShareButton event={event} />
+              <AccountMenu
+                placement="headerTop"
+                showSignedInFallback
+                onSignInOpen={() => {
+                  if (event) {
+                    trackStormSignInStarted({
+                      stormSlug: event.slug,
+                      stormType: event.type,
+                      source: NAV_SOURCES.SIGN_IN_MODAL,
+                    });
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
       </header>

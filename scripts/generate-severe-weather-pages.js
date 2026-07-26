@@ -50,6 +50,13 @@ const HAZARDS = [
     intro: 'Track active flash flood warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
   },
   {
+    slug: 'flood-warning',
+    title: 'Flood Warnings Today — Live Alerts & Radar | StormTracking',
+    description: 'Track active Flood Warnings across the United States with live NWS alerts, affected states, current warning information, and weather radar.',
+    h1: 'Flood Warnings Today',
+    intro: 'Track active flood warnings across the United States.',
+  },
+  {
     slug: 'flood-watch',
     title: 'Flood Watches Today: Live Radar & Active Watches | StormTracking',
     description: 'Track active flood watches across the United States with live radar, affected states, watch details, and current National Weather Service alerts.',

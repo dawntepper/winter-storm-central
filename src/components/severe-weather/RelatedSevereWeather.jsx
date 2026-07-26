@@ -27,8 +27,14 @@ export default function RelatedSevereWeather({ relatedHazards = [], onRelatedCli
                   </span>
                 )}
               </div>
-              {item.description && (
-                <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.description}</p>
+              {item.pageTitle && item.label && item.pageTitle !== item.label ? (
+                <p className="mt-1 text-xs text-slate-400">
+                  Live {item.label.toLowerCase()} with radar and active alerts
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-400">
+                  Live status, radar, and current National Weather Service alerts
+                </p>
               )}
             </Link>
           </li>

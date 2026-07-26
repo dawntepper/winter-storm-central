@@ -1000,8 +1000,33 @@ export function trackStateAlertsPageView({ stateCode, stateName, alertCount, sou
 /**
  * Track alert detail view from state alerts page
  */
-export function trackStateAlertDetailView({ stateCode, alertType }) {
-  track('State Alert Detail View', { stateCode, alertType });
+export function trackStateAlertDetailView({ stateCode, alertType, sourceSection }) {
+  track('State Alert Detail View', {
+    stateCode,
+    alertType,
+    ...(sourceSection ? { source_section: sourceSection } : {}),
+  });
+}
+
+/**
+ * Active hazard chip / link on a state Current Situation block.
+ */
+export function trackStateHazardClicked({ stateCode, hazardSlug, sourceSection }) {
+  track('state_hazard_clicked', {
+    state_code: stateCode || 'unknown',
+    hazard_slug: hazardSlug || 'unknown',
+    source_section: sourceSection || 'current_situation',
+  });
+}
+
+/**
+ * CTA from Current Situation → Current Alerts anchor on a state page.
+ */
+export function trackStateCurrentAlertsAnchorClicked({ stateCode, sourceSection }) {
+  track('state_current_alerts_anchor_clicked', {
+    state_code: stateCode || 'unknown',
+    source_section: sourceSection || 'current_situation',
+  });
 }
 
 /**
@@ -1024,10 +1049,11 @@ export function trackStateQuickActionClicked({ state, actionType, action }) {
 /**
  * Popular location pill clicked on a state alert page.
  */
-export function trackPopularLocationClicked({ state, city }) {
+export function trackPopularLocationClicked({ state, city, sourceSection }) {
   track('Popular Location Clicked', {
     state: state || 'unknown',
     city: city || 'unknown',
+    ...(sourceSection ? { source_section: sourceSection } : {}),
   });
 }
 
@@ -1053,10 +1079,11 @@ export function trackStateCitySelected({ state, city }) {
 /**
  * Catalog county selected on a state alert page.
  */
-export function trackStateCountySelected({ state, county }) {
+export function trackStateCountySelected({ state, county, sourceSection }) {
   track('State County Selected', {
     state: state || 'unknown',
     county: county || 'unknown',
+    ...(sourceSection ? { source_section: sourceSection } : {}),
   });
 }
 
@@ -1385,6 +1412,8 @@ export const MAP_REGION_SOURCES = {
   HEATMAP: 'heatmap',
   MOST_IMPACTED_LIST: 'most_impacted_list',
   STORM_MAP: 'storm_map',
+  RADAR_AK_HI_JUMP: 'radar_ak_hi_jump',
+  HOMEPAGE_AK_HI_JUMP: 'homepage_ak_hi_jump',
 };
 
 const NAV_SOURCE_KEY = 'st_nav_source';
@@ -1902,9 +1931,17 @@ export function trackSevereWeatherRadarClick(props = {}) {
 
 export function trackSevereWeatherAlertOpened(props = {}) {
   recordProductEvent(PRODUCT_EVENTS.SEVERE_WEATHER_ALERT_OPENED, {
-    metadata: { hazard_slug: props.hazard_slug },
+    metadata: {
+      hazard_slug: props.hazard_slug,
+      alert_event: props.alert_event || null,
+      source_section: props.source_section || 'current_alerts',
+    },
   });
-  track('alert_opened', { hazard_slug: props.hazard_slug || 'unknown' });
+  track('alert_opened', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    alert_event: props.alert_event || 'unknown',
+    source_section: props.source_section || 'current_alerts',
+  });
 }
 
 export function trackSevereWeatherStateClick(props = {}) {
@@ -1913,11 +1950,13 @@ export function trackSevereWeatherStateClick(props = {}) {
     metadata: {
       hazard_slug: props.hazard_slug,
       destination_state_code: props.destination_state_code,
+      source_section: props.source_section || 'live_status',
     },
   });
   track('affected_state_clicked', {
     hazard_slug: props.hazard_slug || 'unknown',
     destination_state_code: props.destination_state_code || 'unknown',
+    source_section: props.source_section || 'live_status',
   });
 }
 
@@ -1926,11 +1965,13 @@ export function trackSevereWeatherRelatedClick(props = {}) {
     metadata: {
       hazard_slug: props.hazard_slug,
       related_hazard_slug: props.related_hazard_slug,
+      source_section: props.source_section || 'related_severe_weather',
     },
   });
   track('related_hazard_clicked', {
     hazard_slug: props.hazard_slug || 'unknown',
     related_hazard_slug: props.related_hazard_slug || 'unknown',
+    source_section: props.source_section || 'related_severe_weather',
   });
 }
 
@@ -1939,6 +1980,13 @@ export function trackSevereWeatherStateListExpanded(props = {}) {
     metadata: { hazard_slug: props.hazard_slug },
   });
   track('state_list_expanded', { hazard_slug: props.hazard_slug || 'unknown' });
+}
+
+export function trackSevereWeatherWarningsAnchorClick(props = {}) {
+  track('hazard_current_warnings_anchor_clicked', {
+    hazard_slug: props.hazard_slug || 'unknown',
+    source_section: 'live_status',
+  });
 }
 
 
@@ -2124,6 +2172,8 @@ export default {
   // State alerts events
   trackStateAlertsPageView,
   trackStateAlertDetailView,
+  trackStateHazardClicked,
+  trackStateCurrentAlertsAnchorClicked,
   trackStateNearbyClick,
   trackStateQuickActionClicked,
   trackPopularLocationClicked,
@@ -2167,4 +2217,5 @@ export default {
   trackSevereWeatherStateClick,
   trackSevereWeatherRelatedClick,
   trackSevereWeatherStateListExpanded,
+  trackSevereWeatherWarningsAnchorClick,
 };

@@ -7,27 +7,6 @@ export function Skeleton({ className = '' }) {
   return <div className={`bg-slate-700 rounded animate-pulse ${className}`} />;
 }
 
-/** Map area placeholder — matches StormMap container dimensions. */
-export function MapSkeleton({ className = '' }) {
-  return (
-    <div
-      className={`absolute inset-0 z-[400] pointer-events-none bg-slate-800 ${className}`}
-      aria-hidden="true"
-    >
-      <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-800 via-slate-700/40 to-slate-800" />
-      <div className="absolute inset-4 border border-slate-600/20 rounded-lg" />
-      <div className="absolute bottom-4 left-4 flex gap-2">
-        <Skeleton className="h-8 w-20 rounded-lg" />
-        <Skeleton className="h-8 w-16 rounded-lg" />
-      </div>
-      <div className="absolute top-4 right-4 flex gap-1.5">
-        <Skeleton className="h-7 w-14 rounded-lg" />
-        <Skeleton className="h-7 w-14 rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
 /** Alert card list placeholder. */
 export function AlertListSkeleton({ count = 4, showHeader = true, className = '' }) {
   return (

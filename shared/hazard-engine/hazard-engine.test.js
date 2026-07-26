@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hazardEngine,
   get,
+  buildStateSituationSummary,
 } from './index.js';
 import { getHazardConfig, labelForCount } from './hazards.js';
 import {
@@ -114,13 +115,28 @@ describe('live status + fallback brief', () => {
     ]);
     const status = buildLiveStatus(tornadoConfig, { activeCount: 12, affectedStates: states });
     expect(status.hasActiveAlerts).toBe(true);
-    expect(status.statusHeadline).toBe('12 Tornado Warnings Active');
+    expect(status.statusHeadline).toBe('Active Tornado Warnings: 12');
     expect(status.statusSentence).toContain('Kentucky');
   });
 
   it('builds zero-active status', () => {
     const status = buildLiveStatus(tornadoConfig, { activeCount: 0, affectedStates: [] });
     expect(status.statusHeadline).toBe('No Active Tornado Warnings');
+    expect(status.heading).toBe('Current Situation');
+    expect(status.monitoringNote).toMatch(/monitor/i);
+  });
+
+  it('builds distribution-aware situation summary', () => {
+    const status = buildLiveStatus(tornadoConfig, {
+      activeCount: 7,
+      affectedStates: [
+        { name: 'Texas', code: 'TX', alertCount: 5 },
+        { name: 'Georgia', code: 'GA', alertCount: 1 },
+        { name: 'Kansas', code: 'KS', alertCount: 1 },
+      ],
+    });
+    expect(status.situationSummary).toContain('Texas accounting for 5 of the 7');
+    expect(status.situationSummary).toMatch(/Georgia and Kansas each have one/i);
   });
 
   it('fallback briefs are grammatical', () => {
@@ -246,7 +262,7 @@ describe('hazardEngine.get snapshot', () => {
     expect(snap.ok).toBe(true);
     expect(snap.activeCount).toBe(3);
     expect(snap.radarFilter).toBe('tornado-warning');
-    expect(snap.liveStatus.statusHeadline).toContain('3 Tornado Warnings');
+    expect(snap.liveStatus.statusHeadline).toBe('Active Tornado Warnings: 3');
     expect(snap.weatherBrief.source).toBe('fallback');
     expect(snap.affectedStates).toHaveLength(3);
     expect(snap.relatedHazards.some((r) => r.slug === 'tornado-watch')).toBe(true);
@@ -271,5 +287,115 @@ describe('hazardEngine.get snapshot', () => {
     expect(snap.activeCount).toBe(0);
     expect(snap.liveStatus.statusHeadline).toMatch(/unavailable/i);
     expect(snap.freshness.dataAvailable).toBe(false);
+  });
+});
+
+describe('hazardEngine.getState', () => {
+  it('aggregates alerts, hazards, and deterministic summary for a state', () => {
+    const alerts = [
+      alert({
+        id: 'heat-1',
+        event: 'Excessive Heat Warning',
+        category: 'heat',
+        state: 'CO',
+        areaDesc: 'Denver, CO; Pueblo, CO',
+        urgency: 'Expected',
+        severity: 'Moderate',
+      }),
+      alert({
+        id: 'heat-2',
+        event: 'Heat Advisory',
+        category: 'heat',
+        state: 'CO',
+        areaDesc: 'El Paso, CO',
+        urgency: 'Expected',
+        severity: 'Minor',
+      }),
+      alert({
+        id: 'flood-1',
+        event: 'Flash Flood Warning',
+        category: 'flood',
+        state: 'CO',
+        areaDesc: 'Pueblo, CO',
+      }),
+      alert({
+        id: 'other-state',
+        event: 'Heat Advisory',
+        category: 'heat',
+        state: 'TX',
+        areaDesc: 'Travis, TX',
+      }),
+    ];
+
+    const snap = hazardEngine.getState('CO', alerts, {
+      latestSourceUpdateAt: '2026-07-24T12:05:00Z',
+    });
+
+    expect(snap.ok).toBe(true);
+    expect(snap.stateCode).toBe('CO');
+    expect(snap.stateName).toBe('Colorado');
+    expect(snap.activeCount).toBe(3);
+    expect(snap.hazards.map((h) => h.slug)).toEqual(['heat', 'flood']);
+    expect(snap.hazards[0].activeCount).toBe(2);
+    expect(snap.hazards[1].activeCount).toBe(1);
+    expect(snap.liveStatus.statusHeadline).toBe('3 Weather Alerts Active in Colorado');
+    expect(snap.deterministicSummary).toBe(
+      'Extreme Heat is the primary concern with 2 alerts, plus 1 Flooding alert.'
+    );
+    expect(snap.deterministicSummary).not.toMatch(/currently active across/i);
+    expect(snap.affectedCounties.some((c) => c.name === 'Pueblo')).toBe(true);
+    expect(snap.weatherBrief).toBeNull();
+  });
+
+  it('handles zero-alert state without inventing activity', () => {
+    const snap = hazardEngine.getState('CO', [], {
+      latestSourceUpdateAt: '2026-07-24T12:05:00Z',
+    });
+    expect(snap.ok).toBe(true);
+    expect(snap.activeCount).toBe(0);
+    expect(snap.liveStatus.statusHeadline).toBe('No Active Weather Alerts in Colorado');
+    expect(snap.liveStatus.monitoringNote).toMatch(/continues to monitor/i);
+    expect(snap.hazards).toHaveLength(0);
+  });
+
+  it('rejects unknown state codes', () => {
+    expect(hazardEngine.getState('XX', []).ok).toBe(false);
+  });
+});
+
+describe('buildStateSituationSummary', () => {
+  it('does not repeat the headline count opener', () => {
+    const summary = buildStateSituationSummary({
+      stateName: 'Oregon',
+      activeCount: 7,
+      hazards: [
+        { label: 'Fire Weather', activeCount: 6 },
+        { label: 'Extreme Heat', activeCount: 1 },
+      ],
+    });
+    expect(summary).toBe(
+      'Fire Weather is the primary concern with 6 alerts, plus 1 Extreme Heat alert.'
+    );
+    expect(summary).not.toMatch(/7 Weather Alerts/i);
+  });
+
+  it('handles a single hazard type', () => {
+    expect(
+      buildStateSituationSummary({
+        stateName: 'Texas',
+        activeCount: 1,
+        hazards: [{ label: 'Flooding', activeCount: 1 }],
+      })
+    ).toBe('Flooding is the primary concern with 1 alert.');
+  });
+
+  it('handles zero alerts', () => {
+    expect(
+      buildStateSituationSummary({
+        stateName: 'Maine',
+        activeCount: 0,
+        hazards: [],
+      })
+    ).toMatch(/no active/i);
   });
 });

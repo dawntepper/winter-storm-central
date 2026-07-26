@@ -245,9 +245,9 @@ export const HAZARD_CONFIGS = {
     seoTitle: 'Flood Warnings Today & Live Radar | StormTracking',
     seoDescription: 'Track active flood warnings with live radar and National Weather Service alerts.',
     zeroActiveDescription: 'There are currently no active flood warnings in the United States.',
-    relatedHazards: ['flash-flood-warning', 'flood-watch'],
+    relatedHazards: ['flash-flood-warning', 'flood-watch', 'severe-thunderstorm-warning'],
     educationalContentKey: 'flood-warning',
-    launch: false,
+    launch: true,
   },
   'blizzard-warning': {
     slug: 'blizzard-warning',

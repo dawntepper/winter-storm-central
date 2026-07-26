@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import PageBackNav from './PageBackNav';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
 import { CATEGORY_ORDER } from '../services/noaaAlertsService';
-import { US_STATES } from '../data/stateConfig';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { rankAlerts } from '../utils/alertRanking';
 import LiveAlertCard from './LiveAlertCard';
 import StormMap from './StormMap';
+import PageSiteHeader from './PageSiteHeader';
 import { FooterLinks } from './SiteFooter';
-import { trackRadarLinkClick, trackBrowseByStateClick, setNavSource, NAV_SOURCES } from '../utils/analytics';
+import { NAV_SOURCES } from '../utils/analytics';
 
 // =============================================
 // SEO META TAGS
@@ -49,7 +47,6 @@ function resetMetaTags() {
 // =============================================
 
 export default function LiveAlertsPage() {
-  const navigate = useNavigate();
   const { alerts: alertsData, loading, error, refresh } = useExtremeWeather(true);
   const [activeCategories, setActiveCategories] = useState(() => new Set(CATEGORY_ORDER));
   const [tick, setTick] = useState(0);
@@ -112,40 +109,7 @@ export default function LiveAlertsPage() {
         }}
       />
 
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <PageBackNav />
-            <Link to="/" className="flex items-center gap-2 text-white hover:text-sky-300 transition-colors">
-              <span className="text-xl">📡</span>
-              <span className="text-lg sm:text-xl font-bold">StormTracking</span>
-            </Link>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link to="/alerts" className="text-[10px] sm:text-xs text-red-400 hover:bg-red-500/25 font-medium bg-red-500/15 pl-2 pr-2 py-0.5 rounded border border-red-500/30 transition-colors">Live Alerts</Link>
-            <Link to="/radar" onClick={() => { trackRadarLinkClick(NAV_SOURCES.HEADER_NAVIGATION); setNavSource(NAV_SOURCES.HEADER_NAVIGATION); }} className="text-[10px] sm:text-xs text-emerald-400 hover:bg-emerald-500/25 font-medium bg-emerald-500/15 pl-2 pr-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Live Radar</Link>
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  const abbr = US_STATES[e.target.value]?.abbr;
-                  if (abbr) trackBrowseByStateClick({ stateCode: abbr, source: NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN });
-                  setNavSource(NAV_SOURCES.STATE_PAGE_STATE_DROPDOWN);
-                  navigate(`/alerts/${e.target.value}`);
-                  e.target.value = '';
-                }
-              }}
-              className="appearance-none bg-sky-500/15 text-sky-400 hover:bg-sky-500/25 cursor-pointer pl-2 pr-1 py-0.5 rounded focus:outline-none text-[10px] sm:text-xs font-medium border border-sky-500/30 transition-colors"
-            >
-              <option value="" disabled>State Alerts/Radar ▾</option>
-              {Object.entries(US_STATES).map(([slug, s]) => (
-                <option key={slug} value={slug}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </header>
+      <PageSiteHeader source={NAV_SOURCES.HEADER_NAVIGATION} />
 
       {/* Page title bar */}
       <div className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-4">
