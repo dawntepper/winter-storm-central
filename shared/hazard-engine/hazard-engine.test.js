@@ -4,7 +4,7 @@ import {
   get,
   buildStateSituationSummary,
 } from './index.js';
-import { getHazardConfig, labelForCount } from './hazards.js';
+import { getHazardConfig, labelForCount, resolveDisplayLabels, pluralizeNwsEvent } from './hazards.js';
 import {
   matchesHazardEvent,
   dedupeAlertsById,
@@ -64,9 +64,11 @@ describe('exact NWS event matching', () => {
   it('matches both Excessive and Extreme Heat Warning on the heat hazard page', () => {
     const heatConfig = getHazardConfig('excessive-heat-warning');
     expect(heatConfig.nwsEvents).toEqual([
-      'Excessive Heat Warning',
       'Extreme Heat Warning',
+      'Excessive Heat Warning',
     ]);
+    expect(heatConfig.singularLabel).toBe('Extreme Heat Warning');
+    expect(heatConfig.pluralLabel).toBe('Extreme Heat Warnings');
     expect(matchesHazardEvent(alert({ event: 'Excessive Heat Warning' }), heatConfig)).toBe(true);
     expect(matchesHazardEvent(alert({ event: 'Extreme Heat Warning' }), heatConfig)).toBe(true);
     // Advisories and watches are separate products — do not group onto this page
@@ -88,6 +90,70 @@ describe('exact NWS event matching', () => {
     expect(snap.ok).toBe(true);
     expect(snap.activeCount).toBe(2);
     expect(snap.alerts.every((a) => a.event === 'Extreme Heat Warning')).toBe(true);
+  });
+
+  it('builds non-empty live status for Extreme Heat Warning alerts', () => {
+    const snap = hazardEngine.get(
+      'excessive-heat-warning',
+      [
+        alert({ id: 'eh-1', event: 'Extreme Heat Warning', state: 'AZ', areaDesc: 'Maricopa, AZ' }),
+        alert({ id: 'eh-2', event: 'Extreme Heat Warning', state: 'IA', areaDesc: 'Polk, IA' }),
+      ],
+      { dataAvailable: true }
+    );
+    expect(snap.liveStatus.hasActiveAlerts).toBe(true);
+    expect(snap.liveStatus.statusHeadline).toBe('Active Extreme Heat Warnings: 2');
+    expect(snap.liveStatus.situationSummary).toMatch(/Extreme Heat Warnings are currently active/i);
+    expect(snap.liveStatus.situationSummary).not.toMatch(/no active/i);
+    expect(snap.liveStatus.monitoringNote).toBeNull();
+  });
+
+  it('shows empty live status only when Extreme and Excessive Heat Warning counts are both zero', () => {
+    const heatOnlyAdvisory = hazardEngine.get(
+      'excessive-heat-warning',
+      [alert({ id: 'adv-1', event: 'Heat Advisory', state: 'TX', areaDesc: 'Travis, TX' })],
+      { dataAvailable: true }
+    );
+    expect(heatOnlyAdvisory.activeCount).toBe(0);
+    expect(heatOnlyAdvisory.liveStatus.hasActiveAlerts).toBe(false);
+    expect(heatOnlyAdvisory.liveStatus.statusHeadline).toBe('No Active Extreme Heat Warnings');
+    expect(heatOnlyAdvisory.liveStatus.situationSummary).toMatch(
+      /no active Extreme Heat Warnings or Excessive Heat Warnings/i
+    );
+
+    const excessiveOnly = hazardEngine.get(
+      'excessive-heat-warning',
+      [alert({ id: 'ex-1', event: 'Excessive Heat Warning', state: 'CA', areaDesc: 'Riverside, CA' })],
+      { dataAvailable: true }
+    );
+    expect(excessiveOnly.activeCount).toBe(1);
+    expect(excessiveOnly.liveStatus.hasActiveAlerts).toBe(true);
+    expect(excessiveOnly.liveStatus.statusHeadline).toBe('Active Excessive Heat Warnings: 1');
+
+    const both = hazardEngine.get(
+      'excessive-heat-warning',
+      [
+        alert({ id: 'eh-1', event: 'Extreme Heat Warning', state: 'AZ', areaDesc: 'Maricopa, AZ' }),
+        alert({ id: 'ex-1', event: 'Excessive Heat Warning', state: 'CA', areaDesc: 'Riverside, CA' }),
+      ],
+      { dataAvailable: true }
+    );
+    expect(both.activeCount).toBe(2);
+    expect(both.liveStatus.hasActiveAlerts).toBe(true);
+    // Both products active → configured covering label (Extreme Heat)
+    expect(both.liveStatus.statusHeadline).toBe('Active Extreme Heat Warnings: 2');
+  });
+
+  it('resolves display labels from the active heat product', () => {
+    const heatConfig = getHazardConfig('excessive-heat-warning');
+    expect(pluralizeNwsEvent('Extreme Heat Warning')).toBe('Extreme Heat Warnings');
+    expect(resolveDisplayLabels(heatConfig, [
+      alert({ event: 'Extreme Heat Warning' }),
+    ]).pluralLabel).toBe('Extreme Heat Warnings');
+    expect(resolveDisplayLabels(heatConfig, [
+      alert({ event: 'Excessive Heat Warning' }),
+    ]).pluralLabel).toBe('Excessive Heat Warnings');
+    expect(resolveDisplayLabels(heatConfig, []).pluralLabel).toBe('Extreme Heat Warnings');
   });
 });
 

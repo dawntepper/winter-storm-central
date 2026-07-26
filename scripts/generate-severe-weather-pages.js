@@ -128,10 +128,10 @@ const HAZARDS = [
   },
   {
     slug: 'excessive-heat-warning',
-    title: 'Excessive Heat Warnings Today | StormTracking',
-    description: 'Track active excessive heat warnings across the United States with affected states, warning details, and current National Weather Service alerts.',
-    h1: 'Excessive Heat Warnings Today',
-    intro: 'Track active excessive heat warnings across the United States with affected areas, warning details, and links to current state alerts.',
+    title: 'Extreme Heat Warnings Today | StormTracking',
+    description: 'Track active Extreme Heat Warnings and Excessive Heat Warnings across the United States with affected states, warning details, and current National Weather Service alerts.',
+    h1: 'Extreme Heat Warnings Today',
+    intro: 'Track active Extreme Heat Warnings and Excessive Heat Warnings across the United States with affected areas, warning details, and links to current state alerts.',
   },
   {
     slug: 'red-flag-warning',

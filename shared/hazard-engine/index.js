@@ -162,6 +162,7 @@ export function get(slug, alerts = [], options = {}) {
     ? buildLiveStatus(config, {
       activeCount: filtered.length,
       affectedStates,
+      alerts: filtered,
     })
     : {
       heading: 'Live Status',
