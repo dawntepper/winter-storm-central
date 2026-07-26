@@ -437,7 +437,8 @@ function EmbeddedViewport({
       ? resolveStateEmbedTarget(stateCode)
       : resolveHazardEmbedTarget(alertSnapshot);
 
-    const padding = fitMode === 'state' ? EMBED_STATE_PADDING : EMBED_MOBILE_PADDING;
+    const padding = target.padding
+      ?? (fitMode === 'state' ? EMBED_STATE_PADDING : EMBED_MOBILE_PADDING);
     programmaticFitRef.current = true;
     map.invalidateSize({ animate: false });
     map.fitBounds(toLeafletBounds(L, target.bounds), {
@@ -451,7 +452,8 @@ function EmbeddedViewport({
     });
   }, [map, fitMode, stateCode]);
 
-  // Initial / page-context / geography-class fit (not every alert poll)
+  // Initial / page-context / geography-class fit (not every alert poll).
+  // Double-rAF waits for CSS height overrides (hazard embed) before fitting.
   useEffect(() => {
     if (!enabled) return undefined;
     const geoChanged = lastGeoSigRef.current !== geoSig;
@@ -462,8 +464,14 @@ function EmbeddedViewport({
       lastGeoSigRef.current = geoSig;
     }
     fitAlertsRef.current = alerts;
-    const id = requestAnimationFrame(() => applyFit(false, alerts));
-    return () => cancelAnimationFrame(id);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => applyFit(false, alerts));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, contextKey, geoSig, applyFit]);
 
@@ -477,11 +485,11 @@ function EmbeddedViewport({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetTrigger]);
 
-  // Orientation / breakpoint — re-invalidate; re-fit only if user hasn't moved
+  // Container / window resize — re-fit after hazard CSS height overrides settle
   useEffect(() => {
     if (!enabled) return undefined;
     let timeout;
-    const handleResize = () => {
+    const scheduleRefit = () => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         map.invalidateSize({ animate: false });
@@ -490,12 +498,19 @@ function EmbeddedViewport({
         }
       }, 150);
     };
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+    window.addEventListener('resize', scheduleRefit);
+    window.addEventListener('orientationchange', scheduleRefit);
+    const container = map.getContainer?.();
+    let observer;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(scheduleRefit);
+      observer.observe(container);
+    }
     return () => {
       clearTimeout(timeout);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
+      window.removeEventListener('resize', scheduleRefit);
+      window.removeEventListener('orientationchange', scheduleRefit);
+      observer?.disconnect();
     };
   }, [enabled, map, applyFit]);
 
