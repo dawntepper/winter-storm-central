@@ -18,6 +18,7 @@ import {
   getCategoryForEvent,
   extractLocationName,
   extractStateCode,
+  isAlaskaOrHawaiiAlert,
   extractGeometryCoordinates,
   filterSameCodesForState,
   filterAlertFeatures,
@@ -152,7 +153,12 @@ export function extractCoordinates(alert) {
 /**
  * Parse NOAA alert into our format
  */
-function parseAlert(alert) {
+/**
+ * Parse a raw NWS GeoJSON alert feature into the app alert shape.
+ * Exported for tests — Alaska/Hawaii land products must never be dropped
+ * solely because geometry/FIPS centroids are missing (common for AK zones).
+ */
+export function parseAlert(alert) {
   const props = alert.properties || {};
   const eventType = props.event || '';
   const category = getCategoryForEvent(eventType);
@@ -163,8 +169,13 @@ function parseAlert(alert) {
   // alerts even when county FIPS/geometry is missing — state centroid is enough
   // for hazard pages and map framing.
   let coords = extractCoordinates(alert);
-  const state = extractStateCode(alert);
-  if (!coords && state && (state === 'AK' || state === 'HI')) {
+  let state = extractStateCode(alert);
+  if (!state && isAlaskaOrHawaiiAlert(alert)) {
+    const ugcs = props.geocode?.UGC || [];
+    const hit = ugcs.find((u) => typeof u === 'string' && /^(AK|HI)/i.test(u));
+    state = hit ? hit.substring(0, 2).toUpperCase() : null;
+  }
+  if ((!coords || !Number.isFinite(coords.lat)) && (state === 'AK' || state === 'HI')) {
     const centroid = getStateCentroid(state);
     if (centroid) {
       coords = addJitter({ ...centroid, source: 'state' }, 0.5);
@@ -182,7 +193,7 @@ function parseAlert(alert) {
     id: alert.id || props.id,
     event: eventType,
     category,
-    state, // State code (e.g., "PA", "NY")
+    state, // State code (e.g., "PA", "NY", "AK", "HI")
     sameCodes,
     ugc: props.geocode?.UGC || [],
     location: extractLocationName(alert),

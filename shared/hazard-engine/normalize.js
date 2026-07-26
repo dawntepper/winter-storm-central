@@ -100,6 +100,17 @@ export function extractAffectedStateCodes(alert) {
     }
   }
 
+  // Coordinate fallback for AK/HI zone products that omit ", ST" in areaDesc
+  // (e.g. "Central Brooks Range" with AKZ* UGC already handled above — this
+  // covers parsed alerts that only retained lat/lon).
+  if (states.size === 0) {
+    const { lat, lon } = alert || {};
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      if (lat < 24.2 && lon < -154) states.add('HI');
+      else if (lat > 50 && lon < -129) states.add('AK');
+    }
+  }
+
   return [...states];
 }
 
