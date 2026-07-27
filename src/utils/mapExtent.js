@@ -32,10 +32,18 @@ export const EMBED_STATE_PADDING = [32, 24];
  * Looser [36, 28] left too much Canada / ocean and crowded state labels.
  */
 export const EMBED_CONUS_PADDING = [16, 12];
+/**
+ * Padding for homepage /alerts /radar CONUS fitBounds.
+ * Slightly looser than hazard-embed CONUS padding so Pacific + Atlantic
+ * coasts stay in frame in wide map columns.
+ */
+export const HOME_CONUS_PADDING = [28, 24];
+/** Cap for full-page CONUS fit — keeps both coasts visible in map columns. */
+export const HOME_CONUS_MAX_ZOOM = 5.25;
 
 /** Cap zoom so single alerts stay regional, not street-level. */
 export const EMBED_MAX_ZOOM = 8;
-/** Allow CONUS fitBounds to fill the embed; still below street-level. */
+/** Allow CONUS fitBounds to fill hazard embeds; still below street-level. */
 export const EMBED_CONUS_MAX_ZOOM = 6;
 export const EMBED_SINGLE_ALERT_ZOOM = 7;
 /** Alaska is large — keep a wider regional view than CONUS counties. */

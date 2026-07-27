@@ -132,6 +132,7 @@ export default function LiveAlertsPage() {
               stormPhase="active"
               alerts={mapAlerts}
               isHero
+              fitConusView
               centerOn={mapCenterOn}
               selectedAlertId={selectedAlertId}
               selectedAlertUsesCategoryColor

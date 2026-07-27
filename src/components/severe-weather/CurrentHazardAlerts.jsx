@@ -7,7 +7,7 @@ const INITIAL_VISIBLE = 8;
 const GROUP_BY_STATE_MIN_ALERTS = 4;
 const GROUP_BY_STATE_MIN_STATES = 2;
 
-export default function CurrentHazardAlerts({ hazard, onAlertOpen }) {
+export default function CurrentHazardAlerts({ hazard, loading = false, onAlertOpen }) {
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
   const [tick] = useState(0);
 
@@ -51,89 +51,114 @@ export default function CurrentHazardAlerts({ hazard, onAlertOpen }) {
   }, [ranked, hazard.affectedStates]);
 
   const flatShown = ranked.slice(0, visible);
+  const plural = hazard.pluralLabel || 'Alerts';
 
   return (
-    <section id="current-alerts" aria-labelledby="current-alerts-heading" className="mt-10">
+    <section
+      id="current-alerts"
+      aria-labelledby="current-alerts-heading"
+      aria-busy={loading || undefined}
+      className="mt-10"
+    >
       <h2 id="current-alerts-heading" className="text-lg font-semibold text-white mb-1">
-        Current {hazard.pluralLabel}
-        {ranked.length > 0 ? (
+        Current {plural}
+        {!loading && ranked.length > 0 ? (
           <span className="text-slate-400 font-medium"> — {ranked.length}</span>
         ) : null}
       </h2>
       <p className="text-xs text-slate-500 mb-4">
-        {hazard.freshness?.latestSourceUpdateAt
-          ? `Alert list refreshed ${new Date(hazard.freshness.latestSourceUpdateAt).toLocaleString()}`
-          : 'Live National Weather Service alerts'}
+        {loading
+          ? 'Loading National Weather Service alerts…'
+          : hazard.freshness?.latestSourceUpdateAt
+            ? `Alert list refreshed ${new Date(hazard.freshness.latestSourceUpdateAt).toLocaleString()}`
+            : 'Live National Weather Service alerts'}
       </p>
 
-      {ranked.length === 0 ? (
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-4 py-5">
-          <p className="text-sm font-medium text-slate-200">
-            No {hazard.pluralLabel} Active
-          </p>
-          <p className="mt-1.5 text-sm text-slate-400">
-            There are currently no active {hazard.pluralLabel} in the United States.
-          </p>
-          {hazard.relatedHazards?.length > 0 && (
-            <p className="mt-3 text-sm text-slate-400">
-              Related:{' '}
-              {hazard.relatedHazards.slice(0, 3).map((r, i) => (
-                <span key={r.slug}>
-                  {i > 0 && ', '}
-                  <Link to={r.href} className="text-sky-400 hover:underline">
-                    {r.label}
-                  </Link>
-                  {typeof r.activeCount === 'number' && r.activeCount > 0
-                    ? ` (${r.activeCount})`
-                    : ''}
-                </span>
-              ))}
-            </p>
-          )}
+      {loading ? (
+        <div className="space-y-3" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-4 py-4 space-y-2"
+            >
+              <div className="content-placeholder h-4 w-2/3" />
+              <div className="content-placeholder h-3 w-1/3" />
+              <div className="content-placeholder h-3 w-1/2" />
+            </div>
+          ))}
         </div>
-      ) : groupedByState ? (
-        <div className="space-y-6">
-          {groupedByState.map(({ state, alerts }) => (
-            <div key={state.code}>
-              <h3 className="text-sm font-semibold text-slate-300 mb-2">
-                {state.href ? (
-                  <Link to={state.href} className="text-sky-400 hover:underline">
-                    {state.name}
-                  </Link>
-                ) : (
-                  state.name
-                )}
-                <span className="text-slate-500 font-normal"> — {alerts.length}</span>
-              </h3>
+      ) : (
+        <div className="content-appear">
+          {ranked.length === 0 ? (
+            <div className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-4 py-5">
+              <p className="text-sm font-medium text-slate-200">
+                No {plural} Active
+              </p>
+              <p className="mt-1.5 text-sm text-slate-400">
+                There are currently no active {plural} in the United States.
+              </p>
+              {hazard.relatedHazards?.length > 0 && (
+                <p className="mt-3 text-sm text-slate-400">
+                  Related:{' '}
+                  {hazard.relatedHazards.slice(0, 3).map((r, i) => (
+                    <span key={r.slug}>
+                      {i > 0 && ', '}
+                      <Link to={r.href} className="text-sky-400 hover:underline">
+                        {r.label}
+                      </Link>
+                      {typeof r.activeCount === 'number' && r.activeCount > 0
+                        ? ` (${r.activeCount})`
+                        : ''}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
+          ) : groupedByState ? (
+            <div className="space-y-6">
+              {groupedByState.map(({ state, alerts }) => (
+                <div key={state.code}>
+                  <h3 className="text-sm font-semibold text-slate-300 mb-2">
+                    {state.href ? (
+                      <Link to={state.href} className="text-sky-400 hover:underline">
+                        {state.name}
+                      </Link>
+                    ) : (
+                      state.name
+                    )}
+                    <span className="text-slate-500 font-normal"> — {alerts.length}</span>
+                  </h3>
+                  <div className="space-y-3">
+                    {alerts.map((alert) => (
+                      <div key={alert.id} onClick={() => onAlertOpen?.(alert)}>
+                        <LiveAlertCard alert={alert} mode="full" tick={tick} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
               <div className="space-y-3">
-                {alerts.map((alert) => (
+                {flatShown.map((alert) => (
                   <div key={alert.id} onClick={() => onAlertOpen?.(alert)}>
                     <LiveAlertCard alert={alert} mode="full" tick={tick} />
                   </div>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3">
-            {flatShown.map((alert) => (
-              <div key={alert.id} onClick={() => onAlertOpen?.(alert)}>
-                <LiveAlertCard alert={alert} mode="full" tick={tick} />
-              </div>
-            ))}
-          </div>
-          {ranked.length > visible && (
-            <button
-              type="button"
-              onClick={() => setVisible((v) => v + INITIAL_VISIBLE)}
-              className="mt-4 text-sm text-sky-400 hover:text-sky-300 cursor-pointer"
-            >
-              Show more ({ranked.length - visible} remaining)
-            </button>
+              {ranked.length > visible && (
+                <button
+                  type="button"
+                  onClick={() => setVisible((v) => v + INITIAL_VISIBLE)}
+                  className="mt-4 text-sm text-sky-400 hover:text-sky-300 cursor-pointer"
+                >
+                  Show more ({ranked.length - visible} remaining)
+                </button>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </section>
   );

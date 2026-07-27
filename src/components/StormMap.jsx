@@ -36,8 +36,8 @@ import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS, BASEMAP_PREFERENCE_
 import {
   EMBED_MOBILE_PADDING,
   EMBED_STATE_PADDING,
-  EMBED_CONUS_PADDING,
-  EMBED_CONUS_MAX_ZOOM,
+  HOME_CONUS_PADDING,
+  HOME_CONUS_MAX_ZOOM,
   resolveHazardEmbedTarget,
   resolveStateEmbedTarget,
   alertGeographySignature,
@@ -342,17 +342,18 @@ function FitBoundsToLocations({ userLocations, triggerFit }) {
   return null;
 }
 
-// Fit the lower-48 to the map container — homepage / radar / hazard CONUS
-// embeds share the same tight padding + maxZoom so the lower 48 fills the view.
+// Fit the lower-48 to the map container — homepage /alerts /radar.
+// Uses slightly looser padding than hazard embeds so both coasts stay visible.
 function ConusViewport({ enabled, resetTrigger, centerOn, highlightArea }) {
   const map = useMap();
   const hasLocalFocus = !!(centerOn?.lat || highlightArea?.geometry);
   const shouldFit = enabled && !hasLocalFocus;
 
   const fitConus = useCallback((animate = false) => {
+    map.invalidateSize({ animate: false });
     map.fitBounds(CONUS_BOUNDS, {
-      padding: EMBED_CONUS_PADDING,
-      maxZoom: EMBED_CONUS_MAX_ZOOM,
+      padding: HOME_CONUS_PADDING,
+      maxZoom: HOME_CONUS_MAX_ZOOM,
       animate,
       duration: animate ? 0.5 : 0,
     });

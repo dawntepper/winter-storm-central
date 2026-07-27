@@ -172,31 +172,17 @@ export default function SevereWeatherHazardPage() {
         </p>
 
         <div className="mt-4">
-          {alertsLoading ? (
-            <section
-              aria-labelledby="current-situation-heading"
-              className="rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 py-3.5"
-              style={{ borderLeftWidth: 4, borderLeftColor: hazard.severityColor || '#64748b' }}
-            >
-              <h2 id="current-situation-heading" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Current Situation
-              </h2>
-              <p className="text-sm text-slate-400" role="status">
-                Checking National Weather Service alerts…
-              </p>
-            </section>
-          ) : (
-            <CurrentSituation
-              hazard={hazard}
-              onAlertsClick={() => trackSevereWeatherWarningsAnchorClick(analyticsProps)}
-              onStateClick={(state) => trackSevereWeatherStateClick({
-                ...analyticsProps,
-                destination_state_code: state.code,
-                source_section: 'current_situation',
-              })}
-              onExpandStates={() => trackSevereWeatherStateListExpanded(analyticsProps)}
-            />
-          )}
+          <CurrentSituation
+            hazard={hazard}
+            loading={alertsLoading}
+            onAlertsClick={() => trackSevereWeatherWarningsAnchorClick(analyticsProps)}
+            onStateClick={(state) => trackSevereWeatherStateClick({
+              ...analyticsProps,
+              destination_state_code: state.code,
+              source_section: 'current_situation',
+            })}
+            onExpandStates={() => trackSevereWeatherStateListExpanded(analyticsProps)}
+          />
         </div>
 
         <HazardRadarSection
@@ -209,6 +195,7 @@ export default function SevereWeatherHazardPage() {
 
         <CurrentHazardAlerts
           hazard={hazard}
+          loading={alertsLoading}
           onAlertOpen={(alert) => trackSevereWeatherAlertOpened({
             ...analyticsProps,
             alert_event: alert?.event,
@@ -218,6 +205,7 @@ export default function SevereWeatherHazardPage() {
 
         <RelatedSevereWeather
           relatedHazards={hazard.relatedHazards}
+          loading={alertsLoading}
           onRelatedClick={(item) => trackSevereWeatherRelatedClick({
             ...analyticsProps,
             related_hazard_slug: item.slug,
