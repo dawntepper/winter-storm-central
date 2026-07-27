@@ -1,10 +1,18 @@
 import { Link } from 'react-router-dom';
 
-export default function RelatedSevereWeather({ relatedHazards = [], onRelatedClick }) {
+export default function RelatedSevereWeather({
+  relatedHazards = [],
+  loading = false,
+  onRelatedClick,
+}) {
   if (!relatedHazards.length) return null;
 
   return (
-    <section aria-labelledby="related-severe-heading" className="mt-10">
+    <section
+      aria-labelledby="related-severe-heading"
+      aria-busy={loading || undefined}
+      className="mt-10"
+    >
       <h2 id="related-severe-heading" className="text-lg font-semibold text-white mb-3">
         Related Severe Weather
       </h2>
@@ -21,11 +29,13 @@ export default function RelatedSevereWeather({ relatedHazards = [], onRelatedCli
                   <span aria-hidden="true" className="mr-1.5">{item.icon}</span>
                   {item.pageTitle || item.label}
                 </span>
-                {typeof item.activeCount === 'number' && (
-                  <span className="text-xs text-slate-500 tabular-nums shrink-0">
+                {loading ? (
+                  <span className="content-placeholder h-3 w-16 shrink-0" aria-hidden="true" />
+                ) : typeof item.activeCount === 'number' ? (
+                  <span className="content-appear text-xs text-slate-500 tabular-nums shrink-0">
                     {item.activeCount > 0 ? `${item.activeCount} active` : 'None active'}
                   </span>
-                )}
+                ) : null}
               </div>
               {item.pageTitle && item.label && item.pageTitle !== item.label ? (
                 <p className="mt-1 text-xs text-slate-400">

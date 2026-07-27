@@ -171,17 +171,38 @@ export function extractLocationName(alert) {
 }
 
 /**
- * Extract state code from a raw NWS alert feature
+ * Extract primary land-state code from a raw NWS alert feature.
+ * Scans all UGC prefixes (not just the first), then areaDesc ", ST" patterns.
+ * Marine zone prefixes are skipped so PK/PH ocean products don't become "states".
  */
 export function extractStateCode(alert) {
-  const ugc = alert.properties?.geocode?.UGC?.[0] || '';
-  if (ugc && ugc.length >= 2) {
-    const stateCode = ugc.substring(0, 2);
-    if (!MARINE_ZONE_PREFIXES.includes(stateCode)) {
-      return stateCode;
+  const ugcs = alert.properties?.geocode?.UGC || alert.geocode?.UGC || alert.ugc || [];
+  for (const ugc of ugcs) {
+    if (typeof ugc !== 'string' || ugc.length < 2) continue;
+    const stateCode = ugc.substring(0, 2).toUpperCase();
+    if (MARINE_ZONE_PREFIXES.includes(stateCode)) continue;
+    // Valid USPS / territorial-looking codes used by NWS land products
+    if (/^[A-Z]{2}$/.test(stateCode)) return stateCode;
+  }
+
+  const areaDesc = alert.properties?.areaDesc || alert.areaDesc || '';
+  if (areaDesc) {
+    const match = areaDesc.match(/,\s*([A-Z]{2})\b/);
+    if (match) {
+      const stateCode = match[1];
+      if (!MARINE_ZONE_PREFIXES.includes(stateCode)) return stateCode;
     }
   }
+
   return null;
+}
+
+/** True when any UGC / state field indicates Alaska or Hawaii land product. */
+export function isAlaskaOrHawaiiAlert(alert) {
+  const state = extractStateCode(alert);
+  if (state === 'AK' || state === 'HI') return true;
+  const ugcs = alert.properties?.geocode?.UGC || alert.geocode?.UGC || alert.ugc || [];
+  return ugcs.some((ugc) => typeof ugc === 'string' && /^(AK|HI)/i.test(ugc));
 }
 
 /**

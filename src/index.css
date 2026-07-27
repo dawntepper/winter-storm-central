@@ -130,6 +130,46 @@ body {
   animation: tornado-warning-pulse 1.5s ease-in-out infinite;
 }
 
+/* Soft appear for deferred live copy (Current Situation, alert lists).
+   One-shot only — no remount loops. Honors reduced-motion. */
+@keyframes content-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.content-appear {
+  animation: content-appear 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content-appear {
+    animation: none;
+  }
+}
+
+/* Reserved-space placeholders while NWS feed loads — same card chrome stays put. */
+.content-placeholder {
+  border-radius: 0.375rem;
+  background: rgba(51, 65, 85, 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .content-placeholder {
+    animation: content-placeholder-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes content-placeholder-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.85; }
+}
+
 /* Tornado Warning map marker — red filled circle with 🌪 emoji overlay.
    Replaces the standard CircleMarker for active Warnings only. Reuses the
    tornado-warning-pulse keyframe (same 1.5s cadence as alert cards) so the
