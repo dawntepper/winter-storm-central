@@ -75,6 +75,12 @@
       })
     </script>
 
+    <!-- Warm RainViewer connections before radar tiles/manifest are requested. -->
+    <link rel="preconnect" href="https://api.rainviewer.com" crossorigin />
+    <link rel="preconnect" href="https://tilecache.rainviewer.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.rainviewer.com" />
+    <link rel="dns-prefetch" href="https://tilecache.rainviewer.com" />
+
     <!-- Leaflet CSS is bundled via src/index.css (avoid unpkg on critical path). -->
   </head>
   <body>

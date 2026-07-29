@@ -41,3 +41,22 @@ export function CardSkeleton({ lines = 3, className = '' }) {
     </div>
   );
 }
+
+/** Reserved-height map viewer placeholder (Suspense / lazy StormMap). */
+export function MapViewerSkeleton({ className = '', label = 'Loading map…' }) {
+  return (
+    <div
+      className={`relative flex flex-col items-center justify-center gap-3 bg-slate-900 ${className}`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <div className="absolute inset-0 content-placeholder rounded-none" aria-hidden="true" />
+      <span
+        className="relative inline-block w-8 h-8 rounded-full border-[3px] border-slate-600/40 border-t-sky-400 animate-spin"
+        aria-hidden="true"
+      />
+      <span className="relative text-sm font-medium text-slate-300">{label}</span>
+    </div>
+  );
+}
