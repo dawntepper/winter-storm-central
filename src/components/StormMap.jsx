@@ -519,6 +519,25 @@ function EmbeddedViewport({
   return null;
 }
 
+/** Fires once when Leaflet finishes initializing — used for map-shell overlay. */
+function MapReadyReporter({ onReady }) {
+  const map = useMap();
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (firedRef.current) return undefined;
+    const fire = () => {
+      if (firedRef.current) return;
+      firedRef.current = true;
+      onReady?.();
+    };
+    map.whenReady(fire);
+    return undefined;
+  }, [map, onReady]);
+
+  return null;
+}
+
 function MapSizeSync({ syncKey }) {
   const map = useMap();
 
@@ -2046,6 +2065,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   isPageHero = false,
   mapTitle = 'Live Weather Map',
   mapOverlay = null,
+  /** Optional: parent notified once Leaflet map.whenReady fires (one-shot). */
+  onMapReady = null,
   /**
    * 'full' — /radar and homepage exploration (unchanged).
    * 'embedded' — state / severe-weather page preview; enables mobile compact mode.
@@ -2079,6 +2100,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   // Delay the radar spinner so fast loads (the common case) never flash it.
   // Surfaces once loading exceeds ~200ms; tiles still ease in via pane fade.
   const [radarSpinnerVisible, setRadarSpinnerVisible] = useState(false);
+  // Map shell stays mounted; overlay covers empty Leaflet until whenReady.
+  // Do not gate StormMap mount on this — avoids full-page remount loops.
+  const [mapReady, setMapReady] = useState(false);
+  const onMapReadyRef = useRef(onMapReady);
+  useEffect(() => {
+    onMapReadyRef.current = onMapReady;
+  }, [onMapReady]);
+  const handleMapReady = useCallback(() => {
+    setMapReady(true);
+    onMapReadyRef.current?.();
+  }, []);
   useEffect(() => {
     if (showRadar && radarLoading) {
       const t = setTimeout(() => setRadarSpinnerVisible(true), RADAR_SPINNER_DELAY_MS);
@@ -2814,8 +2846,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         )}
       </div>
 
-      {/* Map Container - fills available height in sidebar mode */}
-      <div ref={mapContainerRef} className={`relative overflow-visible z-10 storm-map-shell ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}>
+      {/* Map Container - fills available height in sidebar mode.
+          Shell always mounts with reserved height; overlay covers until Leaflet ready. */}
+      <div
+        ref={mapContainerRef}
+        className={`relative overflow-visible z-10 storm-map-shell ${isSidebar ? 'flex-1 min-h-[400px]' : ''}`}
+      >
         {mapOverlay}
         <MapContainer
           center={initialCenter}
@@ -2825,9 +2861,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             width: '100%',
             backgroundColor: basemapStyle === 'dark' ? MAP_ATMOSPHERE_CHROME.containerBg : undefined,
           }}
-          className={`z-0 storm-map-canvas${basemapStyle === 'dark' ? ' storm-map-dark' : ''} ${mapHeightClass}`}
+          className={`z-0 storm-map-canvas${basemapStyle === 'dark' ? ' storm-map-dark' : ''} ${mapHeightClass}${mapReady ? ' storm-map-appear' : ' storm-map-pending'}`}
           zoomControl={!isMobileEmbedded}
         >
+          <MapReadyReporter onReady={handleMapReady} />
           <MapController showRadar={showRadar} />
           <MapSizeSync syncKey={`${presentation}-${isMobileEmbedded ? 'm' : 'd'}-${embedContextKey}`} />
           <ZoomTracker onZoomChange={setZoomLevel} />
@@ -2958,6 +2995,26 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             )}
           </ZoomContext.Provider>
         </MapContainer>
+
+        {/* Map init overlay — reserved shell + spinner until Leaflet whenReady.
+            Fades out in place (no unmount of MapContainer / StormMap). */}
+        <div
+          className={`absolute inset-0 z-[440] flex flex-col items-center justify-center gap-3 storm-map-init-overlay ${
+            mapReady ? 'storm-map-init-overlay-done' : ''
+          }`}
+          role="status"
+          aria-live="polite"
+          aria-label={mapReady ? undefined : 'Loading map'}
+          aria-hidden={mapReady}
+        >
+          {!mapReady && (
+            <>
+              <div className="absolute inset-0 content-placeholder rounded-none" aria-hidden="true" />
+              <span className="radar-spinner radar-spinner-lg relative" aria-hidden="true" />
+              <span className="relative text-sm font-medium text-slate-300">Loading map…</span>
+            </>
+          )}
+        </div>
 
         {/* Radar loading overlay — centered card while tiles fetch/paint.
             pointer-events-none keeps the map fully interactive underneath. */}
@@ -3427,9 +3484,26 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           from { opacity: 0; transform: translateY(-4px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .storm-map-pending {
+          opacity: 0;
+        }
+        .storm-map-appear {
+          animation: content-appear 200ms ease-out both;
+        }
+        .storm-map-init-overlay {
+          background: rgba(15, 23, 42, 0.92);
+          pointer-events: none;
+          transition: opacity 200ms ease-out, visibility 200ms ease-out;
+        }
+        .storm-map-init-overlay-done {
+          opacity: 0;
+          visibility: hidden;
+        }
         @media (prefers-reduced-motion: reduce) {
           .radar-spinner { animation-duration: 1.4s; }
           .radar-loading-fade { animation: none; }
+          .storm-map-appear { animation: none; opacity: 1; }
+          .storm-map-init-overlay { transition: none; }
         }
         .leaflet-tooltip.enhanced-tooltip {
           background: #f8fafc;

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MapViewerSkeleton } from '../Skeletons';
 
 const StormMap = lazy(() => import('../StormMap'));
 
@@ -33,9 +34,7 @@ export default function HazardRadarSection({ hazard, alerts = [] }) {
       >
         <Suspense
           fallback={
-            <div className="h-[clamp(360px,50vh,440px)] md:h-[500px] lg:h-[560px] flex items-center justify-center text-slate-400 text-sm">
-              Loading radar…
-            </div>
+            <MapViewerSkeleton className="h-[clamp(360px,50vh,440px)] md:h-[500px] lg:h-[560px]" />
           }
         >
           <StormMap
