@@ -802,15 +802,59 @@ const STATE_ABBR_CENTERS = Object.fromEntries(
 const STATE_LABEL_PANE = 'state-labels';
 
 const RADAR_MANIFEST_REFRESH_MS = 5 * 60 * 1000;
+// In-memory TTL so RadarLayer can start tiles immediately when the manifest
+// was already prefetched (or fetched recently) instead of waiting on a
+// cache-busted network round-trip every mount.
+const RADAR_MANIFEST_TTL_MS = 90 * 1000;
+const RADAR_MANIFEST_URL = 'https://api.rainviewer.com/public/weather-maps.json';
+const RADAR_EARLY_REVEAL_TILES = 3;
+
+let rainViewerManifestCache = null; // { data, fetchedAt }
+let rainViewerManifestInflight = null;
 
 function buildRainViewerTileUrl(host, path, colorScheme) {
   return `${host}${path}/256/{z}/{x}/{y}/${colorScheme}/1_1.png`;
 }
 
-async function fetchRainViewerManifest() {
-  const response = await fetch(`https://api.rainviewer.com/public/weather-maps.json?_=${Date.now()}`);
-  if (!response.ok) throw new Error(`RainViewer manifest ${response.status}`);
-  return response.json();
+async function fetchRainViewerManifest({ force = false } = {}) {
+  const now = Date.now();
+  if (
+    !force
+    && rainViewerManifestCache
+    && (now - rainViewerManifestCache.fetchedAt) < RADAR_MANIFEST_TTL_MS
+  ) {
+    return rainViewerManifestCache.data;
+  }
+  if (!force && rainViewerManifestInflight) {
+    return rainViewerManifestInflight;
+  }
+
+  const request = (async () => {
+    // TTL-window bust lets browsers/CDNs reuse the response within the window
+    // instead of Date.now() defeating cache on every call. Forced refreshes
+    // (5-min interval) still bust so the latest radar frame is picked up.
+    const cacheKey = force ? Date.now() : Math.floor(Date.now() / RADAR_MANIFEST_TTL_MS);
+    const response = await fetch(`${RADAR_MANIFEST_URL}?_=${cacheKey}`);
+    if (!response.ok) throw new Error(`RainViewer manifest ${response.status}`);
+    const data = await response.json();
+    rainViewerManifestCache = { data, fetchedAt: Date.now() };
+    return data;
+  })();
+
+  rainViewerManifestInflight = request;
+  try {
+    return await request;
+  } finally {
+    if (rainViewerManifestInflight === request) {
+      rainViewerManifestInflight = null;
+    }
+  }
+}
+
+// Warm the manifest as soon as StormMap is imported (eager on home/radar
+// routes) so RadarLayer often hits memory cache on first paint.
+if (typeof window !== 'undefined') {
+  fetchRainViewerManifest().catch(() => {});
 }
 
 function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoadingChange }) {
@@ -819,10 +863,10 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
   const rainViewerHostRef = useRef('https://tilecache.rainviewer.com');
 
   useEffect(() => {
-    // Dedicated pane so we can fade the WHOLE radar layer in at once via the
-    // pane's opacity, instead of tiles popping in one-by-one (the "choppy"
-    // look). The pane stays hidden until the layer's 'load' fires, then eases
-    // in. CSS transition lives in .radar-overlay-pane.
+    // Dedicated pane so we can fade the WHOLE radar layer in via pane opacity
+    // instead of tiles popping one-by-one. Stay hidden until a few tiles land
+    // (early reveal) or the layer's 'load' fires, then ease in quickly.
+    // CSS transition lives in .radar-overlay-pane.
     let pane = map.getPane(RADAR_PANE);
     if (!pane) {
       pane = map.createPane(RADAR_PANE);
@@ -844,10 +888,26 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
     }
 
     // Show the spinner up front — covers the gap before tiles begin loading
-    // (notably the RainViewer JSON fetch on the precipitation path). The
-    // layer's 'load' event clears it once the imagery is actually painted.
+    // (notably the RainViewer JSON fetch on the precipitation path). Cleared
+    // once enough tiles have painted (early reveal) or full 'load' fires.
     onLoadingChange?.(true);
-    hideRadar(); // start hidden; reveal (faded) once tiles finish on this pull-in
+    hideRadar(); // start hidden; reveal after a few tiles / full load
+
+    const attachRevealListeners = (layer, { notifyLoading = true } = {}) => {
+      let tilesLoaded = 0;
+      let revealed = false;
+      const maybeReveal = () => {
+        if (revealed) return;
+        revealed = true;
+        if (notifyLoading) onLoadingChange?.(false);
+        revealRadar();
+      };
+      layer.on('tileload', () => {
+        tilesLoaded += 1;
+        if (tilesLoaded >= RADAR_EARLY_REVEAL_TILES) maybeReveal();
+      });
+      layer.on('load', maybeReveal);
+    };
 
     const addLayer = (url, options = {}, { notifyLoading = true } = {}) => {
       if (layerRef.current) map.removeLayer(layerRef.current);
@@ -857,10 +917,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
         pane: RADAR_PANE,
         ...options,
       });
-      layer.on('load', () => {
-        if (notifyLoading) onLoadingChange?.(false);
-        revealRadar();
-      });
+      attachRevealListeners(layer, { notifyLoading });
       layer.addTo(map);
       layerRef.current = layer;
     };
@@ -875,10 +932,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
         pane: RADAR_PANE,
         ...options,
       });
-      layer.on('load', () => {
-        if (notifyLoading) onLoadingChange?.(false);
-        revealRadar();
-      });
+      attachRevealListeners(layer, { notifyLoading });
       layer.addTo(map);
       layerRef.current = layer;
     };
@@ -970,7 +1024,7 @@ function RadarLayer({ show, layerType = 'precipitation', colorScheme = 4, onLoad
       } else {
         (async () => {
           try {
-            const data = await fetchRainViewerManifest();
+            const data = await fetchRainViewerManifest({ force: true });
             if (cancelled) return;
             const host = data.host || rainViewerHostRef.current;
             rainViewerHostRef.current = host;
@@ -3321,7 +3375,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           50% { opacity: 0.8; }
         }
         .radar-overlay-pane {
-          transition: opacity 0.55s ease-in-out;
+          transition: opacity 0.22s ease-out;
           opacity: 0;
           filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.06));
         }
