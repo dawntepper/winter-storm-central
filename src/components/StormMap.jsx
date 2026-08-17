@@ -401,6 +401,7 @@ function EmbeddedViewport({
   alerts = [],
   contextKey = '',
   resetTrigger = 0,
+  mapFamily = null,
 }) {
   const map = useMap();
   const userMovedRef = useRef(false);
@@ -437,7 +438,7 @@ function EmbeddedViewport({
   const applyFit = useCallback((animate = false, alertSnapshot = fitAlertsRef.current) => {
     const target = fitMode === 'state'
       ? resolveStateEmbedTarget(stateCode)
-      : resolveHazardEmbedTarget(alertSnapshot);
+      : resolveHazardEmbedTarget(alertSnapshot, { mapFamily });
 
     const padding = target.padding
       ?? (fitMode === 'state' ? EMBED_STATE_PADDING : EMBED_MOBILE_PADDING);
@@ -452,7 +453,7 @@ function EmbeddedViewport({
     map.once('moveend', () => {
       programmaticFitRef.current = false;
     });
-  }, [map, fitMode, stateCode]);
+  }, [map, fitMode, stateCode, mapFamily]);
 
   // Initial / page-context / geography-class fit (not every alert poll).
   // Double-rAF waits for CSS height overrides (hazard embed) before fitting.
@@ -1307,6 +1308,18 @@ const alertCategoryColors = {
   default: '#ef4444'   // red fallback
 };
 
+/**
+ * Tropical markers keep 🌀 (no distinct hurricane emoji in Unicode) and
+ * differentiate severity via disc color — same pattern as tornado emoji+color.
+ * Hurricane / Extreme Wind = warmer urgency; storm surge = violet (inundation);
+ * tropical storm (+ watches) = category azure.
+ */
+function tropicalMarkerModifier(event = '') {
+  if (/Hurricane|Extreme Wind/i.test(event)) return 'hurricane';
+  if (/Storm Surge/i.test(event)) return 'surge';
+  return 'storm';
+}
+
 // Simple alert dot marker with highlight and selected support
 function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false, selected = false, selectedUsesCategoryColor = false, shouldPulse = false }) {
   const position = [alert.lat, alert.lon];
@@ -1349,16 +1362,16 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
     );
   }
 
-  // Tropical alerts (hurricane/tropical storm/storm surge) get the same
-  // emoji-in-circle treatment as Tornado Warnings — a filled azure circle with
-  // the 🌀 icon — so they read clearly on the dark map instead of as a small
-  // dark-blue dot. No pulse: tropical systems are slower-moving than the
-  // "take shelter now" tornado signal, so the static circle suffices. Selected
-  // state falls through to the green CircleMarker treatment below.
+  // Tropical alerts get the same emoji-in-circle treatment as Tornado Warnings
+  // (🌀 disc) so they read on the dark map. Disc color varies by event type
+  // (hurricane vs tropical storm vs storm surge); emoji stays shared. No pulse:
+  // tropical systems are slower-moving than the tornado "take shelter now"
+  // signal. Selected state falls through to the green CircleMarker below.
   const isTropical = alert.category === 'tropical';
   if (isTropical && !selected) {
+    const mod = tropicalMarkerModifier(alert.event);
     const icon = L.divIcon({
-      html: `<div class="tropical-alert-marker" role="img" aria-label="${alert.event || 'Tropical alert'}"><span aria-hidden="true">🌀</span></div>`,
+      html: `<div class="tropical-alert-marker tropical-alert-marker--${mod}" role="img" aria-label="${alert.event || 'Tropical alert'}"><span aria-hidden="true">🌀</span></div>`,
       className: '',
       iconSize: [28, 28],
       iconAnchor: [14, 14]
@@ -2057,6 +2070,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   embedFit = 'alerts',
   /** Re-fit key when page context changes (state abbr / hazard slug). */
   embedContextKey = '',
+  /**
+   * Hazard map family for embed framing. 'tropical' uses US+Caribbean basin
+   * (AK/HI/PR/VI + broader Caribbean); other hazards keep alert/CONUS logic.
+   */
+  embedMapFamily = null,
 }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
@@ -2873,6 +2891,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             alerts={alerts}
             contextKey={embedContextKey || selectedStateCode || analyticsPageContext || 'embed'}
             resetTrigger={resetTrigger}
+            mapFamily={embedMapFamily}
           />
           <CenterOnLocation location={centerOn} enabled={!isEmbedded} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />

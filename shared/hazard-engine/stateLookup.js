@@ -59,6 +59,7 @@ export const STATE_BY_ABBR = {
   VI: { name: 'U.S. Virgin Islands', slug: 'us-virgin-islands' },
   GU: { name: 'Guam', slug: 'guam' },
   AS: { name: 'American Samoa', slug: 'american-samoa' },
+  MP: { name: 'Northern Mariana Islands', slug: 'northern-mariana-islands' },
 };
 
 export function getStateName(abbr) {

@@ -11,14 +11,14 @@
 // system. This fixture lets us verify the tropical UI — on the
 // main radar AND per-state radars — without waiting for a storm.
 //
-// Fixtures span three coastal states (FL, LA, TX) so the state
-// radar (/state/{code}) can be verified too, and cover all three
-// tropical event keywords (Hurricane, Tropical Storm, Storm Surge)
-// that map to the 'tropical' category in shared/nws-alert-parser.js.
+// Fixtures span coastal CONUS + Puerto Rico so Caribbean territory pages
+// and map framing can be verified too, and cover tropical event keywords
+// (Hurricane, Tropical Storm, Storm Surge) that map to the 'tropical'
+// category in shared/nws-alert-parser.js.
 //
 // To use: run `npm run dev` → visit /radar?test-tropical=1
 //   - Hurricane Warning (Miami, FL)
-//   - Tropical Storm Warning (New Orleans, LA)
+//   - Tropical Storm Warning (San Juan, PR)
 //   - Storm Surge Warning (Galveston, TX)
 //
 // If you add new tropical UI: extend this fixture if needed, but
@@ -56,20 +56,20 @@ export function makeTropicalFixtures() {
       expires,
     },
     {
-      id: 'fixture-tropical-storm-warning',
+      id: 'fixture-tropical-storm-warning-pr',
       event: 'Tropical Storm Warning',
       category: 'tropical',
-      state: 'LA',
-      location: 'New Orleans, LA',
-      lat: 29.9511,
-      lon: -90.0715,
-      headline: 'Tropical Storm Warning in effect for Southeast Louisiana',
+      state: 'PR',
+      location: 'San Juan, PR',
+      lat: 18.4655,
+      lon: -66.1057,
+      headline: 'Tropical Storm Warning in effect for Puerto Rico',
       description: 'Tropical storm conditions expected with winds of 45-65 mph and heavy rainfall.',
       fullDescription:
         'Tropical storm conditions are expected within 36 hours. Sustained winds of 45 to 65 mph with ' +
-        'higher gusts. Heavy rainfall may produce flash flooding. Secure loose outdoor objects and ' +
-        'prepare for power outages.',
-      areaDesc: 'Orleans, LA; Jefferson, LA; St. Bernard, LA',
+        'higher gusts. Heavy rainfall may produce flash flooding and mudslides. Secure loose outdoor ' +
+        'objects and prepare for power outages.',
+      areaDesc: 'San Juan, PR; Bayamon, PR; Carolina, PR',
       severity: 'Severe',
       urgency: 'Expected',
       onset,

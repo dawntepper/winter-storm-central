@@ -42,6 +42,8 @@ const STATE_ESSENTIALS_VARIANTS = {
   NC: 'state-fl',
   AL: 'state-fl',
   MS: 'state-fl',
+  PR: 'state-fl',
+  VI: 'state-fl',
   KS: 'state-tornado',
   OK: 'state-tornado',
   NE: 'state-tornado',

@@ -29,6 +29,19 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 const SevereWeatherHazardPage = lazy(() => import('./pages/SevereWeatherHazardPage.jsx'))
 
+// Warm the severe-weather route (+ StormMap dep) after first paint so in-app
+// navigations to /severe-weather/:slug skip the cold chunk waterfall.
+if (typeof window !== 'undefined') {
+  const prefetchSevereWeather = () => {
+    import('./pages/SevereWeatherHazardPage.jsx').catch(() => {})
+  }
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(prefetchSevereWeather, { timeout: 4000 })
+  } else {
+    setTimeout(prefetchSevereWeather, 2000)
+  }
+}
+
 function RouteFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-slate-950">

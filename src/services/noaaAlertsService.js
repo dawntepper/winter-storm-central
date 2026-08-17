@@ -165,9 +165,9 @@ export function parseAlert(alert) {
 
   if (!category) return null;
 
-  // Prefer geometry / FIPS / UGC centroid. Always keep Alaska & Hawaii land
-  // alerts even when county FIPS/geometry is missing — state centroid is enough
-  // for hazard pages and map framing.
+  // Prefer geometry / FIPS / UGC centroid. Always keep Alaska, Hawaii, and
+  // NWS territory land alerts even when county FIPS/geometry is missing —
+  // state centroid is enough for hazard pages and map framing.
   let coords = extractCoordinates(alert);
   let state = extractStateCode(alert);
   if (!state && isAlaskaOrHawaiiAlert(alert)) {
@@ -175,7 +175,15 @@ export function parseAlert(alert) {
     const hit = ugcs.find((u) => typeof u === 'string' && /^(AK|HI)/i.test(u));
     state = hit ? hit.substring(0, 2).toUpperCase() : null;
   }
-  if ((!coords || !Number.isFinite(coords.lat)) && (state === 'AK' || state === 'HI')) {
+  // Territory UGC prefixes (PRZ/PRC, VIZ, GUZ, ASZ, MPZ) when extractStateCode
+  // somehow missed them — rare, but mirrors the AK/HI retention path.
+  if (!state) {
+    const ugcs = props.geocode?.UGC || [];
+    const hit = ugcs.find((u) => typeof u === 'string' && /^(PR|VI|GU|AS|MP)/i.test(u));
+    if (hit) state = hit.substring(0, 2).toUpperCase();
+  }
+  const NON_CONUS_LAND = new Set(['AK', 'HI', 'PR', 'VI', 'GU', 'AS', 'MP']);
+  if ((!coords || !Number.isFinite(coords.lat)) && NON_CONUS_LAND.has(state)) {
     const centroid = getStateCentroid(state);
     if (centroid) {
       coords = addJitter({ ...centroid, source: 'state' }, 0.5);
@@ -266,6 +274,24 @@ function getCachedAlerts() {
 }
 
 /**
+ * Sync peek of a still-fresh localStorage alerts payload (or null).
+ * Used to hydrate React state before the first useEffect fetch so soft-loading
+ * placeholders can skip on return visits / after homepage warmed the cache.
+ */
+export function peekFreshCachedExtremeWeather() {
+  const cached = getCachedAlerts();
+  if (!cached) return null;
+  return {
+    ...cached.data,
+    fromCache: true,
+    cacheAge: cached.age,
+  };
+}
+
+// Deduplicate concurrent cold fetches (module warm + useExtremeWeather mount).
+let extremeWeatherInflight = null;
+
+/**
  * Save alerts to cache
  */
 function cacheAlerts(data) {
@@ -332,71 +358,90 @@ export async function fetchExtremeWeather(forceRefresh = false) {
     }
   }
 
+  // Share one in-flight network request across callers (page module warm + hook).
+  if (!forceRefresh && !tornadoTest && !tropicalTest && extremeWeatherInflight) {
+    return extremeWeatherInflight;
+  }
+
   console.log('Fetching fresh NOAA alerts...');
 
-  try {
-    const response = await fetchAlertsFromAPI();
-    const features = response.features || [];
+  const request = (async () => {
+    try {
+      const response = await fetchAlertsFromAPI();
+      const features = response.features || [];
 
-    // Filter to only included event types
-    const warnings = filterAlertFeatures(features);
+      // Filter to only included event types
+      const warnings = filterAlertFeatures(features);
 
-    // Parse alerts
-    const parsed = warnings
-      .map(parseAlert)
-      .filter(Boolean); // Remove nulls
+      // Parse alerts
+      const parsed = warnings
+        .map(parseAlert)
+        .filter(Boolean); // Remove nulls
 
-    // Prepend dev-only fixtures (tornado and/or tropical) so they appear in
-    // allAlerts AND byCategory AND the selected/map flow, end-to-end.
-    const allAlerts = [
-      ...(tornadoTest ? makeTornadoFixtures() : []),
-      ...(tropicalTest ? makeTropicalFixtures() : []),
-      ...parsed,
-    ];
+      // Prepend dev-only fixtures (tornado and/or tropical) so they appear in
+      // allAlerts AND byCategory AND the selected/map flow, end-to-end.
+      const allAlerts = [
+        ...(tornadoTest ? makeTornadoFixtures() : []),
+        ...(tropicalTest ? makeTropicalFixtures() : []),
+        ...parsed,
+      ];
 
-    // Group by category
-    const byCategory = {};
-    for (const categoryId of CATEGORY_ORDER) {
-      byCategory[categoryId] = allAlerts.filter(a => a.category === categoryId);
-    }
+      // Group by category
+      const byCategory = {};
+      for (const categoryId of CATEGORY_ORDER) {
+        byCategory[categoryId] = allAlerts.filter(a => a.category === categoryId);
+      }
 
-    // Select balanced set for display
-    const selected = selectBalancedAlerts(allAlerts);
+      // Select balanced set for display
+      const selected = selectBalancedAlerts(allAlerts);
 
-    const result = {
-      allAlerts,
-      byCategory,
-      selected,
-      totalCount: allAlerts.length,
-      lastUpdated: new Date().toISOString(),
-      fromCache: false
-    };
-
-    // Cache the real result (skip when the dev fixture is active so removing
-    // the URL param returns to clean real-NWS data on the next load).
-    if (!tornadoTest) {
-      cacheAlerts(result);
-    }
-
-    return result;
-
-  } catch (error) {
-    console.error('Error fetching NOAA alerts:', error);
-
-    // Try to return any cached payload on error, even past TTL — better than
-    // leaving the UI on React state that may be hours old with no stale flag.
-    const staleCache = readAlertsCacheEntry();
-    if (staleCache) {
-      return {
-        ...staleCache.data,
-        fromCache: true,
-        stale: true,
-        cacheAge: staleCache.age,
-        error: error.message
+      const result = {
+        allAlerts,
+        byCategory,
+        selected,
+        totalCount: allAlerts.length,
+        lastUpdated: new Date().toISOString(),
+        fromCache: false
       };
-    }
 
-    throw error;
+      // Cache the real result (skip when the dev fixture is active so removing
+      // the URL param returns to clean real-NWS data on the next load).
+      if (!tornadoTest) {
+        cacheAlerts(result);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching NOAA alerts:', error);
+
+      // Try to return any cached payload on error, even past TTL — better than
+      // leaving the UI on React state that may be hours old with no stale flag.
+      const staleCache = readAlertsCacheEntry();
+      if (staleCache) {
+        return {
+          ...staleCache.data,
+          fromCache: true,
+          stale: true,
+          cacheAge: staleCache.age,
+          error: error.message
+        };
+      }
+
+      throw error;
+    }
+  })();
+
+  if (!forceRefresh && !tornadoTest && !tropicalTest) {
+    extremeWeatherInflight = request;
+  }
+
+  try {
+    return await request;
+  } finally {
+    if (extremeWeatherInflight === request) {
+      extremeWeatherInflight = null;
+    }
   }
 }
 

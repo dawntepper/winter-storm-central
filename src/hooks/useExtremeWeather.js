@@ -19,6 +19,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchExtremeWeather,
+  peekFreshCachedExtremeWeather,
   hasUrgentAlert,
   REFRESH_INTERVAL_NORMAL,
   REFRESH_INTERVAL_FAST,
@@ -34,19 +35,39 @@ function getRefreshThreshold(allAlerts) {
   return hasUrgentAlert(allAlerts) ? REFRESH_INTERVAL_FAST : REFRESH_INTERVAL_NORMAL;
 }
 
+function readInitialAlertsState() {
+  if (typeof window === 'undefined') {
+    return { alerts: null, loading: true, lastUpdated: null };
+  }
+  try {
+    const cached = peekFreshCachedExtremeWeather();
+    if (cached) {
+      return {
+        alerts: cached,
+        loading: false,
+        lastUpdated: cached.lastUpdated ? new Date(cached.lastUpdated) : null,
+      };
+    }
+  } catch {
+    // Ignore corrupt cache; cold fetch path handles it.
+  }
+  return { alerts: null, loading: true, lastUpdated: null };
+}
+
 export function useExtremeWeather(enabled = true) {
-  const [alerts, setAlerts] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const initial = readInitialAlertsState();
+  const [alerts, setAlerts] = useState(initial.alerts);
+  const [loading, setLoading] = useState(initial.loading);
   const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(initial.lastUpdated);
   const [isStale, setIsStale] = useState(false);
 
   // Track the active polling interval so we only swap setInterval when the
   // mode actually changes — not on every fetch tick.
   const intervalRef = useRef({ id: null, ms: null });
   const inFlightRef = useRef(false);
-  const lastUpdatedRef = useRef(null);
-  const alertsRef = useRef(null);
+  const lastUpdatedRef = useRef(initial.lastUpdated);
+  const alertsRef = useRef(initial.alerts);
 
   useEffect(() => {
     lastUpdatedRef.current = lastUpdated;
@@ -60,7 +81,10 @@ export function useExtremeWeather(enabled = true) {
     if (!enabled || inFlightRef.current) return;
 
     inFlightRef.current = true;
-    setLoading(true);
+    // Keep soft-loading placeholders off when we already hydrated from cache.
+    if (!alertsRef.current) {
+      setLoading(true);
+    }
     setError(null);
 
     try {

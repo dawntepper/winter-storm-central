@@ -28,6 +28,7 @@ const SLUG_TO_STATE_NAME = {
   // Territories
   'district-of-columbia': 'District of Columbia', 'puerto-rico': 'Puerto Rico',
   'us-virgin-islands': 'U.S. Virgin Islands', 'guam': 'Guam', 'american-samoa': 'American Samoa',
+  'northern-mariana-islands': 'Northern Mariana Islands',
 };
 
 function isCrawler(userAgent) {

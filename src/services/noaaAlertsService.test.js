@@ -119,3 +119,45 @@ describe('Alaska / Hawaii retention for severe-weather pages', () => {
     expect(snap.liveStatus.statusHeadline).toMatch(/Winter Weather Advisory Active/i);
   });
 });
+
+/** Puerto Rico tropical product with zone UGC and no polygon geometry. */
+const PR_TROPICAL_STORM_WARNING = {
+  id: 'pr-tsw-test',
+  geometry: null,
+  properties: {
+    event: 'Tropical Storm Warning',
+    areaDesc: 'San Juan and Vicinity',
+    severity: 'Severe',
+    urgency: 'Expected',
+    certainty: 'Likely',
+    onset: '2026-08-16T12:00:00Z',
+    expires: '2099-08-17T06:00:00Z',
+    headline: 'Tropical Storm Warning for Puerto Rico',
+    description: 'Tropical storm conditions expected.',
+    geocode: {
+      UGC: ['PRZ001', 'PRZ002'],
+      SAME: [],
+    },
+  },
+};
+
+describe('Puerto Rico / territory retention for tropical pages', () => {
+  it('extracts PR from UGC and keeps alert without geometry', () => {
+    expect(extractStateCode(PR_TROPICAL_STORM_WARNING)).toBe('PR');
+    const parsed = parseAlert(PR_TROPICAL_STORM_WARNING);
+    expect(parsed).not.toBeNull();
+    expect(parsed.state).toBe('PR');
+    expect(parsed.category).toBe('tropical');
+    expect(parsed.lat).toBeGreaterThan(17);
+    expect(parsed.lat).toBeLessThan(19);
+    expect(parsed.lon).toBeLessThan(-65);
+  });
+
+  it('surfaces PR tropical storm on the tropical-storm hazard page', () => {
+    const parsed = parseAlert(PR_TROPICAL_STORM_WARNING);
+    const snap = hazardEngine.get('tropical-storm-warning', [parsed], { dataAvailable: true });
+    expect(snap.activeCount).toBe(1);
+    expect(snap.affectedStates.map((s) => s.code)).toContain('PR');
+    expect(snap.affectedStates.find((s) => s.code === 'PR')?.href).toBe('/alerts/puerto-rico');
+  });
+});

@@ -60,6 +60,13 @@ export const US_STATES = {
   'west-virginia':  { name: 'West Virginia',   abbr: 'WV', center: [38.64, -80.62], zoom: 7,  fipsCode: '54' },
   'wisconsin':      { name: 'Wisconsin',       abbr: 'WI', center: [44.63, -89.71], zoom: 7,  fipsCode: '55' },
   'wyoming':        { name: 'Wyoming',         abbr: 'WY', center: [43.0,  -107.55], zoom: 7, fipsCode: '56' },
+  // DC + NWS-covered US territories (SPA pages, dropdowns, map jumps)
+  'district-of-columbia': { name: 'Washington D.C.', abbr: 'DC', center: [38.91, -77.04], zoom: 10, fipsCode: '11' },
+  'puerto-rico':    { name: 'Puerto Rico',     abbr: 'PR', center: [18.22, -66.59], zoom: 8,  fipsCode: '72' },
+  'us-virgin-islands': { name: 'U.S. Virgin Islands', abbr: 'VI', center: [18.34, -64.90], zoom: 10, fipsCode: '78' },
+  'guam':           { name: 'Guam',            abbr: 'GU', center: [13.44, 144.79], zoom: 10, fipsCode: '66' },
+  'american-samoa': { name: 'American Samoa',  abbr: 'AS', center: [-14.27, -170.13], zoom: 10, fipsCode: '60' },
+  'northern-mariana-islands': { name: 'Northern Mariana Islands', abbr: 'MP', center: [15.1, 145.67], zoom: 9, fipsCode: '69' },
 };
 
 // =============================================
@@ -78,8 +85,6 @@ for (const [slug, state] of Object.entries(US_STATES)) {
   SLUG_TO_ABBR[slug] = state.abbr;
   STATE_NAMES[state.abbr] = state.name;
 }
-// DC isn't a state but appears in NWS alert data
-STATE_NAMES['DC'] = 'Washington D.C.';
 
 // =============================================
 // NEARBY STATES (geographic adjacency)
@@ -136,6 +141,12 @@ export const NEARBY_STATES = {
   WV: ['PA', 'MD', 'VA', 'KY', 'OH'],
   WI: ['MN', 'IA', 'IL', 'MI'],
   WY: ['MT', 'SD', 'NE', 'CO', 'UT', 'ID'],
+  DC: ['MD', 'VA'],
+  PR: ['VI'],
+  VI: ['PR'],
+  GU: ['MP'],
+  MP: ['GU'],
+  AS: [],
 };
 
 // =============================================

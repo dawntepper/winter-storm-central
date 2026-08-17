@@ -5,9 +5,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { hazardEngine } from '../../shared/hazard-engine/index.js';
+import { fetchExtremeWeather } from '../services/noaaAlertsService';
 import { useExtremeWeather } from './useExtremeWeather';
 
 const BRIEF_API = '/.netlify/functions/hazard-weather-brief';
+
+// Start the NWS/cache path as soon as the severe-weather page chunk evaluates,
+// overlapping React mount + StormMap init. Inflight dedup in the service
+// shares this request with useExtremeWeather's first fetch.
+if (typeof window !== 'undefined') {
+  fetchExtremeWeather().catch(() => {});
+}
 
 export function useHazardEngine(hazardSlug) {
   const {
