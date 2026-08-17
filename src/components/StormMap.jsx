@@ -1535,7 +1535,7 @@ function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {} 
       }}
     >
       <Tooltip direction="top" offset={[0, -size / 2]} opacity={0.95}>
-        {label}: {count} alert{count === 1 ? '' : 's'}{tooltipCats} — zoom in for details
+        {label}: {count} alert{count === 1 ? '' : 's'}{tooltipCats} — Click Alert(s) for more details
       </Tooltip>
     </Marker>
   );
