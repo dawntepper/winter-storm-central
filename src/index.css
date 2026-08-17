@@ -242,6 +242,24 @@ body {
   cursor: pointer;
   user-select: none;
 }
+/* Multi-hazard: category pie ring + dark count core (readable at CONUS zoom). */
+.state-alert-density-badge--multi {
+  padding: 0;
+  color: #fff;
+}
+.state-alert-density-badge-core {
+  width: calc(100% - 7px);
+  height: calc(100% - 7px);
+  border-radius: 9999px;
+  background: #0f172a;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .tornado-warning-pulse,

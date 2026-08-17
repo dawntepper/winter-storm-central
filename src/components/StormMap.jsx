@@ -1436,28 +1436,91 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
+/** Ordered category segments for density badges (respects active filter via aggregates). */
+function getDensityCategorySegments(categoryCounts = {}) {
+  const segments = [];
+  for (const id of CATEGORY_ORDER) {
+    const n = categoryCounts[id] || 0;
+    if (n > 0) {
+      segments.push({
+        id,
+        n,
+        color: alertCategoryColors[id] || alertCategoryColors.default,
+        name: ALERT_CATEGORIES[id]?.name || id,
+      });
+    }
+  }
+  for (const [id, n] of Object.entries(categoryCounts)) {
+    if (n > 0 && !CATEGORY_ORDER.includes(id)) {
+      segments.push({
+        id,
+        n,
+        color: alertCategoryColors[id] || alertCategoryColors.default,
+        name: ALERT_CATEGORIES[id]?.name || id,
+      });
+    }
+  }
+  return segments;
+}
+
+/** Solid fill for one category; proportional conic pie for multi-hazard states. */
+function densityBadgeBackground(segments) {
+  if (segments.length === 0) return alertCategoryColors.default;
+  if (segments.length === 1) return segments[0].color;
+  const total = segments.reduce((sum, seg) => sum + seg.n, 0) || 1;
+  let acc = 0;
+  const stops = segments.map((seg) => {
+    const start = (acc / total) * 360;
+    acc += seg.n;
+    const end = (acc / total) * 360;
+    return `${seg.color} ${start.toFixed(1)}deg ${end.toFixed(1)}deg`;
+  });
+  return `conic-gradient(from -90deg, ${stops.join(', ')})`;
+}
+
 /**
  * Compact per-state alert count badge for low-zoom density mode.
+ * Multi-hazard states use a pie-segment ring around the count.
  * Click zooms past the density threshold so individual markers appear.
  */
-function StateAlertDensityMarker({ stateCode, count, color }) {
+function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {} }) {
   const map = useMap();
   const center = STATE_ABBR_CENTERS[stateCode];
   if (!center || count <= 0) return null;
 
+  const segments = getDensityCategorySegments(categoryCounts);
+  const multi = segments.length > 1;
   const size = count >= 50 ? 36 : count >= 20 ? 32 : count >= 10 ? 28 : 24;
   const label = STATE_NAMES[stateCode] || stateCode;
+  const countLabel = count > 99 ? '99+' : String(count);
+  const catNames = segments.map((s) => s.name).join(', ');
+  const ariaExtra = multi ? ` (${catNames})` : '';
+  const bg = multi ? densityBadgeBackground(segments) : (color || segments[0]?.color || alertCategoryColors.default);
+  const fontSize = size >= 32 ? 13 : 11;
+  const html = multi
+    ? `<div class="state-alert-density-badge state-alert-density-badge--multi" style="
+        width: ${size}px;
+        height: ${size}px;
+        background: ${bg};
+        font-size: ${fontSize}px;
+      " role="img" aria-label="${label}: ${count} alert${count === 1 ? '' : 's'}${ariaExtra}">
+        <span class="state-alert-density-badge-core">${countLabel}</span>
+      </div>`
+    : `<div class="state-alert-density-badge" style="
+        width: ${size}px;
+        height: ${size}px;
+        background: ${bg};
+        font-size: ${fontSize}px;
+      " role="img" aria-label="${label}: ${count} alert${count === 1 ? '' : 's'}">${countLabel}</div>`;
+
   const icon = L.divIcon({
     className: 'state-alert-density-badge-wrapper',
-    html: `<div class="state-alert-density-badge" style="
-      width: ${size}px;
-      height: ${size}px;
-      background: ${color};
-      font-size: ${size >= 32 ? 13 : 11}px;
-    " role="img" aria-label="${label}: ${count} alert${count === 1 ? '' : 's'}">${count > 99 ? '99+' : count}</div>`,
+    html,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
+
+  const tooltipCats = multi ? ` · ${catNames}` : '';
 
   return (
     <Marker
@@ -1472,7 +1535,7 @@ function StateAlertDensityMarker({ stateCode, count, color }) {
       }}
     >
       <Tooltip direction="top" offset={[0, -size / 2]} opacity={0.95}>
-        {label}: {count} alert{count === 1 ? '' : 's'} — zoom in for details
+        {label}: {count} alert{count === 1 ? '' : 's'}{tooltipCats} — zoom in for details
       </Tooltip>
     </Marker>
   );
@@ -1846,6 +1909,8 @@ function UsStatesOutline({
   selectedStateCode,
   hoveredStateCode,
   stateCardLocked,
+  /** When true (alert marker/card active), disable polygon hover so state popups don't flash. */
+  suppressStateHover = false,
   onStateHover,
   onStateLeave,
   onStateClick,
@@ -1856,8 +1921,9 @@ function UsStatesOutline({
   return Object.entries(STATE_GEOJSON).map(([code, data]) => {
     const isSelected = code === selectedStateCode;
     const isHovered = code === hoveredStateCode;
+    // Alert hover wins: polygons stop receiving mouseover while markers/cards are active.
     // Only lock other polygons while the cursor is on the hover card (not during map-to-map moves).
-    const interactive = !stateCardLocked || code === hoveredStateCode;
+    const interactive = !suppressStateHover && (!stateCardLocked || code === hoveredStateCode);
 
     return (
       <GeoJSON
@@ -2230,7 +2296,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const [hoveredAlert, setHoveredAlert] = useState(null);
   const [hoveredUserLocation, setHoveredUserLocation] = useState(null);
   const [hoveredStateCode, setHoveredStateCode] = useState(null);
+  /** First summary popup for the current in-state session; suppressed after shown until leave. */
+  const [showStateSummary, setShowStateSummary] = useState(false);
   const [stateCardLocked, setStateCardLocked] = useState(false);
+  /** Alert marker/card owns hover — disables state polygon mouseover to prevent popup flash. */
+  const [preferAlertHover, setPreferAlertHover] = useState(false);
   const [hoverCardPosition, setHoverCardPosition] = useState(null);
   const [modalAlert, setModalAlert] = useState(null); // For the full alert modal
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2254,6 +2324,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const hideAlertTimeoutRef = useRef(null);
   const pinnedAlertRef = useRef(false);
   const stateHoverLockedRef = useRef(false);
+  /** Sticky in-state session: summary once, then alert popups only until leave. */
+  const stateHoverSessionRef = useRef(null); // { code, summaryConsumed }
+  const suppressStatePopupUntilRef = useRef(0);
+  const clearPreferAlertHoverTimeoutRef = useRef(null);
   const cities = Object.values(weatherData || {});
 
   // Count alerts per category
@@ -2288,7 +2362,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       });
   }, [alerts, activeCategories, eventFilter]);
 
-  // Per-state aggregates for low-zoom density mode (dominant category → badge color).
+  // Per-state aggregates for low-zoom density mode (multi-category pie when mixed).
   const stateDensityAggregates = useMemo(() => {
     if (!densityModeActive) return [];
     const byState = {};
@@ -2315,6 +2389,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       return {
         stateCode: bucket.stateCode,
         count: bucket.count,
+        categoryCounts: bucket.categoryCounts,
         color: alertCategoryColors[dominant] || alertCategoryColors.default,
       };
     });
@@ -2382,11 +2457,34 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     );
   };
 
-  // Handle alert marker hover
+  const beginPreferAlertHover = () => {
+    if (clearPreferAlertHoverTimeoutRef.current) {
+      clearTimeout(clearPreferAlertHoverTimeoutRef.current);
+      clearPreferAlertHoverTimeoutRef.current = null;
+    }
+    setPreferAlertHover(true);
+    suppressStatePopupUntilRef.current = Date.now() + 450;
+    setShowStateSummary(false);
+  };
+
+  const endPreferAlertHoverSoon = (delayMs = 280) => {
+    if (clearPreferAlertHoverTimeoutRef.current) {
+      clearTimeout(clearPreferAlertHoverTimeoutRef.current);
+    }
+    clearPreferAlertHoverTimeoutRef.current = setTimeout(() => {
+      clearPreferAlertHoverTimeoutRef.current = null;
+      if (!pinnedAlertRef.current) {
+        setPreferAlertHover(false);
+      }
+    }, delayMs);
+  };
+
+  // Handle alert marker hover — always wins over state summary.
   const handleAlertHover = (alert, event) => {
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
+    beginPreferAlertHover();
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
     stateHoverLockedRef.current = false;
@@ -2405,9 +2503,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   // Handle alert marker leave with delay (skipped when pinned via click/tap)
   const handleAlertLeave = () => {
     if (pinnedAlertRef.current) return;
+    // Keep state polygons suppressed while moving between nearby markers / toward the card.
+    suppressStatePopupUntilRef.current = Date.now() + 400;
     hideAlertTimeoutRef.current = setTimeout(() => {
       setHoveredAlert(null);
       setHoverCardPosition(null);
+      endPreferAlertHoverSoon(300);
     }, 200);
   };
 
@@ -2421,9 +2522,11 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       pinnedAlertRef.current = false;
       setHoveredAlert(null);
       setHoverCardPosition(null);
+      endPreferAlertHoverSoon(200);
       return;
     }
     pinnedAlertRef.current = true;
+    beginPreferAlertHover();
     setHoveredUserLocation(null);
     setHoveredStateCode(null);
     stateHoverLockedRef.current = false;
@@ -2443,6 +2546,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       clearTimeout(hideAlertTimeoutRef.current);
     }
     pinnedAlertRef.current = true;
+    beginPreferAlertHover();
   };
 
   // Handle user location marker hover
@@ -2451,8 +2555,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
+    beginPreferAlertHover();
     setHoveredAlert(null);
     setHoveredStateCode(null);
+    setShowStateSummary(false);
     setStateCardLocked(false);
     setHoveredUserLocation(location);
 
@@ -2470,16 +2576,43 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     hideAlertTimeoutRef.current = setTimeout(() => {
       setHoveredUserLocation(null);
       setHoverCardPosition(null);
+      endPreferAlertHoverSoon(280);
     }, 200);
   };
 
-  // Handle state polygon hover — popup anchored near cursor; free state-to-state moves on the map.
+  // Handle state polygon hover — summary once per in-state session; then alerts only.
   const handleStateHover = (stateCode, event) => {
-    if (pinnedAlertRef.current || stateHoverLockedRef.current) return;
+    if (pinnedAlertRef.current || stateHoverLockedRef.current || preferAlertHover) return;
+    if (Date.now() < suppressStatePopupUntilRef.current) return;
 
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
       hideAlertTimeoutRef.current = null;
+    }
+
+    const session = stateHoverSessionRef.current;
+    const sameSession = session?.code === stateCode;
+
+    // New state → start a fresh session that may show the summary once.
+    if (!sameSession) {
+      stateHoverSessionRef.current = { code: stateCode, summaryConsumed: false };
+    }
+
+    const activeSession = stateHoverSessionRef.current;
+    const alreadySummarized = activeSession.summaryConsumed;
+
+    // Still in the same state after the first summary: do not re-open if it was
+    // dismissed (e.g. after an alert hover). If the first summary is still open,
+    // keep it and optionally follow the cursor — alert markers still win via preferAlertHover.
+    if (alreadySummarized) {
+      if (showStateSummary) {
+        const point = event?.containerPoint;
+        if (point && mapContainerRef.current) {
+          setHoverCardPosition({ x: point.x, y: point.y });
+        }
+      }
+      if (hoveredStateCode !== stateCode) setHoveredStateCode(stateCode);
+      return;
     }
 
     const point = event?.containerPoint;
@@ -2487,19 +2620,22 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       setHoverCardPosition({ x: point.x, y: point.y });
     }
 
-    if (hoveredStateCode === stateCode) return;
-
+    activeSession.summaryConsumed = true;
     setHoveredAlert(null);
     setHoveredUserLocation(null);
     setHoveredStateCode(stateCode);
+    setShowStateSummary(true);
   };
 
   const handleStateLeave = () => {
     if (pinnedAlertRef.current || stateHoverLockedRef.current) return;
     hideAlertTimeoutRef.current = setTimeout(() => {
+      setShowStateSummary(false);
       setHoveredStateCode(null);
       setHoverCardPosition(null);
-    }, 400);
+      // Leaving the state resets so the next entry can show a summary again.
+      stateHoverSessionRef.current = null;
+    }, 350);
   };
 
   const handleStateClick = (stateCode, event) => {
@@ -2524,13 +2660,20 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     stateHoverLockedRef.current = true;
     setStateCardLocked(true);
+    setShowStateSummary(true);
   };
 
   const handleStateCardLeave = () => {
     stateHoverLockedRef.current = false;
     setStateCardLocked(false);
+    setShowStateSummary(false);
     setHoveredStateCode(null);
     setHoverCardPosition(null);
+    // Stay in-session briefly so dropping back onto the same state doesn't re-popup;
+    // full leave (timeout) clears the session.
+    hideAlertTimeoutRef.current = setTimeout(() => {
+      stateHoverSessionRef.current = null;
+    }, 400);
   };
 
   // Handle card hover (keep it visible)
@@ -2538,9 +2681,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     if (hideAlertTimeoutRef.current) {
       clearTimeout(hideAlertTimeoutRef.current);
     }
+    if (clearPreferAlertHoverTimeoutRef.current) {
+      clearTimeout(clearPreferAlertHoverTimeoutRef.current);
+      clearPreferAlertHoverTimeoutRef.current = null;
+    }
+    if (hoveredAlert || hoveredUserLocation) {
+      beginPreferAlertHover();
+    }
     if (hoveredStateCode) {
       stateHoverLockedRef.current = true;
       setStateCardLocked(true);
+      setShowStateSummary(true);
     }
   };
 
@@ -2551,8 +2702,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     setStateCardLocked(false);
     setHoveredAlert(null);
     setHoveredUserLocation(null);
+    setShowStateSummary(false);
     setHoveredStateCode(null);
     setHoverCardPosition(null);
+    endPreferAlertHoverSoon(200);
+    // Leaving a card onto empty map: reset state session after a short grace.
+    hideAlertTimeoutRef.current = setTimeout(() => {
+      stateHoverSessionRef.current = null;
+    }, 400);
   };
 
   // Cleanup timeout on unmount
@@ -2560,6 +2717,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     return () => {
       if (hideAlertTimeoutRef.current) {
         clearTimeout(hideAlertTimeoutRef.current);
+      }
+      if (clearPreferAlertHoverTimeoutRef.current) {
+        clearTimeout(clearPreferAlertHoverTimeoutRef.current);
       }
     };
   }, []);
@@ -3039,6 +3199,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
             selectedStateCode={selectedStateCode}
             hoveredStateCode={hoveredStateCode}
             stateCardLocked={stateCardLocked}
+            suppressStateHover={preferAlertHover}
             onStateHover={handleStateHover}
             onStateLeave={handleStateLeave}
             onStateClick={handleStateClick}
@@ -3066,6 +3227,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                   stateCode={agg.stateCode}
                   count={agg.count}
                   color={agg.color}
+                  categoryCounts={agg.categoryCounts}
                 />
               ))
               : filteredMapAlerts.map((alert) => (
@@ -3418,8 +3580,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           </div>
         )}
 
-        {/* State hover card overlay */}
-        {hoveredStateCode && !hoveredAlert && !hoveredUserLocation && stateHoverCardStyle && (
+        {/* State hover card overlay — first summary per in-state session only */}
+        {hoveredStateCode && showStateSummary && !hoveredAlert && !hoveredUserLocation && stateHoverCardStyle && (
           <div
             className="bg-white rounded-xl shadow-2xl border border-slate-200 p-2.5"
             style={{ ...stateHoverCardStyle, pointerEvents: 'auto', width: STATE_HOVER_CARD_W }}
