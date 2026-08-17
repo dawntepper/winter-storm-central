@@ -223,6 +223,26 @@ body {
   background: #7c3aed; /* storm surge — inundation / flood-adjacent */
 }
 
+/* Low-zoom alert density badge — per-state count disc (StormMap densityMode="zoom"). */
+.state-alert-density-badge-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+.state-alert-density-badge {
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  user-select: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tornado-warning-pulse,
   .tornado-warning-marker-pulse {

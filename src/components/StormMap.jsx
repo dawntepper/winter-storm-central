@@ -160,6 +160,9 @@ const CENTER_MOBILE = [38.5, -98];
 const ZOOM_DESKTOP = 4.85;
 const ZOOM_MOBILE = 3.5;
 
+/** Below this zoom, densityMode="zoom" shows per-state count badges instead of individual alert markers. */
+const ALERT_DENSITY_ZOOM_THRESHOLD = 5.5;
+
 // Lower-48 bounding box for fitBounds (Alaska/Hawaii remain pannable).
 const CONUS_BOUNDS = L.latLngBounds(
   [24.52, -124.77],
@@ -1433,6 +1436,48 @@ function AlertDotMarker({ alert, onHover, onLeave, onClick, highlighted = false,
   );
 }
 
+/**
+ * Compact per-state alert count badge for low-zoom density mode.
+ * Click zooms past the density threshold so individual markers appear.
+ */
+function StateAlertDensityMarker({ stateCode, count, color }) {
+  const map = useMap();
+  const center = STATE_ABBR_CENTERS[stateCode];
+  if (!center || count <= 0) return null;
+
+  const size = count >= 50 ? 36 : count >= 20 ? 32 : count >= 10 ? 28 : 24;
+  const label = STATE_NAMES[stateCode] || stateCode;
+  const icon = L.divIcon({
+    className: 'state-alert-density-badge-wrapper',
+    html: `<div class="state-alert-density-badge" style="
+      width: ${size}px;
+      height: ${size}px;
+      background: ${color};
+      font-size: ${size >= 32 ? 13 : 11}px;
+    " role="img" aria-label="${label}: ${count} alert${count === 1 ? '' : 's'}">${count > 99 ? '99+' : count}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+
+  return (
+    <Marker
+      position={center}
+      icon={icon}
+      pane={MAP_MARKER_PANE}
+      eventHandlers={{
+        click: () => {
+          const targetZoom = Math.max(ALERT_DENSITY_ZOOM_THRESHOLD, map.getZoom() + 1.25);
+          map.setView(center, targetZoom, { animate: true, duration: 0.45 });
+        },
+      }}
+    >
+      <Tooltip direction="top" offset={[0, -size / 2]} opacity={0.95}>
+        {label}: {count} alert{count === 1 ? '' : 's'} — zoom in for details
+      </Tooltip>
+    </Marker>
+  );
+}
+
 function getStateSlug(stateCode) {
   return ABBR_TO_SLUG[stateCode] || (stateCode === 'DC' ? 'district-of-columbia' : null);
 }
@@ -2081,6 +2126,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
    * (AK/HI/PR/VI + broader Caribbean); other hazards keep alert/CONUS logic.
    */
   embedMapFamily = null,
+  /**
+   * Alert density prototype:
+   * - 'off' (default) — always show individual alert markers
+   * - 'zoom' — below ALERT_DENSITY_ZOOM_THRESHOLD, show per-state count badges;
+   *   at/above threshold, show individual markers. Forced off when
+   *   presentation="embedded" so state/hazard embeds stay unchanged.
+   */
+  densityMode = 'off',
 }) {
   const { preference: basemapPreference, cyclePreference, effectiveBasemap } = useMapBasemapPreference();
   const basemapStyle = basemapStyleProp ?? effectiveBasemap;
@@ -2192,6 +2245,9 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   const mapContainerRef = useRef(null);
   const isEmbedded = presentation === 'embedded';
   const isMobileEmbedded = isEmbedded && isMobile;
+  // Zoom density is home/radar only — never on embedded state/hazard maps.
+  const densityModeActive = densityMode === 'zoom' && !isEmbedded;
+  const showAlertAggregates = densityModeActive && zoomLevel < ALERT_DENSITY_ZOOM_THRESHOLD;
   /** Mobile progressive disclosure for secondary map controls (all presentations). */
   const useMobileMapChrome = isMobile;
   const mapOptionsId = 'storm-map-options-sheet';
@@ -2219,6 +2275,50 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
     }
     return counts;
   }, [alerts, stateHoverAlerts]);
+
+  // Markers / density badges share the same category + event filters as chips.
+  const filteredMapAlerts = useMemo(() => {
+    return alerts
+      .filter((alert) => activeCategories.has(alert.category))
+      .filter((alert) => {
+        if (!eventFilter) return true;
+        if (Array.isArray(eventFilter)) return eventFilter.includes(alert.event);
+        if (eventFilter instanceof Set) return eventFilter.has(alert.event);
+        return alert.event === eventFilter;
+      });
+  }, [alerts, activeCategories, eventFilter]);
+
+  // Per-state aggregates for low-zoom density mode (dominant category → badge color).
+  const stateDensityAggregates = useMemo(() => {
+    if (!densityModeActive) return [];
+    const byState = {};
+    for (const alert of filteredMapAlerts) {
+      if (!alert.state) continue;
+      let bucket = byState[alert.state];
+      if (!bucket) {
+        bucket = { stateCode: alert.state, count: 0, categoryCounts: {} };
+        byState[alert.state] = bucket;
+      }
+      bucket.count += 1;
+      const cat = alert.category || 'default';
+      bucket.categoryCounts[cat] = (bucket.categoryCounts[cat] || 0) + 1;
+    }
+    return Object.values(byState).map((bucket) => {
+      let dominant = 'default';
+      let max = 0;
+      for (const [cat, n] of Object.entries(bucket.categoryCounts)) {
+        if (n > max) {
+          max = n;
+          dominant = cat;
+        }
+      }
+      return {
+        stateCode: bucket.stateCode,
+        count: bucket.count,
+        color: alertCategoryColors[dominant] || alertCategoryColors.default,
+      };
+    });
+  }, [densityModeActive, filteredMapAlerts]);
 
   const [storedLocationsVersion, setStoredLocationsVersion] = useState(0);
   useEffect(() => {
@@ -2958,16 +3058,17 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {/* Alert dot markers — optional eventFilter locks to exact NWS event names */}
-            {alerts
-              .filter((alert) => activeCategories.has(alert.category))
-              .filter((alert) => {
-                if (!eventFilter) return true;
-                if (Array.isArray(eventFilter)) return eventFilter.includes(alert.event);
-                if (eventFilter instanceof Set) return eventFilter.has(alert.event);
-                return alert.event === eventFilter;
-              })
-              .map((alert) => (
+            {/* Low zoom: per-state count badges. High zoom (or density off): individual markers. */}
+            {showAlertAggregates
+              ? stateDensityAggregates.map((agg) => (
+                <StateAlertDensityMarker
+                  key={`density-${agg.stateCode}`}
+                  stateCode={agg.stateCode}
+                  count={agg.count}
+                  color={agg.color}
+                />
+              ))
+              : filteredMapAlerts.map((alert) => (
               <AlertDotMarker
                 key={alert.id}
                 alert={alert}
