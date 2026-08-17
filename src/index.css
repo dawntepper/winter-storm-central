@@ -51,30 +51,31 @@ body {
   background: #1e293b;
 }
 
-/* Tooltip styling for dark theme */
+/* Tooltip styling for dark theme — use background-color so we reliably override Leaflet's #fff. */
 .leaflet-tooltip {
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #475569;
+  background: #0f172a;
+  background-color: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .leaflet-tooltip-top:before {
-  border-top-color: #475569;
+  border-top-color: #0f172a;
 }
 
 .leaflet-tooltip-bottom:before {
-  border-bottom-color: #475569;
+  border-bottom-color: #0f172a;
 }
 
 .leaflet-tooltip-left:before {
-  border-left-color: #475569;
+  border-left-color: #0f172a;
 }
 
 .leaflet-tooltip-right:before {
-  border-right-color: #475569;
+  border-right-color: #0f172a;
 }
 
 /* Scrollbar styling */
@@ -221,6 +222,44 @@ body {
 }
 .tropical-alert-marker--surge {
   background: #7c3aed; /* storm surge — inundation / flood-adjacent */
+}
+
+/* Low-zoom alert density badge — per-state count disc (StormMap densityMode="zoom"). */
+.state-alert-density-badge-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+.state-alert-density-badge {
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  user-select: none;
+}
+/* Multi-hazard: category pie ring + dark count core (readable at CONUS zoom). */
+.state-alert-density-badge--multi {
+  padding: 0;
+  color: #fff;
+}
+.state-alert-density-badge-core {
+  width: calc(100% - 7px);
+  height: calc(100% - 7px);
+  border-radius: 9999px;
+  background: #0f172a;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 @media (prefers-reduced-motion: reduce) {

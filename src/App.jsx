@@ -1109,6 +1109,7 @@ export default function App() {
               isHero
               isPageHero={!isLgUp}
               fitConusView
+              densityMode="zoom"
               centerOn={mapCenterOn}
               previewLocation={previewCity}
               resolvedLocation={hasMapLocalFocus ? heroLocation : null}
@@ -1355,6 +1356,7 @@ export default function App() {
                   isHero
                   isPageHero={isLgUp}
                   fitConusView
+                  densityMode="zoom"
                   centerOn={mapCenterOn}
                   previewLocation={previewCity}
                   resolvedLocation={hasMapLocalFocus ? heroLocation : null}

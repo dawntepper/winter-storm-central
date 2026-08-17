@@ -470,6 +470,7 @@ export default function RadarPage() {
               alerts={mapAlerts}
               isHero
               fitConusView
+              densityMode="zoom"
               radarLayerType={radarType}
               radarColorScheme={4}
               centerOn={displayCenterOn}
