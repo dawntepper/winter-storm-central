@@ -51,30 +51,31 @@ body {
   background: #1e293b;
 }
 
-/* Tooltip styling for dark theme */
+/* Tooltip styling for dark theme — use background-color so we reliably override Leaflet's #fff. */
 .leaflet-tooltip {
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #475569;
+  background: #0f172a;
+  background-color: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .leaflet-tooltip-top:before {
-  border-top-color: #475569;
+  border-top-color: #0f172a;
 }
 
 .leaflet-tooltip-bottom:before {
-  border-bottom-color: #475569;
+  border-bottom-color: #0f172a;
 }
 
 .leaflet-tooltip-left:before {
-  border-left-color: #475569;
+  border-left-color: #0f172a;
 }
 
 .leaflet-tooltip-right:before {
-  border-right-color: #475569;
+  border-right-color: #0f172a;
 }
 
 /* Scrollbar styling */

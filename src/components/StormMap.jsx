@@ -1483,7 +1483,7 @@ function densityBadgeBackground(segments) {
  * Multi-hazard states use a pie-segment ring around the count.
  * Click zooms past the density threshold so individual markers appear.
  */
-function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {} }) {
+function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {}, isMobile = false }) {
   const map = useMap();
   const center = STATE_ABBR_CENTERS[stateCode];
   if (!center || count <= 0) return null;
@@ -1521,6 +1521,10 @@ function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {} 
   });
 
   const tooltipCats = multi ? ` · ${catNames}` : '';
+  // Mobile: abbreviation + CTA only — full name/count/categories are too long on small screens.
+  const tooltipText = isMobile
+    ? `${stateCode} — Click Alert(s) for more details`
+    : `${label}: ${count} alert${count === 1 ? '' : 's'}${tooltipCats} — Click Alert(s) for more details`;
 
   return (
     <Marker
@@ -1534,8 +1538,8 @@ function StateAlertDensityMarker({ stateCode, count, color, categoryCounts = {} 
         },
       }}
     >
-      <Tooltip direction="top" offset={[0, -size / 2]} opacity={0.95}>
-        {label}: {count} alert{count === 1 ? '' : 's'}{tooltipCats} — Click Alert(s) for more details
+      <Tooltip direction="top" offset={[0, -size / 2]} opacity={1} className="density-badge-tooltip">
+        {tooltipText}
       </Tooltip>
     </Marker>
   );
@@ -3228,6 +3232,7 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
                   count={agg.count}
                   color={agg.color}
                   categoryCounts={agg.categoryCounts}
+                  isMobile={isMobile}
                 />
               ))
               : filteredMapAlerts.map((alert) => (
@@ -3761,6 +3766,8 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         }
         .leaflet-tooltip.enhanced-tooltip {
           background: #f8fafc;
+          background-color: #f8fafc;
+          color: #0f172a;
           border: 1px solid #e5e7eb;
           border-radius: 10px;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -3768,6 +3775,20 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
         }
         .leaflet-tooltip.enhanced-tooltip::before {
           border-top-color: #f8fafc;
+        }
+        /* Density badge CTA — solid dark surface + bright text (beats Leaflet white default). */
+        .leaflet-tooltip.density-badge-tooltip {
+          background: #0f172a !important;
+          background-color: #0f172a !important;
+          color: #f8fafc !important;
+          border: 1px solid #64748b !important;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-weight: 600;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+        }
+        .leaflet-tooltip.density-badge-tooltip::before {
+          border-top-color: #0f172a !important;
         }
         .city-label-wrapper {
           background: transparent !important;
