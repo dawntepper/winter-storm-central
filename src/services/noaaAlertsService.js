@@ -274,6 +274,24 @@ function getCachedAlerts() {
 }
 
 /**
+ * Sync peek of a still-fresh localStorage alerts payload (or null).
+ * Used to hydrate React state before the first useEffect fetch so soft-loading
+ * placeholders can skip on return visits / after homepage warmed the cache.
+ */
+export function peekFreshCachedExtremeWeather() {
+  const cached = getCachedAlerts();
+  if (!cached) return null;
+  return {
+    ...cached.data,
+    fromCache: true,
+    cacheAge: cached.age,
+  };
+}
+
+// Deduplicate concurrent cold fetches (module warm + useExtremeWeather mount).
+let extremeWeatherInflight = null;
+
+/**
  * Save alerts to cache
  */
 function cacheAlerts(data) {
@@ -340,71 +358,90 @@ export async function fetchExtremeWeather(forceRefresh = false) {
     }
   }
 
+  // Share one in-flight network request across callers (page module warm + hook).
+  if (!forceRefresh && !tornadoTest && !tropicalTest && extremeWeatherInflight) {
+    return extremeWeatherInflight;
+  }
+
   console.log('Fetching fresh NOAA alerts...');
 
-  try {
-    const response = await fetchAlertsFromAPI();
-    const features = response.features || [];
+  const request = (async () => {
+    try {
+      const response = await fetchAlertsFromAPI();
+      const features = response.features || [];
 
-    // Filter to only included event types
-    const warnings = filterAlertFeatures(features);
+      // Filter to only included event types
+      const warnings = filterAlertFeatures(features);
 
-    // Parse alerts
-    const parsed = warnings
-      .map(parseAlert)
-      .filter(Boolean); // Remove nulls
+      // Parse alerts
+      const parsed = warnings
+        .map(parseAlert)
+        .filter(Boolean); // Remove nulls
 
-    // Prepend dev-only fixtures (tornado and/or tropical) so they appear in
-    // allAlerts AND byCategory AND the selected/map flow, end-to-end.
-    const allAlerts = [
-      ...(tornadoTest ? makeTornadoFixtures() : []),
-      ...(tropicalTest ? makeTropicalFixtures() : []),
-      ...parsed,
-    ];
+      // Prepend dev-only fixtures (tornado and/or tropical) so they appear in
+      // allAlerts AND byCategory AND the selected/map flow, end-to-end.
+      const allAlerts = [
+        ...(tornadoTest ? makeTornadoFixtures() : []),
+        ...(tropicalTest ? makeTropicalFixtures() : []),
+        ...parsed,
+      ];
 
-    // Group by category
-    const byCategory = {};
-    for (const categoryId of CATEGORY_ORDER) {
-      byCategory[categoryId] = allAlerts.filter(a => a.category === categoryId);
-    }
+      // Group by category
+      const byCategory = {};
+      for (const categoryId of CATEGORY_ORDER) {
+        byCategory[categoryId] = allAlerts.filter(a => a.category === categoryId);
+      }
 
-    // Select balanced set for display
-    const selected = selectBalancedAlerts(allAlerts);
+      // Select balanced set for display
+      const selected = selectBalancedAlerts(allAlerts);
 
-    const result = {
-      allAlerts,
-      byCategory,
-      selected,
-      totalCount: allAlerts.length,
-      lastUpdated: new Date().toISOString(),
-      fromCache: false
-    };
-
-    // Cache the real result (skip when the dev fixture is active so removing
-    // the URL param returns to clean real-NWS data on the next load).
-    if (!tornadoTest) {
-      cacheAlerts(result);
-    }
-
-    return result;
-
-  } catch (error) {
-    console.error('Error fetching NOAA alerts:', error);
-
-    // Try to return any cached payload on error, even past TTL — better than
-    // leaving the UI on React state that may be hours old with no stale flag.
-    const staleCache = readAlertsCacheEntry();
-    if (staleCache) {
-      return {
-        ...staleCache.data,
-        fromCache: true,
-        stale: true,
-        cacheAge: staleCache.age,
-        error: error.message
+      const result = {
+        allAlerts,
+        byCategory,
+        selected,
+        totalCount: allAlerts.length,
+        lastUpdated: new Date().toISOString(),
+        fromCache: false
       };
-    }
 
-    throw error;
+      // Cache the real result (skip when the dev fixture is active so removing
+      // the URL param returns to clean real-NWS data on the next load).
+      if (!tornadoTest) {
+        cacheAlerts(result);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching NOAA alerts:', error);
+
+      // Try to return any cached payload on error, even past TTL — better than
+      // leaving the UI on React state that may be hours old with no stale flag.
+      const staleCache = readAlertsCacheEntry();
+      if (staleCache) {
+        return {
+          ...staleCache.data,
+          fromCache: true,
+          stale: true,
+          cacheAge: staleCache.age,
+          error: error.message
+        };
+      }
+
+      throw error;
+    }
+  })();
+
+  if (!forceRefresh && !tornadoTest && !tropicalTest) {
+    extremeWeatherInflight = request;
+  }
+
+  try {
+    return await request;
+  } finally {
+    if (extremeWeatherInflight === request) {
+      extremeWeatherInflight = null;
+    }
   }
 }
 
