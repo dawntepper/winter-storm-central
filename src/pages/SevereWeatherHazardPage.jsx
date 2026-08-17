@@ -123,7 +123,7 @@ function NotFoundHazard({ slug }) {
 export default function SevereWeatherHazardPage() {
   const { hazardSlug } = useParams();
   const config = hazardEngine.getConfig(hazardSlug);
-  const { snapshot, lastUpdated, allAlerts, loading: alertsLoading } = useHazardEngine(hazardSlug);
+  const { snapshot, lastUpdated, loading: alertsLoading } = useHazardEngine(hazardSlug);
 
   const analyticsProps = useMemo(() => ({
     hazard_slug: hazardSlug,
@@ -190,7 +190,7 @@ export default function SevereWeatherHazardPage() {
             ...hazard,
             singularLabel: hazard.hazardLabel,
           }}
-          alerts={allAlerts || hazard.alerts || []}
+          alerts={hazard.alerts || []}
         />
 
         <CurrentHazardAlerts

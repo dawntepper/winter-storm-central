@@ -175,7 +175,8 @@ export const HAZARD_CONFIGS = {
     intro:
       'Track active hurricane warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
     icon: tropical.icon,
-    severityColor: tropical.color,
+    // Same 🌀 as other tropical products; warmer orange matches map disc.
+    severityColor: '#ea580c',
     radarCategory: 'tropical',
     radarFilter: 'hurricane-warning',
     seoTitle: 'Hurricane Warnings Today, Alerts & Live Radar | StormTracking',
@@ -197,6 +198,7 @@ export const HAZARD_CONFIGS = {
     intro:
       'Track active tropical storm warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
     icon: tropical.icon,
+    // Same 🌀; lighter sky blue vs hurricane navy (category still tropical).
     severityColor: tropical.color,
     radarCategory: 'tropical',
     radarFilter: 'tropical-storm-warning',
@@ -395,7 +397,8 @@ export const HAZARD_CONFIGS = {
     intro:
       'Track active storm surge warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
     icon: tropical.icon,
-    severityColor: tropical.color,
+    // Same 🌀; violet matches map disc (inundation / flood-adjacent).
+    severityColor: '#7c3aed',
     radarCategory: 'tropical',
     radarFilter: 'storm-surge-warning',
     seoTitle: 'Storm Surge Warnings Today & Live Radar | StormTracking',
@@ -416,7 +419,8 @@ export const HAZARD_CONFIGS = {
     intro:
       'Track active extreme wind warnings across the United States with live radar, affected areas, warning details, and links to current state alerts.',
     icon: tropical.icon,
-    severityColor: tropical.color,
+    // Same 🌀; warmer orange matches hurricane / extreme-wind map disc.
+    severityColor: '#ea580c',
     radarCategory: 'tropical',
     radarFilter: 'extreme-wind-warning',
     seoTitle: 'Extreme Wind Warnings Today & Live Radar | StormTracking',

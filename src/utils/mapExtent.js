@@ -17,6 +17,24 @@ export const CONUS_BOUNDS = {
   east: -66.95,
 };
 
+/**
+ * Tropical-family hazard frame: lower-48 + Gulf + Caribbean approaches so
+ * PR/VI and Atlantic hurricane tracks stay in view without zooming so far
+ * out that RainViewer precip vanishes (a AK→Caribbean world box at z≈3.5
+ * made radar look "missing"). Used only on tropical embeds — tornado/flood
+ * keep CONUS or alert-local framing. Pacific-only alert sets (AK/HI/GU/AS/MP)
+ * still use tighter non-CONUS state framing via resolveTropicalHazardEmbedTarget.
+ */
+export const TROPICAL_BASIN_BOUNDS = {
+  south: 8.0,
+  west: -125.0,
+  north: 50.0,
+  east: -50.0,
+};
+
+/** Pacific non-CONUS codes — keep state/alert framing, not Atlantic basin. */
+export const PACIFIC_NON_CONUS_CODES = new Set(['AK', 'HI', 'GU', 'AS', 'MP']);
+
 /** Lon/lat span (degrees) above which we treat alerts as nationally broad. */
 export const BROAD_SPAN_LON_DEG = 28;
 export const BROAD_SPAN_LAT_DEG = 18;
@@ -51,6 +69,9 @@ export const EMBED_ALASKA_MAX_ZOOM = 5;
 export const EMBED_HAWAII_MAX_ZOOM = 7;
 /** Puerto Rico / USVI / Pacific territories — regional, not street-level. */
 export const EMBED_TERRITORY_MAX_ZOOM = 8;
+/** Tropical basin embeds — CONUS + Caribbean; high enough for visible precip. */
+export const EMBED_TROPICAL_MAX_ZOOM = 5;
+export const EMBED_TROPICAL_PADDING = [14, 12];
 
 function conusEmbedTarget() {
   return {
@@ -58,6 +79,15 @@ function conusEmbedTarget() {
     mode: 'conus',
     maxZoom: EMBED_CONUS_MAX_ZOOM,
     padding: EMBED_CONUS_PADDING,
+  };
+}
+
+function tropicalBasinEmbedTarget() {
+  return {
+    bounds: TROPICAL_BASIN_BOUNDS,
+    mode: 'tropical_basin',
+    maxZoom: EMBED_TROPICAL_MAX_ZOOM,
+    padding: EMBED_TROPICAL_PADDING,
   };
 }
 
@@ -270,9 +300,20 @@ function singleAlertBounds(alert, padDeg) {
  * Non-CONUS (AK/HI/territories): always frame those alerts / that state —
  * never fall back to the lower-48 CONUS box (Alaska's footprint alone looks
  * "broad" by span; PR/VI sit south of CONUS_BOUNDS).
+ *
+ * @param {object[]} alerts
+ * @param {{ mapFamily?: 'tropical'|null }} [options]
+ *   mapFamily 'tropical' → CONUS + Caribbean basin (incl. PR/VI approaches)
+ *   unless alerts are Pacific-only (AK/HI/GU/AS/MP).
  */
-export function resolveHazardEmbedTarget(alerts) {
+export function resolveHazardEmbedTarget(alerts, options = {}) {
   const list = alerts || [];
+  const mapFamily = options.mapFamily || null;
+
+  if (mapFamily === 'tropical') {
+    return resolveTropicalHazardEmbedTarget(list);
+  }
+
   if (list.length === 0) {
     return conusEmbedTarget();
   }
@@ -281,37 +322,7 @@ export function resolveHazardEmbedTarget(alerts) {
   const allOutside = outside.length === list.length;
 
   if (allOutside) {
-    const stateCodes = new Set(list.map((a) => a.state).filter(Boolean));
-    const maxZoom = maxZoomForNonConusStates(stateCodes);
-
-    // Single non-CONUS state → prefer full state frame so context is clear
-    if (stateCodes.size === 1) {
-      const code = [...stateCodes][0];
-      const stateBounds = getStateBounds(code);
-      if (stateBounds) {
-        return { bounds: stateBounds, mode: 'non_conus_state', maxZoom };
-      }
-    }
-
-    if (list.length === 1 && Number.isFinite(list[0].lat) && Number.isFinite(list[0].lon)) {
-      const pad = list[0].state === 'AK' ? 2.5 : 1.2;
-      return {
-        bounds: singleAlertBounds(list[0], pad),
-        mode: 'non_conus_single',
-        maxZoom,
-      };
-    }
-
-    const bounds = boundsFromAlertPoints(list);
-    if (isValidBounds(bounds)) {
-      return { bounds, mode: 'non_conus_alerts', maxZoom };
-    }
-    // Last resort: still avoid CONUS for known AK/HI state codes
-    const fallbackCode = [...stateCodes][0];
-    const fallbackBounds = fallbackCode ? getStateBounds(fallbackCode) : null;
-    if (fallbackBounds) {
-      return { bounds: fallbackBounds, mode: 'non_conus_state', maxZoom };
-    }
+    return resolveNonConusHazardEmbedTarget(list);
   }
 
   // Mixed non-CONUS + CONUS: frame from lower-48 points only so Alaska/Hawaii/
@@ -335,6 +346,65 @@ export function resolveHazardEmbedTarget(alerts) {
   }
 
   return { bounds, mode: 'alerts', maxZoom: EMBED_MAX_ZOOM };
+}
+
+/**
+ * Tropical-family embeds: prefer CONUS + Caribbean basin so PR/VI and
+ * Atlantic approaches stay in view without a globe-scale zoom that hides
+ * RainViewer precip. Do not fall back to CONUS-only (clips Caribbean).
+ * Pacific-only tropical products keep AK/HI/territory framing.
+ */
+function resolveTropicalHazardEmbedTarget(list) {
+  if (list.length === 0) {
+    return tropicalBasinEmbedTarget();
+  }
+
+  const stateCodes = new Set(list.map((a) => a.state).filter(Boolean));
+  const allPacific = [...stateCodes].length > 0
+    && [...stateCodes].every((c) => PACIFIC_NON_CONUS_CODES.has(c));
+  const allOutside = list.every(isOutsideConusAlert);
+
+  if (allOutside && allPacific) {
+    return resolveNonConusHazardEmbedTarget(list);
+  }
+
+  return tropicalBasinEmbedTarget();
+}
+
+function resolveNonConusHazardEmbedTarget(list) {
+  const stateCodes = new Set(list.map((a) => a.state).filter(Boolean));
+  const maxZoom = maxZoomForNonConusStates(stateCodes);
+
+  // Single non-CONUS state → prefer full state frame so context is clear
+  if (stateCodes.size === 1) {
+    const code = [...stateCodes][0];
+    const stateBounds = getStateBounds(code);
+    if (stateBounds) {
+      return { bounds: stateBounds, mode: 'non_conus_state', maxZoom };
+    }
+  }
+
+  if (list.length === 1 && Number.isFinite(list[0].lat) && Number.isFinite(list[0].lon)) {
+    const pad = list[0].state === 'AK' ? 2.5 : 1.2;
+    return {
+      bounds: singleAlertBounds(list[0], pad),
+      mode: 'non_conus_single',
+      maxZoom,
+    };
+  }
+
+  const bounds = boundsFromAlertPoints(list);
+  if (isValidBounds(bounds)) {
+    return { bounds, mode: 'non_conus_alerts', maxZoom };
+  }
+  // Last resort: still avoid CONUS for known AK/HI state codes
+  const fallbackCode = [...stateCodes][0];
+  const fallbackBounds = fallbackCode ? getStateBounds(fallbackCode) : null;
+  if (fallbackBounds) {
+    return { bounds: fallbackBounds, mode: 'non_conus_state', maxZoom };
+  }
+
+  return conusEmbedTarget();
 }
 
 /**

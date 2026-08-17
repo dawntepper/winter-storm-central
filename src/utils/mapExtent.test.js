@@ -8,9 +8,12 @@ import {
   BROAD_SPAN_LON_DEG,
   BROAD_STATE_COUNT,
   CONUS_BOUNDS,
+  TROPICAL_BASIN_BOUNDS,
   EMBED_CONUS_PADDING,
   EMBED_CONUS_MAX_ZOOM,
   EMBED_MOBILE_PADDING,
+  EMBED_TROPICAL_PADDING,
+  EMBED_TROPICAL_MAX_ZOOM,
 } from './mapExtent.js';
 
 function pt(lat, lon, state, id = 'a') {
@@ -161,6 +164,49 @@ describe('resolveHazardEmbedTarget', () => {
     ]);
     expect(t.mode).toBe('alerts');
     expect(t.bounds.south).toBeGreaterThan(24);
+  });
+
+  it('uses tropical basin for empty tropical-family embeds', () => {
+    const t = resolveHazardEmbedTarget([], { mapFamily: 'tropical' });
+    expect(t.mode).toBe('tropical_basin');
+    expect(boundsEquals(t.bounds, TROPICAL_BASIN_BOUNDS)).toBe(true);
+    expect(t.padding).toEqual(EMBED_TROPICAL_PADDING);
+    expect(t.maxZoom).toBe(EMBED_TROPICAL_MAX_ZOOM);
+    // Caribbean south of CONUS; PR/VI in frame; not a globe-scale AK box
+    expect(t.bounds.south).toBeLessThan(CONUS_BOUNDS.south);
+    expect(t.bounds.east).toBeGreaterThan(-55);
+    expect(t.bounds.west).toBeGreaterThan(-130);
+    expect(t.bounds.west).toBeLessThan(CONUS_BOUNDS.west + 1);
+    expect(t.bounds.north).toBeLessThan(55);
+    // Lon span must stay radar-readable (AK→Caribbean was ~120°)
+    expect(t.bounds.east - t.bounds.west).toBeLessThan(90);
+  });
+
+  it('uses tropical basin for PR tropical alerts instead of tight island zoom', () => {
+    const t = resolveHazardEmbedTarget(
+      [pt(18.47, -66.11, 'PR', 'pr-1')],
+      { mapFamily: 'tropical' },
+    );
+    expect(t.mode).toBe('tropical_basin');
+    expect(boundsEquals(t.bounds, TROPICAL_BASIN_BOUNDS)).toBe(true);
+  });
+
+  it('uses tropical basin for CONUS hurricane alerts (not street-level single)', () => {
+    const t = resolveHazardEmbedTarget(
+      [pt(25.76, -80.19, 'FL', 'fl-1')],
+      { mapFamily: 'tropical' },
+    );
+    expect(t.mode).toBe('tropical_basin');
+  });
+
+  it('keeps Hawaii framing for Pacific-only tropical alerts', () => {
+    const t = resolveHazardEmbedTarget(
+      [pt(21.3, -157.8, 'HI', 'hi-1')],
+      { mapFamily: 'tropical' },
+    );
+    expect(t.mode).toMatch(/^non_conus/);
+    expect(boundsEquals(t.bounds, TROPICAL_BASIN_BOUNDS)).toBe(false);
+    expect(t.bounds.south).toBeLessThan(24);
   });
 });
 
