@@ -6,6 +6,7 @@ import { getCityBySlug } from '../data/cityCatalog';
 import { setHomepageMetaTags } from '../data/homepageMeta';
 import { getForecastForCoords, lookupZipCoords } from '../services/forecastService';
 import { useExtremeWeather } from '../hooks/useExtremeWeather';
+import { hazardEngine } from '../../shared/hazard-engine/index.js';
 import ForecastLocationPicker from '../components/ForecastLocationPicker';
 import { ForecastCurrent, ForecastHourly, ForecastDaily } from '../components/ForecastSections';
 import { getTimeOfDayClass } from '../components/ForecastVisuals';
@@ -55,18 +56,25 @@ export default function ForecastPage() {
 
   // Pull active NWS alerts so the radar map can show alert markers + the
   // hover popup if any alert is active at the picked location. Same hook
-  // and adaptive-refresh cadence as the homepage/state pages.
-  const { alerts: alertsData } = useExtremeWeather(true);
-  const mapAlerts = useMemo(() => (
-    alertsData?.byCategory ? Object.values(alertsData.byCategory).flat() : []
-  ), [alertsData]);
+  // and adaptive-refresh cadence as the homepage/state pages. Alerts are
+  // scoped to this state (same hazardEngine path as StateAlertsPage) so
+  // the map never paints the entire US feed on /forecast/{state}.
+  const { alerts: alertsData, lastUpdated, error: alertsError } = useExtremeWeather(true);
+  const stateIntel = useMemo(() => {
+    if (!stateData?.abbr) return null;
+    return hazardEngine.getState(stateData.abbr, alertsData?.allAlerts || [], {
+      latestSourceUpdateAt: lastUpdated || null,
+      dataAvailable: !alertsError,
+    });
+  }, [stateData?.abbr, alertsData, lastUpdated, alertsError]);
+  const mapAlerts = stateIntel?.ok ? stateIntel.alerts : [];
 
   // Find the most-imminent active Tornado Warning in the picked location's
   // state (state-level v1 — see TornadoWarningBanner for the rationale on
   // why we don't tighten to UGC zone or polygon containment yet). If found,
   // we render the urgent banner at the top of the page above the picker.
   const tornadoWarning = useMemo(() => {
-    const userStateAbbr = forecast?.location?.state;
+    const userStateAbbr = forecast?.location?.state || stateData?.abbr;
     if (!userStateAbbr) return null;
     const candidates = mapAlerts.filter(
       (a) => a.event === 'Tornado Warning' && a.state === userStateAbbr
@@ -75,7 +83,22 @@ export default function ForecastPage() {
     return [...candidates].sort(
       (a, b) => new Date(a.expires).getTime() - new Date(b.expires).getTime()
     )[0];
-  }, [mapAlerts, forecast?.location?.state]);
+  }, [mapAlerts, forecast?.location?.state, stateData?.abbr]);
+
+  // State-default view: frame the whole state like /alerts/{state}.
+  // City/ZIP/geo picks keep a local centerOn zoom (pin already shown).
+  const isStateDefaultView = Boolean(
+    coords?.displayName?.endsWith('(state default)')
+  );
+  const stateMapCenter = useMemo(() => {
+    if (!stateData?.abbr) return null;
+    return {
+      lat: stateData.center[0],
+      lon: stateData.center[1],
+      zoom: (stateData.zoom ?? 7) - 1,
+      id: `state-${stateData.abbr}`,
+    };
+  }, [stateData]);
 
   // One-time page view per state slug (not on coords/search param churn).
   const forecastPageViewTrackedRef = useRef(null);
@@ -296,7 +319,7 @@ export default function ForecastPage() {
                 // Only show the location pin when the user has explicitly
                 // picked a city/ZIP/their location. For state-default the
                 // whole state is in view; a centroid pin would be misleading.
-                coords.displayName?.endsWith('(state default)')
+                isStateDefaultView
                   ? []
                   : [{
                       id: 'forecast-pin',
@@ -315,8 +338,31 @@ export default function ForecastPage() {
               }
               alerts={mapAlerts}
               isHero
+              presentation={isStateDefaultView ? 'embedded' : undefined}
+              embedFit={isStateDefaultView ? 'state' : undefined}
+              embedContextKey={isStateDefaultView ? stateData.abbr : undefined}
               selectedStateCode={stateData.abbr}
-              centerOn={{ lat: coords.lat, lon: coords.lon, id: `forecast-${coords.lat}-${coords.lon}`, zoom: 8 }}
+              centerOn={
+                isStateDefaultView
+                  ? stateMapCenter
+                  : {
+                      lat: coords.lat,
+                      lon: coords.lon,
+                      id: `forecast-${coords.lat}-${coords.lon}`,
+                      zoom: 8,
+                    }
+              }
+              resetViewLabel={isStateDefaultView ? 'Full View' : undefined}
+              resetViewTitle={
+                isStateDefaultView
+                  ? `Reset to ${stateData.name} view`
+                  : undefined
+              }
+              resetToDefaultOnClick={isStateDefaultView ? true : undefined}
+              radarLayerType="precipitation"
+              radarColorScheme={4}
+              currentStateSlug={slug}
+              showHazardControls={false}
             />
           </section>
         )}
