@@ -2043,6 +2043,12 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
    * homepage / radar / city pages keep map-native controls.
    */
   showHazardControls = true,
+  /**
+   * Optional full alert set used only for state-polygon hover counts.
+   * State alert pages pass national alerts here while keeping `alerts` scoped
+   * to the current state for markers / embed framing. Defaults to `alerts`.
+   */
+  stateHoverAlerts = null,
   analyticsPageContext = null, headerCenterControls = null,
   /**
    * Optional Alaska/Hawaii (etc.) jump controls. When set, Full View / Reset
@@ -2205,13 +2211,14 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   }, [alerts]);
 
   const stateAlertCounts = useMemo(() => {
+    const source = Array.isArray(stateHoverAlerts) ? stateHoverAlerts : alerts;
     const counts = {};
-    for (const alert of alerts) {
+    for (const alert of source) {
       if (!alert.state) continue;
       counts[alert.state] = (counts[alert.state] || 0) + 1;
     }
     return counts;
-  }, [alerts]);
+  }, [alerts, stateHoverAlerts]);
 
   const [storedLocationsVersion, setStoredLocationsVersion] = useState(0);
   useEffect(() => {

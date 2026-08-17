@@ -228,6 +228,10 @@ export default function StateAlertsPage() {
 
   const stateAlerts = stateIntel?.ok ? stateIntel.alerts : [];
 
+  // Full national feed for map state-polygon hover counts (neighbor states).
+  // Markers / list stay scoped to `stateAlerts` so the page framing stays local.
+  const nationalAlerts = alertsData?.allAlerts || [];
+
   // StormMap marker filter — derived from page-owned selectedHazard
   const activeCategories = useMemo(() => {
     if (!selectedHazard) return new Set(CATEGORY_ORDER);
@@ -372,6 +376,7 @@ export default function StateAlertsPage() {
                 stormPhase="active"
                 userLocations={[]}
                 alerts={stateAlerts}
+                stateHoverAlerts={nationalAlerts}
                 cityMarkers={stateCityMarkers}
                 isHero
                 presentation="embedded"
