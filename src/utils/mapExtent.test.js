@@ -139,6 +139,29 @@ describe('resolveHazardEmbedTarget', () => {
     expect(boundsEquals(t.bounds, CONUS_BOUNDS)).toBe(false);
     expect(t.bounds.south).toBeLessThan(24);
   });
+
+  it('frames Puerto Rico instead of CONUS for Caribbean tropical alerts', () => {
+    const t = resolveHazardEmbedTarget([
+      pt(18.47, -66.11, 'PR', 'pr-1'),
+      pt(18.22, -66.59, 'PR', 'pr-2'),
+    ]);
+    expect(t.mode).toBe('non_conus_state');
+    expect(boundsEquals(t.bounds, CONUS_BOUNDS)).toBe(false);
+    expect(t.bounds.north).toBeLessThan(20);
+    expect(t.bounds.south).toBeGreaterThan(17);
+    expect(t.maxZoom).toBe(8);
+  });
+
+  it('ignores PR points when framing mixed CONUS alert sets', () => {
+    const t = resolveHazardEmbedTarget([
+      pt(31.5, -99, 'TX'),
+      pt(38.5, -98, 'KS'),
+      pt(33, -83.5, 'GA'),
+      pt(18.47, -66.11, 'PR', 'pr-1'),
+    ]);
+    expect(t.mode).toBe('alerts');
+    expect(t.bounds.south).toBeGreaterThan(24);
+  });
 });
 
 describe('resolveStateEmbedTarget', () => {
@@ -174,5 +197,14 @@ describe('resolveStateEmbedTarget', () => {
     expect(t.maxZoom).toBe(7);
     expect(t.bounds.east - t.bounds.west).toBeLessThan(10);
     expect(t.bounds.north).toBeLessThan(24);
+  });
+
+  it('frames Puerto Rico from territory bounds (not CONUS fallback)', () => {
+    const t = resolveStateEmbedTarget('PR');
+    expect(t.mode).toBe('state');
+    expect(t.maxZoom).toBe(8);
+    expect(boundsEquals(t.bounds, CONUS_BOUNDS)).toBe(false);
+    expect(t.bounds.south).toBeGreaterThan(17);
+    expect(t.bounds.north).toBeLessThan(19);
   });
 });

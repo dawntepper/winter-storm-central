@@ -165,9 +165,9 @@ export function parseAlert(alert) {
 
   if (!category) return null;
 
-  // Prefer geometry / FIPS / UGC centroid. Always keep Alaska & Hawaii land
-  // alerts even when county FIPS/geometry is missing — state centroid is enough
-  // for hazard pages and map framing.
+  // Prefer geometry / FIPS / UGC centroid. Always keep Alaska, Hawaii, and
+  // NWS territory land alerts even when county FIPS/geometry is missing —
+  // state centroid is enough for hazard pages and map framing.
   let coords = extractCoordinates(alert);
   let state = extractStateCode(alert);
   if (!state && isAlaskaOrHawaiiAlert(alert)) {
@@ -175,7 +175,15 @@ export function parseAlert(alert) {
     const hit = ugcs.find((u) => typeof u === 'string' && /^(AK|HI)/i.test(u));
     state = hit ? hit.substring(0, 2).toUpperCase() : null;
   }
-  if ((!coords || !Number.isFinite(coords.lat)) && (state === 'AK' || state === 'HI')) {
+  // Territory UGC prefixes (PRZ/PRC, VIZ, GUZ, ASZ, MPZ) when extractStateCode
+  // somehow missed them — rare, but mirrors the AK/HI retention path.
+  if (!state) {
+    const ugcs = props.geocode?.UGC || [];
+    const hit = ugcs.find((u) => typeof u === 'string' && /^(PR|VI|GU|AS|MP)/i.test(u));
+    if (hit) state = hit.substring(0, 2).toUpperCase();
+  }
+  const NON_CONUS_LAND = new Set(['AK', 'HI', 'PR', 'VI', 'GU', 'AS', 'MP']);
+  if ((!coords || !Number.isFinite(coords.lat)) && NON_CONUS_LAND.has(state)) {
     const centroid = getStateCentroid(state);
     if (centroid) {
       coords = addJitter({ ...centroid, source: 'state' }, 0.5);

@@ -66,6 +66,7 @@ const states = [
   { slug: 'us-virgin-islands', name: 'U.S. Virgin Islands' },
   { slug: 'guam', name: 'Guam' },
   { slug: 'american-samoa', name: 'American Samoa' },
+  { slug: 'northern-mariana-islands', name: 'Northern Mariana Islands' },
 ];
 
 function generateStateHTML(baseHTML, state) {

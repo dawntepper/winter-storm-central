@@ -21,6 +21,7 @@ const STATE_SLUGS = [
   'south-dakota', 'tennessee', 'texas', 'utah', 'vermont',
   'virginia', 'washington', 'west-virginia', 'wisconsin', 'wyoming',
   'district-of-columbia', 'puerto-rico', 'us-virgin-islands', 'guam', 'american-samoa',
+  'northern-mariana-islands',
 ];
 
 const CORE_ROUTES = ['/', '/radar', '/alerts', '/prep', '/add-to-home', '/privacy', '/terms'];

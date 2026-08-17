@@ -49,6 +49,8 @@ export const EMBED_SINGLE_ALERT_ZOOM = 7;
 /** Alaska is large — keep a wider regional view than CONUS counties. */
 export const EMBED_ALASKA_MAX_ZOOM = 5;
 export const EMBED_HAWAII_MAX_ZOOM = 7;
+/** Puerto Rico / USVI / Pacific territories — regional, not street-level. */
+export const EMBED_TERRITORY_MAX_ZOOM = 8;
 
 function conusEmbedTarget() {
   return {
@@ -59,8 +61,24 @@ function conusEmbedTarget() {
   };
 }
 
-/** States outside the default lower-48 radar frame. */
-export const NON_CONUS_STATE_CODES = new Set(['AK', 'HI']);
+/**
+ * States/territories outside the default lower-48 radar frame.
+ * Caribbean (PR/VI) and Pacific (GU/AS/MP) sit south/west of CONUS_BOUNDS —
+ * without this, tropical alerts frame as CONUS and markers fall off-map.
+ */
+export const NON_CONUS_STATE_CODES = new Set(['AK', 'HI', 'PR', 'VI', 'GU', 'AS', 'MP']);
+
+/**
+ * Approximate bounding boxes for territories missing from STATE_GEOJSON
+ * (us-atlas lower-48 + AK/HI/DC only). Used by getStateBounds / embeds.
+ */
+export const TERRITORY_BOUNDS = {
+  PR: { south: 17.85, west: -67.95, north: 18.55, east: -65.20 },
+  VI: { south: 17.65, west: -65.10, north: 18.45, east: -64.55 },
+  GU: { south: 13.22, west: 144.60, north: 13.67, east: 145.01 },
+  AS: { south: -14.40, west: -170.85, north: -14.15, east: -169.40 },
+  MP: { south: 14.05, west: 145.10, north: 15.30, east: 145.90 },
+};
 
 function isValidBounds(b) {
   return (
@@ -97,8 +115,8 @@ export function boundsFromAlertPoints(alerts) {
 }
 
 /**
- * True when an alert is in Alaska/Hawaii (or coordinates clearly outside CONUS).
- * These never appear in the default lower-48 radar frame.
+ * True when an alert is outside the lower-48 (AK/HI/territories, or coords).
+ * These never appear in the default CONUS radar frame.
  */
 export function isOutsideConusAlert(alert) {
   if (!alert) return false;
@@ -110,6 +128,12 @@ export function isOutsideConusAlert(alert) {
   if (lat < 24.2 && lon < -154) return true;
   // Alaska (incl. Aleutians west of the CONUS west edge)
   if (lat > 50 && lon < -129) return true;
+  // Puerto Rico / US Virgin Islands (Caribbean — south of CONUS_BOUNDS.south)
+  if (lat >= 17.5 && lat <= 19.5 && lon >= -68.5 && lon <= -64.3) return true;
+  // Guam / Northern Mariana Islands (western Pacific, eastern hemisphere)
+  if (lat >= 13 && lat <= 21 && lon >= 144 && lon <= 147) return true;
+  // American Samoa (south Pacific)
+  if (lat >= -15 && lat <= -13 && lon >= -172 && lon <= -168) return true;
   return false;
 }
 
@@ -142,6 +166,10 @@ export function isBroadlyDistributed(bounds, alerts = []) {
 function maxZoomForNonConusStates(states) {
   if (states.has('AK') && !states.has('HI')) return EMBED_ALASKA_MAX_ZOOM;
   if (states.has('HI') && !states.has('AK')) return EMBED_HAWAII_MAX_ZOOM;
+  // Caribbean / Pacific territories
+  if ([...states].some((c) => ['PR', 'VI', 'GU', 'AS', 'MP'].includes(c))) {
+    return EMBED_TERRITORY_MAX_ZOOM;
+  }
   // Both AK + HI (rare): keep loose so neither is over-zoomed
   return EMBED_ALASKA_MAX_ZOOM;
 }
@@ -213,7 +241,11 @@ export function boundsFromLonLatPairs(pairs) {
  * @returns {{south,west,north,east}|null}
  */
 export function getStateBounds(stateCode) {
-  if (!stateCode || !STATE_GEOJSON[stateCode]) return null;
+  if (!stateCode) return null;
+  if (TERRITORY_BOUNDS[stateCode]) {
+    return { ...TERRITORY_BOUNDS[stateCode] };
+  }
+  if (!STATE_GEOJSON[stateCode]) return null;
   try {
     const coords = [];
     walkCoordinates(STATE_GEOJSON[stateCode].geometry?.coordinates, coords);
@@ -235,8 +267,9 @@ function singleAlertBounds(alert, padDeg) {
 /**
  * Resolve the target bounds for an embedded hazard map.
  *
- * Non-CONUS (AK/HI): always frame those alerts / that state — never fall back
- * to the lower-48 CONUS box (Alaska's footprint alone looks "broad" by span).
+ * Non-CONUS (AK/HI/territories): always frame those alerts / that state —
+ * never fall back to the lower-48 CONUS box (Alaska's footprint alone looks
+ * "broad" by span; PR/VI sit south of CONUS_BOUNDS).
  */
 export function resolveHazardEmbedTarget(alerts) {
   const list = alerts || [];
@@ -281,8 +314,8 @@ export function resolveHazardEmbedTarget(alerts) {
     }
   }
 
-  // Mixed AK/HI + CONUS: frame from lower-48 points only so Alaska/Hawaii
-  // markers cannot force a world-wide / overly broad embed viewport.
+  // Mixed non-CONUS + CONUS: frame from lower-48 points only so Alaska/Hawaii/
+  // Caribbean/Pacific markers cannot force a world-wide / overly broad embed.
   const conusList = list.filter((a) => !isOutsideConusAlert(a));
   const bounds = boundsFromAlertPoints(conusList);
   if (!isValidBounds(bounds)) {
@@ -315,6 +348,7 @@ export function resolveStateEmbedTarget(stateCode) {
   let maxZoom = EMBED_MAX_ZOOM;
   if (stateCode === 'AK') maxZoom = EMBED_ALASKA_MAX_ZOOM;
   else if (stateCode === 'HI') maxZoom = EMBED_HAWAII_MAX_ZOOM;
+  else if (NON_CONUS_STATE_CODES.has(stateCode)) maxZoom = EMBED_TERRITORY_MAX_ZOOM;
   return { bounds, mode: 'state', maxZoom };
 }
 

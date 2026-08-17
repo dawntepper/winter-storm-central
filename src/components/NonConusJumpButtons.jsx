@@ -1,6 +1,6 @@
 /**
- * Compact Alaska / Hawaii jump controls — pan the existing map (no inset maps).
- * Distinct colors: blue for Alaska, green for Hawaii.
+ * Compact non-CONUS jump controls — pan the existing map (no inset maps).
+ * Alaska / Hawaii / Puerto Rico (Caribbean tropical coverage).
  */
 
 const BASE_PILL =
@@ -12,12 +12,15 @@ const ALASKA_PILL =
 const HAWAII_PILL =
   `${BASE_PILL} bg-emerald-500/20 text-emerald-300 border-emerald-500/45 hover:bg-emerald-500/30 hover:text-emerald-200 focus:ring-2 focus:ring-emerald-500/40`;
 
+const CARIBBEAN_PILL =
+  `${BASE_PILL} bg-cyan-500/20 text-cyan-300 border-cyan-500/45 hover:bg-cyan-500/30 hover:text-cyan-200 focus:ring-2 focus:ring-cyan-500/40`;
+
 export default function NonConusJumpButtons({ onJump, className = '' }) {
   return (
     <div
       className={`flex items-center gap-1.5 shrink-0 ${className}`.trim()}
       role="group"
-      aria-label="Jump map to Alaska or Hawaii"
+      aria-label="Jump map to Alaska, Hawaii, or Puerto Rico"
     >
       <button
         type="button"
@@ -36,6 +39,15 @@ export default function NonConusJumpButtons({ onJump, className = '' }) {
         title="Pan map to Hawaii"
       >
         Hawaii
+      </button>
+      <button
+        type="button"
+        onClick={() => onJump?.('PR')}
+        className={CARIBBEAN_PILL}
+        aria-label="Jump map to Puerto Rico"
+        title="Pan map to Puerto Rico"
+      >
+        Puerto Rico
       </button>
     </div>
   );

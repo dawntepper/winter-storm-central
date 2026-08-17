@@ -164,6 +164,10 @@ const ZIP_PREFIX_TO_STATE = {
   '990': 'WA', '991': 'WA', '992': 'WA', '993': 'WA', '994': 'WA',
   // Alaska
   '995': 'AK', '996': 'AK', '997': 'AK', '998': 'AK', '999': 'AK',
+  // Puerto Rico (006–009) and US Virgin Islands (008)
+  '006': 'PR', '007': 'PR', '008': 'VI', '009': 'PR',
+  // Guam / Northern Mariana Islands (969xx — MP shares 9695x with GU office)
+  '969': 'GU',
 };
 
 /**

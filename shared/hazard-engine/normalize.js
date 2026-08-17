@@ -100,14 +100,23 @@ export function extractAffectedStateCodes(alert) {
     }
   }
 
-  // Coordinate fallback for AK/HI zone products that omit ", ST" in areaDesc
-  // (e.g. "Central Brooks Range" with AKZ* UGC already handled above — this
-  // covers parsed alerts that only retained lat/lon).
+  // Coordinate fallback for zone products that omit ", ST" in areaDesc
+  // (AK/HI zones; Caribbean / Pacific territory coords when UGC missing).
   if (states.size === 0) {
     const { lat, lon } = alert || {};
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
       if (lat < 24.2 && lon < -154) states.add('HI');
       else if (lat > 50 && lon < -129) states.add('AK');
+      else if (lat >= 17.5 && lat <= 19.5 && lon >= -68.5 && lon <= -64.3) {
+        // Prefer PR for western half of the box; VI for the east
+        states.add(lon <= -65.5 ? 'PR' : 'VI');
+      } else if (lat >= 13 && lat <= 14.5 && lon >= 144 && lon <= 145.2) {
+        states.add('GU');
+      } else if (lat >= 14 && lat <= 21 && lon >= 145.1 && lon <= 147) {
+        states.add('MP');
+      } else if (lat >= -15 && lat <= -13 && lon >= -172 && lon <= -168) {
+        states.add('AS');
+      }
     }
   }
 
