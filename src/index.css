@@ -200,12 +200,13 @@ body {
 /* Tropical alert marker — same filled-circle-with-emoji shape as the tornado
    marker. Shared 🌀 emoji; disc color differentiates hurricane vs tropical
    storm vs storm surge (see StormMap tropicalMarkerModifier). No pulse.
-   White core behind the swirl keeps it crisp on azure/orange/violet discs. */
+   Whitish swirl (white-filtered emoji) keeps contrast without covering the
+   azure / orange / violet category discs. */
 .tropical-alert-marker {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: #0ea5e9;
+  background: #0ea5e9;
   border: 2px solid #ffffff;
   display: flex;
   align-items: center;
@@ -216,33 +217,19 @@ body {
   cursor: pointer;
 }
 .tropical-alert-marker > span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 45%,
-    #ffffff 0%,
-    #ffffff 62%,
-    rgba(255, 255, 255, 0.92) 78%,
-    rgba(255, 255, 255, 0.55) 100%
-  );
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
-  /* Slight lift so Apple/Google emoji blues don’t flatten into the pad. */
-  filter: contrast(1.12) saturate(1.05);
+  /* Pure whitish swirl on the original colored disc (no opaque white pad). */
+  filter: brightness(0) invert(1);
 }
 .tropical-alert-marker--storm {
-  background-color: #0ea5e9; /* tropical storm — category azure */
+  background: #0ea5e9; /* tropical storm — category azure */
 }
 .tropical-alert-marker--hurricane {
-  background-color: #ea580c; /* hurricane / extreme wind — warmer urgency */
+  background: #ea580c; /* hurricane / extreme wind — warmer urgency */
 }
 .tropical-alert-marker--surge {
-  background-color: #7c3aed; /* storm surge — inundation / flood-adjacent */
+  background: #7c3aed; /* storm surge — inundation / flood-adjacent */
 }
 
 /* Low-zoom alert density badge — per-state count disc (StormMap densityMode="zoom"). */
