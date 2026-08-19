@@ -163,6 +163,18 @@ const ZOOM_MOBILE = 3.5;
 /** Below this zoom, densityMode="zoom" shows per-state count badges instead of individual alert markers. */
 const ALERT_DENSITY_ZOOM_THRESHOLD = 5.5;
 
+/**
+ * High-priority alerts that keep individual emoji markers even in low-zoom
+ * density mode (state badges). Matches the emoji-disc paths in AlertDotMarker:
+ * Tornado Warnings (🌪) and all tropical-category alerts (🌀).
+ * Tornado Watches stay in badges (hollow ring only at high zoom).
+ */
+function isDensityPriorityAlert(alert) {
+  if (!alert) return false;
+  if (alert.category === 'tropical') return true;
+  return alert.category === 'tornado' && (alert.event || '').includes('Warning');
+}
+
 // Lower-48 bounding box for fitBounds (Alaska/Hawaii remain pannable).
 const CONUS_BOUNDS = L.latLngBounds(
   [24.52, -124.77],
@@ -2199,9 +2211,10 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
   /**
    * Alert density prototype:
    * - 'off' (default) — always show individual alert markers
-   * - 'zoom' — below ALERT_DENSITY_ZOOM_THRESHOLD, show per-state count badges;
-   *   at/above threshold, show individual markers. Forced off when
-   *   presentation="embedded" so state/hazard embeds stay unchanged.
+   * - 'zoom' — below ALERT_DENSITY_ZOOM_THRESHOLD, show per-state count badges
+   *   for non-priority alerts; Tornado Warnings and tropical (🌀) markers stay
+   *   individual. At/above threshold, show all individual markers. Forced off
+   *   when presentation="embedded" so state/hazard embeds stay unchanged.
    */
   densityMode = 'off',
 }) {
@@ -2366,12 +2379,21 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
       });
   }, [alerts, activeCategories, eventFilter]);
 
+  // Tornado Warnings + tropical alerts keep emoji markers at low zoom (not
+  // folded into state badges). Same category/event filters as chips.
+  const densityPriorityAlerts = useMemo(
+    () => filteredMapAlerts.filter(isDensityPriorityAlert),
+    [filteredMapAlerts],
+  );
+
   // Per-state aggregates for low-zoom density mode (multi-category pie when mixed).
+  // Excludes density-priority alerts so badge counts don't double-count emoji markers.
   const stateDensityAggregates = useMemo(() => {
     if (!densityModeActive) return [];
     const byState = {};
     for (const alert of filteredMapAlerts) {
       if (!alert.state) continue;
+      if (isDensityPriorityAlert(alert)) continue;
       let bucket = byState[alert.state];
       if (!bucket) {
         bucket = { stateCode: alert.state, count: 0, categoryCounts: {} };
@@ -3223,19 +3245,19 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
 
           {/* Markers with zoom context */}
           <ZoomContext.Provider value={zoomLevel}>
-            {/* Low zoom: per-state count badges. High zoom (or density off): individual markers. */}
-            {showAlertAggregates
-              ? stateDensityAggregates.map((agg) => (
-                <StateAlertDensityMarker
-                  key={`density-${agg.stateCode}`}
-                  stateCode={agg.stateCode}
-                  count={agg.count}
-                  color={agg.color}
-                  categoryCounts={agg.categoryCounts}
-                  isMobile={isMobile}
-                />
-              ))
-              : filteredMapAlerts.map((alert) => (
+            {/* Low zoom: state badges for non-priority alerts + Tornado Warning /
+                tropical emoji markers. High zoom (or density off): all markers. */}
+            {showAlertAggregates && stateDensityAggregates.map((agg) => (
+              <StateAlertDensityMarker
+                key={`density-${agg.stateCode}`}
+                stateCode={agg.stateCode}
+                count={agg.count}
+                color={agg.color}
+                categoryCounts={agg.categoryCounts}
+                isMobile={isMobile}
+              />
+            ))}
+            {(showAlertAggregates ? densityPriorityAlerts : filteredMapAlerts).map((alert) => (
               <AlertDotMarker
                 key={alert.id}
                 alert={alert}
