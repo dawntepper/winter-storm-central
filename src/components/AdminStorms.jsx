@@ -18,6 +18,7 @@ import {
   archiveStormInDb
 } from '../lib/stormsRepo';
 import { logoutAdmin } from '../lib/adminAuth';
+import { BASEMAP_STYLES } from '../lib/basemapTiles';
 import { dbStormToFormData } from '../lib/stormNormalize';
 import {
   EMERGENCY_ENTRY_CATEGORIES,
@@ -228,8 +229,10 @@ function MapPicker({ currentLat, currentLon, onSelect, onClose }) {
             style={{ height: '100%', width: '100%' }}
           >
             <TileLayer
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution={BASEMAP_STYLES.dark.attribution}
+              url={BASEMAP_STYLES.dark.url}
+              maxNativeZoom={BASEMAP_STYLES.dark.maxNativeZoom}
+              maxZoom={BASEMAP_STYLES.dark.maxZoom}
             />
             <MapClickHandler onLocationSelect={handleLocationSelect} />
             <Marker position={[selectedLat, selectedLon]} icon={markerIcon} />
