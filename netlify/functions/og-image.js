@@ -126,9 +126,8 @@ async function compositeMapImage(lat, lon, zoom) {
   const radar = await getLatestRadarTimestamp();
 
   const fetchPromises = tileGrid.map(async (tile) => {
-    const subdomains = ['a', 'b', 'c', 'd'];
-    const s = subdomains[(tile.x + tile.y) % subdomains.length];
-    const baseUrl = `https://${s}.basemaps.cartocdn.com/dark_all/${zoom}/${tile.x}/${tile.y}.png`;
+    // Esri Canvas (z/y/x). CARTO raster tiles watermark unauthenticated requests.
+    const baseUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${zoom}/${tile.y}/${tile.x}`;
 
     const baseBuffer = await fetchTile(baseUrl);
 

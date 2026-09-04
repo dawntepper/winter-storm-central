@@ -33,6 +33,7 @@ import {
   SAVE_TRIGGERS
 } from '../utils/analytics';
 import { useMapBasemapPreference, BASEMAP_PREFERENCE_LABELS, BASEMAP_PREFERENCE_CYCLE } from '../hooks/useMapBasemapPreference';
+import { BASEMAP_STYLES } from '../lib/basemapTiles';
 import {
   EMBED_MOBILE_PADDING,
   EMBED_STATE_PADDING,
@@ -43,6 +44,8 @@ import {
   alertGeographySignature,
   toLeafletBounds,
 } from '../utils/mapExtent';
+
+export { BASEMAP_STYLES };
 /**
  * Full Alert Modal - shows complete alert details
  */
@@ -701,25 +704,7 @@ export const RADAR_COLOR_SCHEMES = {
   8: 'Dark Sky',
 };
 
-// CARTO basemap tiles (Leaflet raster). No API key required.
-export const BASEMAP_STYLES = {
-  dark: {
-    label: 'Dark',
-    // nolabels avoids CARTO's baked-in bright admin boundaries; we draw our own borders/labels.
-    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-  },
-  light: {
-    label: 'Light',
-    // nolabels — we draw state/geographic labels; voyager base is warmer than light_all.
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-  },
-  voyager: {
-    label: 'Voyager',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  },
-};
-
-// Basemap tile enhancement for dark CARTO tiles (tilePane only — radar/alerts unchanged).
+// Basemap tile enhancement for dark tiles (tilePane only — radar/alerts unchanged).
 export const BASEMAP_BRIGHTNESS_VARIANTS = {
   original: { label: 'Original', value: 1 },
   a: { label: '+10%', value: 1.1 },
@@ -1794,7 +1779,7 @@ function BasemapTileEnhancement({
   return null;
 }
 
-// Subtle terrain hint — CARTO nolabels over basemap with soft-light blend for depth.
+// Subtle terrain hint — dark canvas over basemap with soft-light blend for depth.
 const TERRAIN_HINT_PANE = 'terrain-hint';
 const TERRAIN_HINT_URL = BASEMAP_STYLES.dark.url;
 
@@ -3189,11 +3174,13 @@ export default function StormMap({ weatherData, stormPhase = 'pre-storm', userLo
           <CenterOnLocation location={centerOn} enabled={!isEmbedded} />
           <CenterOnGeolocation trigger={geoTrigger} onLocated={handleGeoLocated} onError={handleGeoError} />
 
-          {/* CARTO basemap — key forces Leaflet to swap tiles when style changes */}
+          {/* Basemap — key forces Leaflet to swap tiles when style changes */}
           <TileLayer
             key={basemap.url}
-            attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution={basemap.attribution}
             url={basemap.url}
+            maxNativeZoom={basemap.maxNativeZoom}
+            maxZoom={basemap.maxZoom}
           />
           <TerrainHintLayer basemapStyle={basemapStyle} />
           <BasemapTileEnhancement
